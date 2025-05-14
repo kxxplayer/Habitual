@@ -1,3 +1,4 @@
+// src/components/habits/HabitItem.tsx
 "use client";
 
 import type { FC } from 'react';
@@ -5,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Lightbulb, CalendarDays, Clock, Timer, CalendarClock } from 'lucide-react';
+import { Lightbulb, CalendarDays, Clock, Timer, CalendarClock, CalendarPlus } from 'lucide-react';
 import type { Habit } from '@/types';
+import { generateICS, downloadICS } from '@/lib/calendarUtils';
+import { useToast } from '@/hooks/use-toast';
 
 interface HabitItemProps {
   habit: Habit;
@@ -17,9 +20,30 @@ interface HabitItemProps {
 
 const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggestion, isCompletedToday }) => {
   const today = new Date().toISOString().split('T')[0];
+  const { toast } = useToast();
 
   const handleCompletionChange = (checked: boolean) => {
     onToggleComplete(habit.id, today, checked);
+  };
+
+  const handleAddToCalendar = () => {
+    try {
+      const icsContent = generateICS(habit);
+      // Sanitize habit name for filename
+      const filename = `${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_habit.ics`;
+      downloadICS(filename, icsContent);
+      toast({
+        title: "Calendar File Generated",
+        description: `"${habit.name}" has been prepared. Import it into your calendar.`,
+      });
+    } catch (error) {
+      console.error("Error generating ICS file:", error);
+      toast({
+        title: "ICS Generation Error",
+        description: "Could not generate calendar file. Please check console for details.",
+        variant: "destructive",
+      });
+    }
   };
 
   const latestCompletionTimeToday = habit.completionLog
@@ -80,10 +104,14 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
           )}
         </div>
       </CardContent>
-      <CardFooter>
-        <Button variant="outline" size="sm" onClick={() => onGetAISuggestion(habit)} className="w-full">
+      <CardFooter className="flex flex-col sm:flex-row gap-2 pt-4">
+        <Button variant="outline" size="sm" onClick={() => onGetAISuggestion(habit)} className="w-full sm:flex-1">
           <Lightbulb className="mr-2 h-4 w-4" />
           Get AI Suggestion
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleAddToCalendar} className="w-full sm:flex-1">
+          <CalendarPlus className="mr-2 h-4 w-4" />
+          Add to Calendar
         </Button>
       </CardFooter>
     </Card>
