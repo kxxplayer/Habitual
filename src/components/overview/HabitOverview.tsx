@@ -9,20 +9,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { format, subDays } from 'date-fns';
 import { getDayAbbreviationFromDate } from '@/lib/dateUtils';
-import { Target, Repeat, Award, TrendingUp } from 'lucide-react';
+import { Target, Repeat, Award, TrendingUp, ClipboardList, CheckCircle2, Circle } from 'lucide-react';
 
 interface HabitOverviewProps {
   habits: Habit[];
 }
 
 const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
+  const today = useMemo(() => new Date(), []);
+  const todayStr = useMemo(() => format(today, 'yyyy-MM-dd'), [today]);
+  const todayAbbr = useMemo(() => getDayAbbreviationFromDate(today), [today]);
+
+  const scheduledToday = useMemo(() => {
+    return habits.filter(habit => habit.daysOfWeek.includes(todayAbbr));
+  }, [habits, todayAbbr]);
+
   const dailyProgress = useMemo(() => {
     if (!habits || habits.length === 0) return { scheduled: 0, completed: 0, percent: 0 };
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const todayAbbr = getDayAbbreviationFromDate(today);
-
-    const scheduledToday = habits.filter(habit => habit.daysOfWeek.includes(todayAbbr));
+    
     if (scheduledToday.length === 0) return { scheduled: 0, completed: 0, percent: 0 };
 
     const completedToday = scheduledToday.filter(habit =>
@@ -33,14 +37,13 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
         completed: completedToday.length,
         percent: Math.round((completedToday.length / scheduledToday.length) * 100)
     };
-  }, [habits]);
+  }, [habits, scheduledToday, todayStr]);
 
   const consistencyScore = useMemo(() => {
     if (!habits || habits.length === 0) return { score: 0, days: 7 };
     const numDays = 7;
     let totalScheduledInstances = 0;
     let totalCompletedInstances = 0;
-    const today = new Date();
 
     for (let i = 0; i < numDays; i++) {
       const currentDate = subDays(today, i);
@@ -62,7 +65,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
         score: Math.round((totalCompletedInstances / totalScheduledInstances) * 100),
         days: numDays
     };
-  }, [habits]);
+  }, [habits, today]);
 
   const totalHabitsTracked = habits.length;
   
@@ -115,6 +118,32 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
               <Progress value={consistencyScore.score} className="h-2.5" indicatorClassName="bg-accent" />
             </div>
             
+            {scheduledToday.length > 0 && (
+              <div className="pt-3 space-y-2">
+                <h4 className="text-sm font-medium text-foreground flex items-center">
+                  <ClipboardList className="mr-2 h-4 w-4 text-muted-foreground" />
+                  Today's Checklist:
+                </h4>
+                <ul className="space-y-1.5 pl-1">
+                  {scheduledToday.map(habit => {
+                    const isCompleted = habit.completionLog.some(log => log.date === todayStr);
+                    return (
+                      <li key={habit.id} className="flex items-center text-sm">
+                        {isCompleted ? (
+                          <CheckCircle2 className="mr-2 h-4 w-4 text-accent flex-shrink-0" />
+                        ) : (
+                          <Circle className="mr-2 h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <span className={isCompleted ? 'text-muted-foreground line-through' : 'text-foreground'}>
+                          {habit.name}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
             <div className="pt-2 text-center border-t border-border/60">
                 <p className="text-sm font-medium text-muted-foreground flex items-center justify-center mt-3">
                     <Award className="mr-2 h-5 w-5 text-yellow-500" />
@@ -133,3 +162,4 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
 };
 
 export default HabitOverview;
+
