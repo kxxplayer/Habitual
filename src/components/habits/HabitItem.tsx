@@ -2,6 +2,7 @@
 // src/components/habits/HabitItem.tsx
 "use client";
 
+import * as React from 'react'; // Added this line
 import type { FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -288,3 +289,4 @@ Track your habits with Habitual!`;
 };
 
 export default HabitItem;
+
