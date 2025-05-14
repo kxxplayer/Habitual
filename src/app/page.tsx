@@ -24,9 +24,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Smile, Trash2, AlertTriangle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PlusCircle, Smile, Trash2, AlertTriangle, LayoutDashboard } from 'lucide-react';
 
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -42,6 +49,7 @@ const HabitualPage: NextPage = () => {
   const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = useState(false);
   const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
 
 
   useEffect(() => {
@@ -231,15 +239,17 @@ const HabitualPage: NextPage = () => {
 
         <div className="flex-grow overflow-y-auto">
           <main className="px-3 sm:px-4 py-6">
-            <div className="mb-6">
+            <div className="flex flex-col sm:flex-row gap-2 mb-6">
               <Button size="lg" onClick={() => setIsCreateHabitDialogOpen(true)} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Add New Habit
               </Button>
+              <Button size="lg" variant="outline" onClick={() => setIsDashboardDialogOpen(true)} className="w-full sm:w-auto">
+                <LayoutDashboard className="mr-2 h-5 w-5" />
+                View Dashboard
+              </Button>
             </div>
             
-            <HabitOverview habits={habits} />
-
             {selectedHabitIds.length > 0 && habits.length > 0 && (
               <div className="my-4 flex items-center gap-2 sm:gap-4 p-2 border rounded-md bg-card shadow-sm w-full justify-between">
                 <div className="flex items-center space-x-2">
@@ -323,8 +333,30 @@ const HabitualPage: NextPage = () => {
           error={aiSuggestion.error}
         />
       )}
+
+      <Dialog open={isDashboardDialogOpen} onOpenChange={setIsDashboardDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-xl">
+              <LayoutDashboard className="mr-2 h-5 w-5 text-primary" />
+              Your Habit Dashboard
+            </DialogTitle>
+            <DialogDescription>
+              A snapshot of your progress and today's checklist.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 max-h-[65vh] overflow-y-auto pr-2"> {/* Added pr-2 for scrollbar spacing */}
+            <HabitOverview habits={habits} />
+          </div>
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setIsDashboardDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
 
 export default HabitualPage;
+

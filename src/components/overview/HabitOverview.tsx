@@ -5,11 +5,11 @@
 import type { FC } from 'react';
 import { useMemo } from 'react';
 import type { Habit } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { format, subDays } from 'date-fns';
 import { getDayAbbreviationFromDate } from '@/lib/dateUtils';
-import { Target, Repeat, Award, TrendingUp, ClipboardList, CheckCircle2, Circle } from 'lucide-react';
+import { Target, Repeat, Award, ClipboardList, CheckCircle2, Circle } from 'lucide-react';
 
 interface HabitOverviewProps {
   habits: Habit[];
@@ -82,16 +82,8 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
 
 
   return (
-    <Card className="mb-6 shadow-md">
-      <CardHeader className="pb-3 pt-4 px-4 sm:px-6">
-        <CardTitle className="text-lg sm:text-xl font-semibold text-primary flex items-center">
-          <TrendingUp className="mr-2.5 h-5 w-5 sm:h-6 sm:w-6" />
-          Your Habit Dashboard
-        </CardTitle>
-        {totalHabitsTracked > 0 && <CardDescription className="text-xs sm:text-sm mt-1">A snapshot of your progress.</CardDescription>}
-        {totalHabitsTracked === 0 && <CardDescription  className="text-xs sm:text-sm mt-1">Add your first habit to see your progress.</CardDescription>}
-      </CardHeader>
-      <CardContent className="space-y-3 px-4 sm:px-6 pb-4 pt-0">
+    <Card>
+      <CardContent className="space-y-3 px-4 sm:px-6 py-4">
         {totalHabitsTracked > 0 ? (
           <>
             <div>
@@ -162,3 +154,4 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
 };
 
 export default HabitOverview;
+
