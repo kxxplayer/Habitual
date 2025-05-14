@@ -7,11 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Lightbulb, CalendarDays, Clock, Timer, CalendarClock, CalendarPlus, Share2, Hourglass } from 'lucide-react';
-import type { Habit } from '@/types';
+import { Progress } from '@/components/ui/progress';
+import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, TrendingUp } from 'lucide-react';
+import type { Habit, WeekDay } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { isDateInCurrentWeek, getDayAbbreviationFromDate } from '@/lib/dateUtils';
 
 
 interface HabitItemProps {
@@ -23,7 +25,7 @@ interface HabitItemProps {
   onSelectToggle: (habitId: string) => void;
 }
 
-const weekDaysOrder = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const weekDaysOrder: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // Helper to format HH:mm to h:mm AM/PM or return original if not HH:mm
 const formatSpecificTime = (timeStr?: string): string | undefined => {
@@ -41,11 +43,11 @@ const formatSpecificTime = (timeStr?: string): string | undefined => {
 };
 
 const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggestion, isCompletedToday, isSelected, onSelectToggle }) => {
-  const today = new Date().toISOString().split('T')[0];
+  const todayString = new Date().toISOString().split('T')[0];
   const { toast } = useToast();
 
   const handleCompletionChange = (checked: boolean) => {
-    onToggleComplete(habit.id, today, checked);
+    onToggleComplete(habit.id, todayString, checked);
   };
 
   const handleAddToCalendar = () => {
@@ -80,7 +82,6 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
       durationText += `${habit.durationMinutes} min`;
     }
 
-
     const shareText = `Check out this habit I'm tracking with Habitual!
 
 Habit: ${habit.name}
@@ -111,12 +112,11 @@ Track your habits with Habitual!`;
         toast({ title: "Habit Shared!", description: "The habit details have been shared." });
       } catch (error) {
         if ((error as DOMException).name === 'AbortError') {
-          // User cancelled the share action, try copying to clipboard as a fallback.
           console.log("Share action was cancelled by the user. Copying to clipboard.");
           copyToClipboard(shareText);
         } else {
           console.error("Error sharing habit, falling back to clipboard copy:", error);
-          copyToClipboard(shareText); 
+          copyToClipboard(shareText);
         }
       }
     } else {
@@ -125,7 +125,7 @@ Track your habits with Habitual!`;
   };
 
   const latestCompletionTimeToday = habit.completionLog
-    .filter(log => log.date === today)
+    .filter(log => log.date === todayString)
     .map(log => log.time)
     .sort()
     .pop();
@@ -142,8 +142,31 @@ Track your habits with Habitual!`;
   }
   const formattedSpecificTime = formatSpecificTime(habit.specificTime);
 
+  // Weekly Progress Calculation
+  const scheduledDaysInWeek = habit.daysOfWeek.length;
+  let completedCountInCurrentWeek = 0;
+  if (scheduledDaysInWeek > 0) {
+    const completedOnScheduledDaysThisWeek = new Set<string>(); // Tracks 'YYYY-MM-DD' of completions
+    habit.completionLog.forEach(log => {
+      if (isDateInCurrentWeek(log.date)) {
+        try {
+            const completionDateObj = parseISO(log.date + 'T00:00:00Z'); // Treat as UTC date part
+            const dayOfCompletion = getDayAbbreviationFromDate(completionDateObj);
+            if (habit.daysOfWeek.includes(dayOfCompletion)) {
+                completedOnScheduledDaysThisWeek.add(log.date);
+            }
+        } catch (e) {
+            console.error("Error parsing log date for weekly progress:", log.date, e);
+        }
+      }
+    });
+    completedCountInCurrentWeek = completedOnScheduledDaysThisWeek.size;
+  }
+  
+  const weeklyProgressPercent = scheduledDaysInWeek > 0 ? (completedCountInCurrentWeek / scheduledDaysInWeek) * 100 : 0;
+
   return (
-    <Card className={`relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isCompletedToday ? 'border-accent bg-green-50 dark:bg-green-900/30' : 'bg-card'} ${isSelected ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
+    <Card className={`relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isCompletedToday ? 'border-accent bg-green-50 dark:bg-green-900/30' : 'bg-card'} ${isSelected ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-background' : ''}`}>
       <div className="absolute top-3 left-3 z-10">
         <Checkbox
           id={`select-${habit.id}`}
@@ -153,10 +176,13 @@ Track your habits with Habitual!`;
           className="transform scale-110 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
       </div>
-      <CardHeader className="pt-3 pl-12"> {/* Add padding to account for checkbox */}
+      <CardHeader className="pt-3 pl-12">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-xl font-semibold text-primary">{habit.name}</CardTitle>
+            <CardTitle className="text-xl font-semibold text-primary flex items-center">
+              {isCompletedToday && <CheckCircle2 className="mr-2 h-5 w-5 text-accent" />}
+              {habit.name}
+            </CardTitle>
             {habit.description && <CardDescription className="text-sm text-muted-foreground mt-1">{habit.description}</CardDescription>}
           </div>
           <div className="flex flex-col items-end space-y-1">
@@ -165,9 +191,10 @@ Track your habits with Habitual!`;
                   id={`complete-${habit.id}`}
                   checked={isCompletedToday}
                   onCheckedChange={(checked) => handleCompletionChange(Boolean(checked))}
-                  className={`transform scale-125 ${isCompletedToday ? 'data-[state=checked]:bg-accent data-[state=checked]:border-accent' : ''}`}
+                  className={`transform scale-125 ${isCompletedToday ? 'data-[state=checked]:bg-accent data-[state=checked]:border-accent' : 'border-primary'}`}
+                  aria-label={`Mark ${habit.name} as done for today`}
                 />
-                <Label htmlFor={`complete-${habit.id}`} className={`text-sm font-medium ${isCompletedToday ? 'text-accent-foreground' : 'text-foreground'}`}>
+                <Label htmlFor={`complete-${habit.id}`} className={`text-sm font-medium cursor-pointer ${isCompletedToday ? 'text-accent-foreground dark:text-accent' : 'text-foreground'}`}>
                   Done Today
                 </Label>
               </div>
@@ -177,44 +204,60 @@ Track your habits with Habitual!`;
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pl-12"> {/* Add padding to account for checkbox */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
+      <CardContent className="space-y-3 pl-12 pb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-muted-foreground">
           <div className="flex items-center col-span-full sm:col-span-1">
-            <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
+            <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0 text-primary/80" />
             <span>Days: {displayDays.length > 0 ? displayDays : 'Not specified'}</span>
           </div>
           {habit.optimalTiming && (
             <div className="flex items-center">
-              <CalendarClock className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Optimal Timing: {habit.optimalTiming}</span>
+              <CalendarClock className="mr-2 h-4 w-4 flex-shrink-0 text-primary/80" />
+              <span>Timing: {habit.optimalTiming}</span>
             </div>
           )}
           {durationDisplay && (
             <div className="flex items-center">
-              <Hourglass className="mr-2 h-4 w-4 flex-shrink-0" />
+              <Hourglass className="mr-2 h-4 w-4 flex-shrink-0 text-primary/80" />
               <span>Duration: {durationDisplay}</span>
             </div>
           )}
           {formattedSpecificTime && (
              <div className="flex items-center">
-              <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Specific Time: {formattedSpecificTime}</span>
+              <Clock className="mr-2 h-4 w-4 flex-shrink-0 text-primary/80" />
+              <span>Time: {formattedSpecificTime}</span>
             </div>
           )}
         </div>
+
+        {habit.daysOfWeek && habit.daysOfWeek.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-border/50">
+            <div className="flex justify-between items-center text-xs font-medium text-muted-foreground mb-1">
+              <span className="flex items-center"><TrendingUp className="mr-1.5 h-3.5 w-3.5 text-primary/90" />Weekly Goal</span>
+              <span>{completedCountInCurrentWeek} / {scheduledDaysInWeek} days</span>
+            </div>
+            <Progress 
+              value={weeklyProgressPercent} 
+              indicatorClassName="bg-accent" 
+              className="h-2" 
+              aria-label={`Weekly progress: ${completedCountInCurrentWeek} of ${scheduledDaysInWeek} days completed`}
+            />
+          </div>
+        )}
+
       </CardContent>
-      <CardFooter className="flex flex-col sm:grid sm:grid-cols-3 gap-2 pt-4 pl-12"> {/* Add padding */}
+      <CardFooter className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-4 pl-12 pb-4">
         <Button variant="outline" size="sm" onClick={() => onGetAISuggestion(habit)} className="w-full">
           <Lightbulb className="mr-2 h-4 w-4" />
-          AI Suggestion
+          AI Tip
         </Button>
         <Button variant="outline" size="sm" onClick={handleAddToCalendar} className="w-full">
           <CalendarPlus className="mr-2 h-4 w-4" />
-          Add to Calendar
+          To Calendar
         </Button>
         <Button variant="outline" size="sm" onClick={handleShareHabit} className="w-full">
           <Share2 className="mr-2 h-4 w-4" />
-          Share Habit
+          Share
         </Button>
       </CardFooter>
     </Card>
@@ -222,3 +265,4 @@ Track your habits with Habitual!`;
 };
 
 export default HabitItem;
+
