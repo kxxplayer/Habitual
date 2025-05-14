@@ -57,7 +57,6 @@
   }
 
   .dark {
-    /* Define dark mode colors if needed, for now keeping it consistent with user request which implies light mode */
     --background: 210 40% 5%; /* Dark background */
     --foreground: 200 17% 94%; /* Light Gray text */
 
