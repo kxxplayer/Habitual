@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -19,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Wand2, Clock, CalendarClock, Timer, Smile, PlusCircle, CheckSquare, Square } from 'lucide-react';
+import { Loader2, Wand2, Clock, CalendarClock, Timer, Smile, PlusCircle, CheckSquare, Square, Hourglass } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 
@@ -32,9 +33,13 @@ const createHabitFormSchema = z.object({
   name: z.string().min(1, "Habit name is required."),
   daysOfWeek: z.array(z.enum(weekDays)).min(1, "Please select at least one day."),
   optimalTiming: z.string().optional(),
-  duration: z.string().optional(),
-  specificTime: z.string().optional(),
+  durationHours: z.coerce.number().min(0).optional().nullable(),
+  durationMinutes: z.coerce.number().min(0).max(59).optional().nullable(),
+  specificTime: z.string().optional(), // Stored as "HH:mm" or "Anytime" etc.
+}).refine(data => data.durationHours || data.durationMinutes || (!data.durationHours && !data.durationMinutes), { // Allow both to be empty/undefined
+  // No specific message needed here if both empty is fine. If one must exist if the other is empty, adjust this.
 });
+
 
 type CreateHabitFormData = z.infer<typeof createHabitFormSchema>;
 
@@ -60,14 +65,13 @@ const HabitualPage: NextPage = () => {
       name: '',
       daysOfWeek: [],
       optimalTiming: '',
-      duration: '',
+      durationHours: null,
+      durationMinutes: null,
       specificTime: '',
     },
   });
 
   const habitDescriptionForAI = watchCreateHabitForm('description');
-  const selectedDaysOfWeek = watchCreateHabitForm('daysOfWeek');
-
 
   useEffect(() => {
     const storedHabits = localStorage.getItem('habits');
@@ -75,29 +79,56 @@ const HabitualPage: NextPage = () => {
       try {
         const parsedHabits: Habit[] = JSON.parse(storedHabits).map((habit: any) => {
           let daysOfWeek: WeekDay[] = habit.daysOfWeek || [];
-          // Migration from old 'frequency' field
-          if (!habit.daysOfWeek && habit.frequency) {
+          if (!habit.daysOfWeek && habit.frequency) { // Migration from old 'frequency'
             const freqLower = habit.frequency.toLowerCase();
-            if (freqLower === 'daily') {
-              daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-            } else {
+            if (freqLower === 'daily') daysOfWeek = [...weekDays];
+            else { /* ... existing day mapping ... */ 
               const dayMap: { [key: string]: WeekDay } = {
-                'sun': 'Sun', 'sunday': 'Sun',
-                'mon': 'Mon', 'monday': 'Mon',
-                'tue': 'Tue', 'tuesday': 'Tue',
-                'wed': 'Wed', 'wednesday': 'Wed',
-                'thu': 'Thu', 'thursday': 'Thu',
-                'fri': 'Fri', 'friday': 'Fri',
+                'sun': 'Sun', 'sunday': 'Sun', 'mon': 'Mon', 'monday': 'Mon',
+                'tue': 'Tue', 'tuesday': 'Tue', 'wed': 'Wed', 'wednesday': 'Wed',
+                'thu': 'Thu', 'thursday': 'Thu', 'fri': 'Fri', 'friday': 'Fri',
                 'sat': 'Sat', 'saturday': 'Sat',
               };
-              const potentialDays = freqLower.split(/[\s,]+/)
-                .map((d: string) => dayMap[d.trim() as keyof typeof dayMap])
-                .filter(Boolean) as WeekDay[];
-              if (potentialDays.length > 0) {
-                daysOfWeek = potentialDays;
-              }
+              daysOfWeek = freqLower.split(/[\s,]+/).map((d: string) => dayMap[d.trim() as keyof typeof dayMap]).filter(Boolean) as WeekDay[];
             }
           }
+
+          let migratedDurationHours: number | undefined = habit.durationHours;
+          let migratedDurationMinutes: number | undefined = habit.durationMinutes;
+
+          // Migration for old string duration format
+          if (habit.duration && typeof habit.duration === 'string' && migratedDurationHours === undefined && migratedDurationMinutes === undefined) {
+            const durationStr = habit.duration.toLowerCase();
+            const hourMatch = durationStr.match(/(\d+)\s*hour/);
+            const minMatch = durationStr.match(/(\d+)\s*min/);
+            if (hourMatch) migratedDurationHours = parseInt(hourMatch[1]);
+            if (minMatch) migratedDurationMinutes = parseInt(minMatch[1]);
+            
+            // If only a number, assume minutes if <= 120, else assume it was meant for hours but badly formatted.
+            // This is a heuristic.
+            if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
+                const numVal = parseInt(durationStr);
+                if (numVal <= 120) migratedDurationMinutes = numVal;
+                // else difficult to guess, could be >120 minutes or intended hours
+            }
+          }
+          
+          // Ensure specificTime is in HH:mm format if it looks like a time, otherwise keep as is (e.g. "Anytime")
+          let migratedSpecificTime = habit.specificTime;
+          if (migratedSpecificTime && /\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime)) {
+            try {
+              const [timePart, modifier] = migratedSpecificTime.split(/\s+/);
+              let [hours, minutes] = timePart.split(':').map(Number);
+              if (modifier && modifier.toLowerCase() === 'pm' && hours < 12) hours += 12;
+              if (modifier && modifier.toLowerCase() === 'am' && hours === 12) hours = 0; // Midnight
+              migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            } catch (e) { /* ignore conversion error, keep original */ }
+          } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) {
+             // Already in HH:mm potentially, ensure leading zeros if needed
+             const [hours, minutes] = migratedSpecificTime.split(':').map(Number);
+             migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+          }
+
 
           return {
             id: habit.id || Date.now().toString(),
@@ -105,8 +136,9 @@ const HabitualPage: NextPage = () => {
             description: habit.description || undefined,
             daysOfWeek: daysOfWeek,
             optimalTiming: habit.optimalTiming || undefined,
-            duration: habit.duration || undefined,
-            specificTime: habit.specificTime || undefined,
+            durationHours: migratedDurationHours,
+            durationMinutes: migratedDurationMinutes,
+            specificTime: migratedSpecificTime || undefined,
             completionLog: habit.completionLog || (habit.completedDates 
               ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A' })) 
               : []),
@@ -115,7 +147,7 @@ const HabitualPage: NextPage = () => {
         setHabits(parsedHabits);
       } catch (error) {
         console.error("Failed to parse habits from localStorage:", error);
-        localStorage.removeItem('habits'); // Clear corrupted data
+        localStorage.removeItem('habits'); 
       }
     }
   }, []);
@@ -201,12 +233,22 @@ const HabitualPage: NextPage = () => {
     try {
       const result = await createHabitFromDescription({ description: habitDescriptionForAI });
       setCreateHabitFormValue('name', result.habitName);
-      // Ensure AI returns valid 3-letter day codes or map them
       const validSuggestedDays = result.daysOfWeek.filter(day => weekDays.includes(day as WeekDay)) as WeekDay[];
       setCreateHabitFormValue('daysOfWeek', validSuggestedDays);
       setCreateHabitFormValue('optimalTiming', result.optimalTiming || '');
-      setCreateHabitFormValue('duration', result.duration || '');
-      setCreateHabitFormValue('specificTime', result.specificTime || '');
+      setCreateHabitFormValue('durationHours', result.durationHours || null);
+      setCreateHabitFormValue('durationMinutes', result.durationMinutes || null);
+      
+      // For specificTime, if AI returns "Anytime" or "Flexible", clear the input, otherwise set it.
+      // Input type="time" expects HH:mm or empty string.
+      if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) {
+        setCreateHabitFormValue('specificTime', result.specificTime);
+      } else if (result.specificTime && (result.specificTime.toLowerCase() === "anytime" || result.specificTime.toLowerCase() === "flexible")) {
+         setCreateHabitFormValue('specificTime', ''); // Clear for "Anytime" or set a placeholder string if your schema allows
+      } else {
+        setCreateHabitFormValue('specificTime', result.specificTime || ''); // Or handle other formats if necessary
+      }
+
       toast({
         title: "AI Suggestion Applied",
         description: "Habit details have been populated by AI.",
@@ -229,7 +271,8 @@ const HabitualPage: NextPage = () => {
       description: data.description,
       daysOfWeek: data.daysOfWeek,
       optimalTiming: data.optimalTiming,
-      duration: data.duration,
+      durationHours: data.durationHours === null ? undefined : data.durationHours,
+      durationMinutes: data.durationMinutes === null ? undefined : data.durationMinutes,
       specificTime: data.specificTime,
     });
     resetCreateHabitForm();
@@ -292,7 +335,6 @@ const HabitualPage: NextPage = () => {
                               const newDays = checked
                                 ? [...currentDays, day]
                                 : currentDays.filter((d) => d !== day);
-                              // Ensure unique days and maintain original order if possible, or sort
                               const uniqueDays = Array.from(new Set(newDays)).sort((a, b) => weekDays.indexOf(a) - weekDays.indexOf(b));
                               field.onChange(uniqueDays);
                             }}
@@ -307,41 +349,49 @@ const HabitualPage: NextPage = () => {
                 {createHabitFormErrors.daysOfWeek && <p className="text-sm text-destructive">{createHabitFormErrors.daysOfWeek.message}</p>}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="habit-duration" className="font-medium">Duration (Optional)</Label>
-                   <div className="relative">
-                    <Timer className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Controller
-                      name="duration"
-                      control={createHabitFormControl}
-                      render={({ field }) => <Input id="habit-duration" placeholder="e.g., 30 minutes" {...field} className="bg-input/50 pl-10" />}
-                    />
+                  <Label className="font-medium flex items-center"><Hourglass className="mr-2 h-4 w-4 text-muted-foreground" />Duration (Optional)</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="duration-hours" className="text-xs text-muted-foreground">Hours</Label>
+                      <Controller
+                        name="durationHours"
+                        control={createHabitFormControl}
+                        render={({ field }) => <Input id="duration-hours" type="number" placeholder="e.g., 1" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full" min="0" />}
+                      />
+                       {createHabitFormErrors.durationHours && <p className="text-sm text-destructive">{createHabitFormErrors.durationHours.message}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="duration-minutes" className="text-xs text-muted-foreground">Minutes</Label>
+                      <Controller
+                        name="durationMinutes"
+                        control={createHabitFormControl}
+                        render={({ field }) => <Input id="duration-minutes" type="number" placeholder="e.g., 30" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full" min="0" max="59"/>}
+                      />
+                       {createHabitFormErrors.durationMinutes && <p className="text-sm text-destructive">{createHabitFormErrors.durationMinutes.message}</p>}
+                    </div>
                   </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="habit-specificTime" className="font-medium">Specific Time (Optional)</Label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Controller
-                      name="specificTime"
-                      control={createHabitFormControl}
-                      render={({ field }) => <Input id="habit-specificTime" placeholder="e.g., 08:00 AM, Anytime" {...field} className="bg-input/50 pl-10" />}
-                    />
-                  </div>
+                  <Label htmlFor="habit-specificTime" className="font-medium flex items-center"><Clock className="mr-2 h-4 w-4 text-muted-foreground" />Specific Time (Optional)</Label>
+                  <Controller
+                    name="specificTime"
+                    control={createHabitFormControl}
+                    render={({ field }) => <Input id="habit-specificTime" type="time" {...field} className="bg-input/50 w-full" />}
+                  />
+                  {createHabitFormErrors.specificTime && <p className="text-sm text-destructive">{createHabitFormErrors.specificTime.message}</p>}
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="habit-optimalTiming" className="font-medium">Optimal General Timing (Optional)</Label>
-                 <div className="relative">
-                    <CalendarClock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Controller
-                    name="optimalTiming"
-                    control={createHabitFormControl}
-                    render={({ field }) => <Input id="habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50 pl-10" />}
-                  />
-                </div>
+                <Label htmlFor="habit-optimalTiming" className="font-medium flex items-center"><CalendarClock className="mr-2 h-4 w-4 text-muted-foreground" />Optimal General Timing (Optional)</Label>
+                <Controller
+                  name="optimalTiming"
+                  control={createHabitFormControl}
+                  render={({ field }) => <Input id="habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50" />}
+                />
               </div>
               <Button type="submit" disabled={isSubmittingCreateHabitForm || isAISuggestingDetails} size="lg" className="w-full">
                 {isSubmittingCreateHabitForm ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-5 w-5" />}

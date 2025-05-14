@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Lightbulb, CalendarDays, Clock, Timer, CalendarClock, CalendarPlus, Share2 } from 'lucide-react';
+import { Lightbulb, CalendarDays, Clock, Timer, CalendarClock, CalendarPlus, Share2, Hourglass } from 'lucide-react';
 import type { Habit } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
+import { format, parse } from 'date-fns';
+
 
 interface HabitItemProps {
   habit: Habit;
@@ -19,6 +21,21 @@ interface HabitItemProps {
 }
 
 const weekDaysOrder = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Helper to format HH:mm to h:mm AM/PM or return original if not HH:mm
+const formatSpecificTime = (timeStr?: string): string | undefined => {
+  if (!timeStr || timeStr.toLowerCase() === "anytime" || timeStr.toLowerCase() === "flexible") return timeStr;
+  try {
+    if (/^\d{2}:\d{2}$/.test(timeStr)) {
+      const [hours, minutes] = timeStr.split(':');
+      const date = new Date();
+      date.setHours(parseInt(hours, 10));
+      date.setMinutes(parseInt(minutes, 10));
+      return format(date, 'h:mm a');
+    }
+  } catch (e) { /* Fallback to original string if parsing fails */ }
+  return timeStr; // Return original if not in HH:mm or if parsing fails
+};
 
 const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggestion, isCompletedToday }) => {
   const today = new Date().toISOString().split('T')[0];
@@ -51,14 +68,24 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
     const sortedDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b));
     const daysText = sortedDays.length === 7 ? "Daily" : sortedDays.join(', ');
 
+    let durationText = '';
+    if (habit.durationHours && habit.durationHours > 0) {
+      durationText += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
+    }
+    if (habit.durationMinutes && habit.durationMinutes > 0) {
+      if (durationText) durationText += ' ';
+      durationText += `${habit.durationMinutes} min`;
+    }
+
+
     const shareText = `Check out this habit I'm tracking with Habitual!
 
 Habit: ${habit.name}
 ${habit.description ? `Description: ${habit.description}\n` : ''}
 Days: ${daysText}
 ${habit.optimalTiming ? `Optimal Timing: ${habit.optimalTiming}\n` : ''}
-${habit.duration ? `Duration: ${habit.duration}\n` : ''}
-${habit.specificTime ? `Specific Time: ${habit.specificTime}\n` : ''}
+${durationText ? `Duration: ${durationText}\n` : ''}
+${habit.specificTime ? `Specific Time: ${formatSpecificTime(habit.specificTime)}\n` : ''}
 
 Track your habits with Habitual!`;
 
@@ -101,6 +128,15 @@ Track your habits with Habitual!`;
 
   const displayDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b)).join(', ');
 
+  let durationDisplay = '';
+  if (habit.durationHours && habit.durationHours > 0) {
+    durationDisplay += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
+  }
+  if (habit.durationMinutes && habit.durationMinutes > 0) {
+    if (durationDisplay) durationDisplay += ' ';
+    durationDisplay += `${habit.durationMinutes} min`;
+  }
+  const formattedSpecificTime = formatSpecificTime(habit.specificTime);
 
   return (
     <Card className={`transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isCompletedToday ? 'border-accent bg-green-50 dark:bg-green-900/30' : 'bg-card'}`}>
@@ -130,7 +166,7 @@ Track your habits with Habitual!`;
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
-          <div className="flex items-center col-span-full sm:col-span-1"> {/* Make daysOfWeek take full width on small, half on sm+ */}
+          <div className="flex items-center col-span-full sm:col-span-1">
             <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
             <span>Days: {displayDays.length > 0 ? displayDays : 'Not specified'}</span>
           </div>
@@ -140,16 +176,16 @@ Track your habits with Habitual!`;
               <span>Optimal Timing: {habit.optimalTiming}</span>
             </div>
           )}
-          {habit.duration && (
+          {durationDisplay && (
             <div className="flex items-center">
-              <Timer className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Duration: {habit.duration}</span>
+              <Hourglass className="mr-2 h-4 w-4 flex-shrink-0" />
+              <span>Duration: {durationDisplay}</span>
             </div>
           )}
-          {habit.specificTime && (
+          {formattedSpecificTime && (
              <div className="flex items-center">
               <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Specific Time: {habit.specificTime}</span>
+              <span>Specific Time: {formattedSpecificTime}</span>
             </div>
           )}
         </div>

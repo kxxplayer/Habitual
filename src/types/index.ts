@@ -9,8 +9,9 @@ export interface Habit {
   description?: string; // Optional: Original user description for AI context
   daysOfWeek: string[]; // e.g., ["Mon", "Wed", "Fri"] or ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] for daily
   optimalTiming?: string; // e.g., "Morning", "Evening" - AI suggestion
-  duration?: string; // e.g., "30 minutes", "1 hour"
-  specificTime?: string; // e.g., "08:00 AM", "Anytime"
+  durationHours?: number; // e.g., 1 for 1 hour
+  durationMinutes?: number; // e.g., 30 for 30 minutes
+  specificTime?: string; // e.g., "08:00" (HH:mm format for input type="time"), "Anytime"
   completionLog: HabitCompletionLogEntry[]; // Array of completion entries
 }
 
