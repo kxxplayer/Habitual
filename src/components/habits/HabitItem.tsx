@@ -7,12 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp } from 'lucide-react';
+import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp, Flame } from 'lucide-react';
 import type { Habit, WeekDay } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
-import { isDateInCurrentWeek, getDayAbbreviationFromDate } from '@/lib/dateUtils';
+import { isDateInCurrentWeek, getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
 
 
 interface HabitItemProps {
@@ -44,6 +44,14 @@ const formatSpecificTime = (timeStr?: string): string | undefined => {
 const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggestion, isCompletedToday, isSelected, onSelectToggle }) => {
   const todayString = new Date().toISOString().split('T')[0];
   const { toast } = useToast();
+  const [currentDate, setCurrentDate] = React.useState(new Date()); // For streak calculation
+
+  // Update current date for streak calculation when component mounts or todayString changes
+  React.useEffect(() => {
+    setCurrentDate(new Date());
+  }, [todayString]);
+
+  const streak = calculateStreak(habit, currentDate);
 
   const handleToggleDailyCompletion = () => {
     onToggleComplete(habit.id, todayString, !isCompletedToday);
@@ -89,7 +97,7 @@ Days: ${daysText}
 ${habit.optimalTiming ? `Optimal Timing: ${habit.optimalTiming}\n` : ''}
 ${durationText ? `Duration: ${durationText}\n` : ''}
 ${habit.specificTime ? `Specific Time: ${formatSpecificTime(habit.specificTime)}\n` : ''}
-
+${streak > 0 ? `Current Streak: ${streak} day(s)!\n` : ''}
 Track your habits with Habitual!`;
 
     const copyToClipboard = async (text: string) => {
@@ -145,11 +153,11 @@ Track your habits with Habitual!`;
   const scheduledDaysInWeek = habit.daysOfWeek.length;
   let completedCountInCurrentWeek = 0;
   if (scheduledDaysInWeek > 0) {
-    const completedOnScheduledDaysThisWeek = new Set<string>(); // Tracks 'YYYY-MM-DD' of completions
+    const completedOnScheduledDaysThisWeek = new Set<string>(); 
     habit.completionLog.forEach(log => {
-      if (isDateInCurrentWeek(log.date)) {
+      if (isDateInCurrentWeek(log.date, currentDate)) {
         try {
-            const completionDateObj = parseISO(log.date + 'T00:00:00Z'); // Treat as UTC date part
+            const completionDateObj = parseISO(log.date + 'T00:00:00Z'); 
             const dayOfCompletion = getDayAbbreviationFromDate(completionDateObj);
             if (habit.daysOfWeek.includes(dayOfCompletion)) {
                 completedOnScheduledDaysThisWeek.add(log.date);
@@ -177,13 +185,26 @@ Track your habits with Habitual!`;
       </div>
       <CardHeader className="pt-3 pl-12">
         <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-xl font-semibold text-primary">
-              {habit.name}
-            </CardTitle>
+          <div className="flex-grow mr-2">
+            <div className="flex items-center gap-2 mb-0.5">
+              <CardTitle className="text-xl font-semibold text-primary">
+                {habit.name}
+              </CardTitle>
+              {streak > 0 ? (
+                <div className="flex items-center text-orange-500 animate-pulse" title={`Current streak: ${streak} days`}>
+                  <Flame className="h-5 w-5" />
+                  <span className="ml-1 text-sm font-semibold">{streak}</span>
+                </div>
+              ) : (
+                <div className="flex items-center text-muted-foreground opacity-60" title="No active streak">
+                  <Flame className="h-5 w-5" />
+                   <span className="ml-1 text-sm font-semibold">0</span>
+                </div>
+              )}
+            </div>
             {habit.description && <CardDescription className="text-sm text-muted-foreground mt-1">{habit.description}</CardDescription>}
           </div>
-          <div className="flex flex-col items-center space-y-1 text-center">
+          <div className="flex flex-col items-center space-y-1 text-center flex-shrink-0">
             <Button 
               variant="ghost" 
               size="icon" 
