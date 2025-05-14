@@ -6,9 +6,8 @@ import type { FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, TrendingUp } from 'lucide-react';
+import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp } from 'lucide-react';
 import type { Habit, WeekDay } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -46,8 +45,8 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
   const todayString = new Date().toISOString().split('T')[0];
   const { toast } = useToast();
 
-  const handleCompletionChange = (checked: boolean) => {
-    onToggleComplete(habit.id, todayString, checked);
+  const handleToggleDailyCompletion = () => {
+    onToggleComplete(habit.id, todayString, !isCompletedToday);
   };
 
   const handleAddToCalendar = () => {
@@ -179,28 +178,31 @@ Track your habits with Habitual!`;
       <CardHeader className="pt-3 pl-12">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-xl font-semibold text-primary flex items-center">
-              {isCompletedToday && <CheckCircle2 className="mr-2 h-5 w-5 text-accent" />}
+            <CardTitle className="text-xl font-semibold text-primary">
               {habit.name}
             </CardTitle>
             {habit.description && <CardDescription className="text-sm text-muted-foreground mt-1">{habit.description}</CardDescription>}
           </div>
-          <div className="flex flex-col items-end space-y-1">
-             <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`complete-${habit.id}`}
-                  checked={isCompletedToday}
-                  onCheckedChange={(checked) => handleCompletionChange(Boolean(checked))}
-                  className={`transform scale-125 ${isCompletedToday ? 'data-[state=checked]:bg-accent data-[state=checked]:border-accent' : 'border-primary'}`}
-                  aria-label={`Mark ${habit.name} as done for today`}
-                />
-                <Label htmlFor={`complete-${habit.id}`} className={`text-sm font-medium cursor-pointer ${isCompletedToday ? 'text-accent-foreground dark:text-accent' : 'text-foreground'}`}>
-                  Done Today
-                </Label>
-              </div>
-              {isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A' && (
-                <p className="text-xs text-muted-foreground">Completed at {latestCompletionTimeToday}</p>
+          <div className="flex flex-col items-center space-y-1 text-center">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleToggleDailyCompletion} 
+              className="rounded-full p-0 h-10 w-10 group"
+              aria-label={isCompletedToday ? `Mark ${habit.name} as not done for today` : `Mark ${habit.name} as done for today`}
+            >
+              {isCompletedToday ? (
+                <CheckCircle2 className="h-8 w-8 text-accent group-hover:text-accent/90 transition-colors" />
+              ) : (
+                <Circle className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
               )}
+            </Button>
+            {isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A' && (
+              <p className="text-xs text-muted-foreground">at {latestCompletionTimeToday}</p>
+            )}
+            <p className={`text-xs font-medium ${isCompletedToday ? 'text-accent' : 'text-muted-foreground'}`}>
+              {isCompletedToday ? "Completed!" : "Mark Done"}
+            </p>
           </div>
         </div>
       </CardHeader>
@@ -265,4 +267,3 @@ Track your habits with Habitual!`;
 };
 
 export default HabitItem;
-
