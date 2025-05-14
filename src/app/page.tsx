@@ -9,7 +9,7 @@ import { z } from 'zod';
 import AppHeader from '@/components/layout/AppHeader';
 import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
-import type { Habit, AISuggestion as AISuggestionType, HabitCompletionLogEntry } from '@/types';
+import type { Habit, AISuggestion as AISuggestionType } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import { useToast } from '@/hooks/use-toast';
@@ -18,15 +18,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Loader2, Wand2, Clock, CalendarClock, Timer, Smile, PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2, Wand2, Clock, CalendarClock, Timer, Smile, PlusCircle, CheckSquare, Square } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 // Form schema for creating habits
+const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+type WeekDay = typeof weekDays[number];
+
 const createHabitFormSchema = z.object({
   description: z.string().optional(), // For AI suggestion
   name: z.string().min(1, "Habit name is required."),
-  frequency: z.string().min(1, "Frequency is required."),
+  daysOfWeek: z.array(z.enum(weekDays)).min(1, "Please select at least one day."),
   optimalTiming: z.string().optional(),
   duration: z.string().optional(),
   specificTime: z.string().optional(),
@@ -36,13 +40,11 @@ type CreateHabitFormData = z.infer<typeof createHabitFormSchema>;
 
 const HabitualPage: NextPage = () => {
   const [habits, setHabits] = useState<Habit[]>([]);
-  // State for CreateHabitDialog removed: const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = useState(false);
   const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = useState(false);
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = useState<Habit | null>(null);
   const [aiSuggestion, setAISuggestion] = useState<AISuggestionType | null>(null);
   const { toast } = useToast();
 
-  // Form state and handlers for the inline "Add Habit" form
   const [isAISuggestingDetails, setIsAISuggestingDetails] = useState(false);
   const { 
     control: createHabitFormControl, 
@@ -56,7 +58,7 @@ const HabitualPage: NextPage = () => {
     defaultValues: {
       description: '',
       name: '',
-      frequency: '',
+      daysOfWeek: [],
       optimalTiming: '',
       duration: '',
       specificTime: '',
@@ -64,33 +66,60 @@ const HabitualPage: NextPage = () => {
   });
 
   const habitDescriptionForAI = watchCreateHabitForm('description');
+  const selectedDaysOfWeek = watchCreateHabitForm('daysOfWeek');
 
-  // Load habits from local storage
+
   useEffect(() => {
     const storedHabits = localStorage.getItem('habits');
     if (storedHabits) {
       try {
-        const parsedHabits: Habit[] = JSON.parse(storedHabits).map((habit: any) => ({
-          id: habit.id || Date.now().toString(),
-          name: habit.name || 'Unnamed Habit',
-          description: habit.description || undefined,
-          frequency: habit.frequency || 'Daily',
-          optimalTiming: habit.optimalTiming || undefined,
-          duration: habit.duration || undefined,
-          specificTime: habit.specificTime || undefined,
-          completionLog: habit.completionLog || (habit.completedDates 
-            ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A' })) 
-            : []),
-        }));
+        const parsedHabits: Habit[] = JSON.parse(storedHabits).map((habit: any) => {
+          let daysOfWeek: WeekDay[] = habit.daysOfWeek || [];
+          // Migration from old 'frequency' field
+          if (!habit.daysOfWeek && habit.frequency) {
+            const freqLower = habit.frequency.toLowerCase();
+            if (freqLower === 'daily') {
+              daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            } else {
+              const dayMap: { [key: string]: WeekDay } = {
+                'sun': 'Sun', 'sunday': 'Sun',
+                'mon': 'Mon', 'monday': 'Mon',
+                'tue': 'Tue', 'tuesday': 'Tue',
+                'wed': 'Wed', 'wednesday': 'Wed',
+                'thu': 'Thu', 'thursday': 'Thu',
+                'fri': 'Fri', 'friday': 'Fri',
+                'sat': 'Sat', 'saturday': 'Sat',
+              };
+              const potentialDays = freqLower.split(/[\s,]+/)
+                .map((d: string) => dayMap[d.trim() as keyof typeof dayMap])
+                .filter(Boolean) as WeekDay[];
+              if (potentialDays.length > 0) {
+                daysOfWeek = potentialDays;
+              }
+            }
+          }
+
+          return {
+            id: habit.id || Date.now().toString(),
+            name: habit.name || 'Unnamed Habit',
+            description: habit.description || undefined,
+            daysOfWeek: daysOfWeek,
+            optimalTiming: habit.optimalTiming || undefined,
+            duration: habit.duration || undefined,
+            specificTime: habit.specificTime || undefined,
+            completionLog: habit.completionLog || (habit.completedDates 
+              ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A' })) 
+              : []),
+          };
+        });
         setHabits(parsedHabits);
       } catch (error) {
         console.error("Failed to parse habits from localStorage:", error);
-        localStorage.removeItem('habits');
+        localStorage.removeItem('habits'); // Clear corrupted data
       }
     }
   }, []);
 
-  // Save habits to local storage
   useEffect(() => {
     localStorage.setItem('habits', JSON.stringify(habits));
   }, [habits]);
@@ -159,7 +188,6 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-  // AI Suggestion for the inline form
   const handleAISuggestDetailsOnPage = async () => {
     if (!habitDescriptionForAI || habitDescriptionForAI.trim() === "") {
       toast({
@@ -173,7 +201,9 @@ const HabitualPage: NextPage = () => {
     try {
       const result = await createHabitFromDescription({ description: habitDescriptionForAI });
       setCreateHabitFormValue('name', result.habitName);
-      setCreateHabitFormValue('frequency', result.frequency);
+      // Ensure AI returns valid 3-letter day codes or map them
+      const validSuggestedDays = result.daysOfWeek.filter(day => weekDays.includes(day as WeekDay)) as WeekDay[];
+      setCreateHabitFormValue('daysOfWeek', validSuggestedDays);
       setCreateHabitFormValue('optimalTiming', result.optimalTiming || '');
       setCreateHabitFormValue('duration', result.duration || '');
       setCreateHabitFormValue('specificTime', result.specificTime || '');
@@ -193,25 +223,22 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-  // Form submission for the inline form
   const onSubmitHabitOnPage = (data: CreateHabitFormData) => {
     handleAddHabit({
       name: data.name,
-      description: data.description, // Save original description too
-      frequency: data.frequency,
+      description: data.description,
+      daysOfWeek: data.daysOfWeek,
       optimalTiming: data.optimalTiming,
       duration: data.duration,
       specificTime: data.specificTime,
     });
-    resetCreateHabitForm(); // Reset the form fields
+    resetCreateHabitForm();
   };
-
 
   return (
     <div className="min-h-screen flex flex-col">
-      <AppHeader /> {/* onAddHabitClick removed */}
+      <AppHeader />
       <main className="flex-grow container mx-auto px-4 py-8">
-        {/* Inline Add Habit Form */}
         <Card className="mb-8 shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold flex items-center">
@@ -237,26 +264,47 @@ const HabitualPage: NextPage = () => {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="habit-name" className="font-medium">Habit Name</Label>
-                  <Controller
-                    name="name"
-                    control={createHabitFormControl}
-                    render={({ field }) => <Input id="habit-name" placeholder="e.g., Read a chapter daily" {...field} className="bg-input/50" />}
-                  />
-                  {createHabitFormErrors.name && <p className="text-sm text-destructive">{createHabitFormErrors.name.message}</p>}
+              <div className="space-y-2">
+                <Label htmlFor="habit-name" className="font-medium">Habit Name</Label>
+                <Controller
+                  name="name"
+                  control={createHabitFormControl}
+                  render={({ field }) => <Input id="habit-name" placeholder="e.g., Read a chapter daily" {...field} className="bg-input/50" />}
+                />
+                {createHabitFormErrors.name && <p className="text-sm text-destructive">{createHabitFormErrors.name.message}</p>}
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="font-medium">Days of the Week</Label>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2 p-2 border rounded-md bg-input/20">
+                  {weekDays.map((day) => (
+                    <Controller
+                      key={day}
+                      name="daysOfWeek"
+                      control={createHabitFormControl}
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2 p-1.5 rounded-md hover:bg-accent/10 transition-colors">
+                          <Checkbox
+                            id={`day-${day}`}
+                            checked={field.value?.includes(day)}
+                            onCheckedChange={(checked) => {
+                              const currentDays = field.value || [];
+                              const newDays = checked
+                                ? [...currentDays, day]
+                                : currentDays.filter((d) => d !== day);
+                              // Ensure unique days and maintain original order if possible, or sort
+                              const uniqueDays = Array.from(new Set(newDays)).sort((a, b) => weekDays.indexOf(a) - weekDays.indexOf(b));
+                              field.onChange(uniqueDays);
+                            }}
+                            className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                          />
+                          <Label htmlFor={`day-${day}`} className="text-sm font-normal cursor-pointer select-none">{day}</Label>
+                        </div>
+                      )}
+                    />
+                  ))}
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="habit-frequency" className="font-medium">Frequency</Label>
-                  <Controller
-                    name="frequency"
-                    control={createHabitFormControl}
-                    render={({ field }) => <Input id="habit-frequency" placeholder="e.g., Daily, 3 times a week" {...field} className="bg-input/50" />}
-                  />
-                  {createHabitFormErrors.frequency && <p className="text-sm text-destructive">{createHabitFormErrors.frequency.message}</p>}
-                </div>
+                {createHabitFormErrors.daysOfWeek && <p className="text-sm text-destructive">{createHabitFormErrors.daysOfWeek.message}</p>}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -310,8 +358,6 @@ const HabitualPage: NextPage = () => {
         />
       </main>
       
-      {/* CreateHabitDialog removed from here */}
-
       {selectedHabitForAISuggestion && aiSuggestion && (
         <AISuggestionDialog
           isOpen={isAISuggestionDialogOpen}

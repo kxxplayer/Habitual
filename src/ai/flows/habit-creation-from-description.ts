@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview Creates a habit from a user-provided description by suggesting details like frequency, timing, duration, and specific time.
+ * @fileOverview Creates a habit from a user-provided description by suggesting details like name, days of the week, timing, duration, and specific time.
  *
  * - createHabitFromDescription - A function that handles the habit creation process.
  * - HabitCreationInput - The input type for the createHabitFromDescription function.
@@ -18,7 +18,7 @@ export type HabitCreationInput = z.infer<typeof HabitCreationInputSchema>;
 
 const HabitCreationOutputSchema = z.object({
   habitName: z.string().describe('A suggested name for the habit.'),
-  frequency: z.string().describe('A suggested frequency for performing the habit (e.g., daily, weekly, monthly).'),
+  daysOfWeek: z.array(z.string().length(3)).describe('Suggested days of the week (3-letter abbreviations like "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun") for the habit. For daily, suggest all seven days.'),
   optimalTiming: z.string().describe('A suggested general optimal time of day to perform the habit (e.g., morning, afternoon, evening).'),
   duration: z.string().optional().describe('A suggested duration for the habit activity (e.g., "30 minutes", "1 hour").'),
   specificTime: z.string().optional().describe('A suggested specific time for the habit if applicable (e.g., "08:00 AM", "Anytime").'),
@@ -37,7 +37,7 @@ const prompt = ai.definePrompt({
 
   Based on the following description, suggest:
   1. A habit name.
-  2. A frequency (e.g., daily, weekly).
+  2. The days of the week this habit should be performed. Provide this as an array of 3-letter day abbreviations (e.g., ["Mon", "Wed", "Fri"] or ["Sat", "Sun"] for weekends, or ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] for daily habits).
   3. An optimal general timing (e.g., morning, afternoon, evening).
   4. A suitable duration for the activity (e.g., "30 minutes", "1 hour").
   5. A specific time of day if applicable (e.g., "08:00 AM", "Anytime", or "Flexible").
@@ -54,6 +54,16 @@ const createHabitFromDescriptionFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
+    // Ensure daysOfWeek is an array, even if AI returns a single string by mistake (though schema should enforce array)
+    if (output && output.daysOfWeek && !Array.isArray(output.daysOfWeek)) {
+        // This is a fallback, schema validation should ideally catch this.
+        // If AI sends a string like "Mon,Tue,Wed", try to split. Otherwise, wrap.
+        if (typeof output.daysOfWeek === 'string' && (output.daysOfWeek as string).includes(',')) {
+           output.daysOfWeek = (output.daysOfWeek as string).split(',').map(d => d.trim());
+        } else {
+           output.daysOfWeek = [output.daysOfWeek as any];
+        }
+    }
     return output!;
   }
 );

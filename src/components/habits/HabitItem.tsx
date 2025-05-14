@@ -18,6 +18,8 @@ interface HabitItemProps {
   isCompletedToday: boolean;
 }
 
+const weekDaysOrder = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggestion, isCompletedToday }) => {
   const today = new Date().toISOString().split('T')[0];
   const { toast } = useToast();
@@ -29,7 +31,6 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
   const handleAddToCalendar = () => {
     try {
       const icsContent = generateICS(habit);
-      // Sanitize habit name for filename
       const filename = `${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_habit.ics`;
       downloadICS(filename, icsContent);
       toast({
@@ -47,11 +48,14 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
   };
 
   const handleShareHabit = async () => {
+    const sortedDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b));
+    const daysText = sortedDays.length === 7 ? "Daily" : sortedDays.join(', ');
+
     const shareText = `Check out this habit I'm tracking with Habitual!
 
 Habit: ${habit.name}
 ${habit.description ? `Description: ${habit.description}\n` : ''}
-Frequency: ${habit.frequency}
+Days: ${daysText}
 ${habit.optimalTiming ? `Optimal Timing: ${habit.optimalTiming}\n` : ''}
 ${habit.duration ? `Duration: ${habit.duration}\n` : ''}
 ${habit.specificTime ? `Specific Time: ${habit.specificTime}\n` : ''}
@@ -73,19 +77,15 @@ Track your habits with Habitual!`;
         await navigator.share({
           title: `Habit: ${habit.name}`,
           text: shareText,
-          // url: window.location.href, // Could be added if app is deployed and has unique URLs per habit
         });
         toast({ title: "Habit Shared!", description: "The habit details have been shared." });
       } catch (error) {
-        // Check if error is due to user cancellation (AbortError)
         if ((error as DOMException).name === 'AbortError') {
           console.log("Share action was cancelled by the user.");
-          // Optionally, don't toast or copy if user explicitly cancelled.
-          // For now, we'll fall back to copy as per original plan for simplicity.
           copyToClipboard(shareText);
         } else {
           console.error("Error sharing habit:", error);
-          copyToClipboard(shareText); // Fallback to clipboard on other errors
+          copyToClipboard(shareText); 
         }
       }
     } else {
@@ -98,6 +98,9 @@ Track your habits with Habitual!`;
     .map(log => log.time)
     .sort()
     .pop();
+
+  const displayDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b)).join(', ');
+
 
   return (
     <Card className={`transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isCompletedToday ? 'border-accent bg-green-50 dark:bg-green-900/30' : 'bg-card'}`}>
@@ -127,9 +130,9 @@ Track your habits with Habitual!`;
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
-          <div className="flex items-center">
+          <div className="flex items-center col-span-full sm:col-span-1"> {/* Make daysOfWeek take full width on small, half on sm+ */}
             <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
-            <span>Frequency: {habit.frequency}</span>
+            <span>Days: {displayDays.length > 0 ? displayDays : 'Not specified'}</span>
           </div>
           {habit.optimalTiming && (
             <div className="flex items-center">

@@ -7,7 +7,7 @@ export interface Habit {
   id: string;
   name: string;
   description?: string; // Optional: Original user description for AI context
-  frequency: string; // e.g., "Daily", "Mon, Wed, Fri", "3 times a week"
+  daysOfWeek: string[]; // e.g., ["Mon", "Wed", "Fri"] or ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] for daily
   optimalTiming?: string; // e.g., "Morning", "Evening" - AI suggestion
   duration?: string; // e.g., "30 minutes", "1 hour"
   specificTime?: string; // e.g., "08:00 AM", "Anytime"
