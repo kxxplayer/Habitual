@@ -49,10 +49,10 @@ const HabitualPage: NextPage = () => {
       try {
         const parsedHabits: Habit[] = JSON.parse(storedHabits).map((habit: any) => {
           let daysOfWeek: WeekDay[] = habit.daysOfWeek || [];
-          if (!habit.daysOfWeek && habit.frequency) { 
+          if (!habit.daysOfWeek && habit.frequency) {
             const freqLower = habit.frequency.toLowerCase();
             if (freqLower === 'daily') daysOfWeek = [...weekDays];
-            else { 
+            else {
               const dayMap: { [key: string]: WeekDay } = {
                 'sun': 'Sun', 'sunday': 'Sun', 'mon': 'Mon', 'monday': 'Mon',
                 'tue': 'Tue', 'tuesday': 'Tue', 'wed': 'Wed', 'wednesday': 'Wed',
@@ -72,20 +72,20 @@ const HabitualPage: NextPage = () => {
             const minMatch = durationStr.match(/(\d+)\s*min/);
             if (hourMatch) migratedDurationHours = parseInt(hourMatch[1]);
             if (minMatch) migratedDurationMinutes = parseInt(minMatch[1]);
-            
+
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
-                if (numVal <= 120) migratedDurationMinutes = numVal; 
+                if (numVal <= 120) migratedDurationMinutes = numVal;
             }
           }
-          
+
           let migratedSpecificTime = habit.specificTime;
           if (migratedSpecificTime && /\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime)) {
             try {
               const [timePart, modifier] = migratedSpecificTime.split(/\s+/);
               let [hours, minutes] = timePart.split(':').map(Number);
               if (modifier && modifier.toLowerCase() === 'pm' && hours < 12) hours += 12;
-              if (modifier && modifier.toLowerCase() === 'am' && hours === 12) hours = 0; 
+              if (modifier && modifier.toLowerCase() === 'am' && hours === 12) hours = 0;
               migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
             } catch (e) { /* ignore conversion error, keep original */ }
           } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) {
@@ -103,15 +103,15 @@ const HabitualPage: NextPage = () => {
             durationHours: migratedDurationHours,
             durationMinutes: migratedDurationMinutes,
             specificTime: migratedSpecificTime || undefined,
-            completionLog: habit.completionLog || (habit.completedDates 
-              ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A' })) 
+            completionLog: habit.completionLog || (habit.completedDates
+              ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A' }))
               : []),
           };
         });
         setHabits(parsedHabits);
       } catch (error) {
         console.error("Failed to parse habits from localStorage:", error);
-        localStorage.removeItem('habits'); 
+        localStorage.removeItem('habits');
       }
     }
   }, []);
@@ -123,7 +123,7 @@ const HabitualPage: NextPage = () => {
   const handleAddHabit = (newHabitData: Omit<Habit, 'id' | 'completionLog'>) => {
     const newHabit: Habit = {
       ...newHabitData,
-      id: Date.now().toString() + Math.random().toString(36).substring(2,7), 
+      id: Date.now().toString() + Math.random().toString(36).substring(2,7),
       completionLog: [],
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
@@ -141,13 +141,17 @@ const HabitualPage: NextPage = () => {
           let newCompletionLog = [...habit.completionLog];
           if (completed) {
             const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-            newCompletionLog = newCompletionLog.filter(log => log.date !== date); 
+            newCompletionLog = newCompletionLog.filter(log => log.date !== date);
             newCompletionLog.push({ date, time: currentTime });
             toast({
                 title: "Great Job!",
                 description: `You've completed "${habit.name}" for today!`,
                 className: "bg-accent border-green-600 text-accent-foreground",
             });
+            // TODO: Play completion sound if available
+            // Example:
+            // const audio = new Audio('/sounds/completion-chime.mp3');
+            // audio.play().catch(e => console.error("Error playing sound:", e));
           } else {
             newCompletionLog = newCompletionLog.filter(log => log.date !== date);
           }
@@ -170,11 +174,11 @@ const HabitualPage: NextPage = () => {
       setAISuggestion({ habitId: habit.id, suggestionText: result.suggestion, isLoading: false });
     } catch (error) {
       console.error("Error fetching AI suggestion:", error);
-      setAISuggestion({ 
-        habitId: habit.id, 
-        suggestionText: '', 
-        isLoading: false, 
-        error: 'Failed to get suggestion.' 
+      setAISuggestion({
+        habitId: habit.id,
+        suggestionText: '',
+        isLoading: false,
+        error: 'Failed to get suggestion.'
       });
       toast({
         title: "AI Suggestion Error",
@@ -215,16 +219,16 @@ const HabitualPage: NextPage = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-neutral-100 dark:bg-neutral-900 p-2 sm:p-4">
-      <div 
+      <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
-          maxWidth: 'clamp(320px, 100%, 450px)', 
+          maxWidth: 'clamp(320px, 100%, 450px)',
           aspectRatio: '9 / 16',
-          overflow: 'hidden', 
+          overflow: 'hidden',
         }}
       >
         <AppHeader />
-        
+
         <div className="flex-grow overflow-y-auto">
           <main className="px-3 sm:px-4 py-6">
             <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -293,18 +297,18 @@ const HabitualPage: NextPage = () => {
             />
           </main>
         </div>
-        
+
         <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0">
           <p>&copy; {new Date().getFullYear()} Habitual.</p>
         </footer>
       </div>
-      
+
       <CreateHabitDialog
         isOpen={isCreateHabitDialogOpen}
         onClose={() => setIsCreateHabitDialogOpen(false)}
         onAddHabit={(data) => {
           handleAddHabit(data);
-          setIsCreateHabitDialogOpen(false); 
+          setIsCreateHabitDialogOpen(false);
         }}
       />
 

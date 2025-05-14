@@ -2,7 +2,7 @@
 // src/components/habits/HabitItem.tsx
 "use client";
 
-import * as React from 'react'; // Added this line
+import * as React from 'react';
 import type { FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,11 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
 
   const handleToggleDailyCompletion = () => {
     onToggleComplete(habit.id, todayString, !isCompletedToday);
+    // Placeholder for playing a sound if the habit is being marked as complete
+    // if (!isCompletedToday) {
+    //   // const audio = new Audio('/sounds/complete-chime.mp3'); // Example
+    //   // audio.play();
+    // }
   };
 
   const handleAddToCalendar = () => {
@@ -154,11 +159,11 @@ Track your habits with Habitual!`;
   const scheduledDaysInWeek = habit.daysOfWeek.length;
   let completedCountInCurrentWeek = 0;
   if (scheduledDaysInWeek > 0) {
-    const completedOnScheduledDaysThisWeek = new Set<string>(); 
+    const completedOnScheduledDaysThisWeek = new Set<string>();
     habit.completionLog.forEach(log => {
       if (isDateInCurrentWeek(log.date, currentDate)) {
         try {
-            const completionDateObj = parseISO(log.date + 'T00:00:00Z'); 
+            const completionDateObj = parseISO(log.date + 'T00:00:00Z');
             const dayOfCompletion = getDayAbbreviationFromDate(completionDateObj);
             if (habit.daysOfWeek.includes(dayOfCompletion)) {
                 completedOnScheduledDaysThisWeek.add(log.date);
@@ -170,7 +175,7 @@ Track your habits with Habitual!`;
     });
     completedCountInCurrentWeek = completedOnScheduledDaysThisWeek.size;
   }
-  
+
   const weeklyProgressPercent = scheduledDaysInWeek > 0 ? (completedCountInCurrentWeek / scheduledDaysInWeek) * 100 : 0;
 
   return (
@@ -206,11 +211,11 @@ Track your habits with Habitual!`;
             {habit.description && <CardDescription className="text-sm text-muted-foreground mt-1">{habit.description}</CardDescription>}
           </div>
           <div className="flex flex-col items-center space-y-1 text-center flex-shrink-0">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleToggleDailyCompletion} 
-              className="rounded-full p-0 h-10 w-10 group"
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleDailyCompletion}
+              className="rounded-full p-0 h-10 w-10 group transform transition-transform active:scale-95"
               aria-label={isCompletedToday ? `Mark ${habit.name} as not done for today` : `Mark ${habit.name} as done for today`}
             >
               {isCompletedToday ? (
@@ -260,10 +265,10 @@ Track your habits with Habitual!`;
               <span className="flex items-center"><TrendingUp className="mr-1.5 h-3.5 w-3.5 text-primary/90" />Weekly Goal</span>
               <span>{completedCountInCurrentWeek} / {scheduledDaysInWeek} days</span>
             </div>
-            <Progress 
-              value={weeklyProgressPercent} 
-              indicatorClassName="bg-accent" 
-              className="h-2" 
+            <Progress
+              value={weeklyProgressPercent}
+              indicatorClassName="bg-accent"
+              className="h-2"
               aria-label={`Weekly progress: ${completedCountInCurrentWeek} of ${scheduledDaysInWeek} days completed`}
             />
           </div>
@@ -289,4 +294,3 @@ Track your habits with Habitual!`;
 };
 
 export default HabitItem;
-
