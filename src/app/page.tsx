@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import AppHeader from '@/components/layout/AppHeader';
 import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
-import HabitOverview from '@/components/overview/HabitOverview'; // Import the new component
+import HabitOverview from '@/components/overview/HabitOverview';
 import type { Habit, AISuggestion as AISuggestionType, WeekDay } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { useToast } from '@/hooks/use-toast';
@@ -143,14 +142,13 @@ const HabitualPage: NextPage = () => {
           let newCompletionLog = [...habit.completionLog];
           if (completed) {
             const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-            newCompletionLog = newCompletionLog.filter(log => log.date !== date);
+            newCompletionLog = newCompletionLog.filter(log => log.date !== date); // Remove previous entries for the same date
             newCompletionLog.push({ date, time: currentTime });
             toast({
                 title: "Great Job!",
                 description: `You've completed "${habit.name}" for today!`,
                 className: "bg-accent border-green-600 text-accent-foreground",
             });
-            // TODO: Play completion sound if available
             // Example:
             // const audio = new Audio('/sounds/completion-chime.mp3');
             // audio.play().catch(e => console.error("Error playing sound:", e));
@@ -233,64 +231,63 @@ const HabitualPage: NextPage = () => {
 
         <div className="flex-grow overflow-y-auto">
           <main className="px-3 sm:px-4 py-6">
-            <HabitOverview habits={habits} /> {/* Add the overview component here */}
-
-            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="mb-6">
               <Button size="lg" onClick={() => setIsCreateHabitDialogOpen(true)} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Add New Habit
               </Button>
-
-              {habits.length > 0 && (
-                <div className="flex items-center gap-2 sm:gap-4 p-2 border rounded-md bg-card shadow-sm w-full sm:w-auto justify-between sm:justify-start">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="select-all-habits"
-                      checked={allHabitsSelected}
-                      onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
-                      disabled={habits.length === 0}
-                      aria-label="Select all habits"
-                    />
-                    <Label htmlFor="select-all-habits" className="text-xs sm:text-sm font-medium">
-                      {allHabitsSelected ? "Deselect All" : "Select All"}
-                    </Label>
-                  </div>
-                  <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                    {selectedHabitIds.length > 0 ? `${selectedHabitIds.length} sel.` : ""}
-                  </span>
-                  <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={selectedHabitIds.length === 0}
-                        className="px-2 sm:px-3"
-                      >
-                        <Trash2 className="mr-0 sm:mr-2 h-4 w-4" />
-                        <span className="hidden sm:inline">Delete</span>
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center">
-                          <AlertTriangle className="mr-2 h-5 w-5 text-destructive" />
-                          Confirm Deletion
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete {selectedHabitIds.length} selected habit(s)? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteSelectedHabits} className="bg-destructive hover:bg-destructive/90">
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              )}
             </div>
+            
+            <HabitOverview habits={habits} />
+
+            {selectedHabitIds.length > 0 && habits.length > 0 && (
+              <div className="my-4 flex items-center gap-2 sm:gap-4 p-2 border rounded-md bg-card shadow-sm w-full justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="select-all-habits"
+                    checked={allHabitsSelected}
+                    onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
+                    disabled={habits.length === 0}
+                    aria-label="Select all habits"
+                  />
+                  <Label htmlFor="select-all-habits" className="text-xs sm:text-sm font-medium">
+                    {allHabitsSelected ? "Deselect All" : "Select All"}
+                  </Label>
+                </div>
+                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                  {`${selectedHabitIds.length} sel.`}
+                </span>
+                <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="px-2 sm:px-3"
+                    >
+                      <Trash2 className="mr-0 sm:mr-2 h-4 w-4" />
+                      <span className="hidden sm:inline">Delete</span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center">
+                        <AlertTriangle className="mr-2 h-5 w-5 text-destructive" />
+                        Confirm Deletion
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete {selectedHabitIds.length} selected habit(s)? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteSelectedHabits} className="bg-destructive hover:bg-destructive/90">
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
 
             <HabitList
               habits={habits}
@@ -331,4 +328,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
