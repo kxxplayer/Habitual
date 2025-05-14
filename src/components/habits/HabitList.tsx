@@ -32,7 +32,7 @@ const HabitList: FC<HabitListProps> = ({ habits, onToggleComplete, onGetAISugges
           habit={habit}
           onToggleComplete={onToggleComplete}
           onGetAISuggestion={onGetAISuggestion}
-          isCompletedToday={habit.completedDates.includes(today)}
+          isCompletedToday={habit.completionLog.some(log => log.date === today)}
         />
       ))}
     </div>
