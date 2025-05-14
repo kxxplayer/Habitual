@@ -6,7 +6,7 @@ import type { NextPage } from 'next';
 import AppHeader from '@/components/layout/AppHeader';
 import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
-import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
+import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm'; // New import
 import HabitOverview from '@/components/overview/HabitOverview';
 import type { Habit, AISuggestion as AISuggestionType, WeekDay } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
@@ -46,7 +46,7 @@ const HabitualPage: NextPage = () => {
   const [aiSuggestion, setAISuggestion] = useState<AISuggestionType | null>(null);
   const { toast } = useToast();
 
-  const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = useState(false);
+  const [showInlineHabitForm, setShowInlineHabitForm] = useState(false); // New state for inline form
   const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
@@ -141,6 +141,7 @@ const HabitualPage: NextPage = () => {
       description: `"${newHabit.name}" is now ready to be tracked.`,
       action: <Smile className="h-5 w-5 text-accent" />,
     });
+    setShowInlineHabitForm(false); // Close inline form after adding
   };
 
   const handleToggleComplete = (habitId: string, date: string, completed: boolean) => {
@@ -239,8 +240,8 @@ const HabitualPage: NextPage = () => {
 
         <div className="flex-grow overflow-y-auto">
           <main className="px-3 sm:px-4 py-6">
-            <div className="flex flex-col sm:flex-row gap-2 mb-6">
-              <Button size="lg" onClick={() => setIsCreateHabitDialogOpen(true)} className="w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+              <Button size="lg" onClick={() => setShowInlineHabitForm(true)} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Add New Habit
               </Button>
@@ -249,8 +250,17 @@ const HabitualPage: NextPage = () => {
                 View Dashboard
               </Button>
             </div>
+
+            {showInlineHabitForm && (
+              <div className="my-4">
+                <InlineCreateHabitForm
+                  onAddHabit={handleAddHabit}
+                  onCloseForm={() => setShowInlineHabitForm(false)}
+                />
+              </div>
+            )}
             
-            {selectedHabitIds.length > 0 && habits.length > 0 && (
+            {selectedHabitIds.length > 0 && habits.length > 0 && !showInlineHabitForm && (
               <div className="my-4 flex items-center gap-2 sm:gap-4 p-2 border rounded-md bg-card shadow-sm w-full justify-between">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -314,14 +324,8 @@ const HabitualPage: NextPage = () => {
         </footer>
       </div>
 
-      <CreateHabitDialog
-        isOpen={isCreateHabitDialogOpen}
-        onClose={() => setIsCreateHabitDialogOpen(false)}
-        onAddHabit={(data) => {
-          handleAddHabit(data);
-          setIsCreateHabitDialogOpen(false);
-        }}
-      />
+      {/* CreateHabitDialog is no longer used for the primary "Add New Habit" button */}
+      {/* It could be repurposed or removed if not needed elsewhere */}
 
       {selectedHabitForAISuggestion && aiSuggestion && (
         <AISuggestionDialog

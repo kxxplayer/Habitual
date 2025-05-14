@@ -7,28 +7,19 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-  DialogClose
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, XCircle } from 'lucide-react';
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import type { Habit, CreateHabitFormData, WeekDay } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
-interface CreateHabitDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface InlineCreateHabitFormProps {
   onAddHabit: (habit: Omit<Habit, 'id' | 'completionLog'>) => void;
+  onCloseForm: () => void;
 }
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -43,9 +34,8 @@ const createHabitFormSchema = z.object({
   specificTime: z.string().optional(), 
 }).refine(data => data.durationHours || data.durationMinutes || (!data.durationHours && !data.durationMinutes), {});
 
-// This component is now primarily a fallback or for potential other uses.
-// The main habit creation flow has moved to InlineCreateHabitForm.
-const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddHabit }) => {
+
+const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onCloseForm }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
   const { toast } = useToast();
   
@@ -71,20 +61,20 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
 
   const habitDescriptionForAI = watch('description');
 
+  // Reset form when the component is mounted or when onCloseForm changes (e.g. form is hidden)
+  // This handles reset if form is closed externally without submitting
   useEffect(() => {
-    if (!isOpen) {
-      reset({ 
-        description: '',
-        name: '',
-        daysOfWeek: [],
-        optimalTiming: '',
-        durationHours: null,
-        durationMinutes: null,
-        specificTime: '',
-      }); 
-      setIsAISuggesting(false);
-    }
-  }, [isOpen, reset]);
+    reset({
+      description: '',
+      name: '',
+      daysOfWeek: [],
+      optimalTiming: '',
+      durationHours: null,
+      durationMinutes: null,
+      specificTime: '',
+    });
+  }, [onCloseForm, reset]);
+
 
   const handleAISuggestDetails = async () => {
     if (!habitDescriptionForAI || habitDescriptionForAI.trim() === "") {
@@ -139,59 +129,58 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
       durationMinutes: data.durationMinutes === null ? undefined : data.durationMinutes,
       specificTime: data.specificTime,
     });
-    onClose(); 
+    reset(); // Reset form fields
+    onCloseForm(); // Call parent to hide the form
   };
 
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-[600px] bg-card rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-semibold flex items-center">
-            <PlusCircle className="mr-3 h-7 w-7 text-primary" />
-            Create New Habit (Dialog)
-          </DialogTitle>
-          <DialogDescription>
-            Define your new habit below. You can describe it and let AI suggest details.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-1 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="dialog-ai-description" className="font-medium">Describe your habit (for AI suggestion)</Label>
+    <Card className="bg-card shadow-lg border border-primary/20">
+      <CardHeader>
+        <CardTitle className="text-xl font-semibold flex items-center">
+          <PlusCircle className="mr-3 h-6 w-6 text-primary" />
+          Add a New Habit
+        </CardTitle>
+        <CardDescription>
+          Describe your new habit. AI can help suggest details.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="inline-ai-description" className="text-sm font-medium">Describe habit (for AI)</Label>
             <Controller
               name="description"
               control={control}
-              render={({ field }) => <Textarea id="dialog-ai-description" placeholder="e.g., I want to read more books every morning for 30 mins" {...field} className="bg-input/50" />}
+              render={({ field }) => <Textarea id="inline-ai-description" placeholder="e.g., I want to read more books every morning for 30 mins" {...field} className="bg-input/50 text-sm" rows={2} />}
             />
-            <Button type="button" onClick={handleAISuggestDetails} disabled={isAISuggesting || !habitDescriptionForAI} variant="outline" className="w-full mt-2">
+            <Button type="button" onClick={handleAISuggestDetails} disabled={isAISuggesting || !habitDescriptionForAI} variant="outline" size="sm" className="w-full mt-1">
               {isAISuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
               Suggest Details with AI
             </Button>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="dialog-habit-name" className="font-medium">Habit Name</Label>
+          <div className="space-y-1">
+            <Label htmlFor="inline-habit-name" className="text-sm font-medium">Habit Name</Label>
             <Controller
               name="name"
               control={control}
-              render={({ field }) => <Input id="dialog-habit-name" placeholder="e.g., Read a chapter daily" {...field} className="bg-input/50" />}
+              render={({ field }) => <Input id="inline-habit-name" placeholder="e.g., Read a chapter daily" {...field} className="bg-input/50 text-sm" />}
             />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           
-          <div className="space-y-2">
-            <Label className="font-medium">Days of the Week</Label>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2 p-2 border rounded-md bg-input/20">
+          <div className="space-y-1">
+            <Label className="text-sm font-medium">Days of the Week</Label>
+            <div className="grid grid-cols-4 gap-1 p-1.5 border rounded-md bg-input/20">
               {weekDays.map((day) => (
                 <Controller
                   key={day}
                   name="daysOfWeek"
                   control={control}
                   render={({ field }) => (
-                    <div className="flex items-center space-x-2 p-1.5 rounded-md hover:bg-accent/10 transition-colors">
+                    <div className="flex items-center space-x-1.5 p-1 rounded-md hover:bg-accent/10 transition-colors">
                       <Checkbox
-                        id={`dialog-day-${day}`}
+                        id={`inline-day-${day}`}
                         checked={field.value?.includes(day)}
                         onCheckedChange={(checked) => {
                           const currentDays = field.value || [];
@@ -201,78 +190,74 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
                           const uniqueDays = Array.from(new Set(newDays)).sort((a, b) => weekDays.indexOf(a) - weekDays.indexOf(b));
                           field.onChange(uniqueDays);
                         }}
-                        className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                        className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground h-3.5 w-3.5"
                       />
-                      <Label htmlFor={`dialog-day-${day}`} className="text-sm font-normal cursor-pointer select-none">{day}</Label>
+                      <Label htmlFor={`inline-day-${day}`} className="text-xs font-normal cursor-pointer select-none">{day}</Label>
                     </div>
                   )}
                 />
               ))}
             </div>
-            {errors.daysOfWeek && <p className="text-sm text-destructive">{errors.daysOfWeek.message}</p>}
+            {errors.daysOfWeek && <p className="text-xs text-destructive">{errors.daysOfWeek.message}</p>}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label className="font-medium flex items-center"><Hourglass className="mr-2 h-4 w-4 text-muted-foreground" />Duration (Optional)</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="dialog-duration-hours" className="text-xs text-muted-foreground">Hours</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label className="text-sm font-medium flex items-center"><Hourglass className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />Duration</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-0.5">
+                  <Label htmlFor="inline-duration-hours" className="text-xs text-muted-foreground">Hours</Label>
                   <Controller
                     name="durationHours"
                     control={control}
-                    render={({ field }) => <Input id="dialog-duration-hours" type="number" placeholder="e.g., 1" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full" min="0" />}
+                    render={({ field }) => <Input id="inline-duration-hours" type="number" placeholder="Hr" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm h-9" min="0" />}
                   />
-                   {errors.durationHours && <p className="text-sm text-destructive">{errors.durationHours.message}</p>}
+                   {errors.durationHours && <p className="text-xs text-destructive">{errors.durationHours.message}</p>}
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="dialog-duration-minutes" className="text-xs text-muted-foreground">Minutes</Label>
+                <div className="space-y-0.5">
+                  <Label htmlFor="inline-duration-minutes" className="text-xs text-muted-foreground">Minutes</Label>
                   <Controller
                     name="durationMinutes"
                     control={control}
-                    render={({ field }) => <Input id="dialog-duration-minutes" type="number" placeholder="e.g., 30" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full" min="0" max="59"/>}
+                    render={({ field }) => <Input id="inline-duration-minutes" type="number" placeholder="Min" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm h-9" min="0" max="59"/>}
                   />
-                   {errors.durationMinutes && <p className="text-sm text-destructive">{errors.durationMinutes.message}</p>}
+                   {errors.durationMinutes && <p className="text-xs text-destructive">{errors.durationMinutes.message}</p>}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="dialog-habit-specificTime" className="font-medium flex items-center"><Clock className="mr-2 h-4 w-4 text-muted-foreground" />Specific Time (Optional)</Label>
+            <div className="space-y-1">
+              <Label htmlFor="inline-habit-specificTime" className="text-sm font-medium flex items-center"><Clock className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />Specific Time</Label>
               <Controller
                 name="specificTime"
                 control={control}
-                render={({ field }) => <Input id="dialog-habit-specificTime" type="time" {...field} className="bg-input/50 w-full" />}
+                render={({ field }) => <Input id="inline-habit-specificTime" type="time" {...field} className="bg-input/50 w-full text-sm h-9" />}
               />
-              {errors.specificTime && <p className="text-sm text-destructive">{errors.specificTime.message}</p>}
+              {errors.specificTime && <p className="text-xs text-destructive">{errors.specificTime.message}</p>}
             </div>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="dialog-habit-optimalTiming" className="font-medium flex items-center"><CalendarClock className="mr-2 h-4 w-4 text-muted-foreground" />Optimal General Timing (Optional)</Label>
+          <div className="space-y-1">
+            <Label htmlFor="inline-habit-optimalTiming" className="text-sm font-medium flex items-center"><CalendarClock className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />Optimal General Timing</Label>
             <Controller
               name="optimalTiming"
               control={control}
-              render={({ field }) => <Input id="dialog-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50" />}
+              render={({ field }) => <Input id="inline-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50 text-sm h-9" />}
             />
           </div>
-          <DialogFooter className="pt-4">
-            <DialogClose asChild>
-                <Button type="button" variant="outline">
-                    Cancel
-                </Button>
-            </DialogClose>
+          <CardFooter className="p-0 pt-4 flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => { reset(); onCloseForm(); }} disabled={isSubmitting || isAISuggesting}>
+                <XCircle className="mr-2 h-4 w-4" /> Cancel
+            </Button>
             <Button type="submit" disabled={isSubmitting || isAISuggesting} >
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-5 w-5" />}
               Add This Habit
             </Button>
-          </DialogFooter>
+          </CardFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   );
 };
 
-export default CreateHabitDialog;
-
-    
+export default InlineCreateHabitForm;
