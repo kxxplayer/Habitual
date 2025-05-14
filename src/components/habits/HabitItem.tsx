@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Lightbulb, CalendarDays, Clock, Timer, CalendarClock, CalendarPlus } from 'lucide-react';
+import { Lightbulb, CalendarDays, Clock, Timer, CalendarClock, CalendarPlus, Share2 } from 'lucide-react';
 import type { Habit } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -43,6 +43,53 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
         description: "Could not generate calendar file. Please check console for details.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleShareHabit = async () => {
+    const shareText = `Check out this habit I'm tracking with Habitual!
+
+Habit: ${habit.name}
+${habit.description ? `Description: ${habit.description}\n` : ''}
+Frequency: ${habit.frequency}
+${habit.optimalTiming ? `Optimal Timing: ${habit.optimalTiming}\n` : ''}
+${habit.duration ? `Duration: ${habit.duration}\n` : ''}
+${habit.specificTime ? `Specific Time: ${habit.specificTime}\n` : ''}
+
+Track your habits with Habitual!`;
+
+    const copyToClipboard = async (text: string) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast({ title: "Copied to Clipboard", description: "Habit details copied to clipboard." });
+      } catch (err) {
+        console.error("Failed to copy habit details: ", err);
+        toast({ title: "Copy Failed", description: "Could not copy habit details to clipboard.", variant: "destructive" });
+      }
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Habit: ${habit.name}`,
+          text: shareText,
+          // url: window.location.href, // Could be added if app is deployed and has unique URLs per habit
+        });
+        toast({ title: "Habit Shared!", description: "The habit details have been shared." });
+      } catch (error) {
+        // Check if error is due to user cancellation (AbortError)
+        if ((error as DOMException).name === 'AbortError') {
+          console.log("Share action was cancelled by the user.");
+          // Optionally, don't toast or copy if user explicitly cancelled.
+          // For now, we'll fall back to copy as per original plan for simplicity.
+          copyToClipboard(shareText);
+        } else {
+          console.error("Error sharing habit:", error);
+          copyToClipboard(shareText); // Fallback to clipboard on other errors
+        }
+      }
+    } else {
+      copyToClipboard(shareText);
     }
   };
 
@@ -104,14 +151,18 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row gap-2 pt-4">
-        <Button variant="outline" size="sm" onClick={() => onGetAISuggestion(habit)} className="w-full sm:flex-1">
+      <CardFooter className="flex flex-col sm:grid sm:grid-cols-3 gap-2 pt-4">
+        <Button variant="outline" size="sm" onClick={() => onGetAISuggestion(habit)} className="w-full">
           <Lightbulb className="mr-2 h-4 w-4" />
-          Get AI Suggestion
+          AI Suggestion
         </Button>
-        <Button variant="outline" size="sm" onClick={handleAddToCalendar} className="w-full sm:flex-1">
+        <Button variant="outline" size="sm" onClick={handleAddToCalendar} className="w-full">
           <CalendarPlus className="mr-2 h-4 w-4" />
           Add to Calendar
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleShareHabit} className="w-full">
+          <Share2 className="mr-2 h-4 w-4" />
+          Share Habit
         </Button>
       </CardFooter>
     </Card>
