@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -7,6 +8,7 @@ import AppHeader from '@/components/layout/AppHeader';
 import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
+import HabitOverview from '@/components/overview/HabitOverview'; // Import the new component
 import type { Habit, AISuggestion as AISuggestionType, WeekDay } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { useToast } from '@/hooks/use-toast';
@@ -231,6 +233,8 @@ const HabitualPage: NextPage = () => {
 
         <div className="flex-grow overflow-y-auto">
           <main className="px-3 sm:px-4 py-6">
+            <HabitOverview habits={habits} /> {/* Add the overview component here */}
+
             <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <Button size="lg" onClick={() => setIsCreateHabitDialogOpen(true)} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-5 w-5" />
@@ -327,3 +331,4 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
