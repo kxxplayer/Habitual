@@ -83,58 +83,58 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
 
   return (
     <Card className="mb-6 shadow-md">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-xl font-semibold text-primary flex items-center">
-          <TrendingUp className="mr-2.5 h-6 w-6" />
+      <CardHeader className="pb-3 pt-4 px-4 sm:px-6">
+        <CardTitle className="text-lg sm:text-xl font-semibold text-primary flex items-center">
+          <TrendingUp className="mr-2.5 h-5 w-5 sm:h-6 sm:w-6" />
           Your Habit Dashboard
         </CardTitle>
-        {totalHabitsTracked > 0 && <CardDescription>A snapshot of your progress and consistency.</CardDescription>}
-        {totalHabitsTracked === 0 && <CardDescription>Add your first habit to see your progress here.</CardDescription>}
+        {totalHabitsTracked > 0 && <CardDescription className="text-xs sm:text-sm mt-1">A snapshot of your progress.</CardDescription>}
+        {totalHabitsTracked === 0 && <CardDescription  className="text-xs sm:text-sm mt-1">Add your first habit to see your progress.</CardDescription>}
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-3 px-4 sm:px-6 pb-4 pt-0">
         {totalHabitsTracked > 0 ? (
           <>
             <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <p className="text-sm font-medium text-foreground flex items-center">
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-xs sm:text-sm font-medium text-foreground flex items-center">
                   <Target className="mr-2 h-4 w-4 text-primary/90" />
-                  Today's Goal Completion
+                  Today's Goal
                 </p>
-                <span className="text-sm font-semibold text-primary">
+                <span className="text-xs sm:text-sm font-semibold text-primary">
                   {dailyProgress.scheduled > 0 ? `${dailyProgress.completed} / ${dailyProgress.scheduled} (${dailyProgress.percent}%)` : 'No habits today'}
                 </span>
               </div>
-              <Progress value={dailyProgress.scheduled > 0 ? dailyProgress.percent : 0} className="h-2.5" indicatorClassName="bg-primary" />
+              <Progress value={dailyProgress.scheduled > 0 ? dailyProgress.percent : 0} className="h-2" indicatorClassName="bg-primary" />
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <p className="text-sm font-medium text-foreground flex items-center">
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-xs sm:text-sm font-medium text-foreground flex items-center">
                   <Repeat className="mr-2 h-4 w-4 text-accent" />
-                  Last {consistencyScore.days} Days Consistency
+                  {consistencyScore.days}-Day Consistency
                 </p>
-                <span className="text-sm font-semibold text-accent">{consistencyScore.score}%</span>
+                <span className="text-xs sm:text-sm font-semibold text-accent">{consistencyScore.score}%</span>
               </div>
-              <Progress value={consistencyScore.score} className="h-2.5" indicatorClassName="bg-accent" />
+              <Progress value={consistencyScore.score} className="h-2" indicatorClassName="bg-accent" />
             </div>
             
             {scheduledToday.length > 0 && (
-              <div className="pt-3 space-y-2">
-                <h4 className="text-sm font-medium text-foreground flex items-center">
+              <div className="pt-2 space-y-1.5">
+                <h4 className="text-xs sm:text-sm font-medium text-foreground flex items-center">
                   <ClipboardList className="mr-2 h-4 w-4 text-muted-foreground" />
                   Today's Checklist:
                 </h4>
-                <ul className="space-y-1.5 pl-1">
+                <ul className="space-y-1 pl-1">
                   {scheduledToday.map(habit => {
                     const isCompleted = habit.completionLog.some(log => log.date === todayStr);
                     return (
-                      <li key={habit.id} className="flex items-center text-sm">
+                      <li key={habit.id} className="flex items-center text-xs sm:text-sm">
                         {isCompleted ? (
                           <CheckCircle2 className="mr-2 h-4 w-4 text-accent flex-shrink-0" />
                         ) : (
                           <Circle className="mr-2 h-4 w-4 text-muted-foreground flex-shrink-0" />
                         )}
-                        <span className={isCompleted ? 'text-muted-foreground line-through' : 'text-foreground'}>
+                        <span className={`${isCompleted ? 'text-muted-foreground line-through' : 'text-foreground'} truncate max-w-[200px] xs:max-w-[240px] sm:max-w-none`}>
                           {habit.name}
                         </span>
                       </li>
@@ -145,15 +145,15 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
             )}
 
             <div className="pt-2 text-center border-t border-border/60">
-                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center mt-3">
-                    <Award className="mr-2 h-5 w-5 text-yellow-500" />
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center justify-center mt-2">
+                    <Award className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                     {journeyMessage}
                 </p>
             </div>
           </>
         ) : (
-            <div className="text-center py-3">
-                <p className="text-muted-foreground">{journeyMessage}</p>
+            <div className="text-center py-2">
+                <p className="text-muted-foreground text-xs sm:text-sm">{journeyMessage}</p>
             </div>
         )}
       </CardContent>
@@ -162,4 +162,3 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
 };
 
 export default HabitOverview;
-
