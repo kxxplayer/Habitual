@@ -1,3 +1,4 @@
+
 // src/components/habits/HabitItem.tsx
 "use client";
 
@@ -10,7 +11,7 @@ import { Lightbulb, CalendarDays, Clock, Timer, CalendarClock, CalendarPlus, Sha
 import type { Habit } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 
 
 interface HabitItemProps {
@@ -18,6 +19,8 @@ interface HabitItemProps {
   onToggleComplete: (habitId: string, date: string, completed: boolean) => void;
   onGetAISuggestion: (habit: Habit) => void;
   isCompletedToday: boolean;
+  isSelected: boolean;
+  onSelectToggle: (habitId: string) => void;
 }
 
 const weekDaysOrder = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -37,7 +40,7 @@ const formatSpecificTime = (timeStr?: string): string | undefined => {
   return timeStr; // Return original if not in HH:mm or if parsing fails
 };
 
-const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggestion, isCompletedToday }) => {
+const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggestion, isCompletedToday, isSelected, onSelectToggle }) => {
   const today = new Date().toISOString().split('T')[0];
   const { toast } = useToast();
 
@@ -108,10 +111,11 @@ Track your habits with Habitual!`;
         toast({ title: "Habit Shared!", description: "The habit details have been shared." });
       } catch (error) {
         if ((error as DOMException).name === 'AbortError') {
-          console.log("Share action was cancelled by the user.");
+          // User cancelled the share action, try copying to clipboard as a fallback.
+          console.log("Share action was cancelled by the user. Copying to clipboard.");
           copyToClipboard(shareText);
         } else {
-          console.error("Error sharing habit:", error);
+          console.error("Error sharing habit, falling back to clipboard copy:", error);
           copyToClipboard(shareText); 
         }
       }
@@ -139,8 +143,17 @@ Track your habits with Habitual!`;
   const formattedSpecificTime = formatSpecificTime(habit.specificTime);
 
   return (
-    <Card className={`transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isCompletedToday ? 'border-accent bg-green-50 dark:bg-green-900/30' : 'bg-card'}`}>
-      <CardHeader>
+    <Card className={`relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isCompletedToday ? 'border-accent bg-green-50 dark:bg-green-900/30' : 'bg-card'} ${isSelected ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
+      <div className="absolute top-3 left-3 z-10">
+        <Checkbox
+          id={`select-${habit.id}`}
+          checked={isSelected}
+          onCheckedChange={() => onSelectToggle(habit.id)}
+          aria-label={`Select habit ${habit.name}`}
+          className="transform scale-110 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+        />
+      </div>
+      <CardHeader className="pt-3 pl-12"> {/* Add padding to account for checkbox */}
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-xl font-semibold text-primary">{habit.name}</CardTitle>
@@ -164,7 +177,7 @@ Track your habits with Habitual!`;
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 pl-12"> {/* Add padding to account for checkbox */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
           <div className="flex items-center col-span-full sm:col-span-1">
             <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
@@ -190,7 +203,7 @@ Track your habits with Habitual!`;
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col sm:grid sm:grid-cols-3 gap-2 pt-4">
+      <CardFooter className="flex flex-col sm:grid sm:grid-cols-3 gap-2 pt-4 pl-12"> {/* Add padding */}
         <Button variant="outline" size="sm" onClick={() => onGetAISuggestion(habit)} className="w-full">
           <Lightbulb className="mr-2 h-4 w-4" />
           AI Suggestion

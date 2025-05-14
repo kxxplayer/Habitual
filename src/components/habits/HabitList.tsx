@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -9,9 +10,11 @@ interface HabitListProps {
   habits: Habit[];
   onToggleComplete: (habitId: string, date: string, completed: boolean) => void;
   onGetAISuggestion: (habit: Habit) => void;
+  selectedHabitIds: string[];
+  onSelectHabit: (habitId: string) => void;
 }
 
-const HabitList: FC<HabitListProps> = ({ habits, onToggleComplete, onGetAISuggestion }) => {
+const HabitList: FC<HabitListProps> = ({ habits, onToggleComplete, onGetAISuggestion, selectedHabitIds, onSelectHabit }) => {
   if (habits.length === 0) {
     return (
       <div className="text-center py-10">
@@ -33,6 +36,8 @@ const HabitList: FC<HabitListProps> = ({ habits, onToggleComplete, onGetAISugges
           onToggleComplete={onToggleComplete}
           onGetAISuggestion={onGetAISuggestion}
           isCompletedToday={habit.completionLog.some(log => log.date === today)}
+          isSelected={selectedHabitIds.includes(habit.id)}
+          onSelectToggle={onSelectHabit}
         />
       ))}
     </div>
