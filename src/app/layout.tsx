@@ -1,8 +1,13 @@
+
 import type {Metadata} from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import AppSidebar from "@/components/layout/AppSidebar";
+import { SidebarInset } from "@/components/ui/sidebar";
+
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -31,8 +36,13 @@ export default function RootLayout({
           defaultTheme="system"
           storageKey="habitual-theme"
         >
-          {children}
-          <Toaster />
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              {children}
+              <Toaster />
+            </SidebarInset>
+          </SidebarProvider>
         </ThemeProvider>
       </body>
     </html>
