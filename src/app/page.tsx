@@ -6,7 +6,7 @@ import type { NextPage } from 'next';
 import AppHeader from '@/components/layout/AppHeader';
 import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
-import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm'; // New import
+import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm';
 import HabitOverview from '@/components/overview/HabitOverview';
 import type { Habit, AISuggestion as AISuggestionType, WeekDay } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
@@ -24,7 +24,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Added AlertDialogTrigger
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -34,7 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PlusCircle, Smile, Trash2, AlertTriangle, LayoutDashboard } from 'lucide-react';
+import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings } from 'lucide-react';
 
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -47,7 +47,7 @@ const HabitualPage: NextPage = () => {
   const [aiSuggestion, setAISuggestion] = useState<AISuggestionType | null>(null);
   const { toast } = useToast();
 
-  const [showInlineHabitForm, setShowInlineHabitForm] = useState(false); // New state for inline form
+  const [showInlineHabitForm, setShowInlineHabitForm] = useState(false);
   const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
@@ -142,7 +142,7 @@ const HabitualPage: NextPage = () => {
       description: `"${newHabit.name}" is now ready to be tracked.`,
       action: <Smile className="h-5 w-5 text-accent" />,
     });
-    setShowInlineHabitForm(false); // Close inline form after adding
+    setShowInlineHabitForm(false); 
   };
 
   const handleToggleComplete = (habitId: string, date: string, completed: boolean) => {
@@ -152,14 +152,13 @@ const HabitualPage: NextPage = () => {
           let newCompletionLog = [...habit.completionLog];
           if (completed) {
             const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-            newCompletionLog = newCompletionLog.filter(log => log.date !== date); // Remove previous entries for the same date
+            newCompletionLog = newCompletionLog.filter(log => log.date !== date); 
             newCompletionLog.push({ date, time: currentTime });
             toast({
                 title: "Great Job!",
                 description: `You've completed "${habit.name}" for today!`,
                 className: "bg-accent border-green-600 text-accent-foreground",
             });
-            // Example:
             // const audio = new Audio('/sounds/completion-chime.mp3');
             // audio.play().catch(e => console.error("Error playing sound:", e));
           } else {
@@ -229,29 +228,21 @@ const HabitualPage: NextPage = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-neutral-100 dark:bg-neutral-900 p-2 sm:p-4">
+      {/* Mobile Screen Container */}
       <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
           maxWidth: 'clamp(320px, 100%, 450px)',
-          aspectRatio: '9 / 16',
-          overflow: 'hidden',
+          height: 'clamp(600px, 90vh, 800px)', 
+          overflow: 'hidden', 
         }}
       >
         <AppHeader />
 
+        {/* Scrollable main content area */}
         <div className="flex-grow overflow-y-auto">
           <main className="px-3 sm:px-4 py-6">
-            <div className="flex flex-col sm:flex-row gap-2 mb-4">
-              <Button size="lg" onClick={() => setShowInlineHabitForm(true)} className="w-full sm:w-auto">
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Add New Habit
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => setIsDashboardDialogOpen(true)} className="w-full sm:w-auto">
-                <LayoutDashboard className="mr-2 h-5 w-5" />
-                View Dashboard
-              </Button>
-            </div>
-
+            {/* Conditional rendering for inline form */}
             {showInlineHabitForm && (
               <div className="my-4">
                 <InlineCreateHabitForm
@@ -261,6 +252,7 @@ const HabitualPage: NextPage = () => {
               </div>
             )}
             
+            {/* Conditional rendering for selection toolbar */}
             {selectedHabitIds.length > 0 && habits.length > 0 && !showInlineHabitForm && (
               <div className="my-4 flex items-center gap-2 sm:gap-4 p-2 border rounded-md bg-card shadow-sm w-full justify-between">
                 <div className="flex items-center space-x-2">
@@ -310,24 +302,51 @@ const HabitualPage: NextPage = () => {
               </div>
             )}
 
-            <HabitList
-              habits={habits}
-              onToggleComplete={handleToggleComplete}
-              onGetAISuggestion={handleOpenAISuggestionDialog}
-              selectedHabitIds={selectedHabitIds}
-              onSelectHabit={toggleHabitSelection}
-            />
+            {!showInlineHabitForm && (
+                <HabitList
+                habits={habits}
+                onToggleComplete={handleToggleComplete}
+                onGetAISuggestion={handleOpenAISuggestionDialog}
+                selectedHabitIds={selectedHabitIds}
+                onSelectHabit={toggleHabitSelection}
+                />
+            )}
           </main>
-        </div>
+          <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
+            <p>&copy; {new Date().getFullYear()} Habitual.</p>
+          </footer>
+        </div> {/* End scrollable area */}
 
-        <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0">
-          <p>&copy; {new Date().getFullYear()} Habitual.</p>
-        </footer>
-      </div>
+        {/* Bottom Navigation Bar */}
+        <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16">
+          <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/3">
+            <Home className="h-5 w-5" />
+            <span className="text-xs mt-0.5">Home</span>
+          </Button>
+          <Button variant="ghost" onClick={() => setIsDashboardDialogOpen(true)} className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/3">
+            <LayoutDashboard className="h-5 w-5" />
+            <span className="text-xs mt-0.5">Dashboard</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/3">
+            {/* Placeholder for settings, can link to sidebar or a new dialog */}
+            <Settings className="h-5 w-5" />
+            <span className="text-xs mt-0.5">Settings</span>
+          </Button>
+        </div> {/* End Bottom Navigation Bar */}
+      </div> {/* End Mobile Screen Container */}
 
-      {/* CreateHabitDialog is no longer used for the primary "Add New Habit" button */}
-      {/* It could be repurposed or removed if not needed elsewhere */}
+      {/* FAB for Add New Habit - shown only if inline form is not visible */}
+      {!showInlineHabitForm && (
+        <Button
+          className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
+          onClick={() => setShowInlineHabitForm(true)}
+          aria-label="Add New Habit"
+        >
+          <Plus className="h-7 w-7" />
+        </Button>
+      )}
 
+      {/* Dialogs */}
       {selectedHabitForAISuggestion && aiSuggestion && (
         <AISuggestionDialog
           isOpen={isAISuggestionDialogOpen}
@@ -350,7 +369,7 @@ const HabitualPage: NextPage = () => {
               A snapshot of your progress and today's checklist.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2 max-h-[65vh] overflow-y-auto pr-2"> {/* Added pr-2 for scrollbar spacing */}
+          <div className="py-2 max-h-[65vh] overflow-y-auto pr-2">
             <HabitOverview habits={habits} />
           </div>
           <DialogFooter className="pt-2">
@@ -364,4 +383,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
