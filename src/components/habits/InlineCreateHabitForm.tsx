@@ -36,18 +36,18 @@ const createHabitFormSchema = z.object({
 
 
 const dayMapFullToAbbr: { [key: string]: WeekDay } = {
-  "sunday": "Sun", "sun": "Sun",
-  "monday": "Mon", "mon": "Mon",
-  "tuesday": "Tue", "tue": "Tue",
-  "wednesday": "Wed", "wed": "Wed",
-  "thursday": "Thu", "thu": "Thu",
-  "friday": "Fri", "fri": "Fri",
-  "saturday": "Sat", "sat": "Sat",
+  "sunday": "Sun", "sun": "Sun", "sunday,": "Sun", "sun,": "Sun",
+  "monday": "Mon", "mon": "Mon", "monday,": "Mon", "mon,": "Mon",
+  "tuesday": "Tue", "tue": "Tue", "tuesday,": "Tue", "tue,": "Tue",
+  "wednesday": "Wed", "wed": "Wed", "wednesday,": "Wed", "wed,": "Wed",
+  "thursday": "Thu", "thu": "Thu", "thursday,": "Thu", "thu,": "Thu",
+  "friday": "Fri", "fri": "Fri", "friday,": "Fri", "fri,": "Fri",
+  "saturday": "Sat", "sat": "Sat", "saturday,": "Sat", "sat,": "Sat",
 };
 
 const normalizeDay = (day: string): WeekDay | undefined => {
   if (typeof day !== 'string') return undefined;
-  const lowerDay = day.trim().toLowerCase();
+  const lowerDay = day.trim().toLowerCase().replace(/,/g, ''); // Remove commas for robustness
   return dayMapFullToAbbr[lowerDay];
 };
 
@@ -79,8 +79,6 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
   useEffect(() => {
     // Reset form when it's closed externally or after submission.
-    // This effect depends on `onCloseForm` to signal when a reset is appropriate.
-    // If `onCloseForm` reference changes, it implies the form instance might need resetting for a new use.
     return () => {
         reset({
             description: '',
@@ -96,7 +94,8 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
 
   const handleAISuggestDetails = async () => {
-    if (!habitDescriptionForAI || habitDescriptionForAI.trim() === "") {
+    const currentDescription = habitDescriptionForAI || ""; // Ensure it's a string
+    if (currentDescription.trim() === "") {
       toast({
         title: "No Description Provided",
         description: "Please enter a description for the AI to suggest habit details.",
@@ -106,20 +105,20 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     }
     setIsAISuggesting(true);
     try {
-      const result = await createHabitFromDescription({ description: habitDescriptionForAI });
+      const result = await createHabitFromDescription({ description: currentDescription });
       setValue('name', result.habitName || '');
 
       let suggestedDays: WeekDay[] = [];
       if (result.daysOfWeek && Array.isArray(result.daysOfWeek)) {
         suggestedDays = result.daysOfWeek
-          .map(day => normalizeDay(day as string)) // Ensure day is treated as string for normalizeDay
+          .map(day => normalizeDay(day as string)) 
           .filter((d): d is WeekDay => d !== undefined);
       }
       setValue('daysOfWeek', suggestedDays);
 
       setValue('optimalTiming', result.optimalTiming || '');
-      setValue('durationHours', result.durationHours ?? null); // Use ?? to preserve 0
-      setValue('durationMinutes', result.durationMinutes ?? null); // Use ?? to preserve 0
+      setValue('durationHours', result.durationHours ?? null); 
+      setValue('durationMinutes', result.durationMinutes ?? null); 
 
       if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) {
         setValue('specificTime', result.specificTime);
@@ -158,6 +157,8 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     reset();
     onCloseForm();
   };
+  
+  const isDescriptionEffectivelyEmpty = !habitDescriptionForAI || (typeof habitDescriptionForAI === 'string' && habitDescriptionForAI.trim() === '');
 
   return (
     <Card className="bg-card shadow-lg border border-primary/20">
@@ -179,7 +180,14 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
               control={control}
               render={({ field }) => <Textarea id="inline-ai-description" placeholder="e.g., I want to read more books every morning for 30 mins" {...field} className="bg-input/50 text-sm" rows={2} />}
             />
-            <Button type="button" onClick={handleAISuggestDetails} disabled={isAISuggesting || !habitDescriptionForAI} variant="outline" size="sm" className="w-full mt-1">
+            <Button 
+              type="button" 
+              onClick={handleAISuggestDetails} 
+              disabled={isAISuggesting || isDescriptionEffectivelyEmpty} 
+              variant="outline" 
+              size="sm" 
+              className="w-full mt-1"
+            >
               {isAISuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
               Suggest Details with AI
             </Button>
@@ -287,3 +295,4 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 };
 
 export default InlineCreateHabitForm;
+
