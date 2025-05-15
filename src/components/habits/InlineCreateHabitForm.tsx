@@ -35,6 +35,13 @@ const createHabitFormSchema = z.object({
 }).refine(data => data.durationHours || data.durationMinutes || (!data.durationHours && !data.durationMinutes), {});
 
 
+const normalizeDay = (day: string): WeekDay | undefined => {
+  if (typeof day !== 'string' || day.length !== 3) return undefined;
+  const lowerDay = day.toLowerCase();
+  const matchedDay = weekDays.find(wd => wd.toLowerCase() === lowerDay);
+  return matchedDay;
+};
+
 const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onCloseForm }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
   const { toast } = useToast();
@@ -61,8 +68,6 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
   const habitDescriptionForAI = watch('description');
 
-  // Reset form when the component is mounted or when onCloseForm changes (e.g. form is hidden)
-  // This handles reset if form is closed externally without submitting
   useEffect(() => {
     reset({
       description: '',
@@ -88,9 +93,16 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     setIsAISuggesting(true);
     try {
       const result = await createHabitFromDescription({ description: habitDescriptionForAI });
-      setValue('name', result.habitName);
-      const validSuggestedDays = result.daysOfWeek.filter(day => weekDays.includes(day as WeekDay)) as WeekDay[];
-      setValue('daysOfWeek', validSuggestedDays);
+      setValue('name', result.habitName || '');
+      
+      let suggestedDays: WeekDay[] = [];
+      if (result.daysOfWeek && Array.isArray(result.daysOfWeek)) {
+        suggestedDays = result.daysOfWeek
+          .map(normalizeDay)
+          .filter((d): d is WeekDay => d !== undefined);
+      }
+      setValue('daysOfWeek', suggestedDays);
+      
       setValue('optimalTiming', result.optimalTiming || '');
       setValue('durationHours', result.durationHours || null);
       setValue('durationMinutes', result.durationMinutes || null);
@@ -129,8 +141,8 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       durationMinutes: data.durationMinutes === null ? undefined : data.durationMinutes,
       specificTime: data.specificTime,
     });
-    reset(); // Reset form fields
-    onCloseForm(); // Call parent to hide the form
+    reset(); 
+    onCloseForm(); 
   };
 
   return (
