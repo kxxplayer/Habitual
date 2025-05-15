@@ -10,17 +10,25 @@ interface HabitListProps {
   habits: Habit[];
   onToggleComplete: (habitId: string, date: string, completed: boolean) => void;
   onGetAISuggestion: (habit: Habit) => void;
+  onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   selectedHabitIds: string[];
   onSelectHabit: (habitId: string) => void;
 }
 
-const HabitList: FC<HabitListProps> = ({ habits, onToggleComplete, onGetAISuggestion, selectedHabitIds, onSelectHabit }) => {
+const HabitList: FC<HabitListProps> = ({ 
+    habits, 
+    onToggleComplete, 
+    onGetAISuggestion, 
+    onOpenReflectionDialog,
+    selectedHabitIds, 
+    onSelectHabit 
+}) => {
   if (habits.length === 0) {
     return (
       <div className="text-center py-10">
         <ListChecks className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
         <h3 className="text-xl font-semibold text-foreground">No Habits Yet</h3>
-        <p className="text-muted-foreground">Click "Add Habit" to get started!</p>
+        <p className="text-muted-foreground">Click the "+" button to get started!</p>
       </div>
     );
   }
@@ -35,6 +43,7 @@ const HabitList: FC<HabitListProps> = ({ habits, onToggleComplete, onGetAISugges
           habit={habit}
           onToggleComplete={onToggleComplete}
           onGetAISuggestion={onGetAISuggestion}
+          onOpenReflectionDialog={onOpenReflectionDialog}
           isCompletedToday={habit.completionLog.some(log => log.date === today)}
           isSelected={selectedHabitIds.includes(habit.id)}
           onSelectToggle={onSelectHabit}

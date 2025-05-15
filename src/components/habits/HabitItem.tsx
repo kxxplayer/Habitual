@@ -13,8 +13,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp, Flame, MoreHorizontal } from 'lucide-react';
+import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp, Flame, MoreHorizontal, MessageSquarePlus, StickyNote } from 'lucide-react';
 import type { Habit, WeekDay } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +27,7 @@ interface HabitItemProps {
   habit: Habit;
   onToggleComplete: (habitId: string, date: string, completed: boolean) => void;
   onGetAISuggestion: (habit: Habit) => void;
+  onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   isCompletedToday: boolean;
   isSelected: boolean;
   onSelectToggle: (habitId: string) => void;
@@ -33,7 +35,6 @@ interface HabitItemProps {
 
 const weekDaysOrder: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// Helper to format HH:mm to h:mm AM/PM or return original if not HH:mm
 const formatSpecificTime = (timeStr?: string): string | undefined => {
   if (!timeStr || timeStr.toLowerCase() === "anytime" || timeStr.toLowerCase() === "flexible") return timeStr;
   try {
@@ -44,16 +45,23 @@ const formatSpecificTime = (timeStr?: string): string | undefined => {
       date.setMinutes(parseInt(minutes, 10));
       return format(date, 'h:mm a');
     }
-  } catch (e) { /* Fallback to original string if parsing fails */ }
-  return timeStr; // Return original if not in HH:mm or if parsing fails
+  } catch (e) { /* Fallback */ }
+  return timeStr;
 };
 
-const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggestion, isCompletedToday, isSelected, onSelectToggle }) => {
+const HabitItem: FC<HabitItemProps> = ({ 
+    habit, 
+    onToggleComplete, 
+    onGetAISuggestion, 
+    onOpenReflectionDialog,
+    isCompletedToday, 
+    isSelected, 
+    onSelectToggle 
+}) => {
   const todayString = new Date().toISOString().split('T')[0];
   const { toast } = useToast();
-  const [currentDate, setCurrentDate] = React.useState(new Date()); // For streak calculation
+  const [currentDate, setCurrentDate] = React.useState(new Date()); 
 
-  // Update current date for streak calculation when component mounts or todayString changes
   React.useEffect(() => {
     setCurrentDate(new Date());
   }, [todayString]);
@@ -62,11 +70,6 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
 
   const handleToggleDailyCompletion = () => {
     onToggleComplete(habit.id, todayString, !isCompletedToday);
-    // Placeholder for playing a sound if the habit is being marked as complete
-    // if (!isCompletedToday) {
-    //   // const audio = new Audio('/sounds/complete-chime.mp3'); // Example
-    //   // audio.play();
-    // }
   };
 
   const handleAddToCalendar = () => {
@@ -91,77 +94,47 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
   const handleShareHabit = async () => {
     const sortedDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b));
     const daysText = sortedDays.length === 7 ? "Daily" : sortedDays.join(', ');
-
     let durationText = '';
-    if (habit.durationHours && habit.durationHours > 0) {
-      durationText += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
-    }
+    if (habit.durationHours && habit.durationHours > 0) durationText += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
     if (habit.durationMinutes && habit.durationMinutes > 0) {
       if (durationText) durationText += ' ';
       durationText += `${habit.durationMinutes} min`;
     }
-
-    const shareText = `Check out this habit I'm tracking with Habitual!
-
-Habit: ${habit.name}
-${habit.description ? `Description: ${habit.description}\n` : ''}
-Days: ${daysText}
-${habit.optimalTiming ? `Optimal Timing: ${habit.optimalTiming}\n` : ''}
-${durationText ? `Duration: ${durationText}\n` : ''}
-${habit.specificTime ? `Specific Time: ${formatSpecificTime(habit.specificTime)}\n` : ''}
-${streak > 0 ? `Current Streak: ${streak} day(s)!\n` : ''}
-Track your habits with Habitual!`;
-
+    const shareText = `Check out this habit I'm tracking with Habitual!\n\nHabit: ${habit.name}\n${habit.description ? `Description: ${habit.description}\n` : ''}Days: ${daysText}\n${habit.optimalTiming ? `Optimal Timing: ${habit.optimalTiming}\n` : ''}${durationText ? `Duration: ${durationText}\n` : ''}${habit.specificTime ? `Specific Time: ${formatSpecificTime(habit.specificTime)}\n` : ''}${streak > 0 ? `Current Streak: ${streak} day(s)!\n` : ''}Track your habits with Habitual!`;
     const copyToClipboard = async (text: string) => {
       try {
         await navigator.clipboard.writeText(text);
         toast({ title: "Copied to Clipboard", description: "Habit details copied to clipboard." });
       } catch (err) {
-        console.error("Failed to copy habit details: ", err);
-        toast({ title: "Copy Failed", description: "Could not copy habit details to clipboard.", variant: "destructive" });
+        toast({ title: "Copy Failed", description: "Could not copy habit details.", variant: "destructive" });
       }
     };
-
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: `Habit: ${habit.name}`,
-          text: shareText,
-        });
+        await navigator.share({ title: `Habit: ${habit.name}`, text: shareText });
         toast({ title: "Habit Shared!", description: "The habit details have been shared." });
       } catch (error) {
-        if ((error as DOMException).name === 'AbortError') {
-          console.log("Share action was cancelled by the user. Copying to clipboard.");
-          copyToClipboard(shareText);
-        } else {
-          console.error("Error sharing habit, falling back to clipboard copy:", error);
-          copyToClipboard(shareText);
-        }
+        if ((error as DOMException).name === 'AbortError') copyToClipboard(shareText);
+        else copyToClipboard(shareText);
       }
     } else {
       copyToClipboard(shareText);
     }
   };
 
-  const latestCompletionTimeToday = habit.completionLog
-    .filter(log => log.date === todayString)
-    .map(log => log.time)
-    .sort()
-    .pop();
+  const todaysCompletionLog = habit.completionLog.find(log => log.date === todayString);
+  const latestCompletionTimeToday = todaysCompletionLog?.time;
+  const hasNoteToday = !!todaysCompletionLog?.note;
 
   const displayDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b)).join(', ');
-
   let durationDisplay = '';
-  if (habit.durationHours && habit.durationHours > 0) {
-    durationDisplay += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
-  }
+  if (habit.durationHours && habit.durationHours > 0) durationDisplay += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
   if (habit.durationMinutes && habit.durationMinutes > 0) {
     if (durationDisplay) durationDisplay += ' ';
     durationDisplay += `${habit.durationMinutes} min`;
   }
   const formattedSpecificTime = formatSpecificTime(habit.specificTime);
 
-  // Weekly Progress Calculation
   const scheduledDaysInWeek = habit.daysOfWeek.length;
   let completedCountInCurrentWeek = 0;
   if (scheduledDaysInWeek > 0) {
@@ -171,17 +144,12 @@ Track your habits with Habitual!`;
         try {
             const completionDateObj = parseISO(log.date + 'T00:00:00Z');
             const dayOfCompletion = getDayAbbreviationFromDate(completionDateObj);
-            if (habit.daysOfWeek.includes(dayOfCompletion)) {
-                completedOnScheduledDaysThisWeek.add(log.date);
-            }
-        } catch (e) {
-            console.error("Error parsing log date for weekly progress:", log.date, e);
-        }
+            if (habit.daysOfWeek.includes(dayOfCompletion)) completedOnScheduledDaysThisWeek.add(log.date);
+        } catch (e) { console.error("Error parsing log date for weekly progress:", log.date, e); }
       }
     });
     completedCountInCurrentWeek = completedOnScheduledDaysThisWeek.size;
   }
-
   const weeklyProgressPercent = scheduledDaysInWeek > 0 ? (completedCountInCurrentWeek / scheduledDaysInWeek) * 100 : 0;
 
   return (
@@ -230,9 +198,14 @@ Track your habits with Habitual!`;
                 <Circle className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
               )}
             </Button>
-            {isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A' && (
-              <p className="text-xs text-muted-foreground">at {latestCompletionTimeToday}</p>
-            )}
+            <div className="flex items-center space-x-1">
+              {isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A' && (
+                <p className="text-xs text-muted-foreground">at {latestCompletionTimeToday}</p>
+              )}
+              {isCompletedToday && hasNoteToday && (
+                <StickyNote className="h-3 w-3 text-blue-500" title="Reflection note added" />
+              )}
+            </div>
             <p className={`text-xs font-medium ${isCompletedToday ? 'text-accent' : 'text-muted-foreground'}`}>
               {isCompletedToday ? "Completed!" : "Mark Done"}
             </p>
@@ -290,6 +263,13 @@ Track your habits with Habitual!`;
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {isCompletedToday && (
+              <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}>
+                <MessageSquarePlus className="mr-2 h-4 w-4" />
+                <span>{hasNoteToday ? "Edit Reflection" : "Add Reflection"}</span>
+              </DropdownMenuItem>
+            )}
+            {isCompletedToday && <DropdownMenuSeparator />}
             <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
               <Lightbulb className="mr-2 h-4 w-4" />
               <span>AI Tip</span>
@@ -310,4 +290,3 @@ Track your habits with Habitual!`;
 };
 
 export default HabitItem;
-    

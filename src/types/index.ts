@@ -2,6 +2,7 @@
 export interface HabitCompletionLogEntry {
   date: string; // 'YYYY-MM-DD'
   time: string; // 'HH:MM'
+  note?: string; // Optional reflection note
 }
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -36,5 +37,3 @@ export interface CreateHabitFormData {
   durationMinutes?: number | null;
   specificTime?: string;
 }
-
-    

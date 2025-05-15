@@ -6,9 +6,10 @@ import type { NextPage } from 'next';
 import AppHeader from '@/components/layout/AppHeader';
 import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
+import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog';
 import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm';
 import HabitOverview from '@/components/overview/HabitOverview';
-import type { Habit, AISuggestion as AISuggestionType, WeekDay } from '@/types';
+import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { useToast } from '@/hooks/use-toast';
 
@@ -34,7 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings } from 'lucide-react';
+import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote } from 'lucide-react';
 
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -51,6 +52,14 @@ const HabitualPage: NextPage = () => {
   const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
+
+  const [isReflectionDialogOpen, setIsReflectionDialogOpen] = useState(false);
+  const [reflectionDialogData, setReflectionDialogData] = useState<{ 
+    habitId: string; 
+    date: string; 
+    initialNote?: string;
+    habitName: string;
+  } | null>(null);
 
 
   useEffect(() => {
@@ -85,7 +94,7 @@ const HabitualPage: NextPage = () => {
 
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
-                if (numVal <= 120) migratedDurationMinutes = numVal; // Arbitrary: if just a number, assume minutes if <= 120
+                if (numVal <= 120) migratedDurationMinutes = numVal;
             }
           }
 
@@ -99,13 +108,22 @@ const HabitualPage: NextPage = () => {
               const modifier = modifierPart ? modifierPart.toLowerCase() : '';
 
               if (modifier === 'pm' && hours < 12) hours += 12;
-              if (modifier === 'am' && hours === 12) hours = 0; // Midnight case
+              if (modifier === 'am' && hours === 12) hours = 0; 
               migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-            } catch (e) { /* ignore conversion error, keep original */ }
-          } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) { // Ensure HH:mm format if already 24h
+            } catch (e) { /* ignore */ }
+          } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) {
              const [hours, minutes] = migratedSpecificTime.split(':').map(Number);
              migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
           }
+          
+          // Ensure completionLog entries have a note field, even if undefined
+          const migratedCompletionLog = (habit.completionLog || (habit.completedDates
+              ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A', note: undefined }))
+              : [])).map((log: any) => ({
+                date: log.date,
+                time: log.time,
+                note: log.note || undefined, // Ensure note field exists
+              }));
 
 
           return {
@@ -117,15 +135,12 @@ const HabitualPage: NextPage = () => {
             durationHours: migratedDurationHours,
             durationMinutes: migratedDurationMinutes,
             specificTime: migratedSpecificTime || undefined,
-            completionLog: habit.completionLog || (habit.completedDates
-              ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A' })) // Basic migration
-              : []),
+            completionLog: migratedCompletionLog as HabitCompletionLogEntry[],
           };
         });
         setHabits(parsedHabits);
       } catch (error) {
         console.error("Failed to parse habits from localStorage:", error);
-        // localStorage.removeItem('habits'); // Optionally clear corrupted data
       }
     }
   }, []);
@@ -137,7 +152,7 @@ const HabitualPage: NextPage = () => {
   const handleAddHabit = (newHabitData: Omit<Habit, 'id' | 'completionLog'>) => {
     const newHabit: Habit = {
       ...newHabitData,
-      id: Date.now().toString() + Math.random().toString(36).substring(2,7), // More unique ID
+      id: Date.now().toString() + Math.random().toString(36).substring(2,7),
       completionLog: [],
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
@@ -156,20 +171,23 @@ const HabitualPage: NextPage = () => {
           let newCompletionLog = [...habit.completionLog];
           if (completed) {
             const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-            // Remove existing log for the same date to prevent duplicates if toggling multiple times
-            newCompletionLog = newCompletionLog.filter(log => log.date !== date); 
-            newCompletionLog.push({ date, time: currentTime });
+            const existingLogIndex = newCompletionLog.findIndex(log => log.date === date);
+            if (existingLogIndex > -1) {
+              // If log exists, update time, keep note
+              newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], time: currentTime };
+            } else {
+              // Add new log entry without a note initially
+              newCompletionLog.push({ date, time: currentTime, note: undefined });
+            }
             toast({
                 title: "Great Job!",
                 description: `You've completed "${habit.name}" for today!`,
                 className: "bg-accent border-green-600 text-accent-foreground",
             });
-            // const audio = new Audio('/sounds/completion-chime.mp3'); // Example for sound
-            // audio.play().catch(e => console.error("Error playing sound:", e));
           } else {
             newCompletionLog = newCompletionLog.filter(log => log.date !== date);
           }
-          return { ...habit, completionLog: newCompletionLog };
+          return { ...habit, completionLog: newCompletionLog.sort((a, b) => b.date.localeCompare(a.date)) };
         }
         return habit;
       })
@@ -182,7 +200,13 @@ const HabitualPage: NextPage = () => {
     setAISuggestion({ habitId: habit.id, suggestionText: '', isLoading: true });
 
     try {
-      const completionEntries = habit.completionLog.map(log => `${log.date} at ${log.time}`);
+      const completionEntries = habit.completionLog.map(log => {
+        let entry = `${log.date} at ${log.time}`;
+        if (log.note && log.note.trim() !== "") {
+          entry += ` (Note: ${log.note.trim()})`;
+        }
+        return entry;
+      });
       const trackingData = `Completions: ${completionEntries.join('; ') || 'None yet'}.`;
       
       const inputForAI = {
@@ -240,26 +264,70 @@ const HabitualPage: NextPage = () => {
     setIsDeleteConfirmOpen(false);
   };
 
+  const handleOpenReflectionDialog = (habitId: string, date: string, habitName: string) => {
+    const habit = habits.find(h => h.id === habitId);
+    const logEntry = habit?.completionLog.find(log => log.date === date);
+    setReflectionDialogData({
+      habitId,
+      date,
+      initialNote: logEntry?.note || '',
+      habitName,
+    });
+    setIsReflectionDialogOpen(true);
+  };
+
+  const handleSaveReflectionNote = (note: string) => {
+    if (!reflectionDialogData) return;
+    const { habitId, date } = reflectionDialogData;
+
+    setHabits(prevHabits => 
+      prevHabits.map(h => {
+        if (h.id === habitId) {
+          const newCompletionLog = h.completionLog.map(log => {
+            if (log.date === date) {
+              return { ...log, note: note.trim() === "" ? undefined : note.trim() };
+            }
+            return log;
+          });
+          // If no log entry exists for the date (shouldn't happen if dialog opened from completed item)
+          // This path is defensive. Typically, a log entry for 'date' should exist.
+          if (!newCompletionLog.some(log => log.date === date)) {
+             const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+             newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim()});
+             newCompletionLog.sort((a,b) => b.date.localeCompare(a.date)); // Keep sorted
+          }
+          return { ...h, completionLog: newCompletionLog };
+        }
+        return h;
+      })
+    );
+    toast({
+      title: "Reflection Saved",
+      description: `Your note for "${reflectionDialogData.habitName}" has been saved.`,
+      action: <StickyNote className="h-5 w-5 text-accent" />
+    });
+    setReflectionDialogData(null);
+    setIsReflectionDialogOpen(false);
+  };
+
+
   const allHabitsSelected = habits.length > 0 && selectedHabitIds.length === habits.length;
 
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-neutral-100 dark:bg-neutral-900 p-2 sm:p-4">
-      {/* Mobile Screen Container */}
       <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
-          maxWidth: 'clamp(320px, 100%, 450px)', // Responsive max width
-          height: 'clamp(600px, 90vh, 800px)', // Responsive height
-          overflow: 'hidden', // Crucial for containing layout
+          maxWidth: 'clamp(320px, 100%, 450px)', 
+          height: 'clamp(600px, 90vh, 800px)', 
+          overflow: 'hidden', 
         }}
       >
         <AppHeader />
 
-        {/* Scrollable main content area */}
         <div className="flex-grow overflow-y-auto">
           <main className="px-3 sm:px-4 py-6">
-            {/* Conditional rendering for inline form */}
             {showInlineHabitForm && (
               <div className="my-4">
                 <InlineCreateHabitForm
@@ -269,7 +337,6 @@ const HabitualPage: NextPage = () => {
               </div>
             )}
             
-            {/* Conditional rendering for selection toolbar */}
             {selectedHabitIds.length > 0 && habits.length > 0 && !showInlineHabitForm && (
               <div className="my-4 flex items-center gap-2 sm:gap-4 p-2 border rounded-md bg-card shadow-sm w-full justify-between">
                 <div className="flex items-center space-x-2">
@@ -324,6 +391,7 @@ const HabitualPage: NextPage = () => {
                 habits={habits}
                 onToggleComplete={handleToggleComplete}
                 onGetAISuggestion={handleOpenAISuggestionDialog}
+                onOpenReflectionDialog={handleOpenReflectionDialog}
                 selectedHabitIds={selectedHabitIds}
                 onSelectHabit={toggleHabitSelection}
                 />
@@ -332,9 +400,8 @@ const HabitualPage: NextPage = () => {
           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
             <p>&copy; {new Date().getFullYear()} Habitual.</p>
           </footer>
-        </div> {/* End scrollable area */}
+        </div> 
 
-        {/* Bottom Navigation Bar */}
         <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16">
           <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/3">
             <Home className="h-5 w-5" />
@@ -345,14 +412,12 @@ const HabitualPage: NextPage = () => {
             <span className="text-xs mt-0.5">Dashboard</span>
           </Button>
           <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/3">
-            {/* Placeholder for settings, can link to sidebar or a new dialog */}
             <Settings className="h-5 w-5" />
             <span className="text-xs mt-0.5">Settings</span>
           </Button>
-        </div> {/* End Bottom Navigation Bar */}
-      </div> {/* End Mobile Screen Container */}
+        </div> 
+      </div> 
 
-      {/* FAB for Add New Habit - shown only if inline form is not visible */}
       {!showInlineHabitForm && (
         <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
@@ -363,7 +428,6 @@ const HabitualPage: NextPage = () => {
         </Button>
       )}
 
-      {/* Dialogs */}
       {selectedHabitForAISuggestion && aiSuggestion && (
         <AISuggestionDialog
           isOpen={isAISuggestionDialogOpen}
@@ -372,6 +436,20 @@ const HabitualPage: NextPage = () => {
           suggestion={aiSuggestion.suggestionText}
           isLoading={aiSuggestion.isLoading}
           error={aiSuggestion.error}
+        />
+      )}
+
+      {reflectionDialogData && (
+        <AddReflectionNoteDialog
+          isOpen={isReflectionDialogOpen}
+          onClose={() => {
+            setIsReflectionDialogOpen(false);
+            setReflectionDialogData(null);
+          }}
+          onSaveNote={handleSaveReflectionNote}
+          initialNote={reflectionDialogData.initialNote}
+          habitName={reflectionDialogData.habitName}
+          completionDate={reflectionDialogData.date}
         />
       )}
 
@@ -400,4 +478,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
