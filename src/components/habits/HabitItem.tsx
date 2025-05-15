@@ -294,3 +294,4 @@ Track your habits with Habitual!`;
 };
 
 export default HabitItem;
+
