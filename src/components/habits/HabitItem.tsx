@@ -69,8 +69,8 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onToggleComplete, onGetAISuggest
       const filename = `${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_habit.ics`;
       downloadICS(filename, icsContent);
       toast({
-        title: "Calendar File Generated",
-        description: `"${habit.name}" has been prepared. Import it into your calendar.`,
+        title: "Added to calendar!",
+        description: `The .ics file for "${habit.name}" has been generated. You can import it into Google Calendar or your preferred calendar app.`,
       });
     } catch (error) {
       console.error("Error generating ICS file:", error);
@@ -282,7 +282,7 @@ Track your habits with Habitual!`;
         </Button>
         <Button variant="outline" size="sm" onClick={handleAddToCalendar} className="w-full">
           <CalendarPlus className="mr-2 h-4 w-4" />
-          To Calendar
+          Add to GCal
         </Button>
         <Button variant="outline" size="sm" onClick={handleShareHabit} className="w-full">
           <Share2 className="mr-2 h-4 w-4" />
@@ -295,3 +295,4 @@ Track your habits with Habitual!`;
 
 export default HabitItem;
 
+    
