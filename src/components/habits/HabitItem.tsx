@@ -8,7 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp, Flame } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp, Flame, MoreHorizontal } from 'lucide-react';
 import type { Habit, WeekDay } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -275,24 +281,33 @@ Track your habits with Habitual!`;
         )}
 
       </CardContent>
-      <CardFooter className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-4 pl-12 pb-4">
-        <Button variant="outline" size="sm" onClick={() => onGetAISuggestion(habit)} className="w-full">
-          <Lightbulb className="mr-2 h-4 w-4" />
-          AI Tip
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleAddToCalendar} className="w-full">
-          <CalendarPlus className="mr-2 h-4 w-4" />
-          Add to GCal
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleShareHabit} className="w-full">
-          <Share2 className="mr-2 h-4 w-4" />
-          Share
-        </Button>
+      <CardFooter className="flex justify-end pt-3 pb-3 pl-12 pr-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+              <span className="sr-only">More options</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
+              <Lightbulb className="mr-2 h-4 w-4" />
+              <span>AI Tip</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleAddToCalendar}>
+              <CalendarPlus className="mr-2 h-4 w-4" />
+              <span>Add to GCal</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShareHabit}>
+              <Share2 className="mr-2 h-4 w-4" />
+              <span>Share</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </CardFooter>
     </Card>
   );
 };
 
 export default HabitItem;
-
     
