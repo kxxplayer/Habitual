@@ -22,37 +22,46 @@ interface InlineCreateHabitFormProps {
   onCloseForm: () => void;
 }
 
-const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 const createHabitFormSchema = z.object({
   description: z.string().optional(),
   name: z.string().min(1, "Habit name is required."),
-  daysOfWeek: z.array(z.enum(weekDays)).min(1, "Please select at least one day."),
+  daysOfWeek: z.array(z.enum(weekDaysArray)).min(1, "Please select at least one day."),
   optimalTiming: z.string().optional(),
   durationHours: z.coerce.number().min(0).optional().nullable(),
   durationMinutes: z.coerce.number().min(0).max(59).optional().nullable(),
-  specificTime: z.string().optional(), 
+  specificTime: z.string().optional(),
 }).refine(data => data.durationHours || data.durationMinutes || (!data.durationHours && !data.durationMinutes), {});
 
 
+const dayMapFullToAbbr: { [key: string]: WeekDay } = {
+  "sunday": "Sun", "sun": "Sun",
+  "monday": "Mon", "mon": "Mon",
+  "tuesday": "Tue", "tue": "Tue",
+  "wednesday": "Wed", "wed": "Wed",
+  "thursday": "Thu", "thu": "Thu",
+  "friday": "Fri", "fri": "Fri",
+  "saturday": "Sat", "sat": "Sat",
+};
+
 const normalizeDay = (day: string): WeekDay | undefined => {
-  if (typeof day !== 'string' || day.length !== 3) return undefined;
-  const lowerDay = day.toLowerCase();
-  const matchedDay = weekDays.find(wd => wd.toLowerCase() === lowerDay);
-  return matchedDay;
+  if (typeof day !== 'string') return undefined;
+  const lowerDay = day.trim().toLowerCase();
+  return dayMapFullToAbbr[lowerDay];
 };
 
 const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onCloseForm }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
   const { toast } = useToast();
-  
-  const { 
-    control, 
-    handleSubmit, 
-    reset, 
-    watch, 
-    setValue, 
-    formState: { errors, isSubmitting } 
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting }
   } = useForm<CreateHabitFormData>({
     resolver: zodResolver(createHabitFormSchema),
     defaultValues: {
@@ -69,16 +78,21 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
   const habitDescriptionForAI = watch('description');
 
   useEffect(() => {
-    reset({
-      description: '',
-      name: '',
-      daysOfWeek: [],
-      optimalTiming: '',
-      durationHours: null,
-      durationMinutes: null,
-      specificTime: '',
-    });
-  }, [onCloseForm, reset]);
+    // Reset form when it's closed externally or after submission.
+    // This effect depends on `onCloseForm` to signal when a reset is appropriate.
+    // If `onCloseForm` reference changes, it implies the form instance might need resetting for a new use.
+    return () => {
+        reset({
+            description: '',
+            name: '',
+            daysOfWeek: [],
+            optimalTiming: '',
+            durationHours: null,
+            durationMinutes: null,
+            specificTime: '',
+          });
+    }
+  }, [reset]);
 
 
   const handleAISuggestDetails = async () => {
@@ -94,23 +108,23 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     try {
       const result = await createHabitFromDescription({ description: habitDescriptionForAI });
       setValue('name', result.habitName || '');
-      
+
       let suggestedDays: WeekDay[] = [];
       if (result.daysOfWeek && Array.isArray(result.daysOfWeek)) {
         suggestedDays = result.daysOfWeek
-          .map(normalizeDay)
+          .map(day => normalizeDay(day as string)) // Ensure day is treated as string for normalizeDay
           .filter((d): d is WeekDay => d !== undefined);
       }
       setValue('daysOfWeek', suggestedDays);
-      
+
       setValue('optimalTiming', result.optimalTiming || '');
-      setValue('durationHours', result.durationHours || null);
-      setValue('durationMinutes', result.durationMinutes || null);
-      
+      setValue('durationHours', result.durationHours ?? null); // Use ?? to preserve 0
+      setValue('durationMinutes', result.durationMinutes ?? null); // Use ?? to preserve 0
+
       if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) {
         setValue('specificTime', result.specificTime);
       } else if (result.specificTime && (result.specificTime.toLowerCase() === "anytime" || result.specificTime.toLowerCase() === "flexible")) {
-         setValue('specificTime', ''); 
+         setValue('specificTime', '');
       } else {
         setValue('specificTime', result.specificTime || '');
       }
@@ -130,7 +144,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       setIsAISuggesting(false);
     }
   };
-  
+
   const onSubmit = (data: CreateHabitFormData) => {
     onAddHabit({
       name: data.name,
@@ -141,8 +155,8 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       durationMinutes: data.durationMinutes === null ? undefined : data.durationMinutes,
       specificTime: data.specificTime,
     });
-    reset(); 
-    onCloseForm(); 
+    reset();
+    onCloseForm();
   };
 
   return (
@@ -180,11 +194,11 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
             />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
-          
+
           <div className="space-y-1">
             <Label className="text-sm font-medium">Days of the Week</Label>
             <div className="grid grid-cols-4 gap-1 p-1.5 border rounded-md bg-input/20">
-              {weekDays.map((day) => (
+              {weekDaysArray.map((day) => (
                 <Controller
                   key={day}
                   name="daysOfWeek"
@@ -199,7 +213,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
                           const newDays = checked
                             ? [...currentDays, day]
                             : currentDays.filter((d) => d !== day);
-                          const uniqueDays = Array.from(new Set(newDays)).sort((a, b) => weekDays.indexOf(a) - weekDays.indexOf(b));
+                          const uniqueDays = Array.from(new Set(newDays)).sort((a, b) => weekDaysArray.indexOf(a) - weekDaysArray.indexOf(b));
                           field.onChange(uniqueDays);
                         }}
                         className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground h-3.5 w-3.5"
@@ -212,7 +226,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
             </div>
             {errors.daysOfWeek && <p className="text-xs text-destructive">{errors.daysOfWeek.message}</p>}
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label className="text-sm font-medium flex items-center"><Hourglass className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />Duration</Label>
@@ -248,7 +262,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
               {errors.specificTime && <p className="text-xs text-destructive">{errors.specificTime.message}</p>}
             </div>
           </div>
-          
+
           <div className="space-y-1">
             <Label htmlFor="inline-habit-optimalTiming" className="text-sm font-medium flex items-center"><CalendarClock className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />Optimal General Timing</Label>
             <Controller

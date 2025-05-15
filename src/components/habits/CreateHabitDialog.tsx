@@ -31,23 +31,32 @@ interface CreateHabitDialogProps {
   onAddHabit: (habit: Omit<Habit, 'id' | 'completionLog'>) => void;
 }
 
-const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 const createHabitFormSchema = z.object({
   description: z.string().optional(),
   name: z.string().min(1, "Habit name is required."),
-  daysOfWeek: z.array(z.enum(weekDays)).min(1, "Please select at least one day."),
+  daysOfWeek: z.array(z.enum(weekDaysArray)).min(1, "Please select at least one day."),
   optimalTiming: z.string().optional(),
   durationHours: z.coerce.number().min(0).optional().nullable(),
   durationMinutes: z.coerce.number().min(0).max(59).optional().nullable(),
-  specificTime: z.string().optional(), 
+  specificTime: z.string().optional(),
 }).refine(data => data.durationHours || data.durationMinutes || (!data.durationHours && !data.durationMinutes), {});
 
+const dayMapFullToAbbr: { [key: string]: WeekDay } = {
+  "sunday": "Sun", "sun": "Sun",
+  "monday": "Mon", "mon": "Mon",
+  "tuesday": "Tue", "tue": "Tue",
+  "wednesday": "Wed", "wed": "Wed",
+  "thursday": "Thu", "thu": "Thu",
+  "friday": "Fri", "fri": "Fri",
+  "saturday": "Sat", "sat": "Sat",
+};
+
 const normalizeDay = (day: string): WeekDay | undefined => {
-  if (typeof day !== 'string' || day.length !== 3) return undefined;
-  const lowerDay = day.toLowerCase();
-  const matchedDay = weekDays.find(wd => wd.toLowerCase() === lowerDay);
-  return matchedDay;
+  if (typeof day !== 'string') return undefined;
+  const lowerDay = day.trim().toLowerCase();
+  return dayMapFullToAbbr[lowerDay];
 };
 
 // This component is now primarily a fallback or for potential other uses.
@@ -55,14 +64,14 @@ const normalizeDay = (day: string): WeekDay | undefined => {
 const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddHabit }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
   const { toast } = useToast();
-  
-  const { 
-    control, 
-    handleSubmit, 
-    reset, 
-    watch, 
-    setValue, 
-    formState: { errors, isSubmitting } 
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting }
   } = useForm<CreateHabitFormData>({
     resolver: zodResolver(createHabitFormSchema),
     defaultValues: {
@@ -80,7 +89,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
 
   useEffect(() => {
     if (!isOpen) {
-      reset({ 
+      reset({
         description: '',
         name: '',
         daysOfWeek: [],
@@ -88,7 +97,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
         durationHours: null,
         durationMinutes: null,
         specificTime: '',
-      }); 
+      });
       setIsAISuggesting(false);
     }
   }, [isOpen, reset]);
@@ -110,19 +119,19 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
       let suggestedDays: WeekDay[] = [];
       if (result.daysOfWeek && Array.isArray(result.daysOfWeek)) {
         suggestedDays = result.daysOfWeek
-          .map(normalizeDay)
+          .map(day => normalizeDay(day as string)) // Ensure day is treated as string
           .filter((d): d is WeekDay => d !== undefined);
       }
       setValue('daysOfWeek', suggestedDays);
-      
+
       setValue('optimalTiming', result.optimalTiming || '');
-      setValue('durationHours', result.durationHours || null);
-      setValue('durationMinutes', result.durationMinutes || null);
-      
+      setValue('durationHours', result.durationHours ?? null); // Use ?? to preserve 0
+      setValue('durationMinutes', result.durationMinutes ?? null); // Use ?? to preserve 0
+
       if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) {
         setValue('specificTime', result.specificTime);
       } else if (result.specificTime && (result.specificTime.toLowerCase() === "anytime" || result.specificTime.toLowerCase() === "flexible")) {
-         setValue('specificTime', ''); 
+         setValue('specificTime', '');
       } else {
         setValue('specificTime', result.specificTime || '');
       }
@@ -142,7 +151,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
       setIsAISuggesting(false);
     }
   };
-  
+
   const onSubmit = (data: CreateHabitFormData) => {
     onAddHabit({
       name: data.name,
@@ -153,7 +162,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
       durationMinutes: data.durationMinutes === null ? undefined : data.durationMinutes,
       specificTime: data.specificTime,
     });
-    onClose(); 
+    onClose();
   };
 
 
@@ -169,7 +178,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
             Define your new habit below. You can describe it and let AI suggest details.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-1 pt-4">
           <div className="space-y-2">
             <Label htmlFor="dialog-ai-description" className="font-medium">Describe your habit (for AI suggestion)</Label>
@@ -193,11 +202,11 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
             />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
-          
+
           <div className="space-y-2">
             <Label className="font-medium">Days of the Week</Label>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2 p-2 border rounded-md bg-input/20">
-              {weekDays.map((day) => (
+              {weekDaysArray.map((day) => (
                 <Controller
                   key={day}
                   name="daysOfWeek"
@@ -212,7 +221,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
                           const newDays = checked
                             ? [...currentDays, day]
                             : currentDays.filter((d) => d !== day);
-                          const uniqueDays = Array.from(new Set(newDays)).sort((a, b) => weekDays.indexOf(a) - weekDays.indexOf(b));
+                          const uniqueDays = Array.from(new Set(newDays)).sort((a, b) => weekDaysArray.indexOf(a) - weekDaysArray.indexOf(b));
                           field.onChange(uniqueDays);
                         }}
                         className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
@@ -225,7 +234,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
             </div>
             {errors.daysOfWeek && <p className="text-sm text-destructive">{errors.daysOfWeek.message}</p>}
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label className="font-medium flex items-center"><Hourglass className="mr-2 h-4 w-4 text-muted-foreground" />Duration (Optional)</Label>
@@ -261,7 +270,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
               {errors.specificTime && <p className="text-sm text-destructive">{errors.specificTime.message}</p>}
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="dialog-habit-optimalTiming" className="font-medium flex items-center"><CalendarClock className="mr-2 h-4 w-4 text-muted-foreground" />Optimal General Timing (Optional)</Label>
             <Controller
