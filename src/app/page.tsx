@@ -85,27 +85,31 @@ const HabitualPage: NextPage = () => {
 
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
-                if (numVal <= 120) migratedDurationMinutes = numVal;
+                if (numVal <= 120) migratedDurationMinutes = numVal; // Arbitrary: if just a number, assume minutes if <= 120
             }
           }
 
           let migratedSpecificTime = habit.specificTime;
           if (migratedSpecificTime && /\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime)) {
             try {
-              const [timePart, modifier] = migratedSpecificTime.split(/\s+/);
-              let [hours, minutes] = timePart.split(':').map(Number);
-              if (modifier && modifier.toLowerCase() === 'pm' && hours < 12) hours += 12;
-              if (modifier && modifier.toLowerCase() === 'am' && hours === 12) hours = 0;
+              const [timePart, modifierPart] = migratedSpecificTime.split(/\s+/);
+              const [hoursStr, minutesStr] = timePart.split(':');
+              let hours = parseInt(hoursStr, 10);
+              const minutes = parseInt(minutesStr, 10);
+              const modifier = modifierPart ? modifierPart.toLowerCase() : '';
+
+              if (modifier === 'pm' && hours < 12) hours += 12;
+              if (modifier === 'am' && hours === 12) hours = 0; // Midnight case
               migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
             } catch (e) { /* ignore conversion error, keep original */ }
-          } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) {
+          } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) { // Ensure HH:mm format if already 24h
              const [hours, minutes] = migratedSpecificTime.split(':').map(Number);
              migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
           }
 
 
           return {
-            id: habit.id || Date.now().toString(),
+            id: habit.id || Date.now().toString() + Math.random().toString(36).substring(2,7),
             name: habit.name || 'Unnamed Habit',
             description: habit.description || undefined,
             daysOfWeek: daysOfWeek,
@@ -114,14 +118,14 @@ const HabitualPage: NextPage = () => {
             durationMinutes: migratedDurationMinutes,
             specificTime: migratedSpecificTime || undefined,
             completionLog: habit.completionLog || (habit.completedDates
-              ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A' }))
+              ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A' })) // Basic migration
               : []),
           };
         });
         setHabits(parsedHabits);
       } catch (error) {
         console.error("Failed to parse habits from localStorage:", error);
-        localStorage.removeItem('habits');
+        // localStorage.removeItem('habits'); // Optionally clear corrupted data
       }
     }
   }, []);
@@ -133,7 +137,7 @@ const HabitualPage: NextPage = () => {
   const handleAddHabit = (newHabitData: Omit<Habit, 'id' | 'completionLog'>) => {
     const newHabit: Habit = {
       ...newHabitData,
-      id: Date.now().toString() + Math.random().toString(36).substring(2,7),
+      id: Date.now().toString() + Math.random().toString(36).substring(2,7), // More unique ID
       completionLog: [],
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
@@ -152,6 +156,7 @@ const HabitualPage: NextPage = () => {
           let newCompletionLog = [...habit.completionLog];
           if (completed) {
             const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+            // Remove existing log for the same date to prevent duplicates if toggling multiple times
             newCompletionLog = newCompletionLog.filter(log => log.date !== date); 
             newCompletionLog.push({ date, time: currentTime });
             toast({
@@ -159,7 +164,7 @@ const HabitualPage: NextPage = () => {
                 description: `You've completed "${habit.name}" for today!`,
                 className: "bg-accent border-green-600 text-accent-foreground",
             });
-            // const audio = new Audio('/sounds/completion-chime.mp3');
+            // const audio = new Audio('/sounds/completion-chime.mp3'); // Example for sound
             // audio.play().catch(e => console.error("Error playing sound:", e));
           } else {
             newCompletionLog = newCompletionLog.filter(log => log.date !== date);
@@ -178,8 +183,20 @@ const HabitualPage: NextPage = () => {
 
     try {
       const completionEntries = habit.completionLog.map(log => `${log.date} at ${log.time}`);
-      const trackingData = `Habit: ${habit.name}. Completions: ${completionEntries.join(', ') || 'None yet'}.`;
-      const result = await getHabitSuggestion({ habitName: habit.name, trackingData });
+      const trackingData = `Completions: ${completionEntries.join('; ') || 'None yet'}.`;
+      
+      const inputForAI = {
+        habitName: habit.name,
+        habitDescription: habit.description,
+        daysOfWeek: habit.daysOfWeek,
+        optimalTiming: habit.optimalTiming,
+        durationHours: habit.durationHours,
+        durationMinutes: habit.durationMinutes,
+        specificTime: habit.specificTime,
+        trackingData: trackingData,
+      };
+
+      const result = await getHabitSuggestion(inputForAI);
       setAISuggestion({ habitId: habit.id, suggestionText: result.suggestion, isLoading: false });
     } catch (error) {
       console.error("Error fetching AI suggestion:", error);
@@ -232,9 +249,9 @@ const HabitualPage: NextPage = () => {
       <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
-          maxWidth: 'clamp(320px, 100%, 450px)',
-          height: 'clamp(600px, 90vh, 800px)', 
-          overflow: 'hidden', 
+          maxWidth: 'clamp(320px, 100%, 450px)', // Responsive max width
+          height: 'clamp(600px, 90vh, 800px)', // Responsive height
+          overflow: 'hidden', // Crucial for containing layout
         }}
       >
         <AppHeader />
