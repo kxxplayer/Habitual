@@ -21,6 +21,7 @@ import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import { isDateInCurrentWeek, getDayAbbreviationFromDate, calculateStreak, getCurrentWeekDays, WeekDayInfo } from '@/lib/dateUtils';
+import { cn } from '@/lib/utils';
 
 
 interface HabitItemProps {
@@ -48,6 +49,18 @@ const formatSpecificTime = (timeStr?: string): string | undefined => {
   } catch (e) { /* Fallback */ }
   return timeStr;
 };
+
+const getStableColorIndex = (id: string): number => {
+  let hash = 0;
+  if (!id || id.length === 0) return 0; // Default index for invalid ID
+  for (let i = 0; i < id.length; i++) {
+    const char = id.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return (Math.abs(hash) % 5); // Results in 0, 1, 2, 3, or 4
+};
+
 
 const HabitItem: FC<HabitItemProps> = ({ 
     habit, 
@@ -165,9 +178,23 @@ const HabitItem: FC<HabitItemProps> = ({
   }
   const weeklyProgressPercent = scheduledDaysInWeek > 0 ? (completedCountInCurrentWeek / scheduledDaysInWeek) * 100 : 0;
 
+  const cardStyle: React.CSSProperties = {};
+  let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isSelected ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-background' : ''}`;
+
+  if (isCompletedToday) {
+    cardClasses = cn(cardClasses, 'border-accent bg-green-50 dark:bg-green-900/30');
+  } else {
+    const colorIndex = getStableColorIndex(habit.id); // 0 to 4
+    const chartColorVarSuffix = colorIndex + 1; // 1 to 5
+    cardStyle.borderLeftColor = `hsl(var(--chart-${chartColorVarSuffix}))`;
+    cardClasses = cn(cardClasses, 'border-l-4'); // Apply thicker left border
+  }
+  
+  cardClasses = cn(cardClasses, 'bg-card'); // Ensure bg-card is there for default state
+
   return (
-    <Card className={`relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isCompletedToday ? 'border-accent bg-green-50 dark:bg-green-900/30' : 'bg-card'} ${isSelected ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-background' : ''}`}>
-      <div className="absolute top-3 right-3 z-10"> {/* Changed left-3 to right-3 */}
+    <Card className={cardClasses} style={cardStyle}>
+      <div className="absolute top-3 right-3 z-10">
         <Checkbox
           id={`select-${habit.id}`}
           checked={isSelected}
@@ -176,11 +203,11 @@ const HabitItem: FC<HabitItemProps> = ({
           className="transform scale-110 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
       </div>
-      <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pr-12"> {/* Changed pl-12 to pr-12 */}
+      <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pr-12">
         <div className="flex justify-between items-start">
-          <div className="flex-grow"> {/* Removed mr-2 */}
+          <div className="flex-grow">
             <div className="flex items-center gap-2 mb-0.5">
-              <CardTitle className="text-lg sm:text-xl font-semibold text-primary min-w-0 break-words"> {/* Added min-w-0 break-words */}
+              <CardTitle className="text-lg sm:text-xl font-semibold text-primary min-w-0 break-words">
                 {habit.name}
               </CardTitle>
               {streak > 0 ? (
@@ -234,19 +261,19 @@ const HabitItem: FC<HabitItemProps> = ({
                 const isCompleted = isScheduled && habit.completionLog.some(log => log.date === dayInfo.dateStr);
                 const isMissed = isScheduled && !isCompleted && dayInfo.isPast;
 
-                let bgColor = 'bg-input/30'; 
-                let textColor = 'text-muted-foreground/70';
+                let dayBgColor = 'bg-input/30'; 
+                let dayTextColor = 'text-muted-foreground/70';
 
                 if (isScheduled) {
                   if (isCompleted) {
-                    bgColor = 'bg-accent';
-                    textColor = 'text-accent-foreground';
+                    dayBgColor = 'bg-accent';
+                    dayTextColor = 'text-accent-foreground';
                   } else if (isMissed) {
-                    bgColor = 'bg-destructive';
-                    textColor = 'text-destructive-foreground';
+                    dayBgColor = 'bg-destructive';
+                    dayTextColor = 'text-destructive-foreground';
                   } else { 
-                    bgColor = 'bg-muted';
-                    textColor = 'text-muted-foreground';
+                    dayBgColor = 'bg-muted';
+                    dayTextColor = 'text-muted-foreground';
                   }
                 }
                 
@@ -254,7 +281,7 @@ const HabitItem: FC<HabitItemProps> = ({
                   <div
                     key={dayInfo.dateStr}
                     title={`${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}${isScheduled ? (isCompleted ? ' (Completed)' : (isMissed ? ' (Missed)' : ' (Pending)')) : ' (Not Scheduled)'}`}
-                    className={`flex flex-col items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-md text-xs font-medium transition-all ${bgColor} ${textColor} ${dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : ''}`}
+                    className={`flex flex-col items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-md text-xs font-medium transition-all ${dayBgColor} ${dayTextColor} ${dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : ''}`}
                   >
                     {dayInfo.dayAbbrShort}
                   </div>
@@ -358,3 +385,6 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
+
+
+    
