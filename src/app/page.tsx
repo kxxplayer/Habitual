@@ -67,8 +67,9 @@ const HabitualPage: NextPage = () => {
     if (storedHabits) {
       try {
         const parsedHabits: Habit[] = JSON.parse(storedHabits).map((habit: any) => {
+          // START MIGRATION LOGIC - Ensure no toast() calls are made here.
           let daysOfWeek: WeekDay[] = habit.daysOfWeek || [];
-          if (!habit.daysOfWeek && habit.frequency) {
+          if (!habit.daysOfWeek && habit.frequency) { // Old frequency field
             const freqLower = habit.frequency.toLowerCase();
             if (freqLower === 'daily') daysOfWeek = [...weekDays];
             else {
@@ -94,12 +95,12 @@ const HabitualPage: NextPage = () => {
 
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
-                if (numVal <= 120) migratedDurationMinutes = numVal;
+                if (numVal <= 120) migratedDurationMinutes = numVal; 
             }
           }
 
           let migratedSpecificTime = habit.specificTime;
-          if (migratedSpecificTime && /\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime)) {
+          if (migratedSpecificTime && /\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime)) { 
             try {
               const [timePart, modifierPart] = migratedSpecificTime.split(/\s+/);
               const [hoursStr, minutesStr] = timePart.split(':');
@@ -110,21 +111,20 @@ const HabitualPage: NextPage = () => {
               if (modifier === 'pm' && hours < 12) hours += 12;
               if (modifier === 'am' && hours === 12) hours = 0; 
               migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-            } catch (e) { /* ignore */ }
-          } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) {
+            } catch (e) { /* ignore format error, keep original */ }
+          } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) { 
              const [hours, minutes] = migratedSpecificTime.split(':').map(Number);
              migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
           }
           
-          // Ensure completionLog entries have a note field, even if undefined
-          const migratedCompletionLog = (habit.completionLog || (habit.completedDates
+          const migratedCompletionLog = (habit.completionLog || (habit.completedDates 
               ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A', note: undefined }))
               : [])).map((log: any) => ({
                 date: log.date,
-                time: log.time,
-                note: log.note || undefined, // Ensure note field exists
+                time: log.time || 'N/A', 
+                note: log.note || undefined, 
               }));
-
+          // END MIGRATION LOGIC
 
           return {
             id: habit.id || Date.now().toString() + Math.random().toString(36).substring(2,7),
@@ -141,6 +141,9 @@ const HabitualPage: NextPage = () => {
         setHabits(parsedHabits);
       } catch (error) {
         console.error("Failed to parse habits from localStorage:", error);
+        // Avoid calling toast() here directly during initial render/state update.
+        // If necessary, schedule it:
+        // setTimeout(() => toast({ title: "Error Loading Habits", description: "Could not load habits from storage. Data might be corrupted.", variant: "destructive" }), 0);
       }
     }
   }, []);
@@ -173,10 +176,8 @@ const HabitualPage: NextPage = () => {
             const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
             const existingLogIndex = newCompletionLog.findIndex(log => log.date === date);
             if (existingLogIndex > -1) {
-              // If log exists, update time, keep note
               newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], time: currentTime };
             } else {
-              // Add new log entry without a note initially
               newCompletionLog.push({ date, time: currentTime, note: undefined });
             }
             toast({
@@ -289,12 +290,10 @@ const HabitualPage: NextPage = () => {
             }
             return log;
           });
-          // If no log entry exists for the date (shouldn't happen if dialog opened from completed item)
-          // This path is defensive. Typically, a log entry for 'date' should exist.
           if (!newCompletionLog.some(log => log.date === date)) {
              const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
              newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim()});
-             newCompletionLog.sort((a,b) => b.date.localeCompare(a.date)); // Keep sorted
+             newCompletionLog.sort((a,b) => b.date.localeCompare(a.date)); 
           }
           return { ...h, completionLog: newCompletionLog };
         }
@@ -478,3 +477,5 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+    
+    
