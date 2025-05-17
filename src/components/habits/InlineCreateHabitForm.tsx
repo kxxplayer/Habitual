@@ -12,10 +12,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, XCircle } from 'lucide-react';
+import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, XCircle, Tag } from 'lucide-react';
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
-import type { Habit, CreateHabitFormData, WeekDay } from '@/types';
+import type { Habit, CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
+import { HABIT_CATEGORIES } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface InlineCreateHabitFormProps {
   onAddHabit: (habit: Omit<Habit, 'id' | 'completionLog'>) => void;
@@ -27,6 +35,7 @@ const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
 const createHabitFormSchema = z.object({
   description: z.string().optional(),
   name: z.string().min(1, "Habit name is required."),
+  category: z.enum(HABIT_CATEGORIES).optional(),
   daysOfWeek: z.array(z.enum(weekDaysArray)).min(1, "Please select at least one day."),
   optimalTiming: z.string().optional(),
   durationHours: z.coerce.number().min(0).optional().nullable(),
@@ -67,6 +76,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     defaultValues: {
       description: '',
       name: '',
+      category: 'Other',
       daysOfWeek: [],
       optimalTiming: '',
       durationHours: null,
@@ -78,11 +88,11 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
   const habitDescriptionForAI = watch('description');
 
   useEffect(() => {
-    // Reset form when it's closed externally or after submission.
     return () => {
         reset({
             description: '',
             name: '',
+            category: 'Other',
             daysOfWeek: [],
             optimalTiming: '',
             durationHours: null,
@@ -94,7 +104,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
 
   const handleAISuggestDetails = async () => {
-    const currentDescription = habitDescriptionForAI || ""; // Ensure it's a string
+    const currentDescription = habitDescriptionForAI || ""; 
     if (currentDescription.trim() === "") {
       toast({
         title: "No Description Provided",
@@ -107,18 +117,19 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     try {
       const result = await createHabitFromDescription({ description: currentDescription });
       setValue('name', result.habitName || '');
+      // AI does not suggest category for now. User selects it manually.
 
       let suggestedDays: WeekDay[] = [];
       if (result.daysOfWeek && Array.isArray(result.daysOfWeek)) {
         suggestedDays = result.daysOfWeek
-          .map(day => normalizeDay(day as string)) 
+          .map(day => normalizeDay(day as string))
           .filter((d): d is WeekDay => d !== undefined);
       }
       setValue('daysOfWeek', suggestedDays);
 
       setValue('optimalTiming', result.optimalTiming || '');
-      setValue('durationHours', result.durationHours ?? null); 
-      setValue('durationMinutes', result.durationMinutes ?? null); 
+      setValue('durationHours', result.durationHours ?? null);
+      setValue('durationMinutes', result.durationMinutes ?? null);
 
       if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) {
         setValue('specificTime', result.specificTime);
@@ -130,7 +141,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
       toast({
         title: "AI Suggestion Applied",
-        description: "Habit details have been populated by AI.",
+        description: "Habit details have been populated by AI (category is manual).",
       });
     } catch (error) {
       console.error("AI suggestion error:", error);
@@ -148,6 +159,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     onAddHabit({
       name: data.name,
       description: data.description,
+      category: data.category,
       daysOfWeek: data.daysOfWeek,
       optimalTiming: data.optimalTiming,
       durationHours: data.durationHours === null ? undefined : data.durationHours,
@@ -157,7 +169,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     reset();
     onCloseForm();
   };
-  
+
   const isDescriptionEffectivelyEmpty = !habitDescriptionForAI || (typeof habitDescriptionForAI === 'string' && habitDescriptionForAI.trim() === '');
 
   return (
@@ -180,12 +192,12 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
               control={control}
               render={({ field }) => <Textarea id="inline-ai-description" placeholder="e.g., I want to read more books every morning for 30 mins" {...field} className="bg-input/50 text-sm" rows={2} />}
             />
-            <Button 
-              type="button" 
-              onClick={handleAISuggestDetails} 
-              disabled={isAISuggesting || isDescriptionEffectivelyEmpty} 
-              variant="outline" 
-              size="sm" 
+            <Button
+              type="button"
+              onClick={handleAISuggestDetails}
+              disabled={isAISuggesting || isDescriptionEffectivelyEmpty}
+              variant="outline"
+              size="sm"
               className="w-full mt-1"
             >
               {isAISuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
@@ -193,15 +205,44 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
             </Button>
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="inline-habit-name" className="text-sm font-medium">Habit Name</Label>
-            <Controller
-              name="name"
-              control={control}
-              render={({ field }) => <Input id="inline-habit-name" placeholder="e.g., Read a chapter daily" {...field} className="bg-input/50 text-sm" />}
-            />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="inline-habit-name" className="text-sm font-medium">Habit Name</Label>
+              <Controller
+                name="name"
+                control={control}
+                render={({ field }) => <Input id="inline-habit-name" placeholder="e.g., Read a chapter daily" {...field} className="bg-input/50 text-sm" />}
+              />
+              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="inline-habit-category" className="text-sm font-medium flex items-center">
+                <Tag className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                Category
+              </Label>
+              <Controller
+                name="category"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value || "Other"}>
+                    <SelectTrigger id="inline-habit-category" className="bg-input/50 text-sm h-9">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {HABIT_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat} className="text-sm">
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
+            </div>
           </div>
+
 
           <div className="space-y-1">
             <Label className="text-sm font-medium">Days of the Week</Label>
@@ -295,4 +336,3 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 };
 
 export default InlineCreateHabitForm;
-

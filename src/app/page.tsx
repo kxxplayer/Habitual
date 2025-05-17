@@ -9,7 +9,7 @@ import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
 import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog';
 import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm';
 import HabitOverview from '@/components/overview/HabitOverview';
-import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry } from '@/types';
+import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { useToast } from '@/hooks/use-toast';
 
@@ -54,9 +54,9 @@ const HabitualPage: NextPage = () => {
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
 
   const [isReflectionDialogOpen, setIsReflectionDialogOpen] = useState(false);
-  const [reflectionDialogData, setReflectionDialogData] = useState<{ 
-    habitId: string; 
-    date: string; 
+  const [reflectionDialogData, setReflectionDialogData] = useState<{
+    habitId: string;
+    date: string;
     initialNote?: string;
     habitName: string;
   } | null>(null);
@@ -67,9 +67,9 @@ const HabitualPage: NextPage = () => {
     if (storedHabits) {
       try {
         const parsedHabits: Habit[] = JSON.parse(storedHabits).map((habit: any) => {
-          // START MIGRATION LOGIC - Ensure no toast() calls are made here.
+          // START MIGRATION LOGIC
           let daysOfWeek: WeekDay[] = habit.daysOfWeek || [];
-          if (!habit.daysOfWeek && habit.frequency) { // Old frequency field
+          if (!habit.daysOfWeek && habit.frequency) {
             const freqLower = habit.frequency.toLowerCase();
             if (freqLower === 'daily') daysOfWeek = [...weekDays];
             else {
@@ -95,12 +95,12 @@ const HabitualPage: NextPage = () => {
 
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
-                if (numVal <= 120) migratedDurationMinutes = numVal; 
+                if (numVal <= 120) migratedDurationMinutes = numVal;
             }
           }
 
           let migratedSpecificTime = habit.specificTime;
-          if (migratedSpecificTime && /\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime)) { 
+          if (migratedSpecificTime && /\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime)) {
             try {
               const [timePart, modifierPart] = migratedSpecificTime.split(/\s+/);
               const [hoursStr, minutesStr] = timePart.split(':');
@@ -109,20 +109,20 @@ const HabitualPage: NextPage = () => {
               const modifier = modifierPart ? modifierPart.toLowerCase() : '';
 
               if (modifier === 'pm' && hours < 12) hours += 12;
-              if (modifier === 'am' && hours === 12) hours = 0; 
+              if (modifier === 'am' && hours === 12) hours = 0;
               migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
             } catch (e) { /* ignore format error, keep original */ }
-          } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) { 
+          } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) {
              const [hours, minutes] = migratedSpecificTime.split(':').map(Number);
              migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
           }
-          
-          const migratedCompletionLog = (habit.completionLog || (habit.completedDates 
+
+          const migratedCompletionLog = (habit.completionLog || (habit.completedDates
               ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A', note: undefined }))
               : [])).map((log: any) => ({
                 date: log.date,
-                time: log.time || 'N/A', 
-                note: log.note || undefined, 
+                time: log.time || 'N/A',
+                note: log.note || undefined,
               }));
           // END MIGRATION LOGIC
 
@@ -130,6 +130,7 @@ const HabitualPage: NextPage = () => {
             id: habit.id || Date.now().toString() + Math.random().toString(36).substring(2,7),
             name: habit.name || 'Unnamed Habit',
             description: habit.description || undefined,
+            category: habit.category || undefined, // Add category, default to undefined if not present
             daysOfWeek: daysOfWeek,
             optimalTiming: habit.optimalTiming || undefined,
             durationHours: migratedDurationHours,
@@ -141,9 +142,6 @@ const HabitualPage: NextPage = () => {
         setHabits(parsedHabits);
       } catch (error) {
         console.error("Failed to parse habits from localStorage:", error);
-        // Avoid calling toast() here directly during initial render/state update.
-        // If necessary, schedule it:
-        // setTimeout(() => toast({ title: "Error Loading Habits", description: "Could not load habits from storage. Data might be corrupted.", variant: "destructive" }), 0);
       }
     }
   }, []);
@@ -157,6 +155,7 @@ const HabitualPage: NextPage = () => {
       ...newHabitData,
       id: Date.now().toString() + Math.random().toString(36).substring(2,7),
       completionLog: [],
+      category: newHabitData.category || 'Other', // Default category if not provided
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
     toast({
@@ -164,7 +163,7 @@ const HabitualPage: NextPage = () => {
       description: `"${newHabit.name}" is now ready to be tracked.`,
       action: <Smile className="h-5 w-5 text-accent" />,
     });
-    setShowInlineHabitForm(false); 
+    setShowInlineHabitForm(false);
   };
 
   const handleToggleComplete = (habitId: string, date: string, completed: boolean) => {
@@ -180,11 +179,12 @@ const HabitualPage: NextPage = () => {
             } else {
               newCompletionLog.push({ date, time: currentTime, note: undefined });
             }
-            toast({
-                title: "Great Job!",
-                description: `You've completed "${habit.name}" for today!`,
-                className: "bg-accent border-green-600 text-accent-foreground",
-            });
+            // This toast is handled directly in HabitItem for better UX with sparkle
+            // toast({
+            //     title: "Great Job!",
+            //     description: `You've completed "${habit.name}" for today!`,
+            //     className: "bg-accent border-green-600 text-accent-foreground",
+            // });
           } else {
             newCompletionLog = newCompletionLog.filter(log => log.date !== date);
           }
@@ -209,10 +209,11 @@ const HabitualPage: NextPage = () => {
         return entry;
       });
       const trackingData = `Completions: ${completionEntries.join('; ') || 'None yet'}.`;
-      
+
       const inputForAI = {
         habitName: habit.name,
         habitDescription: habit.description,
+        // category: habit.category, // AI doesn't use category for suggestions yet
         daysOfWeek: habit.daysOfWeek,
         optimalTiming: habit.optimalTiming,
         durationHours: habit.durationHours,
@@ -281,7 +282,7 @@ const HabitualPage: NextPage = () => {
     if (!reflectionDialogData) return;
     const { habitId, date } = reflectionDialogData;
 
-    setHabits(prevHabits => 
+    setHabits(prevHabits =>
       prevHabits.map(h => {
         if (h.id === habitId) {
           const newCompletionLog = h.completionLog.map(log => {
@@ -290,10 +291,11 @@ const HabitualPage: NextPage = () => {
             }
             return log;
           });
+          // Ensure log entry exists if note is added for a date without prior completion toggle
           if (!newCompletionLog.some(log => log.date === date)) {
              const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
              newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim()});
-             newCompletionLog.sort((a,b) => b.date.localeCompare(a.date)); 
+             newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
           }
           return { ...h, completionLog: newCompletionLog };
         }
@@ -318,9 +320,9 @@ const HabitualPage: NextPage = () => {
       <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
-          maxWidth: 'clamp(320px, 100%, 450px)', 
-          height: 'clamp(600px, 90vh, 800px)', 
-          overflow: 'hidden', 
+          maxWidth: 'clamp(320px, 100%, 450px)',
+          height: 'clamp(600px, 90vh, 800px)',
+          overflow: 'hidden',
         }}
       >
         <AppHeader />
@@ -335,7 +337,7 @@ const HabitualPage: NextPage = () => {
                 />
               </div>
             )}
-            
+
             {selectedHabitIds.length > 0 && habits.length > 0 && !showInlineHabitForm && (
               <div className="my-4 flex items-center gap-2 sm:gap-4 p-2 border rounded-md bg-card shadow-sm w-full justify-between">
                 <div className="flex items-center space-x-2">
@@ -399,7 +401,7 @@ const HabitualPage: NextPage = () => {
           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
             <p>&copy; {new Date().getFullYear()} Habitual.</p>
           </footer>
-        </div> 
+        </div>
 
         <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16">
           <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/3">
@@ -414,8 +416,8 @@ const HabitualPage: NextPage = () => {
             <Settings className="h-5 w-5" />
             <span className="text-xs mt-0.5">Settings</span>
           </Button>
-        </div> 
-      </div> 
+        </div>
+      </div>
 
       {!showInlineHabitForm && (
         <Button
@@ -477,5 +479,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-    
-    

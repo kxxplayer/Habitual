@@ -15,8 +15,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp, Flame, MoreHorizontal, MessageSquarePlus, StickyNote } from 'lucide-react';
-import type { Habit, WeekDay } from '@/types';
+import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp, Flame, MoreHorizontal, MessageSquarePlus, StickyNote, Tag } from 'lucide-react';
+import type { Habit, WeekDay, HabitCategory } from '@/types';
+import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
@@ -50,30 +51,38 @@ const formatSpecificTime = (timeStr?: string): string | undefined => {
   return timeStr;
 };
 
-const getStableColorIndex = (id: string): number => {
-  let hash = 0;
-  if (!id || id.length === 0) return 0; // Default index for invalid ID
-  for (let i = 0; i < id.length; i++) {
-    const char = id.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0; // Convert to 32bit integer
+const categoryColorMap: Record<HabitCategory, string> = {
+  "Lifestyle": "--chart-1",
+  "Work/Study": "--chart-2",
+  "Health & Wellness": "--chart-3",
+  "Creative": "--chart-4",
+  "Chores": "--chart-5",
+  "Finance": "--chart-1", // Re-use colors if more categories than chart variables
+  "Social": "--chart-2",
+  "Personal Growth": "--chart-3",
+  "Other": "--chart-5", // Default/fallback chart color
+};
+
+const getCategoryColorVariable = (category?: HabitCategory): string => {
+  if (category && categoryColorMap[category]) {
+    return categoryColorMap[category];
   }
-  return (Math.abs(hash) % 5); // Results in 0, 1, 2, 3, or 4
+  return categoryColorMap["Other"]; // Fallback for undefined or unknown category
 };
 
 
-const HabitItem: FC<HabitItemProps> = ({ 
-    habit, 
-    onToggleComplete, 
-    onGetAISuggestion, 
+const HabitItem: FC<HabitItemProps> = ({
+    habit,
+    onToggleComplete,
+    onGetAISuggestion,
     onOpenReflectionDialog,
-    isCompletedToday, 
-    isSelected, 
-    onSelectToggle 
+    isCompletedToday,
+    isSelected,
+    onSelectToggle
 }) => {
   const todayString = new Date().toISOString().split('T')[0];
   const { toast } = useToast();
-  const [currentDate, setCurrentDate] = React.useState(new Date()); 
+  const [currentDate, setCurrentDate] = React.useState(new Date());
   const [weekViewDays, setWeekViewDays] = React.useState<WeekDayInfo[]>([]);
   const [showSparkles, setShowSparkles] = React.useState(false);
 
@@ -81,7 +90,7 @@ const HabitItem: FC<HabitItemProps> = ({
     const now = new Date();
     setCurrentDate(now);
     setWeekViewDays(getCurrentWeekDays(now));
-  }, [todayString]); 
+  }, [todayString]);
 
   const streak = calculateStreak(habit, currentDate);
 
@@ -90,11 +99,14 @@ const HabitItem: FC<HabitItemProps> = ({
     onToggleComplete(habit.id, todayString, newCompletedState);
     if (newCompletedState) {
       setShowSparkles(true);
-      // Sound playing would also go here if implemented
-      // Example: new Audio('/sounds/completion-chime.mp3').play();
+      toast({
+          title: "Great Job!",
+          description: `You've completed "${habit.name}" for today!`,
+          className: "bg-accent border-green-600 text-accent-foreground",
+      });
       setTimeout(() => {
         setShowSparkles(false);
-      }, 1000); 
+      }, 1000);
     }
   };
 
@@ -126,7 +138,7 @@ const HabitItem: FC<HabitItemProps> = ({
       if (durationText) durationText += ' ';
       durationText += `${habit.durationMinutes} min`;
     }
-    const shareText = `Check out this habit I'm tracking with Habitual!\n\nHabit: ${habit.name}\n${habit.description ? `Description: ${habit.description}\n` : ''}Days: ${daysText}\n${habit.optimalTiming ? `Optimal Timing: ${habit.optimalTiming}\n` : ''}${durationText ? `Duration: ${durationText}\n` : ''}${habit.specificTime ? `Specific Time: ${formatSpecificTime(habit.specificTime)}\n` : ''}${streak > 0 ? `Current Streak: ${streak} day(s)!\n` : ''}Track your habits with Habitual!`;
+    const shareText = `Check out this habit I'm tracking with Habitual!\n\nHabit: ${habit.name}\n${habit.description ? `Description: ${habit.description}\n` : ''}${habit.category ? `Category: ${habit.category}\n` : ''}Days: ${daysText}\n${habit.optimalTiming ? `Optimal Timing: ${habit.optimalTiming}\n` : ''}${durationText ? `Duration: ${durationText}\n` : ''}${habit.specificTime ? `Specific Time: ${formatSpecificTime(habit.specificTime)}\n` : ''}${streak > 0 ? `Current Streak: ${streak} day(s)!\n` : ''}Track your habits with Habitual!`;
     const copyToClipboard = async (text: string) => {
       try {
         await navigator.clipboard.writeText(text);
@@ -184,13 +196,12 @@ const HabitItem: FC<HabitItemProps> = ({
   if (isCompletedToday) {
     cardClasses = cn(cardClasses, 'border-accent bg-green-50 dark:bg-green-900/30');
   } else {
-    const colorIndex = getStableColorIndex(habit.id); // 0 to 4
-    const chartColorVarSuffix = colorIndex + 1; // 1 to 5
-    cardStyle.borderLeftColor = `hsl(var(--chart-${chartColorVarSuffix}))`;
-    cardClasses = cn(cardClasses, 'border-l-4'); // Apply thicker left border
+    const categoryColorVar = getCategoryColorVariable(habit.category);
+    cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
+    cardClasses = cn(cardClasses, 'border-l-4');
   }
-  
-  cardClasses = cn(cardClasses, 'bg-card'); // Ensure bg-card is there for default state
+
+  cardClasses = cn(cardClasses, 'bg-card');
 
   return (
     <Card className={cardClasses} style={cardStyle}>
@@ -223,6 +234,12 @@ const HabitItem: FC<HabitItemProps> = ({
               )}
             </div>
             {habit.description && <CardDescription className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">{habit.description}</CardDescription>}
+             {habit.category && (
+              <div className="flex items-center text-xs text-muted-foreground mt-1">
+                <Tag className="mr-1 h-3 w-3 text-primary/70" />
+                <span>{habit.category}</span>
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -258,29 +275,29 @@ const HabitItem: FC<HabitItemProps> = ({
             <div className="flex justify-around items-center space-x-1">
               {weekViewDays.map((dayInfo) => {
                 const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
-                const isCompleted = isScheduled && habit.completionLog.some(log => log.date === dayInfo.dateStr);
-                const isMissed = isScheduled && !isCompleted && dayInfo.isPast;
+                const isCompletedOnDay = isScheduled && habit.completionLog.some(log => log.date === dayInfo.dateStr);
+                const isMissed = isScheduled && !isCompletedOnDay && dayInfo.isPast;
 
-                let dayBgColor = 'bg-input/30'; 
+                let dayBgColor = 'bg-input/30';
                 let dayTextColor = 'text-muted-foreground/70';
 
                 if (isScheduled) {
-                  if (isCompleted) {
+                  if (isCompletedOnDay) {
                     dayBgColor = 'bg-accent';
                     dayTextColor = 'text-accent-foreground';
                   } else if (isMissed) {
                     dayBgColor = 'bg-destructive';
                     dayTextColor = 'text-destructive-foreground';
-                  } else { 
+                  } else {
                     dayBgColor = 'bg-muted';
                     dayTextColor = 'text-muted-foreground';
                   }
                 }
-                
+
                 return (
                   <div
                     key={dayInfo.dateStr}
-                    title={`${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}${isScheduled ? (isCompleted ? ' (Completed)' : (isMissed ? ' (Missed)' : ' (Pending)')) : ' (Not Scheduled)'}`}
+                    title={`${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}${isScheduled ? (isCompletedOnDay ? ' (Completed)' : (isMissed ? ' (Missed)' : ' (Pending)')) : ' (Not Scheduled)'}`}
                     className={`flex flex-col items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-md text-xs font-medium transition-all ${dayBgColor} ${dayTextColor} ${dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : ''}`}
                   >
                     {dayInfo.dayAbbrShort}
@@ -335,7 +352,7 @@ const HabitItem: FC<HabitItemProps> = ({
             </>
           )}
         </div>
-        
+
         <div className="flex justify-between items-center mt-2 min-h-[20px]">
           <div className="text-xs text-muted-foreground">
             {isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A' && (
@@ -385,6 +402,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-
-
-    
