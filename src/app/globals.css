@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    /* Light Theme - Modern, Minimal, Gamified */
-    --background: 220 20% 97%; /* Very Light Cool Gray */
+    /* Light Theme - Modern, Minimal, Gamified - More Colorful Background */
+    --background: 280 100% 97%; /* Soft Lavender (matches anim-mid) */
     --foreground: 240 10% 10%; /* Dark Slate Gray */
 
     --card: 0 0% 100%; /* White */
@@ -51,15 +51,15 @@
     --sidebar-border: 220 15% 85%;
     --sidebar-ring: 145 58% 45%;
 
-    /* Animated background colors - Light theme */
-    --background-anim-start: 220 20% 98%; /* Very light cool gray */
-    --background-anim-mid: 220 20% 97%;   /* Main light background */
-    --background-anim-end: 210 25% 96%;   /* Slightly more bluish light gray */
+    /* Animated background colors - Light theme - More Colorful */
+    --background-anim-start: 200 100% 96%; /* Soft Sky Blue */
+    --background-anim-mid: 280 100% 97%;   /* Soft Lavender */
+    --background-anim-end: 40 100% 96%;   /* Pale Peach */
   }
 
   .dark {
-    /* Dark Theme - Inspired by image */
-    --background: 248 39% 22%; /* Dark Purple Blue */
+    /* Dark Theme - Inspired by image - More Colorful Background Animation */
+    --background: 200 35% 18%; /* Dark Teal-Blue (matches anim-mid) */
     --foreground: 220 15% 95%; /* Off-White */
 
     --card: 248 35% 28%; /* Slightly Lighter Purple Blue */
@@ -103,10 +103,10 @@
     --sidebar-border: 248 30% 35%;
     --sidebar-ring: 145 58% 50%;
 
-    /* Animated background colors - Dark theme */
-    --background-anim-start: 248 39% 25%; /* Slightly Lighter Dark Purple */
-    --background-anim-mid: 248 39% 22%;   /* Main Dark Purple background */
-    --background-anim-end: 255 35% 23%;  /* Slightly more blueish Dark Purple */
+    /* Animated background colors - Dark theme - More Colorful Variation */
+    --background-anim-start: 240 30% 20%; /* Deep Indigo */
+    --background-anim-mid: 200 35% 18%;   /* Dark Teal-Blue */
+    --background-anim-end: 280 25% 16%;  /* Dark Violet */
   }
 }
 
