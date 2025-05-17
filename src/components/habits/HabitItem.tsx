@@ -78,6 +78,7 @@ const HabitItem: FC<HabitItemProps> = ({
     if (newCompletedState) {
       setShowSparkles(true);
       // Sound playing would also go here if implemented
+      // Example: new Audio('/sounds/completion-chime.mp3').play();
       setTimeout(() => {
         setShowSparkles(false);
       }, 1000); 
@@ -166,7 +167,7 @@ const HabitItem: FC<HabitItemProps> = ({
 
   return (
     <Card className={`relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isCompletedToday ? 'border-accent bg-green-50 dark:bg-green-900/30' : 'bg-card'} ${isSelected ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-background' : ''}`}>
-      <div className="absolute top-3 left-3 z-10">
+      <div className="absolute top-3 right-3 z-10"> {/* Changed left-3 to right-3 */}
         <Checkbox
           id={`select-${habit.id}`}
           checked={isSelected}
@@ -175,11 +176,11 @@ const HabitItem: FC<HabitItemProps> = ({
           className="transform scale-110 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
       </div>
-      <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pl-12">
+      <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pr-12"> {/* Changed pl-12 to pr-12 */}
         <div className="flex justify-between items-start">
-          <div className="flex-grow mr-2">
+          <div className="flex-grow"> {/* Removed mr-2 */}
             <div className="flex items-center gap-2 mb-0.5">
-              <CardTitle className="text-lg sm:text-xl font-semibold text-primary">
+              <CardTitle className="text-lg sm:text-xl font-semibold text-primary min-w-0 break-words"> {/* Added min-w-0 break-words */}
                 {habit.name}
               </CardTitle>
               {streak > 0 ? (
@@ -357,4 +358,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-
