@@ -62,6 +62,7 @@ const HabitItem: FC<HabitItemProps> = ({
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = React.useState(new Date()); 
   const [weekViewDays, setWeekViewDays] = React.useState<WeekDayInfo[]>([]);
+  const [showSparkles, setShowSparkles] = React.useState(false);
 
   React.useEffect(() => {
     const now = new Date();
@@ -72,7 +73,16 @@ const HabitItem: FC<HabitItemProps> = ({
   const streak = calculateStreak(habit, currentDate);
 
   const handleToggleDailyCompletion = () => {
-    onToggleComplete(habit.id, todayString, !isCompletedToday);
+    const newCompletedState = !isCompletedToday;
+    onToggleComplete(habit.id, todayString, newCompletedState);
+    if (newCompletedState) {
+      setShowSparkles(true);
+      // Sound playing would also go here if implemented
+      // The toast is triggered in page.tsx after state update.
+      setTimeout(() => {
+        setShowSparkles(false);
+      }, 1000); // Animation duration + a small buffer
+    }
   };
 
   const handleAddToCalendar = () => {
@@ -188,19 +198,31 @@ const HabitItem: FC<HabitItemProps> = ({
             {habit.description && <CardDescription className="text-sm text-muted-foreground mt-1">{habit.description}</CardDescription>}
           </div>
           <div className="flex flex-col items-center space-y-1 text-center flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleToggleDailyCompletion}
-              className="rounded-full p-0 h-10 w-10 group transform transition-transform active:scale-95"
-              aria-label={isCompletedToday ? `Mark ${habit.name} as not done for today` : `Mark ${habit.name} as done for today`}
-            >
-              {isCompletedToday ? (
-                <CheckCircle2 className="h-8 w-8 text-accent group-hover:text-accent/90 transition-colors" />
-              ) : (
-                <Circle className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+            <div className="relative sparkle-container"> {/* Added sparkle-container for positioning context */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleToggleDailyCompletion}
+                className="rounded-full p-0 h-10 w-10 group transform transition-transform active:scale-95"
+                aria-label={isCompletedToday ? `Mark ${habit.name} as not done for today` : `Mark ${habit.name} as done for today`}
+              >
+                {isCompletedToday ? (
+                  <CheckCircle2 className="h-8 w-8 text-accent group-hover:text-accent/90 transition-colors" />
+                ) : (
+                  <Circle className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                )}
+              </Button>
+              {showSparkles && (
+                <>
+                  <div className="sparkle sparkle-1" style={{ ['--tx' as any]: '-10px', ['--ty' as any]: '-20px' }}></div>
+                  <div className="sparkle sparkle-2" style={{ ['--tx' as any]: '10px', ['--ty' as any]: '-20px' }}></div>
+                  <div className="sparkle sparkle-3" style={{ ['--tx' as any]: '-15px', ['--ty' as any]: '0px' }}></div>
+                  <div className="sparkle sparkle-4" style={{ ['--tx' as any]: '15px', ['--ty' as any]: '0px' }}></div>
+                  <div className="sparkle sparkle-5" style={{ ['--tx' as any]: '0px', ['--ty' as any]: '-25px' }}></div>
+                  <div className="sparkle sparkle-6" style={{ ['--tx' as any]: '5px', ['--ty' as any]: '15px', backgroundColor: 'hsl(var(--primary))' }}></div>
+                </>
               )}
-            </Button>
+            </div>
             <div className="flex items-center space-x-1">
               {isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A' && (
                 <p className="text-xs text-muted-foreground">at {latestCompletionTimeToday}</p>
@@ -333,4 +355,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-

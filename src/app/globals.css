@@ -134,3 +134,54 @@
     background-position: 0% 50%;
   }
 }
+
+/* Sparkle Animation */
+.sparkle-container {
+  position: relative; /* Or any other positioning context if needed */
+  display: inline-flex; /* To wrap the button tightly */
+  align-items: center;
+  justify-content: center;
+}
+
+.sparkle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: hsl(var(--accent)); /* Use accent color for sparkles */
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  animation: sparkle-effect 0.8s ease-out forwards;
+}
+
+/* Positioning for individual sparkles - adjust as needed */
+.sparkle-1 { top: -15%; left: 15%; animation-delay: 0s; }
+.sparkle-2 { top: 0%; right: 0%; animation-delay: 0.1s; }
+.sparkle-3 { top: 60%; left: -5%; animation-delay: 0.2s; }
+.sparkle-4 { bottom: -5%; right: 20%; animation-delay: 0.3s; }
+.sparkle-5 { top: 20%; left: 50%; transform: translateX(-50%); animation-delay: 0.05s; }
+.sparkle-6 { bottom: 15%; left: 30%; animation-delay: 0.15s; }
+
+
+@keyframes sparkle-effect {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.3) translate(0px, 0px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) translate(var(--tx, 0px), var(--ty, -15px)); /* Move upwards and outwards */
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5) translate(calc(var(--tx, 0px) * 2), calc(var(--ty, -15px) * 2)); /* Continue movement and fade */
+  }
+}
+
+/* Custom properties for varied sparkle movement */
+.sparkle-1 { --tx: -10px; --ty: -20px; }
+.sparkle-2 { --tx: 10px; --ty: -20px; }
+.sparkle-3 { --tx: -15px; --ty: 0px; }
+.sparkle-4 { --tx: 15px; --ty: 0px; }
+.sparkle-5 { --tx: 0px; --ty: -25px; } /* More vertical for center top */
+.sparkle-6 { --tx: 0px; --ty: 15px; background-color: hsl(var(--primary));} /* Example of a different color and direction */
