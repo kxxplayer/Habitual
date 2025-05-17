@@ -2,7 +2,7 @@
 "use client";
 
 import type { Habit, WeekDay } from '@/types';
-import { startOfWeek, endOfWeek, isWithinInterval, format, parseISO, getDay, subDays } from 'date-fns';
+import { startOfWeek, endOfWeek, isWithinInterval, format, parseISO, getDay, subDays, eachDayOfInterval, isToday as dateFnsIsToday, isPast as dateFnsIsPast, startOfDay } from 'date-fns';
 
 /**
  * Returns the start (Sunday) and end (Saturday) of the week for a given date.
@@ -39,6 +39,10 @@ export const isDateInCurrentWeek = (dateString: string, today: Date = new Date()
 };
 
 const dayIndexToWeekDay: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const weekDayToShort: Record<WeekDay, string> = {
+  "Sun": "S", "Mon": "M", "Tue": "T", "Wed": "W", "Thu": "T", "Fri": "F", "Sat": "S",
+};
+
 
 /**
  * Gets the 3-letter day abbreviation (e.g., "Sun", "Mon") for a given date.
@@ -66,7 +70,7 @@ export const calculateStreak = (habit: Habit, referenceDate: Date = new Date()):
 
   const completionDates = new Set(habit.completionLog.map(log => log.date));
   let currentStreak = 0;
-  let tempDate = new Date(referenceDate);
+  let tempDate = startOfDay(new Date(referenceDate)); // Ensure we compare date parts only
 
   for (let i = 0; i < 365 * 2; i++) { // Look back up to 2 years, an arbitrary limit
     const dateStr = format(tempDate, 'yyyy-MM-dd');
@@ -76,14 +80,8 @@ export const calculateStreak = (habit: Habit, referenceDate: Date = new Date()):
       if (completionDates.has(dateStr)) { // And it was completed
         currentStreak++;
       } else { // Scheduled but not completed
-        // If checking today (i === 0) and it's not completed, the streak is 0.
-        // Otherwise, a past scheduled day was missed, so the streak accumulated *before* this miss is broken.
-        // Since we are counting backwards, if a scheduled day is missed, the streak effectively ends before this day.
-        // So, if we are on the very first day of checking (today, i=0) and it's missed, streak is 0.
-        // If we have accumulated some streak from future days (closer to today) and then hit a missed scheduled day,
-        // that accumulated streak is the correct one.
-        // The loop breaks, and currentStreak holds the count of consecutive completions.
-        if (i === 0 && format(tempDate, 'yyyy-MM-dd') === format(referenceDate, 'yyyy-MM-dd')) {
+        // If checking today (i === 0 and tempDate is referenceDate) and it's missed, streak is 0.
+        if (i === 0 && format(tempDate, 'yyyy-MM-dd') === format(startOfDay(referenceDate), 'yyyy-MM-dd')) {
              return 0; // Today was scheduled but not completed.
         }
         break; // Streak broken before this day
@@ -95,4 +93,36 @@ export const calculateStreak = (habit: Habit, referenceDate: Date = new Date()):
     tempDate = subDays(tempDate, 1);
   }
   return currentStreak;
+};
+
+export interface WeekDayInfo {
+  date: Date;
+  dayAbbrShort: string; // S, M, T, W, T, F, S
+  dayAbbrFull: WeekDay; // Sun, Mon, Tue...
+  dateStr: string; // YYYY-MM-DD
+  isToday: boolean;
+  isPast: boolean; // True if the day is strictly before today (at midnight)
+}
+
+/**
+ * Gets an array of day information for the current week (Sunday to Saturday).
+ * @param referenceDate The date to determine the current week from (defaults to today).
+ * @returns An array of WeekDayInfo objects.
+ */
+export const getCurrentWeekDays = (referenceDate: Date = new Date()): WeekDayInfo[] => {
+  const weekSpan = getWeekSpan(referenceDate);
+  const days = eachDayOfInterval({ start: weekSpan.start, end: weekSpan.end });
+  const todayRef = startOfDay(referenceDate); // For consistent "isPast" comparison
+
+  return days.map(date => {
+    const dayAbbrFull = getDayAbbreviationFromDate(date);
+    return {
+      date: date,
+      dayAbbrShort: weekDayToShort[dayAbbrFull],
+      dayAbbrFull: dayAbbrFull,
+      dateStr: format(date, 'yyyy-MM-dd'),
+      isToday: dateFnsIsToday(date),
+      isPast: dateFnsIsPast(date) && !dateFnsIsToday(date), // isPast is true only if it's *before* today
+    };
+  });
 };

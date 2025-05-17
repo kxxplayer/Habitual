@@ -20,7 +20,7 @@ import type { Habit, WeekDay } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
-import { isDateInCurrentWeek, getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
+import { isDateInCurrentWeek, getDayAbbreviationFromDate, calculateStreak, getCurrentWeekDays, WeekDayInfo } from '@/lib/dateUtils';
 
 
 interface HabitItemProps {
@@ -61,10 +61,13 @@ const HabitItem: FC<HabitItemProps> = ({
   const todayString = new Date().toISOString().split('T')[0];
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = React.useState(new Date()); 
+  const [weekViewDays, setWeekViewDays] = React.useState<WeekDayInfo[]>([]);
 
   React.useEffect(() => {
-    setCurrentDate(new Date());
-  }, [todayString]);
+    const now = new Date();
+    setCurrentDate(now);
+    setWeekViewDays(getCurrentWeekDays(now));
+  }, [todayString]); // Re-calculate if todayString changes (e.g. midnight)
 
   const streak = calculateStreak(habit, currentDate);
 
@@ -206,7 +209,7 @@ const HabitItem: FC<HabitItemProps> = ({
                 <StickyNote className="h-3 w-3 text-blue-500" title="Reflection note added" />
               )}
             </div>
-            <p className={`text-xs font-medium ${isCompletedToday ? 'text-accent' : 'text-muted-foreground'}`}>
+             <p className={`text-xs font-medium ${isCompletedToday ? 'text-accent' : 'text-muted-foreground'}`}>
               {isCompletedToday ? "Completed!" : "Mark Done"}
             </p>
           </div>
@@ -237,6 +240,46 @@ const HabitItem: FC<HabitItemProps> = ({
             </div>
           )}
         </div>
+
+        {weekViewDays.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-border/50">
+            <p className="text-xs font-medium text-muted-foreground mb-1.5">This Week</p>
+            <div className="flex justify-around items-center space-x-1">
+              {weekViewDays.map((dayInfo) => {
+                const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
+                const isCompleted = isScheduled && habit.completionLog.some(log => log.date === dayInfo.dateStr);
+                const isMissed = isScheduled && !isCompleted && dayInfo.isPast;
+
+                let bgColor = 'bg-input/30'; // Default for not scheduled
+                let textColor = 'text-muted-foreground/70';
+
+                if (isScheduled) {
+                  if (isCompleted) {
+                    bgColor = 'bg-accent';
+                    textColor = 'text-accent-foreground';
+                  } else if (isMissed) {
+                    bgColor = 'bg-destructive';
+                    textColor = 'text-destructive-foreground';
+                  } else { // Scheduled but not completed, and is today or future
+                    bgColor = 'bg-muted';
+                    textColor = 'text-muted-foreground';
+                  }
+                }
+                
+                return (
+                  <div
+                    key={dayInfo.dateStr}
+                    title={`${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}${isScheduled ? (isCompleted ? ' (Completed)' : (isMissed ? ' (Missed)' : ' (Pending)')) : ' (Not Scheduled)'}`}
+                    className={`flex flex-col items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-md text-xs font-medium transition-all ${bgColor} ${textColor} ${dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : ''}`}
+                  >
+                    {dayInfo.dayAbbrShort}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
 
         {habit.daysOfWeek && habit.daysOfWeek.length > 0 && (
           <div className="mt-4 pt-3 border-t border-border/50">
@@ -290,3 +333,4 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
+
