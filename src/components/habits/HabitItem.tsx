@@ -15,7 +15,21 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp, Flame, MoreHorizontal, MessageSquarePlus, StickyNote, Tag } from 'lucide-react';
+import { 
+  Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp, Flame, MoreHorizontal, MessageSquarePlus, StickyNote, Tag,
+  ListChecks, // Generic fallback
+  Droplets, // For water/hydrate
+  Bed, // For sleep
+  BookOpenText, // For journal/reading
+  HeartPulse, // For Health & Wellness
+  Briefcase, // For Work/Study
+  Paintbrush, // For Creative
+  Home as HomeIcon, // For Chores (alias as HomeIcon to avoid conflict with Home from main page)
+  Landmark, // For Finance
+  Users, // For Social
+  Smile, // For Lifestyle
+  Sparkles as SparklesIcon // for Personal Growth & sparkle animation (alias if needed)
+} from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
@@ -57,17 +71,56 @@ const categoryColorMap: Record<HabitCategory, string> = {
   "Health & Wellness": "--chart-3",
   "Creative": "--chart-4",
   "Chores": "--chart-5",
-  "Finance": "--chart-1", // Re-use colors if more categories than chart variables
+  "Finance": "--chart-1", 
   "Social": "--chart-2",
   "Personal Growth": "--chart-3",
-  "Other": "--chart-5", // Default/fallback chart color
+  "Other": "--chart-5",
 };
 
 const getCategoryColorVariable = (category?: HabitCategory): string => {
   if (category && categoryColorMap[category]) {
     return categoryColorMap[category];
   }
-  return categoryColorMap["Other"]; // Fallback for undefined or unknown category
+  return categoryColorMap["Other"]; 
+};
+
+const getHabitIcon = (habit: Habit): React.ReactNode => {
+  const nameLower = habit.name.toLowerCase();
+  const category = habit.category;
+
+  if (nameLower.includes('gym') || nameLower.includes('workout') || nameLower.includes('exercise')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">🏋️</span>;
+  if (nameLower.includes('sql') || nameLower.includes('code') || nameLower.includes('programming') || nameLower.includes('develop')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">💻</span>;
+  if (nameLower.includes('walk') || nameLower.includes('run') || nameLower.includes('jog')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">🚶</span>;
+  if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">📚</span>;
+  if (nameLower.includes('meditate') || nameLower.includes('meditation') || nameLower.includes('mindfulness')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">🧘</span>;
+  
+  if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-blue-500" />;
+  if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-purple-500" />;
+  if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-yellow-600" />;
+  if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-blue-600" />;
+  if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-red-500" />;
+
+
+  switch (category) {
+    case 'Health & Wellness':
+      return <HeartPulse className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-red-500" />;
+    case 'Work/Study':
+      return <Briefcase className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-blue-600" />;
+    case 'Creative':
+      return <Paintbrush className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-orange-500" />;
+    case 'Chores':
+      return <HomeIcon className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-green-600" />;
+    case 'Finance':
+      return <Landmark className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-indigo-500" />;
+    case 'Social':
+      return <Users className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-pink-500" />;
+    case 'Personal Growth':
+      return <SparklesIcon className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-yellow-500" />;
+    case 'Lifestyle':
+      return <Smile className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-teal-500" />;
+    default:
+      return <ListChecks className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-muted-foreground" />;
+  }
 };
 
 
@@ -90,7 +143,7 @@ const HabitItem: FC<HabitItemProps> = ({
     const now = new Date();
     setCurrentDate(now);
     setWeekViewDays(getCurrentWeekDays(now));
-  }, [todayString]);
+  }, [todayString]); // Re-calculate week view if the day changes (e.g. past midnight)
 
   const streak = calculateStreak(habit, currentDate);
 
@@ -99,14 +152,15 @@ const HabitItem: FC<HabitItemProps> = ({
     onToggleComplete(habit.id, todayString, newCompletedState);
     if (newCompletedState) {
       setShowSparkles(true);
-      toast({
-          title: "Great Job!",
-          description: `You've completed "${habit.name}" for today!`,
-          className: "bg-accent border-green-600 text-accent-foreground",
-      });
+      // Toast is now handled by the page for consistency, but keeping this as a note
+      // toast({
+      //     title: "Great Job!",
+      //     description: `You've completed "${habit.name}" for today!`,
+      //     className: "bg-accent border-green-600 text-accent-foreground",
+      // });
       setTimeout(() => {
         setShowSparkles(false);
-      }, 1000);
+      }, 1000); // Sparkle animation duration
     }
   };
 
@@ -180,7 +234,7 @@ const HabitItem: FC<HabitItemProps> = ({
     habit.completionLog.forEach(log => {
       if (isDateInCurrentWeek(log.date, currentDate)) {
         try {
-            const completionDateObj = parseISO(log.date + 'T00:00:00Z');
+            const completionDateObj = parseISO(log.date + 'T00:00:00Z'); // Treat as local date for day comparison
             const dayOfCompletion = getDayAbbreviationFromDate(completionDateObj);
             if (habit.daysOfWeek.includes(dayOfCompletion)) completedOnScheduledDaysThisWeek.add(log.date);
         } catch (e) { console.error("Error parsing log date for weekly progress:", log.date, e); }
@@ -198,6 +252,7 @@ const HabitItem: FC<HabitItemProps> = ({
   } else {
     const categoryColorVar = getCategoryColorVariable(habit.category);
     cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
+    cardStyle['--category-color-var' as any] = `var(${categoryColorVar})`; // For potential use elsewhere
     cardClasses = cn(cardClasses, 'border-l-4');
   }
 
@@ -217,17 +272,18 @@ const HabitItem: FC<HabitItemProps> = ({
       <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pr-12">
         <div className="flex justify-between items-start">
           <div className="flex-grow">
-            <div className="flex items-center gap-2 mb-0.5">
+             <div className="flex items-center gap-1 mb-0.5"> {/* Reduced gap from 2 to 1 */}
+              {getHabitIcon(habit)}
               <CardTitle className="text-lg sm:text-xl font-semibold text-primary min-w-0 break-words">
                 {habit.name}
               </CardTitle>
               {streak > 0 ? (
-                <div className="flex items-center text-orange-500 animate-pulse" title={`Current streak: ${streak} days`}>
+                <div className="flex items-center text-orange-500 animate-pulse ml-1" title={`Current streak: ${streak} days`}>
                   <Flame className="h-5 w-5" />
                   <span className="ml-1 text-sm font-semibold">{streak}</span>
                 </div>
               ) : (
-                <div className="flex items-center text-muted-foreground opacity-60" title="No active streak">
+                <div className="flex items-center text-muted-foreground opacity-60 ml-1" title="No active streak">
                   <Flame className="h-5 w-5" />
                    <span className="ml-1 text-sm font-semibold">0</span>
                 </div>
@@ -402,3 +458,4 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
+
