@@ -68,7 +68,7 @@ const HabitItem: FC<HabitItemProps> = ({
     const now = new Date();
     setCurrentDate(now);
     setWeekViewDays(getCurrentWeekDays(now));
-  }, [todayString]); // Re-calculate if todayString changes (e.g. midnight)
+  }, [todayString]); 
 
   const streak = calculateStreak(habit, currentDate);
 
@@ -78,10 +78,9 @@ const HabitItem: FC<HabitItemProps> = ({
     if (newCompletedState) {
       setShowSparkles(true);
       // Sound playing would also go here if implemented
-      // The toast is triggered in page.tsx after state update.
       setTimeout(() => {
         setShowSparkles(false);
-      }, 1000); // Animation duration + a small buffer
+      }, 1000); 
     }
   };
 
@@ -176,11 +175,11 @@ const HabitItem: FC<HabitItemProps> = ({
           className="transform scale-110 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
       </div>
-      <CardHeader className="pt-3 pl-12">
+      <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pl-12">
         <div className="flex justify-between items-start">
           <div className="flex-grow mr-2">
             <div className="flex items-center gap-2 mb-0.5">
-              <CardTitle className="text-xl font-semibold text-primary">
+              <CardTitle className="text-lg sm:text-xl font-semibold text-primary">
                 {habit.name}
               </CardTitle>
               {streak > 0 ? (
@@ -195,76 +194,38 @@ const HabitItem: FC<HabitItemProps> = ({
                 </div>
               )}
             </div>
-            {habit.description && <CardDescription className="text-sm text-muted-foreground mt-1">{habit.description}</CardDescription>}
-          </div>
-          <div className="flex flex-col items-center space-y-1 text-center flex-shrink-0">
-            <div className="relative sparkle-container"> {/* Added sparkle-container for positioning context */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleToggleDailyCompletion}
-                className="rounded-full p-0 h-10 w-10 group transform transition-transform active:scale-95"
-                aria-label={isCompletedToday ? `Mark ${habit.name} as not done for today` : `Mark ${habit.name} as done for today`}
-              >
-                {isCompletedToday ? (
-                  <CheckCircle2 className="h-8 w-8 text-accent group-hover:text-accent/90 transition-colors" />
-                ) : (
-                  <Circle className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
-                )}
-              </Button>
-              {showSparkles && (
-                <>
-                  <div className="sparkle sparkle-1" style={{ ['--tx' as any]: '-10px', ['--ty' as any]: '-20px' }}></div>
-                  <div className="sparkle sparkle-2" style={{ ['--tx' as any]: '10px', ['--ty' as any]: '-20px' }}></div>
-                  <div className="sparkle sparkle-3" style={{ ['--tx' as any]: '-15px', ['--ty' as any]: '0px' }}></div>
-                  <div className="sparkle sparkle-4" style={{ ['--tx' as any]: '15px', ['--ty' as any]: '0px' }}></div>
-                  <div className="sparkle sparkle-5" style={{ ['--tx' as any]: '0px', ['--ty' as any]: '-25px' }}></div>
-                  <div className="sparkle sparkle-6" style={{ ['--tx' as any]: '5px', ['--ty' as any]: '15px', backgroundColor: 'hsl(var(--primary))' }}></div>
-                </>
-              )}
-            </div>
-            <div className="flex items-center space-x-1">
-              {isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A' && (
-                <p className="text-xs text-muted-foreground">at {latestCompletionTimeToday}</p>
-              )}
-              {isCompletedToday && hasNoteToday && (
-                <StickyNote className="h-3 w-3 text-blue-500" title="Reflection note added" />
-              )}
-            </div>
-             <p className={`text-xs font-medium ${isCompletedToday ? 'text-accent' : 'text-muted-foreground'}`}>
-              {isCompletedToday ? "Completed!" : "Mark Done"}
-            </p>
+            {habit.description && <CardDescription className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">{habit.description}</CardDescription>}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pl-12 pb-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-muted-foreground">
+      <CardContent className="space-y-3 px-3 sm:px-4 pb-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5 text-xs sm:text-sm text-muted-foreground">
           <div className="flex items-center col-span-full sm:col-span-1">
-            <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0 text-primary/80" />
+            <CalendarDays className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
             <span>Days: {displayDays.length > 0 ? displayDays : 'Not specified'}</span>
           </div>
           {habit.optimalTiming && (
             <div className="flex items-center">
-              <CalendarClock className="mr-2 h-4 w-4 flex-shrink-0 text-primary/80" />
+              <CalendarClock className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
               <span>Timing: {habit.optimalTiming}</span>
             </div>
           )}
           {durationDisplay && (
             <div className="flex items-center">
-              <Hourglass className="mr-2 h-4 w-4 flex-shrink-0 text-primary/80" />
+              <Hourglass className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
               <span>Duration: {durationDisplay}</span>
             </div>
           )}
           {formattedSpecificTime && (
              <div className="flex items-center">
-              <Clock className="mr-2 h-4 w-4 flex-shrink-0 text-primary/80" />
+              <Clock className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
               <span>Time: {formattedSpecificTime}</span>
             </div>
           )}
         </div>
 
         {weekViewDays.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-border/50">
+          <div className="mt-2 pt-2 border-t border-border/50">
             <p className="text-xs font-medium text-muted-foreground mb-1.5">This Week</p>
             <div className="flex justify-around items-center space-x-1">
               {weekViewDays.map((dayInfo) => {
@@ -272,7 +233,7 @@ const HabitItem: FC<HabitItemProps> = ({
                 const isCompleted = isScheduled && habit.completionLog.some(log => log.date === dayInfo.dateStr);
                 const isMissed = isScheduled && !isCompleted && dayInfo.isPast;
 
-                let bgColor = 'bg-input/30'; // Default for not scheduled
+                let bgColor = 'bg-input/30'; 
                 let textColor = 'text-muted-foreground/70';
 
                 if (isScheduled) {
@@ -282,7 +243,7 @@ const HabitItem: FC<HabitItemProps> = ({
                   } else if (isMissed) {
                     bgColor = 'bg-destructive';
                     textColor = 'text-destructive-foreground';
-                  } else { // Scheduled but not completed, and is today or future
+                  } else { 
                     bgColor = 'bg-muted';
                     textColor = 'text-muted-foreground';
                   }
@@ -292,7 +253,7 @@ const HabitItem: FC<HabitItemProps> = ({
                   <div
                     key={dayInfo.dateStr}
                     title={`${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}${isScheduled ? (isCompleted ? ' (Completed)' : (isMissed ? ' (Missed)' : ' (Pending)')) : ' (Not Scheduled)'}`}
-                    className={`flex flex-col items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-md text-xs font-medium transition-all ${bgColor} ${textColor} ${dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : ''}`}
+                    className={`flex flex-col items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-md text-xs font-medium transition-all ${bgColor} ${textColor} ${dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : ''}`}
                   >
                     {dayInfo.dayAbbrShort}
                   </div>
@@ -304,7 +265,7 @@ const HabitItem: FC<HabitItemProps> = ({
 
 
         {habit.daysOfWeek && habit.daysOfWeek.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-border/50">
+          <div className="mt-3 pt-3 border-t border-border/50">
             <div className="flex justify-between items-center text-xs font-medium text-muted-foreground mb-1">
               <span className="flex items-center"><TrendingUp className="mr-1.5 h-3.5 w-3.5 text-primary/90" />Weekly Goal</span>
               <span>{completedCountInCurrentWeek} / {scheduledDaysInWeek} days</span>
@@ -319,39 +280,81 @@ const HabitItem: FC<HabitItemProps> = ({
         )}
 
       </CardContent>
-      <CardFooter className="flex justify-end pt-3 pb-3 pl-12 pr-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-              <span className="sr-only">More options</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {isCompletedToday && (
-              <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}>
-                <MessageSquarePlus className="mr-2 h-4 w-4" />
-                <span>{hasNoteToday ? "Edit Reflection" : "Add Reflection"}</span>
-              </DropdownMenuItem>
+      <CardFooter className="flex flex-col items-stretch pt-2 pb-3 px-3">
+        <div className="relative sparkle-container w-full">
+          <Button
+            variant={isCompletedToday ? "default" : "outline"}
+            size="lg"
+            onClick={handleToggleDailyCompletion}
+            className={`w-full font-semibold text-base h-11 transform transition-transform active:scale-95 ${isCompletedToday ? 'bg-accent hover:bg-accent/90 text-accent-foreground border-accent' : 'border-primary/50 text-primary hover:bg-primary/10'}`}
+            aria-label={isCompletedToday ? `Mark ${habit.name} as not done for today` : `Mark ${habit.name} as done for today`}
+          >
+            {isCompletedToday ? (
+              <CheckCircle2 className="mr-2 h-5 w-5" />
+            ) : (
+              <Circle className="mr-2 h-5 w-5" />
             )}
-            {isCompletedToday && <DropdownMenuSeparator />}
-            <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
-              <Lightbulb className="mr-2 h-4 w-4" />
-              <span>AI Tip</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleAddToCalendar}>
-              <CalendarPlus className="mr-2 h-4 w-4" />
-              <span>Add to GCal</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleShareHabit}>
-              <Share2 className="mr-2 h-4 w-4" />
-              <span>Share</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            {isCompletedToday ? "Completed!" : "Mark as Done"}
+          </Button>
+          {showSparkles && (
+            <>
+              <div className="sparkle sparkle-1" style={{ ['--tx' as any]: '-10px', ['--ty' as any]: '-20px' }}></div>
+              <div className="sparkle sparkle-2" style={{ ['--tx' as any]: '10px', ['--ty' as any]: '-20px' }}></div>
+              <div className="sparkle sparkle-3" style={{ ['--tx' as any]: '-15px', ['--ty' as any]: '0px' }}></div>
+              <div className="sparkle sparkle-4" style={{ ['--tx' as any]: '15px', ['--ty' as any]: '0px' }}></div>
+              <div className="sparkle sparkle-5" style={{ ['--tx' as any]: '0px', ['--ty' as any]: '-25px' }}></div>
+              <div className="sparkle sparkle-6" style={{ ['--tx' as any]: '5px', ['--ty' as any]: '15px', backgroundColor: 'hsl(var(--primary))' }}></div>
+            </>
+          )}
+        </div>
+        
+        <div className="flex justify-between items-center mt-2 min-h-[20px]">
+          <div className="text-xs text-muted-foreground">
+            {isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A' && (
+              <span className="flex items-center">
+                <Clock className="mr-1 h-3 w-3" />
+                <span>at {latestCompletionTimeToday}</span>
+                {hasNoteToday && (
+                  <StickyNote className="ml-2 h-3 w-3 text-blue-500" title="Reflection note added" />
+                )}
+              </span>
+            )}
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto">
+                <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+                <span className="sr-only">More options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isCompletedToday && (
+                <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}>
+                  <MessageSquarePlus className="mr-2 h-4 w-4" />
+                  <span>{hasNoteToday ? "Edit Reflection" : "Add Reflection"}</span>
+                </DropdownMenuItem>
+              )}
+              {isCompletedToday && <DropdownMenuSeparator />}
+              <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
+                <Lightbulb className="mr-2 h-4 w-4" />
+                <span>AI Tip</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleAddToCalendar}>
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                <span>Add to GCal</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareHabit}>
+                <Share2 className="mr-2 h-4 w-4" />
+                <span>Share</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardFooter>
     </Card>
   );
 };
 
 export default HabitItem;
+
