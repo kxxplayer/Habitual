@@ -38,7 +38,7 @@ import {
   CheckCircle2,
   Circle,
   XCircle,
-  // Checkbox, // Removed as multi-select is not active
+  Check, // Added Check icon
 } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -47,7 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import { isDateInCurrentWeek, getDayAbbreviationFromDate, calculateStreak, getCurrentWeekDays, WeekDayInfo } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
-import { Checkbox } from '@/components/ui/checkbox';
+// import { Checkbox } from '@/components/ui/checkbox'; // Commented out as multi-select is dormant
 
 
 interface HabitItemProps {
@@ -56,7 +56,9 @@ interface HabitItemProps {
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  earnedBadges: EarnedBadge[];
+  // isSelected: boolean; // Commented out
+  // onSelectToggle: (habitId: string) => void; // Commented out
+  earnedBadges: EarnedBadge[]; // Keep for future on-card reward display
 }
 
 const weekDaysOrder: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -134,6 +136,8 @@ const HabitItem: FC<HabitItemProps> = ({
     onGetAISuggestion,
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
+    // isSelected, // Commented out
+    // onSelectToggle, // Commented out
     earnedBadges,
 }) => {
   const [todayString, setTodayString] = React.useState('');
@@ -261,7 +265,9 @@ const HabitItem: FC<HabitItemProps> = ({
   }
   const formattedSpecificTime = formatSpecificTime(habit.specificTime);
 
-  const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && (log.status === 'completed' || (log.status === undefined && log.time !== 'N/A')));
+  const todayLogEntry = habit.completionLog.find(log => log.date === todayString);
+  const isTodayCompleted = todayLogEntry?.status === 'completed' || (todayLogEntry?.status === undefined && !!todayLogEntry && todayLogEntry.time !== 'N/A');
+  // const isTodaySkipped = todayLogEntry?.status === 'skipped';
 
   const cardStyle: React.CSSProperties = {};
   let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl rounded-[1.25rem]`;
@@ -290,6 +296,16 @@ const HabitItem: FC<HabitItemProps> = ({
 
   return (
     <Card className={cardClasses} style={cardStyle}>
+      {/* Multi-select checkbox - commented out */}
+      {/* <div className="absolute top-3 right-3 z-10">
+        <Checkbox
+          id={`select-${habit.id}`}
+          checked={isSelected}
+          onCheckedChange={() => onSelectToggle(habit.id)}
+          aria-label={`Select habit ${habit.name}`}
+          className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground border-muted-foreground"
+        />
+      </div> */}
       <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-4">
         <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
           {getHabitIcon(habit)}
@@ -382,7 +398,7 @@ const HabitItem: FC<HabitItemProps> = ({
             </div>
         </div>
         {scheduledDaysInWeek > 0 && <Progress value={weeklyProgressPercent} indicatorClassName="bg-accent" className="h-1.5 mb-2" />}
-
+        
         <div className="space-y-1 mt-2">
           {habit.category && (
             <div className="flex items-center text-xs text-muted-foreground">
@@ -417,9 +433,9 @@ const HabitItem: FC<HabitItemProps> = ({
                 const isPendingMakeup = dayLog?.status === 'pending_makeup';
 
                 let dayStatus: 'completed' | 'skipped' | 'pending_makeup' | 'missed' | 'pending_scheduled' | 'not_scheduled' = 'not_scheduled';
-                let dayBoxClasses = "bg-input/10 text-muted-foreground/40";
                 let IconComponent: React.ElementType = Circle;
                 let iconClasses = "text-muted-foreground/40";
+                let dayBoxClasses = "bg-input/10 text-muted-foreground/40";
                 let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
 
                 if (isDayCompleted) dayStatus = 'completed';
@@ -441,7 +457,7 @@ const HabitItem: FC<HabitItemProps> = ({
                     dayBoxClasses = 'bg-destructive/10'; IconComponent = XCircle; iconClasses = 'text-destructive'; titleText += ' (Missed)'; break;
                   case 'pending_scheduled':
                     dayBoxClasses = 'ring-1 ring-orange-500 ring-offset-1 ring-offset-background bg-orange-500/5'; IconComponent = Circle; iconClasses = 'text-orange-500'; titleText += ' (Scheduled)'; break;
-                  default:
+                  default: // not_scheduled
                      dayBoxClasses = 'bg-input/40 dark:bg-input/20 text-muted-foreground/60 dark:text-muted-foreground/50 hover:bg-input/50 dark:hover:bg-input/30'; iconClasses = 'text-muted-foreground/40'; titleText += ' (Not Scheduled)'; break;
                 }
                 
@@ -493,10 +509,10 @@ const HabitItem: FC<HabitItemProps> = ({
         <Button
           onClick={handleToggleDailyCompletion}
           className={cn(
-            "rounded-full transition-all active:scale-95 py-2.5 px-6 text-sm", // Common classes
+            "rounded-full transition-all active:scale-95 py-2.5 px-6 text-sm", 
             !isTodayCompleted
-              ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95" // Incomplete state: orange to red gradient
-              : [ // Completed state
+              ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95"
+              : [ 
                   "bg-accent hover:bg-accent/90 text-accent-foreground",
                   showSparkles ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]",
                 ]
@@ -504,7 +520,7 @@ const HabitItem: FC<HabitItemProps> = ({
         >
           {!isTodayCompleted ? (
             <>
-              <span role="img" aria-label="checkmark" className="mr-2 text-lg">✅</span>
+              <Check className="mr-2 h-5 w-5" /> {/* Replaced emoji with Lucide Check */}
               Mark as Done
             </>
           ) : (
@@ -544,3 +560,6 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
+
+
+    
