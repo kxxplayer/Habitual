@@ -16,16 +16,18 @@ import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
 import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm';
 import HabitOverview from '@/components/overview/HabitOverview';
-import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge } from '@/types';
+import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData } from '@/types'; // Added CreateHabitFormData
 import { THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
+import { getCommonHabitSuggestions, type SuggestedHabit } from '@/ai/flows/common-habit-suggestions-flow'; // Added
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import Link from 'next/link';
 import { cn } from "@/lib/utils";
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle as DialogCardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card'; // Renamed to avoid conflict
 import { Calendar } from '@/components/ui/calendar';
 import type { DayPicker } from 'react-day-picker';
 
@@ -37,13 +39,13 @@ import {
   DialogHeader,
   DialogTitle,
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle as AlertTitle, 
+  // AlertDialogAction, // No longer used here
+  // AlertDialogCancel, // No longer used here
+  // AlertDialogContent, // No longer used here
+  // AlertDialogDescription, // No longer used here
+  // AlertDialogFooter, // No longer used here
+  // AlertDialogHeader, // No longer used here
+  // AlertDialogTitle as AlertTitle,  // No longer used here
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -53,8 +55,8 @@ import {
   SheetDescription,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal  } from 'lucide-react';
+// import { Checkbox } from '@/components/ui/checkbox'; // No longer used for top-level selection
+import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal, PlusCircle } from 'lucide-react';
 import { format, parseISO, isSameDay, getDay } from 'date-fns';
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -69,6 +71,7 @@ const HabitualPage: NextPage = () => {
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
 
   const [habits, setHabits] = React.useState<Habit[]>([]);
+  const [isLoadingHabits, setIsLoadingHabits] = React.useState(true); // For initial load
   const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = React.useState(false);
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = React.useState<Habit | null>(null);
   const [aiSuggestion, setAISuggestion] = React.useState<AISuggestionType | null>(null);
@@ -101,18 +104,27 @@ const HabitualPage: NextPage = () => {
     missedDate: string;
   } | null>(null);
 
+  // New states for common habit suggestions
+  const [commonHabitSuggestions, setCommonHabitSuggestions] = React.useState<SuggestedHabit[]>([]);
+  const [isLoadingCommonSuggestions, setIsLoadingCommonSuggestions] = React.useState(false);
+  const [commonSuggestionsFetched, setCommonSuggestionsFetched] = React.useState(false);
+  const [initialFormDataForInline, setInitialFormDataForInline] = React.useState<Partial<CreateHabitFormData> | null>(null);
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setAuthUser(user);
       } else {
         setAuthUser(null);
-        router.push('/auth/login'); 
+        if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
+           router.push('/auth/login');
+        }
       }
       setIsLoadingAuth(false);
     });
 
-    return () => unsubscribe(); 
+    return () => unsubscribe();
   }, [router]);
 
   useEffect(() => {
@@ -131,18 +143,19 @@ const HabitualPage: NextPage = () => {
       }
     } else {
       console.log('Notifications not supported by this browser.');
-      setNotificationPermission('denied'); 
+      setNotificationPermission('denied');
     }
   }, []);
 
 
   useEffect(() => {
-    if (!authUser || isLoadingAuth) return; 
-
+    if (!authUser || isLoadingAuth) return;
+    setIsLoadingHabits(true);
     const storedHabits = localStorage.getItem('habits');
+    let parsedHabits: Habit[] = [];
     if (storedHabits) {
       try {
-        const parsedHabits: Habit[] = JSON.parse(storedHabits).map((habit: any) => {
+        parsedHabits = JSON.parse(storedHabits).map((habit: any) => {
           let daysOfWeek: WeekDay[] = habit.daysOfWeek || [];
           if (!habit.daysOfWeek && habit.frequency) {
             const freqLower = habit.frequency.toLowerCase();
@@ -169,7 +182,7 @@ const HabitualPage: NextPage = () => {
             if (minMatch) migratedDurationMinutes = parseInt(minMatch[1]);
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
-                if (numVal <= 120) migratedDurationMinutes = numVal; 
+                if (numVal <= 120) migratedDurationMinutes = numVal;
             }
           }
 
@@ -220,6 +233,26 @@ const HabitualPage: NextPage = () => {
         console.error("Failed to parse habits from localStorage:", error);
       }
     }
+    setIsLoadingHabits(false);
+
+    // Fetch common habit suggestions if user is new and has no habits
+    if (authUser && !isLoadingAuth && !commonSuggestionsFetched && parsedHabits.length === 0) {
+      setIsLoadingCommonSuggestions(true);
+      setCommonSuggestionsFetched(true); // Mark as fetched
+      getCommonHabitSuggestions({ count: 4 })
+        .then(response => {
+          if (response && response.suggestions) {
+            setCommonHabitSuggestions(response.suggestions);
+          }
+        })
+        .catch(err => {
+          console.error("Failed to fetch common habit suggestions:", err);
+        })
+        .finally(() => {
+          setIsLoadingCommonSuggestions(false);
+        });
+    }
+
 
     const storedBadges = localStorage.getItem('earnedBadges');
     if (storedBadges) {
@@ -239,10 +272,10 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
       }
     }
-  }, [authUser, isLoadingAuth]); 
+  }, [authUser, isLoadingAuth, commonSuggestionsFetched]); // Added commonSuggestionsFetched
 
   useEffect(() => {
-    if (!authUser || isLoadingAuth) return; 
+    if (!authUser || isLoadingAuth || isLoadingHabits) return;
     localStorage.setItem('habits', JSON.stringify(habits));
 
     const newlyEarned = checkAndAwardBadges(habits, earnedBadges);
@@ -265,7 +298,7 @@ const HabitualPage: NextPage = () => {
       });
       setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, authUser, isLoadingAuth]);
+  }, [habits, earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
   useEffect(() => {
     if (!authUser || isLoadingAuth) return;
@@ -292,12 +325,12 @@ const HabitualPage: NextPage = () => {
             try {
               const [hours, minutes] = habit.specificTime.split(':').map(Number);
               let specificEventTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000); 
-            } catch (e) { 
+              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000);
+            } catch (e) {
               console.error(`Error parsing specificTime "${habit.specificTime}" for habit "${habit.name}"`, e);
             }
           } else {
-            let baseHour = 10; 
+            let baseHour = 10;
             if (habit.optimalTiming?.toLowerCase().includes('morning')) baseHour = 9;
             else if (habit.optimalTiming?.toLowerCase().includes('afternoon')) baseHour = 13;
             else if (habit.optimalTiming?.toLowerCase().includes('evening')) baseHour = 18;
@@ -307,7 +340,7 @@ const HabitualPage: NextPage = () => {
           if (reminderDateTime && reminderDateTime > now) {
             const delay = reminderDateTime.getTime() - now.getTime();
             console.log(`Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
-            
+
           } else if (reminderDateTime) {
             // console.log(`Reminder time for "${habit.name}" (${reminderDateTime.toLocaleTimeString()}) has passed for today or is invalid.`);
           }
@@ -327,11 +360,12 @@ const HabitualPage: NextPage = () => {
       id: Date.now().toString() + Math.random().toString(36).substring(2,7),
       completionLog: [],
       category: newHabitData.category || 'Other',
-      reminderEnabled: false, 
+      reminderEnabled: false,
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
     console.log(`Habit Added: ${newHabit.name}`);
     setShowInlineHabitForm(false);
+    setInitialFormDataForInline(null); // Clear initial data after adding
   };
 
   const handleToggleComplete = async (habitId: string, date: string, completed: boolean) => {
@@ -368,10 +402,10 @@ const HabitualPage: NextPage = () => {
               }
               if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-              } else if (logEntry.note) { 
+              } else if (logEntry.note) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'skipped', time: 'N/A' };
               }
-              else { 
+              else {
                 newCompletionLog.splice(existingLogIndex, 1);
               }
             }
@@ -582,21 +616,23 @@ const HabitualPage: NextPage = () => {
 
     habits.forEach(habit => {
       habit.completionLog.forEach(log => {
-        const logDate = parseISO(log.date);
-        if (log.status === 'completed') {
-          completedDays.push(logDate);
-        } else if (log.status === 'pending_makeup') {
-          makeupPendingDays.push(logDate);
-        }
+        try {
+          const logDate = parseISO(log.date);
+          if (log.status === 'completed') {
+            completedDays.push(logDate);
+          } else if (log.status === 'pending_makeup') {
+            makeupPendingDays.push(logDate);
+          }
+        } catch (e) { console.error("Error parsing log date for calendar modifiers:", log.date, e); }
       });
 
       const today = new Date();
-      for (let i = 0; i < 60; i++) { 
+      for (let i = 0; i < 60; i++) {
           const pastDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
           const futureDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-          
+
           [pastDate, futureDate].forEach(checkDate => {
-            if (isSameDay(checkDate, today) && i !== 0 && checkDate !== pastDate) return; 
+            if (isSameDay(checkDate, today) && i !== 0 && checkDate !== pastDate) return;
 
             const dateStr = format(checkDate, 'yyyy-MM-dd');
             const dayOfWeek = dayIndexToWeekDayConstant[getDay(checkDate)];
@@ -617,12 +653,12 @@ const HabitualPage: NextPage = () => {
           });
       }
     });
-    
-    const finalScheduledUpcoming = scheduledUpcomingDays.filter(sDate => 
+
+    const finalScheduledUpcoming = scheduledUpcomingDays.filter(sDate =>
         !completedDays.some(cDate => isSameDay(sDate, cDate)) &&
         !makeupPendingDays.some(mDate => isSameDay(sDate, mDate))
     );
-    const finalScheduledMissed = scheduledMissedDays.filter(sDate => 
+    const finalScheduledMissed = scheduledMissedDays.filter(sDate =>
         !completedDays.some(cDate => isSameDay(sDate, cDate)) &&
         !makeupPendingDays.some(mDate => isSameDay(sDate, mDate))
     );
@@ -658,7 +694,7 @@ const HabitualPage: NextPage = () => {
           console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
         } else {
           console.log('Reminder Settings: Notification permission not yet set. Requesting...');
-          handleRequestNotificationPermission(); 
+          handleRequestNotificationPermission();
         }
       }
     },
@@ -673,20 +709,22 @@ const HabitualPage: NextPage = () => {
     { label: 'Calendar', icon: CalendarDays, action: () => { setIsSettingsSheetOpen(false); setIsCalendarDialogOpen(true); } },
   ];
 
-  if (isLoadingAuth) {
+  const handleCustomizeSuggestedHabit = (suggestion: SuggestedHabit) => {
+    setInitialFormDataForInline({
+      description: suggestion.description || '',
+      name: suggestion.name,
+      category: suggestion.category || 'Other',
+      daysOfWeek: [], // User must set this
+    });
+    setShowInlineHabitForm(true);
+  };
+
+
+  if (isLoadingAuth || (!authUser && typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register')) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading application...</p>
-      </div>
-    );
-  }
-
-  if (!authUser) {
-    return (
-       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
       </div>
     );
   }
@@ -698,22 +736,64 @@ const HabitualPage: NextPage = () => {
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
           maxWidth: 'clamp(320px, 100%, 450px)',
-          height: 'clamp(700px, 90vh, 850px)', 
+          height: 'clamp(700px, 90vh, 850px)',
           overflow: 'hidden',
         }}
       >
         <AppHeader onOpenCalendar={() => setIsCalendarDialogOpen(true)} />
-        
+
         <div className="flex-grow overflow-y-auto">
-          <main className="px-3 sm:px-4 py-4"> 
+          <main className="px-3 sm:px-4 py-4">
             {showInlineHabitForm && (
               <div className="my-4">
                 <InlineCreateHabitForm
                   onAddHabit={handleAddHabit}
-                  onCloseForm={() => setShowInlineHabitForm(false)}
+                  onCloseForm={() => {
+                    setShowInlineHabitForm(false);
+                    setInitialFormDataForInline(null); // Clear initial data when form is closed
+                  }}
+                  initialData={initialFormDataForInline}
                 />
               </div>
             )}
+
+            {/* Suggestions for new users */}
+            {authUser && !isLoadingAuth && !isLoadingHabits && habits.length === 0 && commonHabitSuggestions.length > 0 && !showInlineHabitForm && (
+              <Card className="my-4 p-4 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
+                <CardHeader className="p-2 pt-0">
+                  <DialogCardTitle className="text-lg font-semibold flex items-center text-primary">
+                     <Lightbulb className="mr-2 h-5 w-5"/>
+                     Welcome to Habitual!
+                  </DialogCardTitle>
+                  <DialogCardDescription className="text-sm text-muted-foreground">
+                    Here are a few ideas to get you started:
+                  </DialogCardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 p-2">
+                  {isLoadingCommonSuggestions ? (
+                    <div className="flex items-center justify-center py-3">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      <p className="ml-2 text-sm text-muted-foreground">Loading suggestions...</p>
+                    </div>
+                  ) : (
+                    commonHabitSuggestions.map((suggestion, index) => (
+                      <div key={index} className="flex items-center justify-between p-2.5 bg-background rounded-lg shadow-sm border border-border/70">
+                        <div>
+                          <p className="font-medium text-sm text-foreground">{suggestion.name}</p>
+                          {suggestion.description && <p className="text-xs text-muted-foreground mt-0.5">{suggestion.description}</p>}
+                          {suggestion.category && <p className="text-xs text-primary/90 mt-0.5 font-medium">{suggestion.category}</p>}
+                        </div>
+                        <Button size="sm" variant="outline" className="shrink-0" onClick={() => handleCustomizeSuggestedHabit(suggestion)}>
+                          <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
+                          Customize
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
 
             {!showInlineHabitForm && (
                 <HabitList
@@ -723,6 +803,8 @@ const HabitualPage: NextPage = () => {
                   onOpenReflectionDialog={handleOpenReflectionDialog}
                   onOpenRescheduleDialog={handleOpenRescheduleDialog}
                   onToggleReminder={handleToggleReminder}
+                  // onSelectToggle={toggleHabitSelection} // Commented out
+                  // selectedHabitIds={selectedHabitIds} // Commented out
                 />
             )}
           </main>
@@ -755,7 +837,10 @@ const HabitualPage: NextPage = () => {
       {!showInlineHabitForm && (
         <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
-          onClick={() => setShowInlineHabitForm(true)}
+          onClick={() => {
+            setInitialFormDataForInline(null); // Ensure form is fresh when opened manually
+            setShowInlineHabitForm(true);
+           }}
           aria-label="Add New Habit"
         >
           <Plus className="h-7 w-7" />
@@ -843,9 +928,9 @@ const HabitualPage: NextPage = () => {
                     onSelect={setSelectedCalendarDate}
                     modifiers={calendarDialogModifiers}
                     modifiersStyles={calendarDialogModifierStyles}
-                    className="rounded-md border p-0 sm:p-2" 
+                    className="rounded-md border p-0 sm:p-2"
                     month={selectedCalendarDate || new Date()}
-                    onMonthChange={setSelectedCalendarDate}   
+                    onMonthChange={setSelectedCalendarDate}
                  />
                 {selectedCalendarDate && (
                 <div className="mt-4 w-full">
@@ -879,7 +964,7 @@ const HabitualPage: NextPage = () => {
                             StatusIcon = XCircle;
                             iconColor = "text-destructive";
                         }
-                        
+
                         return (
                             <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
                             <span className="font-medium truncate pr-2">{habit.name}</span>
@@ -947,7 +1032,7 @@ const HabitualPage: NextPage = () => {
           </SheetHeader>
           <div className="grid gap-2">
             {sheetMenuItems.map((item) => (
-              item.href && item.href !== "/profile" && item.href !== "/calendar" ? ( 
+              item.href && item.href !== "/profile" && item.href !== "/calendar" ? (
                 <SheetClose asChild key={item.label}>
                     <Link href={item.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action}>
@@ -956,7 +1041,7 @@ const HabitualPage: NextPage = () => {
                         </Button>
                     </Link>
                 </SheetClose>
-              ) : item.href === "/profile" ? ( 
+              ) : item.href === "/profile" ? (
                  <SheetClose asChild key={item.label}>
                     <Link href={item.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action} >
@@ -965,7 +1050,7 @@ const HabitualPage: NextPage = () => {
                         </Button>
                     </Link>
                  </SheetClose>
-              ) : ( 
+              ) : (
                 <SheetClose asChild key={item.label}>
                   <Button
                     variant="ghost"
@@ -984,7 +1069,7 @@ const HabitualPage: NextPage = () => {
                     <div className="flex items-center text-sm">
                         <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span>Notification Status:</span>
-                        <span className={cn("ml-1 font-semibold", 
+                        <span className={cn("ml-1 font-semibold",
                             notificationPermission === 'granted' ? 'text-green-600' :
                             notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
                         )}>

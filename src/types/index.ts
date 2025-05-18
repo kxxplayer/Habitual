@@ -69,3 +69,10 @@ export interface EarnedBadge {
   dateAchieved: string; // 'YYYY-MM-DD'
   icon?: string; // Placeholder for future icon identifier or emoji
 }
+
+// For AI common habit suggestions
+export interface SuggestedHabit {
+  name: string;
+  description?: string;
+  category?: HabitCategory;
+}

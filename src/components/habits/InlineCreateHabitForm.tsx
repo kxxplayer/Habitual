@@ -28,6 +28,7 @@ import {
 interface InlineCreateHabitFormProps {
   onAddHabit: (habit: Omit<Habit, 'id' | 'completionLog'>) => void;
   onCloseForm: () => void;
+  initialData?: Partial<CreateHabitFormData> | null; // Added prop
 }
 
 const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -45,22 +46,22 @@ const createHabitFormSchema = z.object({
 
 
 const dayMapFullToAbbr: { [key: string]: WeekDay } = {
-  "sunday": "Sun", "sun": "Sun", "sunday,": "Sun", "sun,": "Sun",
-  "monday": "Mon", "mon": "Mon", "monday,": "Mon", "mon,": "Mon",
-  "tuesday": "Tue", "tue": "Tue", "tuesday,": "Tue", "tue,": "Tue",
-  "wednesday": "Wed", "wed": "Wed", "wednesday,": "Wed", "wed,": "Wed",
-  "thursday": "Thu", "thu": "Thu", "thursday,": "Thu", "thu,": "Thu",
-  "friday": "Fri", "fri": "Fri", "friday,": "Fri", "fri,": "Fri",
-  "saturday": "Sat", "sat": "Sat", "saturday,": "Sat", "sat,": "Sat",
+  "sunday": "Sun", "sun": "Sun", "sunday,": "Sun", "sun,": "Sun", "sundays": "Sun",
+  "monday": "Mon", "mon": "Mon", "monday,": "Mon", "mon,": "Mon", "mondays": "Mon",
+  "tuesday": "Tue", "tue": "Tue", "tuesday,": "Tue", "tue,": "Tue", "tuesdays": "Tue",
+  "wednesday": "Wed", "wed": "Wed", "wednesday,": "Wed", "wed,": "Wed", "wednesdays": "Wed",
+  "thursday": "Thu", "thu": "Thu", "thursday,": "Thu", "thu,": "Thu", "thursdays": "Thu",
+  "friday": "Fri", "fri": "Fri", "friday,": "Fri", "fri,": "Fri", "fridays": "Fri",
+  "saturday": "Sat", "sat": "Sat", "saturday,": "Sat", "sat,": "Sat", "saturdays": "Sat",
 };
 
 const normalizeDay = (day: string): WeekDay | undefined => {
   if (typeof day !== 'string') return undefined;
   const lowerDay = day.trim().toLowerCase().replace(/,/g, ''); // Remove commas for robustness
-  return dayMapFullToAbbr[lowerDay];
+  return dayMapFullToAbbr[lowerDay] || weekDaysArray.find(d => d.toLowerCase() === lowerDay) || undefined;
 };
 
-const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onCloseForm }) => {
+const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onCloseForm, initialData }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
   // const { toast } = useToast(); // Commented out
 
@@ -87,7 +88,6 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
   const habitDescriptionForAI = useWatch({
     control,
     name: 'description',
-    defaultValue: ''
   });
 
   const isDescriptionEffectivelyEmpty = useMemo(() => {
@@ -96,7 +96,18 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
 
   useEffect(() => {
-    return () => {
+    if (initialData) {
+      reset({
+        description: initialData.description || '',
+        name: initialData.name || '',
+        category: initialData.category || 'Other',
+        daysOfWeek: initialData.daysOfWeek || [],
+        optimalTiming: initialData.optimalTiming || '',
+        durationHours: initialData.durationHours === undefined ? null : initialData.durationHours,
+        durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
+        specificTime: initialData.specificTime || '',
+      });
+    } else if (!initialData) { // Reset to truly default if form is closed without specific initial data
         reset({
             description: '',
             name: '',
@@ -106,19 +117,14 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
             durationHours: null,
             durationMinutes: null,
             specificTime: '',
-          });
+        });
     }
-  }, [reset]);
+  }, [initialData, reset]);
 
 
   const handleAISuggestDetails = async () => {
     const currentDescription = habitDescriptionForAI || "";
     if (currentDescription.trim() === "") {
-      // toast({ // Commented out
-      //   title: "No Description Provided",
-      //   description: "Please enter a description for the AI to suggest habit details.",
-      //   variant: "destructive",
-      // });
       console.error("No Description Provided for AI suggestion.");
       return;
     }
@@ -129,6 +135,8 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
         setValue('category', result.category as HabitCategory);
+      } else {
+         setValue('category', 'Other'); // Default if AI doesn't suggest a valid one
       }
 
       let suggestedDays: WeekDay[] = [];
@@ -151,18 +159,9 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
         setValue('specificTime', result.specificTime || '');
       }
 
-      // toast({ // Commented out
-      //   title: "AI Suggestion Applied",
-      //   description: "Habit details have been populated by AI.",
-      // });
       console.log("AI Suggestion Applied");
     } catch (error) {
       console.error("AI suggestion error:", error);
-      // toast({ // Commented out
-      //   title: "AI Suggestion Failed",
-      //   description: "Could not get suggestions from AI. Please try again or fill manually.",
-      //   variant: "destructive",
-      // });
       console.error("AI Suggestion Failed: Could not get suggestions from AI.");
     } finally {
       setIsAISuggesting(false);
@@ -180,7 +179,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       durationMinutes: data.durationMinutes === null ? undefined : data.durationMinutes,
       specificTime: data.specificTime,
     });
-    reset();
+    // Reset is handled by useEffect when initialData changes or by onCloseForm setting initialData to null
     onCloseForm();
   };
 
@@ -333,7 +332,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
             />
           </div>
           <CardFooter className="p-0 pt-4 flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => { reset(); onCloseForm(); }} disabled={isSubmitting || isAISuggesting}>
+            <Button type="button" variant="outline" onClick={() => { onCloseForm(); }} disabled={isSubmitting || isAISuggesting}>
                 <XCircle className="mr-2 h-4 w-4" /> Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || isAISuggesting} >
