@@ -11,7 +11,9 @@ import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHab
 import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm';
 import HabitOverview from '@/components/overview/HabitOverview';
 import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge } from '@/types';
+import { THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
+import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -37,7 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, Star } from 'lucide-react';
+import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, Star, BookOpenText } from 'lucide-react';
 import { format } from 'date-fns';
 
 
@@ -183,20 +185,40 @@ const HabitualPage: NextPage = () => {
     const newlyEarned = checkAndAwardBadges(habits, earnedBadges);
     if (newlyEarned.length > 0) {
       const updatedBadges = [...earnedBadges];
-      newlyEarned.forEach(newBadge => {
+      newlyEarned.forEach(async newBadge => {
         if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
             updatedBadges.push(newBadge);
-            // This toast call is safe as it's in response to a state change (habits -> earnedBadges)
             toast({
                 title: "🏆 New Badge Unlocked! 🎉",
                 description: `You've earned the "${newBadge.name}" badge!`,
                 action: <Award className="h-5 w-5 text-yellow-500" />,
             });
+
+            // Check if the newly earned badge is the SQL streak badge for the bonus tip
+            if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) {
+              try {
+                const sqlTipResult = await getSqlTip();
+                toast({
+                  title: "💡 Bonus SQL Tip Unlocked!",
+                  description: sqlTipResult.tip,
+                  duration: 9000, // Longer duration for a tip
+                  action: <BookOpenText className="h-5 w-5 text-blue-500" />
+                });
+              } catch (tipError) {
+                console.error("Failed to fetch SQL tip:", tipError);
+                // Optionally, inform user tip couldn't be fetched
+                toast({
+                  title: "SQL Tip Error",
+                  description: "Could not fetch bonus SQL tip at this time.",
+                  variant: "destructive"
+                });
+              }
+            }
         }
       });
       setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, toast]); // toast is stable, fine in deps
+  }, [habits, earnedBadges, toast]);
 
   useEffect(() => {
     localStorage.setItem('earnedBadges', JSON.stringify(earnedBadges));
@@ -236,21 +258,19 @@ const HabitualPage: NextPage = () => {
             if (existingLogIndex > -1) {
               const existingLog = newCompletionLog[existingLogIndex];
               if (existingLog.status !== 'completed') {
-                pointsChange = POINTS_PER_COMPLETION; // Award points only if not already 'completed'
+                pointsChange = POINTS_PER_COMPLETION; 
               }
               newCompletionLog[existingLogIndex] = { ...existingLog, status: 'completed', time: currentTime };
             } else {
               pointsChange = POINTS_PER_COMPLETION;
               newCompletionLog.push({ date, time: currentTime, status: 'completed', note: undefined });
             }
-          } else { // un-completing
+          } else { 
             if (existingLogIndex > -1) {
               const logEntry = newCompletionLog[existingLogIndex];
               if (logEntry.status === 'completed') {
-                 pointsChange = -POINTS_PER_COMPLETION; // Subtract points only if it was 'completed'
+                 pointsChange = -POINTS_PER_COMPLETION; 
               }
-              // If it was a makeup that was completed, revert to pending_makeup.
-              // Otherwise (it was a regular day's completion), remove the log.
               if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
               } else {
@@ -280,6 +300,8 @@ const HabitualPage: NextPage = () => {
         let entry = `${log.date} at ${log.time}`;
         if (log.status === 'skipped') entry += ` (Skipped)`;
         else if (log.status === 'pending_makeup') entry += ` (Makeup Pending for ${log.originalMissedDate})`;
+        else if (log.status === 'completed') entry += ` (Completed)`;
+
         if (log.note && log.note.trim() !== "") entry += ` (Note: ${log.note.trim()})`;
         return entry;
       });
@@ -367,17 +389,8 @@ const HabitualPage: NextPage = () => {
             }
             return log;
           });
-          // If adding a note to a day that wasn't previously logged (e.g. a non-completed day),
-          // we should ideally create a basic log entry first or disallow.
-          // For simplicity, current logic updates existing or creates new if day was just completed.
-          // If user adds note to a day not in log (e.g. future, non-interacted past), it might not save correctly without a log.
-          // The UI flow should ideally only allow note for days with existing log (completed/skipped/pending).
           if (!logEntryExists) {
-             // This case should be rare if UI for reflection follows logged days.
-             // For robustness, create a minimal log if it doesn't exist.
              const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-             // Assuming a note is typically added to a completed task or a task being reviewed.
-             // Default to 'completed' if no prior status for that day's log.
              newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim(), status: 'completed'});
              newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
           }
@@ -403,7 +416,6 @@ const HabitualPage: NextPage = () => {
     setHabits(prevHabits => prevHabits.map(h => {
       if (h.id === habitId) {
         const newCompletionLog = [...h.completionLog];
-        // Remove any existing "skipped" or "missed" log for the originalMissedDate
         const existingMissedLogIndex = newCompletionLog.findIndex(log => log.date === originalMissedDate && (log.status === 'skipped' || !log.status));
         if(existingMissedLogIndex > -1) newCompletionLog.splice(existingMissedLogIndex, 1);
 
@@ -432,8 +444,6 @@ const HabitualPage: NextPage = () => {
         let newCompletionLog = [...h.completionLog];
         const existingLogIndex = newCompletionLog.findIndex(log => log.date === missedDate);
         if (existingLogIndex > -1) {
-          // If it was a pending_makeup, remove it and mark original as skipped.
-          // Or just update current log to skipped. For simplicity, update current.
           newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'skipped', time: 'N/A' };
         } else {
           newCompletionLog.push({ date: missedDate, time: 'N/A', status: 'skipped' });
@@ -457,14 +467,14 @@ const HabitualPage: NextPage = () => {
       <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
-          maxWidth: 'clamp(320px, 100%, 450px)', // Max width of the "phone"
-          height: 'clamp(600px, 90vh, 800px)',  // Responsive height
-          overflow: 'hidden', // Clip content to the phone screen
+          maxWidth: 'clamp(320px, 100%, 450px)', 
+          height: 'clamp(600px, 90vh, 800px)', 
+          overflow: 'hidden', 
         }}
       >
         <AppHeader />
 
-        <div className="flex-grow overflow-y-auto"> {/* This div scrolls */}
+        <div className="flex-grow overflow-y-auto"> 
           <main className="px-3 sm:px-4 py-6">
             {showInlineHabitForm && (
               <div className="my-4">
@@ -530,7 +540,7 @@ const HabitualPage: NextPage = () => {
                 onToggleComplete={handleToggleComplete}
                 onGetAISuggestion={handleOpenAISuggestionDialog}
                 onOpenReflectionDialog={handleOpenReflectionDialog}
-                onOpenRescheduleDialog={handleOpenRescheduleDialog} // Pass this down
+                onOpenRescheduleDialog={handleOpenRescheduleDialog}
                 selectedHabitIds={selectedHabitIds}
                 onSelectHabit={toggleHabitSelection}
                 />
@@ -542,7 +552,6 @@ const HabitualPage: NextPage = () => {
         </div>
 
 
-        {/* Bottom Navigation Bar */}
         <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16">
           <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
             <Home className="h-5 w-5" />
@@ -563,7 +572,6 @@ const HabitualPage: NextPage = () => {
         </div>
       </div>
 
-      {/* Floating Action Button for Add New Habit */}
       {!showInlineHabitForm && (
         <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
