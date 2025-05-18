@@ -4,10 +4,9 @@
 
 import * as React from 'react';
 import type { FC } from 'react';
-import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-// Checkbox import removed as it's no longer used directly on card for selection
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +20,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch"; // Added for reminder toggle
+import { Label } from "@/components/ui/label"; // Added for reminder toggle label
 import {
-  Lightbulb, CalendarDays, Clock, CalendarClock as OptimalTimingIcon, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, StickyNote, Tag,
+  Lightbulb, CalendarDays, CalendarClock as OptimalTimingIcon, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag,
   ListChecks,
   Droplets,
   Bed,
@@ -39,16 +40,14 @@ import {
   CheckCircle2,
   Circle,
   XCircle,
-  Check,
-  ChevronRightSquare,
-  X, // Added X icon
+  Check, // Used for incomplete "Mark as Done" button
+  Bell, // For reminder enabled indicator
 } from 'lucide-react';
-import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
+import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
-// import { useToast } from '@/hooks/use-toast'; // Commented out
 import { format, parseISO } from 'date-fns';
-import { isDateInCurrentWeek, getDayAbbreviationFromDate, calculateStreak, getCurrentWeekDays, WeekDayInfo } from '@/lib/dateUtils';
+import { getCurrentWeekDays, WeekDayInfo, calculateStreak } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 
 
@@ -58,10 +57,8 @@ interface HabitItemProps {
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  earnedBadges: EarnedBadge[]; // Keep for potential future use, though not used for on-card reward display in this iteration
+  onToggleReminder: (habitId: string, currentReminderState: boolean) => void; // New prop
 }
-
-const weekDaysOrder: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const formatSpecificTime = (timeStr?: string): string | undefined => {
   if (!timeStr || timeStr.toLowerCase() === "anytime" || timeStr.toLowerCase() === "flexible") return undefined;
@@ -84,7 +81,7 @@ const getCategoryColorVariable = (category?: HabitCategory): string => {
     "Health & Wellness": "--chart-3",
     "Creative": "--chart-4",
     "Chores": "--chart-5",
-    "Finance": "--chart-1", // Re-using chart colors
+    "Finance": "--chart-1", 
     "Social": "--chart-2",
     "Personal Growth": "--chart-3",
     "Other": "--chart-5",
@@ -135,7 +132,7 @@ const HabitItem: FC<HabitItemProps> = ({
     onGetAISuggestion,
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
-    earnedBadges,
+    onToggleReminder,
 }) => {
   const [todayString, setTodayString] = React.useState('');
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -148,7 +145,6 @@ const HabitItem: FC<HabitItemProps> = ({
   const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && (log.status === 'completed' || (log.status === undefined && log.time !== 'N/A' && !(log.status === undefined && log.time === 'N/A' && log.note))));
   const prevIsTodayCompletedRef = React.useRef<boolean>(isTodayCompleted);
 
-
   React.useEffect(() => {
     const now = new Date();
     setCurrentDate(now);
@@ -160,9 +156,9 @@ const HabitItem: FC<HabitItemProps> = ({
   }, [currentDate]);
 
   React.useEffect(() => {
-    if (prevIsTodayCompletedRef.current === false && isTodayCompleted === true) {
+    if (isTodayCompleted && !prevIsTodayCompletedRef.current) { // Just completed today
       setShowSparkles(true);
-      setTimeout(() => setShowSparkles(false), 800);
+      setTimeout(() => setShowSparkles(false), 800); // Duration of sparkle animation
     }
     prevIsTodayCompletedRef.current = isTodayCompleted;
   }, [isTodayCompleted]);
@@ -209,7 +205,7 @@ const HabitItem: FC<HabitItemProps> = ({
       const icsContent = generateICS(habit);
       const filename = `${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_habit.ics`;
       downloadICS(filename, icsContent);
-      console.log(`ICS generated for ${habit.name}`);
+      console.log(`Added to calendar! The .ics file for "${habit.name}" has been generated. You can import it into Google Calendar or your preferred calendar app.`);
     } catch (error) {
       console.error("Error generating ICS file:", error);
       console.error("ICS Generation Error");
@@ -223,7 +219,7 @@ const HabitItem: FC<HabitItemProps> = ({
     if (streakCount > 0) {
       shareText = `I've kept up my habit '${habit.name}' for ${streakCount} day${streakCount > 1 ? 's' : ''} straight with Habitual! 💪 #HabitStreak #HabitualApp`;
     } else {
-      const sortedDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b));
+      const sortedDays = habit.daysOfWeek.sort((a, b) => getCurrentWeekDays()[0].dayAbbrFull.indexOf(a) - getCurrentWeekDays()[0].dayAbbrFull.indexOf(b)); // Assuming weekDaysOrder exists
       const daysText = sortedDays.length === 7 ? "Daily" : sortedDays.join(', ');
       let durationText = '';
       if (habit.durationHours && habit.durationHours > 0) durationText += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
@@ -265,8 +261,7 @@ const HabitItem: FC<HabitItemProps> = ({
     if (durationDisplay) durationDisplay += ' ';
     durationDisplay += `${habit.durationMinutes} min`;
   }
-  const formattedSpecificTime = formatSpecificTime(habit.specificTime);
-
+  
   let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl rounded-[1.25rem]`;
   const cardStyle: React.CSSProperties = {};
 
@@ -281,12 +276,15 @@ const HabitItem: FC<HabitItemProps> = ({
   }
   cardClasses = cn(cardClasses, 'bg-card');
 
-
   const handleToggleDailyCompletion = (dateToToggle: string) => {
     if (!dateToToggle) return;
     const logEntryForDate = habit.completionLog.find(log => log.date === dateToToggle);
     const currentCompletionState = logEntryForDate?.status === 'completed' || (logEntryForDate?.status === undefined && !!logEntryForDate && logEntryForDate.time !== 'N/A' && !(logEntryForDate?.status === undefined && logEntryForDate?.time === 'N/A' && logEntryForDate.note));
     
+    if (!currentCompletionState) { // Only show sparkles if marking as newly complete
+        setShowSparkles(true);
+        setTimeout(() => setShowSparkles(false), 800);
+    }
     onToggleComplete(habit.id, dateToToggle, !currentCompletionState);
   };
 
@@ -301,6 +299,7 @@ const HabitItem: FC<HabitItemProps> = ({
         <h2 className="text-lg sm:text-xl font-bold text-primary text-center flex-grow mx-2 truncate min-w-0 break-words">
           {habit.name}
         </h2>
+        {habit.reminderEnabled && <Bell className="h-4 w-4 text-primary/70 flex-shrink-0 mr-1" />}
         <div className="flex-shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -311,11 +310,25 @@ const HabitItem: FC<HabitItemProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                <DropdownMenuItem onClick={() => {
-                  let targetDateForReflection = todayString; 
-                  onOpenReflectionDialog(habit.id, targetDateForReflection, habit.name);
+                  onOpenReflectionDialog(habit.id, todayString, habit.name);
                 }}>
                 <MessageSquarePlus className="mr-2 h-4 w-4" />
                 <span>Add/Edit Note</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="flex items-center justify-between"
+                onSelect={(e) => e.preventDefault()} // Prevent menu from closing on switch click
+              >
+                <Label htmlFor={`reminder-switch-${habit.id}`} className="flex items-center cursor-pointer">
+                    <Bell className="mr-2 h-4 w-4" />
+                    Enable Reminder
+                </Label>
+                <Switch
+                    id={`reminder-switch-${habit.id}`}
+                    checked={!!habit.reminderEnabled}
+                    onCheckedChange={() => onToggleReminder(habit.id, !!habit.reminderEnabled)}
+                    className="ml-auto"
+                />
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
@@ -330,7 +343,7 @@ const HabitItem: FC<HabitItemProps> = ({
                 <Share2 className="mr-2 h-4 w-4" />
                 <span>Share</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
+               <DropdownMenuItem onClick={() => {
                  const firstMissed = weekViewDays.find(d =>
                     habit.daysOfWeek.includes(d.dayAbbrFull) &&
                     d.isPast && !d.isToday &&
@@ -394,7 +407,7 @@ const HabitItem: FC<HabitItemProps> = ({
           )}
           {habit.description && (
             <div className="text-xs text-muted-foreground">
-              <p className={cn(!isDescriptionExpanded && habit.description.length > DESCRIPTION_TRUNCATE_LENGTH ? "line-clamp-2" : "")}>
+              <p className={cn("inline",!isDescriptionExpanded && habit.description.length > DESCRIPTION_TRUNCATE_LENGTH ? "line-clamp-2" : "")}>
                 <span className="font-medium mr-1">📝 Desc:</span>
                 {isDescriptionExpanded || habit.description.length <= DESCRIPTION_TRUNCATE_LENGTH 
                   ? habit.description 
@@ -488,46 +501,48 @@ const HabitItem: FC<HabitItemProps> = ({
         )}
       </CardContent>
 
-      <CardFooter className="flex flex-col items-stretch pt-6 pb-3 px-3 space-y-2">
-        <div className="flex justify-center space-x-2">
+      <div className="flex flex-col items-stretch pt-6 pb-3 px-3 space-y-2"> {/* Changed from CardFooter to div to avoid default CardFooter padding */}
+        <div className="relative flex justify-center sparkle-container">
           <Button
             onClick={() => onToggleComplete(habit.id, todayString, true)}
             disabled={isTodayCompleted}
             className={cn(
-              "rounded-full py-2.5 px-4 text-sm transition-all active:scale-95 flex-1",
+              "rounded-full py-2.5 px-6 text-sm transition-all active:scale-95",
               !isTodayCompleted
                 ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95"
                 : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed",
+                 isTodayCompleted && (showSparkles ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]")
             )}
           >
             {isTodayCompleted ? (
               <>
                 <CheckCircle2 className="mr-2 h-5 w-5" />
-                Done
+                Done!
               </>
             ) : (
               <>
                 <Check className="mr-2 h-5 w-5" />
-                Mark Done
+                Mark as Done
               </>
             )}
           </Button>
-
-          <Button
-            onClick={() => onToggleComplete(habit.id, todayString, false)}
-            disabled={!isTodayCompleted}
-            variant={isTodayCompleted ? "destructive" : "outline"}
-            className={cn(
-              "rounded-full py-2.5 px-4 text-sm transition-all active:scale-95 flex-1",
-              !isTodayCompleted ? "border-muted text-muted-foreground cursor-not-allowed" : ""
-            )}
-          >
-            <X className="mr-2 h-5 w-5" />
-            Not Done
-          </Button>
+        </div>
+         <div className="relative flex justify-center sparkle-container">
+             <Button
+                onClick={() => onToggleComplete(habit.id, todayString, false)}
+                disabled={!isTodayCompleted}
+                variant={isTodayCompleted ? "destructive" : "outline"}
+                className={cn(
+                "rounded-full py-2.5 px-6 text-sm transition-all active:scale-95",
+                !isTodayCompleted ? "border-muted text-muted-foreground cursor-not-allowed" : ""
+                )}
+            >
+                <XCircle className="mr-2 h-5 w-5" />
+                Not Done
+            </Button>
         </div>
         
-        {showSparkles && (
+        {showSparkles && isTodayCompleted && ( // Only show sparkles if it's marked completed for today
           <>
               <div className="sparkle sparkle-1"></div>
               <div className="sparkle sparkle-2"></div>
@@ -537,55 +552,7 @@ const HabitItem: FC<HabitItemProps> = ({
               <div className="sparkle sparkle-6" style={{ backgroundColor: 'hsl(var(--primary))' }}></div>
           </>
         )}
-
-        <div className="flex justify-end mt-2"> {/* Wrapper for MoreHorizontal */}
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 self-end">
-                    <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-                    <span className="sr-only">More options</span>
-                </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => {
-                      const targetDateForReflection = todayString; 
-                      onOpenReflectionDialog(habit.id, targetDateForReflection, habit.name);
-                    }}>
-                    <MessageSquarePlus className="mr-2 h-4 w-4" />
-                    <span>Add/Edit Note</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
-                    <Lightbulb className="mr-2 h-4 w-4" />
-                    <span>AI Tip</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAddToCalendar}>
-                    <CalendarPlus className="mr-2 h-4 w-4" />
-                    <span>Add to GCal</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleShareHabit}>
-                    <Share2 className="mr-2 h-4 w-4" />
-                    <span>Share</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    const firstMissed = weekViewDays.find(d =>
-                        habit.daysOfWeek.includes(d.dayAbbrFull) &&
-                        d.isPast && !d.isToday &&
-                        !habit.completionLog.some(log => log.date === d.dateStr && (log.status === 'completed' || log.status === 'skipped' || log.status === 'pending_makeup' || (log.status === undefined && log.time !== 'N/A' && !(log.status === undefined && log.time === 'N/A' && log.note))))
-                    );
-                    if (firstMissed) {
-                        onOpenRescheduleDialog(habit, firstMissed.dateStr);
-                    } else {
-                        console.log("Reschedule: No past, scheduled, uncompleted days this week to reschedule.");
-                    }
-                  }}>
-                    <OptimalTimingIcon className="mr-2 h-4 w-4" />
-                    <span>Reschedule Missed</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
-      </CardFooter>
+      </div>
       {showWeeklyConfetti && (
         <div className="weekly-goal-animation-container">
             <div className="weekly-goal-text">Weekly Goal Met!</div>
@@ -604,6 +571,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-
-
-    

@@ -3,7 +3,7 @@
 
 import type { FC } from 'react';
 import HabitItem from './HabitItem';
-import type { Habit, EarnedBadge } from '@/types';
+import type { Habit } from '@/types'; // Removed EarnedBadge import as it's not used here
 import { ListChecks } from 'lucide-react';
 
 interface HabitListProps {
@@ -12,9 +12,7 @@ interface HabitListProps {
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  // selectedHabitIds: string[]; // Removed as card checkbox is removed
-  // onSelectHabit: (habitId: string) => void; // Removed
-  earnedBadges: EarnedBadge[];
+  onToggleReminder: (habitId: string, currentReminderState: boolean) => void; // New prop
 }
 
 const HabitList: FC<HabitListProps> = ({
@@ -23,9 +21,7 @@ const HabitList: FC<HabitListProps> = ({
     onGetAISuggestion,
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
-    // selectedHabitIds, // Removed
-    // onSelectHabit, // Removed
-    earnedBadges,
+    onToggleReminder, // Pass down
 }) => {
   if (habits.length === 0) {
     return (
@@ -47,9 +43,7 @@ const HabitList: FC<HabitListProps> = ({
           onGetAISuggestion={onGetAISuggestion}
           onOpenReflectionDialog={onOpenReflectionDialog}
           onOpenRescheduleDialog={onOpenRescheduleDialog}
-          // isSelected={selectedHabitIds.includes(habit.id)} // Removed
-          // onSelectToggle={onSelectHabit} // Removed
-          earnedBadges={earnedBadges}
+          onToggleReminder={onToggleReminder} // Pass down
         />
       ))}
     </div>

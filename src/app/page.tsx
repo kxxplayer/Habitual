@@ -1,12 +1,13 @@
 
 "use client";
 
+import * as React from 'react'; // Added this line
 import { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
-import { useRouter } from 'next/navigation'; // Added for redirection
-import { auth } from '@/lib/firebase'; // Added for Firebase auth
-import type { User } from 'firebase/auth'; // Added for User type
-import { onAuthStateChanged } from 'firebase/auth'; // Added for auth listener
+import { useRouter } from 'next/navigation';
+import { auth } from '@/lib/firebase';
+import type { User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 
 import AppHeader from '@/components/layout/AppHeader';
 import HabitList from '@/components/habits/HabitList';
@@ -22,6 +23,7 @@ import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import Link from 'next/link';
+import { cn } from "@/lib/utils";
 
 import { Button } from '@/components/ui/button';
 import {
@@ -40,8 +42,8 @@ import {
   SheetDescription,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2 } from 'lucide-react'; // Added Loader2
-import { format, parseISO } from 'date-fns';
+import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell } from 'lucide-react';
+import { format, parseISO, set, subMinutes, isFuture } from 'date-fns';
 
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -66,6 +68,9 @@ const HabitualPage: NextPage = () => {
   const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
   const [totalPoints, setTotalPoints] = useState<number>(0);
 
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+  const reminderTimeouts = React.useRef<NodeJS.Timeout[]>([]);
+
 
   const [isReflectionDialogOpen, setIsReflectionDialogOpen] = useState(false);
   const [reflectionDialogData, setReflectionDialogData] = useState<{
@@ -86,17 +91,38 @@ const HabitualPage: NextPage = () => {
         setAuthUser(user);
       } else {
         setAuthUser(null);
-        router.push('/auth/login'); // Redirect to login if not authenticated
+        router.push('/auth/login'); 
       }
       setIsLoadingAuth(false);
     });
 
-    return () => unsubscribe(); // Cleanup subscription on unmount
+    return () => unsubscribe(); 
   }, [router]);
+
+  // Effect for Notification Permission
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          setNotificationPermission(permission);
+          if (permission === 'granted') {
+            console.log('Notification permission granted.');
+          } else {
+            console.log('Notification permission denied or dismissed.');
+          }
+        });
+      } else {
+        setNotificationPermission(Notification.permission);
+      }
+    } else {
+      console.log('Notifications not supported by this browser.');
+      setNotificationPermission('denied'); // Treat as denied if not supported
+    }
+  }, []);
 
 
   useEffect(() => {
-    if (!authUser || isLoadingAuth) return; // Don't load habits until auth is confirmed
+    if (!authUser || isLoadingAuth) return; 
 
     const storedHabits = localStorage.getItem('habits');
     if (storedHabits) {
@@ -128,7 +154,7 @@ const HabitualPage: NextPage = () => {
             if (minMatch) migratedDurationMinutes = parseInt(minMatch[1]);
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
-                if (numVal <= 120) migratedDurationMinutes = numVal; // Assuming single number duration < 120 is minutes
+                if (numVal <= 120) migratedDurationMinutes = numVal; 
             }
           }
 
@@ -171,6 +197,7 @@ const HabitualPage: NextPage = () => {
             durationMinutes: migratedDurationMinutes,
             specificTime: migratedSpecificTime || undefined,
             completionLog: migratedCompletionLog as HabitCompletionLogEntry[],
+            reminderEnabled: habit.reminderEnabled || false, // Migration for reminderEnabled
           };
         });
         setHabits(parsedHabits);
@@ -197,10 +224,10 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
       }
     }
-  }, [authUser, isLoadingAuth]); // Rerun when authUser or isLoadingAuth changes
+  }, [authUser, isLoadingAuth]); 
 
   useEffect(() => {
-    if (!authUser || isLoadingAuth) return; // Don't save habits until auth is confirmed
+    if (!authUser || isLoadingAuth) return; 
     localStorage.setItem('habits', JSON.stringify(habits));
 
     const newlyEarned = checkAndAwardBadges(habits, earnedBadges);
@@ -209,12 +236,12 @@ const HabitualPage: NextPage = () => {
       newlyEarned.forEach(async newBadge => {
         if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
             updatedBadges.push(newBadge);
-            console.log(`New Badge Unlocked: ${newBadge.name}`);
+            console.log(`New Badge Unlocked: ${newBadge.name} - ${newBadge.description}`);
 
             if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) {
               try {
                 const sqlTipResult = await getSqlTip();
-                console.log(`Bonus SQL Tip Unlocked: ${sqlTipResult.tip}`);
+                console.log(`💡 Bonus SQL Tip Unlocked: ${sqlTipResult.tip}`);
               } catch (tipError) {
                 console.error("Failed to fetch SQL tip:", tipError);
               }
@@ -235,6 +262,62 @@ const HabitualPage: NextPage = () => {
     localStorage.setItem('totalPoints', totalPoints.toString());
   }, [totalPoints, authUser, isLoadingAuth]);
 
+  // Placeholder Reminder Scheduling Logic
+  useEffect(() => {
+    // Clear existing timeouts
+    reminderTimeouts.current.forEach(clearTimeout);
+    reminderTimeouts.current = [];
+
+    if (notificationPermission === 'granted') {
+      console.log("Checking habits for reminders (placeholder)...");
+      habits.forEach(habit => {
+        if (habit.reminderEnabled) {
+          let reminderDateTime: Date | null = null;
+          const now = new Date();
+
+          if (habit.specificTime) {
+            try {
+              const [hours, minutes] = habit.specificTime.split(':').map(Number);
+              let specificEventTime = set(now, { hours, minutes, seconds: 0, milliseconds: 0 });
+              reminderDateTime = subMinutes(specificEventTime, 30);
+            } catch (e) { 
+              console.error(`Error parsing specificTime "${habit.specificTime}" for habit "${habit.name}"`, e);
+            }
+          } else {
+            let baseHour = 10; // Default if no optimal timing
+            if (habit.optimalTiming?.toLowerCase().includes('morning')) baseHour = 9;
+            else if (habit.optimalTiming?.toLowerCase().includes('afternoon')) baseHour = 13;
+            else if (habit.optimalTiming?.toLowerCase().includes('evening')) baseHour = 18;
+            reminderDateTime = set(now, { hours: baseHour, minutes: 0, seconds: 0, milliseconds: 0 });
+          }
+
+          if (reminderDateTime && isFuture(reminderDateTime)) {
+            const delay = reminderDateTime.getTime() - now.getTime();
+            console.log(`Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
+            
+            // Actual setTimeout logic would go here
+            // const timeoutId = setTimeout(() => {
+            //   new Notification("Habitual Reminder", { 
+            //     body: `Time for your habit: ${habit.name}!`,
+            //     // icon: "/path/to/icon.png" // Optional icon
+            //   });
+            //   console.log(`REMINDER FIRED for: ${habit.name}`);
+            // }, delay);
+            // reminderTimeouts.current.push(timeoutId);
+
+          } else if (reminderDateTime) {
+            // console.log(`Reminder time for "${habit.name}" (${reminderDateTime.toLocaleTimeString()}) has passed for today or is invalid.`);
+          }
+        }
+      });
+    }
+    // Cleanup function to clear timeouts when component unmounts or dependencies change
+    return () => {
+      reminderTimeouts.current.forEach(clearTimeout);
+      reminderTimeouts.current = [];
+    };
+  }, [habits, notificationPermission]);
+
 
   const handleAddHabit = (newHabitData: Omit<Habit, 'id' | 'completionLog'>) => {
     const newHabit: Habit = {
@@ -242,6 +325,7 @@ const HabitualPage: NextPage = () => {
       id: Date.now().toString() + Math.random().toString(36).substring(2,7),
       completionLog: [],
       category: newHabitData.category || 'Other',
+      reminderEnabled: false, // Default reminder state
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
     console.log(`Habit Added: ${newHabit.name}`);
@@ -282,10 +366,10 @@ const HabitualPage: NextPage = () => {
               }
               if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-              } else if (logEntry.note) {
+              } else if (logEntry.note) { // If there's a note, mark as skipped instead of removing
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'skipped', time: 'N/A' };
               }
-              else {
+              else { // Otherwise, remove the log
                 newCompletionLog.splice(existingLogIndex, 1);
               }
             }
@@ -308,6 +392,19 @@ const HabitualPage: NextPage = () => {
 
     if (pointsChange !== 0) {
       setTotalPoints(prevPoints => Math.max(0, prevPoints + pointsChange));
+    }
+  };
+
+  const handleToggleReminder = (habitId: string, currentReminderState: boolean) => {
+    setHabits(prevHabits =>
+      prevHabits.map(h =>
+        h.id === habitId ? { ...h, reminderEnabled: !currentReminderState } : h
+      )
+    );
+    const habit = habits.find(h => h.id === habitId);
+    console.log(`Reminder for habit "${habit?.name}" ${!currentReminderState ? 'enabled' : 'disabled'}`);
+    if (!currentReminderState && notificationPermission !== 'granted') {
+       console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
     }
   };
 
@@ -450,10 +547,37 @@ const HabitualPage: NextPage = () => {
     console.log(`Habit Skipped: ${habitName}`);
   };
 
+  const handleRequestNotificationPermission = () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+        Notification.requestPermission().then(permission => {
+            setNotificationPermission(permission);
+            if (permission === 'granted') {
+                console.log('Notification permission granted.');
+            } else {
+                console.log('Notification permission denied or dismissed.');
+            }
+        });
+    }
+  };
+
   const sheetMenuItems = [
     { href: '/', label: 'Home', icon: Home, action: () => setIsSettingsSheetOpen(false) },
     { href: '/profile', label: 'Profile', icon: UserCircle, action: () => setIsSettingsSheetOpen(false) },
-    { href: '#reminders', label: 'Reminders', icon: BellRing, action: () => { setIsSettingsSheetOpen(false); console.log('Reminders settings coming soon!') } },
+    {
+      label: 'Reminders',
+      icon: BellRing,
+      action: () => {
+        setIsSettingsSheetOpen(false);
+        if (notificationPermission === 'granted') {
+          console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
+        } else if (notificationPermission === 'denied') {
+          console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
+        } else {
+          console.log('Reminder Settings: Notification permission not yet set. Requesting...');
+          handleRequestNotificationPermission();
+        }
+      }
+    },
     {
       label: 'Achievements',
       icon: Award,
@@ -475,8 +599,6 @@ const HabitualPage: NextPage = () => {
   }
 
   if (!authUser) {
-    // This case should ideally not be reached if router.push works correctly in useEffect,
-    // but it's a fallback.
     return (
        <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -516,7 +638,7 @@ const HabitualPage: NextPage = () => {
                   onGetAISuggestion={handleOpenAISuggestionDialog}
                   onOpenReflectionDialog={handleOpenReflectionDialog}
                   onOpenRescheduleDialog={handleOpenRescheduleDialog}
-                  earnedBadges={earnedBadges}
+                  onToggleReminder={handleToggleReminder}
                 />
             )}
           </main>
@@ -662,25 +784,25 @@ const HabitualPage: NextPage = () => {
           </SheetHeader>
           <div className="grid gap-2">
             {sheetMenuItems.map((item) => (
-              item.href && item.href !== "#reminders" && item.href !== "#calendar" ? (
+              item.href && item.href !== "#reminders" && item.href !== "#calendar" && item.href !== "/profile" ? ( 
                 <SheetClose asChild key={item.label}>
-                  {item.href === "/profile" ? (
-                     <Link href={item.href}>
-                        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action} >
-                            <item.icon className="mr-3 h-5 w-5" />
-                            {item.label}
-                        </Button>
-                    </Link>
-                  ) : (
                     <Link href={item.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action}>
                         <item.icon className="mr-3 h-5 w-5" />
                         {item.label}
                         </Button>
                     </Link>
-                  )}
                 </SheetClose>
-              ) : (
+              ) : item.href === "/profile" ? ( 
+                 <SheetClose asChild key={item.label}>
+                    <Link href={item.href}>
+                        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action} >
+                            <item.icon className="mr-3 h-5 w-5" />
+                            {item.label}
+                        </Button>
+                    </Link>
+                 </SheetClose>
+              ) : ( 
                 <SheetClose asChild key={item.label}>
                   <Button
                     variant="ghost"
@@ -694,6 +816,27 @@ const HabitualPage: NextPage = () => {
               )
             ))}
           </div>
+           {/* Section to show notification status and allow re-request */}
+           <div className="mt-4 pt-4 border-t">
+                <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center text-sm">
+                        <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <span>Notification Status:</span>
+                        <span className={cn("ml-1 font-semibold", 
+                            notificationPermission === 'granted' ? 'text-green-600' :
+                            notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
+                        )}>
+                            {notificationPermission ? notificationPermission.charAt(0).toUpperCase() + notificationPermission.slice(1) : 'Checking...'}
+                        </span>
+                    </div>
+                    {(notificationPermission === 'default' || notificationPermission === 'denied') && (
+                        <Button size="sm" variant="outline" onClick={handleRequestNotificationPermission}>
+                            Enable Notifications
+                        </Button>
+                    )}
+                </div>
+                {notificationPermission === 'denied' && <p className="text-xs text-muted-foreground px-1 mt-1">Notifications are blocked. Please enable them in your browser settings for Habitual to send reminders.</p>}
+            </div>
         </SheetContent>
       </Sheet>
 
@@ -702,6 +845,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
-
-    
