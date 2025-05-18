@@ -26,7 +26,6 @@ import Link from 'next/link';
 import { cn } from "@/lib/utils";
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle as DialogCardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card'; // Renamed to avoid conflict
 import { Calendar } from '@/components/ui/calendar';
 import type { DayPicker } from 'react-day-picker';
 
@@ -44,7 +43,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle as AlertTitle, // Renamed to avoid conflict
+  AlertDialogTitle as AlertTitle, 
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -55,7 +54,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon  } from 'lucide-react';
+import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal  } from 'lucide-react';
 import { format, parseISO, isSameDay, getDay } from 'date-fns';
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -77,8 +76,8 @@ const HabitualPage: NextPage = () => {
   const [showInlineHabitForm, setShowInlineHabitForm] = React.useState(false);
 
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = React.useState(false);
-  const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false); // New state for calendar dialog
-  const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date()); // New state for calendar dialog date
+  const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
 
   const [isAchievementsDialogOpen, setIsAchievementsDialogOpen] = React.useState(false);
   const [isSettingsSheetOpen, setIsSettingsSheetOpen] = React.useState(false);
@@ -116,7 +115,6 @@ const HabitualPage: NextPage = () => {
     return () => unsubscribe(); 
   }, [router]);
 
-  // Effect for Notification Permission
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
@@ -133,7 +131,7 @@ const HabitualPage: NextPage = () => {
       }
     } else {
       console.log('Notifications not supported by this browser.');
-      setNotificationPermission('denied'); // Treat as denied if not supported
+      setNotificationPermission('denied'); 
     }
   }, []);
 
@@ -214,7 +212,7 @@ const HabitualPage: NextPage = () => {
             durationMinutes: migratedDurationMinutes,
             specificTime: migratedSpecificTime || undefined,
             completionLog: migratedCompletionLog as HabitCompletionLogEntry[],
-            reminderEnabled: habit.reminderEnabled || false, 
+            reminderEnabled: habit.reminderEnabled === undefined ? false : habit.reminderEnabled,
           };
         });
         setHabits(parsedHabits);
@@ -279,9 +277,7 @@ const HabitualPage: NextPage = () => {
     localStorage.setItem('totalPoints', totalPoints.toString());
   }, [totalPoints, authUser, isLoadingAuth]);
 
-  // Placeholder Reminder Scheduling Logic
   useEffect(() => {
-    // Clear existing timeouts
     reminderTimeouts.current.forEach(clearTimeout);
     reminderTimeouts.current = [];
 
@@ -296,12 +292,12 @@ const HabitualPage: NextPage = () => {
             try {
               const [hours, minutes] = habit.specificTime.split(':').map(Number);
               let specificEventTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000); // 30 minutes before
+              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000); 
             } catch (e) { 
               console.error(`Error parsing specificTime "${habit.specificTime}" for habit "${habit.name}"`, e);
             }
           } else {
-            let baseHour = 10; // Default if no optimal timing
+            let baseHour = 10; 
             if (habit.optimalTiming?.toLowerCase().includes('morning')) baseHour = 9;
             else if (habit.optimalTiming?.toLowerCase().includes('afternoon')) baseHour = 13;
             else if (habit.optimalTiming?.toLowerCase().includes('evening')) baseHour = 18;
@@ -312,23 +308,12 @@ const HabitualPage: NextPage = () => {
             const delay = reminderDateTime.getTime() - now.getTime();
             console.log(`Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
             
-            // Actual setTimeout logic would go here
-            // const timeoutId = setTimeout(() => {
-            //   new Notification("Habitual Reminder", { 
-            //     body: `Time for your habit: ${habit.name}!`,
-            //     // icon: "/path/to/icon.png" // Optional icon
-            //   });
-            //   console.log(`REMINDER FIRED for: ${habit.name}`);
-            // }, delay);
-            // reminderTimeouts.current.push(timeoutId);
-
           } else if (reminderDateTime) {
             // console.log(`Reminder time for "${habit.name}" (${reminderDateTime.toLocaleTimeString()}) has passed for today or is invalid.`);
           }
         }
       });
     }
-    // Cleanup function to clear timeouts when component unmounts or dependencies change
     return () => {
       reminderTimeouts.current.forEach(clearTimeout);
       reminderTimeouts.current = [];
@@ -342,7 +327,7 @@ const HabitualPage: NextPage = () => {
       id: Date.now().toString() + Math.random().toString(36).substring(2,7),
       completionLog: [],
       category: newHabitData.category || 'Other',
-      reminderEnabled: false, // Default reminder state
+      reminderEnabled: false, 
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
     console.log(`Habit Added: ${newHabit.name}`);
@@ -383,10 +368,10 @@ const HabitualPage: NextPage = () => {
               }
               if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-              } else if (logEntry.note) { // If there's a note, mark as skipped instead of removing
+              } else if (logEntry.note) { 
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'skipped', time: 'N/A' };
               }
-              else { // Otherwise, remove the log
+              else { 
                 newCompletionLog.splice(existingLogIndex, 1);
               }
             }
@@ -577,7 +562,6 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-  // Calendar Dialog Logic
   const habitsForSelectedCalendarDate = useMemo(() => {
     if (!selectedCalendarDate) return [];
     const dateStr = format(selectedCalendarDate, 'yyyy-MM-dd');
@@ -668,14 +652,13 @@ const HabitualPage: NextPage = () => {
       label: 'Reminders',
       icon: BellRing,
       action: () => {
-        // Keep sheet open for this interaction
         if (notificationPermission === 'granted') {
           console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
         } else if (notificationPermission === 'denied') {
           console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
         } else {
           console.log('Reminder Settings: Notification permission not yet set. Requesting...');
-          handleRequestNotificationPermission(); // This will trigger browser prompt if needed
+          handleRequestNotificationPermission(); 
         }
       }
     },
@@ -715,23 +698,14 @@ const HabitualPage: NextPage = () => {
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
           maxWidth: 'clamp(320px, 100%, 450px)',
-          height: 'clamp(700px, 90vh, 850px)', // Adjusted height
+          height: 'clamp(700px, 90vh, 850px)', 
           overflow: 'hidden',
         }}
       >
-        <AppHeader />
+        <AppHeader onOpenCalendar={() => setIsCalendarDialogOpen(true)} />
         
-        {/* Top Action Bar */}
-        <div className="shrink-0 bg-card/80 backdrop-blur-sm border-b p-2 flex justify-end items-center space-x-2 sticky top-[60px] z-30">
-            <Button variant="ghost" size="icon" onClick={() => setIsCalendarDialogOpen(true)} aria-label="Open Calendar">
-                <CalendarDays className="h-5 w-5 text-primary" />
-            </Button>
-            {/* Add other top action buttons here if needed */}
-        </div>
-
-
         <div className="flex-grow overflow-y-auto">
-          <main className="px-3 sm:px-4 py-4"> {/* Reduced py */}
+          <main className="px-3 sm:px-4 py-4"> 
             {showInlineHabitForm && (
               <div className="my-4">
                 <InlineCreateHabitForm
@@ -869,7 +843,7 @@ const HabitualPage: NextPage = () => {
                     onSelect={setSelectedCalendarDate}
                     modifiers={calendarDialogModifiers}
                     modifiersStyles={calendarDialogModifierStyles}
-                    className="rounded-md border p-0 sm:p-2" // Adjusted padding
+                    className="rounded-md border p-0 sm:p-2" 
                     month={selectedCalendarDate || new Date()}
                     onMonthChange={setSelectedCalendarDate}   
                  />
@@ -1005,7 +979,6 @@ const HabitualPage: NextPage = () => {
               )
             ))}
           </div>
-           {/* Section to show notification status and allow re-request */}
            <div className="mt-4 pt-4 border-t">
                 <div className="flex items-center justify-between px-1">
                     <div className="flex items-center text-sm">
@@ -1034,6 +1007,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
-
-    
