@@ -2,7 +2,7 @@
 "use client";
 
 import type { Habit, EarnedBadge } from '@/types';
-import { SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID } from '@/types';
+import { SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID, THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 import { calculateStreak } from '@/lib/dateUtils';
 import { format } from 'date-fns';
 
@@ -35,6 +35,16 @@ const badgeDefinitions: BadgeDefinition[] = [
     description: "Completed your first habit task.",
     icon: "✅",
     condition: (habits) => habits.some(habit => habit.completionLog.some(log => log.status === 'completed')),
+  },
+  {
+    id: THREE_DAY_SQL_STREAK_BADGE_ID,
+    name: "3-Day SQL Pro! 💻",
+    description: "Practiced SQL for 3 consecutive days.",
+    icon: "💻",
+    condition: (habits) => 
+      habits.some(habit => 
+        habit.name.toLowerCase().includes("sql") && calculateStreak(habit) >= 3
+      ),
   },
   // Add more badge definitions here
 ];

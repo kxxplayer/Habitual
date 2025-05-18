@@ -59,6 +59,7 @@ export interface CreateHabitFormData {
 export const SEVEN_DAY_STREAK_BADGE_ID = "sevenDayStreak";
 export const THIRTY_DAY_STREAK_BADGE_ID = "thirtyDayStreak";
 export const FIRST_HABIT_COMPLETED_BADGE_ID = "firstHabitCompleted";
+export const THREE_DAY_SQL_STREAK_BADGE_ID = "threeDaySqlStreak"; // New badge ID
 // Add more badge IDs as needed
 
 export interface EarnedBadge {
