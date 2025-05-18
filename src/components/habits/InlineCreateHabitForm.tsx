@@ -68,7 +68,6 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     control,
     handleSubmit,
     reset,
-    // watch, // Replaced by useWatch for 'description'
     setValue,
     formState: { errors, isSubmitting }
   } = useForm<CreateHabitFormData>({
@@ -97,7 +96,6 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
 
   useEffect(() => {
-    // This effect is for cleanup on unmount
     return () => {
         reset({
             description: '',
@@ -127,7 +125,10 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     try {
       const result = await createHabitFromDescription({ description: currentDescription });
       setValue('name', result.habitName || '');
-      // AI does not suggest category for now. User selects it manually.
+      
+      if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
+        setValue('category', result.category as HabitCategory);
+      }
 
       let suggestedDays: WeekDay[] = [];
       if (result.daysOfWeek && Array.isArray(result.daysOfWeek)) {
@@ -151,7 +152,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
       toast({
         title: "AI Suggestion Applied",
-        description: "Habit details have been populated by AI (category is manual).",
+        description: "Habit details have been populated by AI.",
       });
     } catch (error) {
       console.error("AI suggestion error:", error);
@@ -233,7 +234,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
                 name="category"
                 control={control}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value || "Other"}>
+                  <Select onValueChange={field.onChange} value={field.value || "Other"}>
                     <SelectTrigger id="inline-habit-category" className="bg-input/50 text-sm h-9">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -344,4 +345,3 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 };
 
 export default InlineCreateHabitForm;
-

@@ -1,7 +1,8 @@
+
 'use server';
 
 /**
- * @fileOverview Creates a habit from a user-provided description by suggesting details like name, days of the week, timing, duration, and specific time.
+ * @fileOverview Creates a habit from a user-provided description by suggesting details like name, days of the week, timing, duration, specific time, and category.
  *
  * - createHabitFromDescription - A function that handles the habit creation process.
  * - HabitCreationInput - The input type for the createHabitFromDescription function.
@@ -10,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { HABIT_CATEGORIES, type HabitCategory } from '@/types'; // Import categories
 
 const HabitCreationInputSchema = z.object({
   description: z.string().describe('A short description of the habit to create.'),
@@ -23,6 +25,7 @@ const HabitCreationOutputSchema = z.object({
   durationHours: z.number().optional().describe('Suggested duration in hours for the habit (e.g., 1 for 1 hour).'),
   durationMinutes: z.number().optional().describe('Suggested duration in minutes for the habit (e.g., 30 for 30 minutes, range 0-59).'),
   specificTime: z.string().optional().describe('A suggested specific time for the habit if applicable (e.g., "08:00", "17:30", "Anytime"). Use HH:mm format for specific times.'),
+  category: z.enum(HABIT_CATEGORIES).optional().describe(`Suggested category for the habit. Choose one from the following list: ${HABIT_CATEGORIES.join(', ')}. If unsure, you can omit this or suggest 'Other'.`),
 });
 export type HabitCreationOutput = z.infer<typeof HabitCreationOutputSchema>;
 
@@ -42,6 +45,7 @@ const prompt = ai.definePrompt({
   3. An optimal general timing (e.g., morning, afternoon, evening).
   4. A suitable duration for the activity. Provide this as durationHours (e.g., 1 for 1 hour) and durationMinutes (e.g., 30 for 30 minutes, range 0-59). If only minutes, durationHours can be omitted or 0. If only hours, durationMinutes can be omitted or 0.
   5. A specific time of day if applicable. Use HH:mm format (e.g., "08:00", "17:30"). If not applicable or flexible, suggest "Anytime" or "Flexible".
+  6. A category for the habit. Choose one of the following valid categories: ${HABIT_CATEGORIES.join(', ')}. For example, if the habit is about exercise, 'Health & Wellness' or 'Lifestyle' might be suitable. If it's about coding, 'Work/Study' or 'Personal Growth' might be good. If very general, 'Other' is fine.
 
   Description: {{{description}}}
   `,
