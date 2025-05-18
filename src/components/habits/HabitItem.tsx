@@ -309,7 +309,7 @@ const HabitItem: FC<HabitItemProps> = ({
           {getHabitIcon(habit)}
         </div>
         <div className="flex items-center text-xs text-muted-foreground mt-0.5 space-x-2">
-          <TooltipProvider>
+            <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center cursor-default">
@@ -327,7 +327,7 @@ const HabitItem: FC<HabitItemProps> = ({
                   </p>
                 </TooltipContent>
               </Tooltip>
-          </TooltipProvider>
+            </TooltipProvider>
           <span className="text-muted-foreground/50">|</span>
            <div className="flex items-center text-xs">
               <span className="mr-1">🎯</span>
@@ -437,7 +437,7 @@ const HabitItem: FC<HabitItemProps> = ({
         )}
       </CardContent>
 
-      <CardFooter className="flex flex-col items-stretch pt-4 pb-3 px-3 space-y-2">
+      <CardFooter className="flex flex-col items-stretch pt-6 pb-3 px-3 space-y-2">
         <div className="sparkle-container relative flex justify-center">
           <Button
             onClick={handleToggleCurrentDayCompletion}
@@ -445,7 +445,7 @@ const HabitItem: FC<HabitItemProps> = ({
               "rounded-full transition-all active:scale-95 py-2.5 px-6 text-sm", 
               isTodayCompleted
                 ? `bg-accent hover:bg-accent/90 text-accent-foreground ${showSparkles && isTodayCompleted ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]"}`
-                : "border border-primary/50 text-primary hover:bg-primary/10"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
             )}
           >
             {isTodayCompleted ? (
