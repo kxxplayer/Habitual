@@ -16,7 +16,7 @@ import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, XCircle, T
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import type { Habit, CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast'; // Commented out
 import {
   Select,
   SelectContent,
@@ -62,7 +62,7 @@ const normalizeDay = (day: string): WeekDay | undefined => {
 
 const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onCloseForm }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Commented out
 
   const {
     control,
@@ -114,11 +114,12 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
   const handleAISuggestDetails = async () => {
     const currentDescription = habitDescriptionForAI || "";
     if (currentDescription.trim() === "") {
-      toast({
-        title: "No Description Provided",
-        description: "Please enter a description for the AI to suggest habit details.",
-        variant: "destructive",
-      });
+      // toast({ // Commented out
+      //   title: "No Description Provided",
+      //   description: "Please enter a description for the AI to suggest habit details.",
+      //   variant: "destructive",
+      // });
+      console.error("No Description Provided for AI suggestion.");
       return;
     }
     setIsAISuggesting(true);
@@ -150,17 +151,19 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
         setValue('specificTime', result.specificTime || '');
       }
 
-      toast({
-        title: "AI Suggestion Applied",
-        description: "Habit details have been populated by AI.",
-      });
+      // toast({ // Commented out
+      //   title: "AI Suggestion Applied",
+      //   description: "Habit details have been populated by AI.",
+      // });
+      console.log("AI Suggestion Applied");
     } catch (error) {
       console.error("AI suggestion error:", error);
-      toast({
-        title: "AI Suggestion Failed",
-        description: "Could not get suggestions from AI. Please try again or fill manually.",
-        variant: "destructive",
-      });
+      // toast({ // Commented out
+      //   title: "AI Suggestion Failed",
+      //   description: "Could not get suggestions from AI. Please try again or fill manually.",
+      //   variant: "destructive",
+      // });
+      console.error("AI Suggestion Failed: Could not get suggestions from AI.");
     } finally {
       setIsAISuggesting(false);
     }

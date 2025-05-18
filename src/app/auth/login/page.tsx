@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GoogleIcon } from '@/components/ui/icons';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast'; // Commented out
 import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
@@ -27,7 +27,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage: NextPage = () => {
   const router = useRouter();
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Commented out
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -39,18 +39,20 @@ const LoginPage: NextPage = () => {
     setIsEmailLoading(true);
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
-      toast({
-        title: "Login Successful!",
-        description: "Welcome back!",
-      });
+      // toast({ // Commented out
+      //   title: "Login Successful!",
+      //   description: "Welcome back!",
+      // });
+      console.log("Login Successful!");
       router.push('/'); // Redirect to home page
     } catch (error: any) {
       console.error("Error signing in with email:", error);
-      toast({
-        title: "Login Failed",
-        description: error.message || "Invalid email or password.",
-        variant: "destructive",
-      });
+      // toast({ // Commented out
+      //   title: "Login Failed",
+      //   description: error.message || "Invalid email or password.",
+      //   variant: "destructive",
+      // });
+      console.error("Login Failed:", error.message || "Invalid email or password.");
     } finally {
       setIsEmailLoading(false);
     }
@@ -61,18 +63,20 @@ const LoginPage: NextPage = () => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      toast({
-        title: "Login Successful!",
-        description: "Welcome!",
-      });
+      // toast({ // Commented out
+      //   title: "Login Successful!",
+      //   description: "Welcome!",
+      // });
+      console.log("Google Login Successful!");
       router.push('/'); // Redirect to home page
     } catch (error: any) {
       console.error("Error with Google sign-in:", error);
-      toast({
-        title: "Google Sign-In Failed",
-        description: error.message || "Could not sign in with Google.",
-        variant: "destructive",
-      });
+      // toast({ // Commented out
+      //   title: "Google Sign-In Failed",
+      //   description: error.message || "Could not sign in with Google.",
+      //   variant: "destructive",
+      // });
+      console.error("Google Sign-In Failed:", error.message || "Could not sign in with Google.");
     } finally {
       setIsGoogleLoading(false);
     }

@@ -16,7 +16,7 @@ import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast'; // Commented out as toasts are removed
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -62,7 +62,7 @@ const HabitualPage: NextPage = () => {
   const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = useState(false);
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = useState<Habit | null>(null);
   const [aiSuggestion, setAISuggestion] = useState<AISuggestionType | null>(null);
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Commented out
 
   const [showInlineHabitForm, setShowInlineHabitForm] = useState(false);
   
@@ -202,21 +202,24 @@ const HabitualPage: NextPage = () => {
       newlyEarned.forEach(async newBadge => {
         if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
             updatedBadges.push(newBadge);
-            toast({
-                title: "🏆 New Badge Unlocked! 🎉",
-                description: `You've earned the "${newBadge.name}" badge!`,
-                action: <Award className="h-5 w-5 text-yellow-500" />,
-            });
+            // toast({ // Commented out
+            //     title: "🏆 New Badge Unlocked! 🎉",
+            //     description: `You've earned the "${newBadge.name}" badge!`,
+            //     action: <Award className="h-5 w-5 text-yellow-500" />,
+            // });
+            console.log(`New Badge Unlocked: ${newBadge.name}`);
+
 
             if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) {
               try {
                 const sqlTipResult = await getSqlTip();
-                toast({
-                  title: "💡 Bonus SQL Tip Unlocked!",
-                  description: sqlTipResult.tip,
-                  duration: 9000,
-                  action: <BookOpenText className="h-5 w-5 text-blue-500" />
-                });
+                // toast({ // Commented out
+                //   title: "💡 Bonus SQL Tip Unlocked!",
+                //   description: sqlTipResult.tip,
+                //   duration: 9000,
+                //   action: <BookOpenText className="h-5 w-5 text-blue-500" />
+                // });
+                console.log(`Bonus SQL Tip Unlocked: ${sqlTipResult.tip}`);
               } catch (tipError) {
                 console.error("Failed to fetch SQL tip:", tipError);
               }
@@ -225,7 +228,7 @@ const HabitualPage: NextPage = () => {
       });
       setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, toast]);
+  }, [habits, earnedBadges /*, toast (removed dependency) */]);
 
   useEffect(() => {
     localStorage.setItem('earnedBadges', JSON.stringify(earnedBadges));
@@ -244,11 +247,12 @@ const HabitualPage: NextPage = () => {
       category: newHabitData.category || 'Other',
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
-    toast({
-      title: "Habit Added!",
-      description: `"${newHabit.name}" is now ready to be tracked.`,
-      action: <Smile className="h-5 w-5 text-accent" />,
-    });
+    // toast({ // Commented out
+    //   title: "Habit Added!",
+    //   description: `"${newHabit.name}" is now ready to be tracked.`,
+    //   action: <Smile className="h-5 w-5 text-accent" />,
+    // });
+    console.log(`Habit Added: ${newHabit.name}`);
     setShowInlineHabitForm(false);
   };
 
@@ -303,18 +307,20 @@ const HabitualPage: NextPage = () => {
     if (justCompleted && habitNameForQuote) {
       try {
         const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuote });
-        toast({
-          title: "✨ Keep Going!",
-          description: quoteResult.quote,
-          duration: 5000,
-        });
+        // toast({ // Commented out
+        //   title: "✨ Keep Going!",
+        //   description: quoteResult.quote,
+        //   duration: 5000,
+        // });
+        console.log(`Motivational Quote: ${quoteResult.quote}`);
       } catch (error) {
         console.error("Failed to fetch motivational quote:", error);
-        toast({
-          title: "✨ Well Done!",
-          description: "You're making progress!",
-          duration: 3000,
-        });
+        // toast({ // Commented out
+        //   title: "✨ Well Done!",
+        //   description: "You're making progress!",
+        //   duration: 3000,
+        // });
+        console.log("Motivational Quote: Well Done! You're making progress!");
       }
     }
 
@@ -362,11 +368,12 @@ const HabitualPage: NextPage = () => {
         isLoading: false,
         error: 'Failed to get suggestion.'
       });
-      toast({
-        title: "AI Suggestion Error",
-        description: "Could not fetch suggestion. Please try again later.",
-        variant: "destructive",
-      });
+      // toast({ // Commented out
+      //   title: "AI Suggestion Error",
+      //   description: "Could not fetch suggestion. Please try again later.",
+      //   variant: "destructive",
+      // });
+      console.error("AI Suggestion Error: Could not fetch suggestion.");
     }
   };
 
@@ -412,11 +419,12 @@ const HabitualPage: NextPage = () => {
         return h;
       })
     );
-    toast({
-      title: "Reflection Saved",
-      description: `Your note for "${reflectionDialogData.habitName}" has been saved.`,
-      action: <StickyNote className="h-5 w-5 text-accent" />
-    });
+    // toast({ // Commented out
+    //   title: "Reflection Saved",
+    //   description: `Your note for "${reflectionDialogData.habitName}" has been saved.`,
+    //   action: <StickyNote className="h-5 w-5 text-accent" />
+    // });
+    console.log(`Reflection Saved for ${reflectionDialogData.habitName}`);
     setReflectionDialogData(null);
     setIsReflectionDialogOpen(false);
   };
@@ -448,11 +456,12 @@ const HabitualPage: NextPage = () => {
       return h;
     }));
     const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
-    toast({
-      title: "Habit Rescheduled",
-      description: `"${habitName}" originally missed on ${format(parseISO(originalMissedDate), "MMM d")} is now set for ${format(parseISO(newDate), "MMM d")}.`,
-      action: <CalendarDays className="h-5 w-5 text-primary" />
-    });
+    // toast({ // Commented out
+    //   title: "Habit Rescheduled",
+    //   description: `"${habitName}" originally missed on ${format(parseISO(originalMissedDate), "MMM d")} is now set for ${format(parseISO(newDate), "MMM d")}.`,
+    //   action: <CalendarDays className="h-5 w-5 text-primary" />
+    // });
+    console.log(`Habit Rescheduled: ${habitName}`);
   };
 
   const handleSaveMarkAsSkipped = (habitId: string, missedDate: string) => {
@@ -471,16 +480,17 @@ const HabitualPage: NextPage = () => {
       return h;
     }));
     const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
-    toast({
-      title: "Habit Skipped",
-      description: `"${habitName}" for ${format(parseISO(missedDate), "MMM d")} has been marked as skipped.`,
-    });
+    // toast({ // Commented out
+    //   title: "Habit Skipped",
+    //   description: `"${habitName}" for ${format(parseISO(missedDate), "MMM d")} has been marked as skipped.`,
+    // });
+    console.log(`Habit Skipped: ${habitName}`);
   };
 
   const sheetMenuItems = [
     { href: '/', label: 'Home', icon: Home, action: () => setIsSettingsSheetOpen(false) },
     { href: '/profile', label: 'Profile', icon: UserCircle, action: () => setIsSettingsSheetOpen(false) },
-    { href: '#reminders', label: 'Reminders', icon: BellRing, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); toast({ title: 'Reminders', description: 'Reminder settings coming soon!' }); } },
+    { href: '#reminders', label: 'Reminders', icon: BellRing, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); console.log('Reminders settings coming soon!') /*toast({ title: 'Reminders', description: 'Reminder settings coming soon!' });*/ } },
     { 
       label: 'Achievements', 
       icon: Award, 
@@ -489,7 +499,7 @@ const HabitualPage: NextPage = () => {
         setIsAchievementsDialogOpen(true); 
       } 
     },
-    { href: '#calendar', label: 'Calendar', icon: CalendarDays, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); toast({ title: 'Calendar', description: 'Full calendar view coming soon!' }); } },
+    { href: '#calendar', label: 'Calendar', icon: CalendarDays, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); console.log('Full calendar view coming soon!') /*toast({ title: 'Calendar', description: 'Full calendar view coming soon!' });*/ } },
   ];
 
 
@@ -759,7 +769,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
-    
-
-    

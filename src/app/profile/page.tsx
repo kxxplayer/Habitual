@@ -8,14 +8,14 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast'; // Commented out
 import { auth } from '@/lib/firebase';
 import { signOut, onAuthStateChanged, type User } from 'firebase/auth';
 import { Loader2, LogOut, ArrowLeft } from 'lucide-react';
 
 const ProfilePage: NextPage = () => {
   const router = useRouter();
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Commented out
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -32,18 +32,20 @@ const ProfilePage: NextPage = () => {
     setIsSigningOut(true);
     try {
       await signOut(auth);
-      toast({
-        title: "Signed Out",
-        description: "You have been successfully signed out.",
-      });
+      // toast({ // Commented out
+      //   title: "Signed Out",
+      //   description: "You have been successfully signed out.",
+      // });
+      console.log("Signed Out");
       router.push('/auth/login');
     } catch (error: any) {
       console.error("Error signing out:", error);
-      toast({
-        title: "Sign Out Failed",
-        description: error.message || "Could not sign out. Please try again.",
-        variant: "destructive",
-      });
+      // toast({ // Commented out
+      //   title: "Sign Out Failed",
+      //   description: error.message || "Could not sign out. Please try again.",
+      //   variant: "destructive",
+      // });
+      console.error("Sign Out Failed:", error.message || "Could not sign out.");
       setIsSigningOut(false);
     }
   };

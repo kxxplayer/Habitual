@@ -7,6 +7,7 @@ import type { FC } from 'react';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,15 +40,15 @@ import {
   Circle,
   XCircle,
   Check,
+  ChevronRightSquare,
 } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast'; // Commented out
 import { format, parseISO } from 'date-fns';
 import { isDateInCurrentWeek, getDayAbbreviationFromDate, calculateStreak, getCurrentWeekDays, WeekDayInfo } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
-// import { Checkbox } from '@/components/ui/checkbox'; // Commented out as multi-select is dormant
 
 
 interface HabitItemProps {
@@ -57,6 +58,8 @@ interface HabitItemProps {
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
   earnedBadges: EarnedBadge[];
+  // isSelected: boolean; // Removed due to header redesign
+  // onSelectToggle: (habitId: string) => void; // Removed due to header redesign
 }
 
 const weekDaysOrder: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -135,9 +138,11 @@ const HabitItem: FC<HabitItemProps> = ({
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
     earnedBadges,
+    // isSelected, // Removed
+    // onSelectToggle, // Removed
 }) => {
   const [todayString, setTodayString] = React.useState('');
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Commented out
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [weekViewDays, setWeekViewDays] = React.useState<WeekDayInfo[]>([]);
   const [showSparkles, setShowSparkles] = React.useState(false);
@@ -197,17 +202,19 @@ const HabitItem: FC<HabitItemProps> = ({
       const icsContent = generateICS(habit);
       const filename = `${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_habit.ics`;
       downloadICS(filename, icsContent);
-      toast({
-        title: "Added to GCal!",
-        description: `The .ics file for "${habit.name}" has been generated. You can import it into Google Calendar or your preferred calendar app.`,
-      });
+      // toast({ // Commented out
+      //   title: "Added to GCal!",
+      //   description: `The .ics file for "${habit.name}" has been generated. You can import it into Google Calendar or your preferred calendar app.`,
+      // });
+      console.log(`ICS generated for ${habit.name}`);
     } catch (error) {
       console.error("Error generating ICS file:", error);
-      toast({
-        title: "ICS Generation Error",
-        description: "Could not generate calendar file. Please check console for details.",
-        variant: "destructive",
-      });
+      // toast({ // Commented out
+      //   title: "ICS Generation Error",
+      //   description: "Could not generate calendar file. Please check console for details.",
+      //   variant: "destructive",
+      // });
+      console.error("ICS Generation Error");
     }
   };
 
@@ -232,16 +239,19 @@ const HabitItem: FC<HabitItemProps> = ({
     const copyToClipboard = async (text: string) => {
       try {
         await navigator.clipboard.writeText(text);
-        toast({ title: "Copied to Clipboard", description: "Habit details copied to clipboard." });
+        // toast({ title: "Copied to Clipboard", description: "Habit details copied to clipboard." }); // Commented out
+        console.log("Copied habit details to clipboard.");
       } catch (err) {
-        toast({ title: "Copy Failed", description: "Could not copy habit details.", variant: "destructive" });
+        // toast({ title: "Copy Failed", description: "Could not copy habit details.", variant: "destructive" }); // Commented out
+        console.error("Copy failed.");
       }
     };
 
     if (navigator.share) {
       try {
         await navigator.share({ title: `Habit: ${habit.name}`, text: shareText });
-        toast({ title: "Habit Shared!", description: "The habit details have been shared." });
+        // toast({ title: "Habit Shared!", description: "The habit details have been shared." }); // Commented out
+        console.log("Habit shared.");
       } catch (error) {
         if ((error as DOMException).name === 'AbortError') {
            console.log("User cancelled sharing.");
@@ -266,10 +276,10 @@ const HabitItem: FC<HabitItemProps> = ({
   const isTodayCompleted = todayLogEntry?.status === 'completed' || (todayLogEntry?.status === undefined && !!todayLogEntry && todayLogEntry.time !== 'N/A');
 
 
-  const cardStyle: React.CSSProperties = {};
   let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl rounded-[1.25rem]`;
+  const cardStyle: React.CSSProperties = {};
 
-  if (isTodayCompleted) {
+  if (isTodayCompleted) { // This logic might need adjustment if completion button is specific to today only.
     cardClasses = cn(cardClasses, 'bg-green-50 dark:bg-green-900/30');
     cardStyle.borderColor = `hsl(var(--accent))`;
     cardStyle.borderWidth = '1px';
@@ -315,9 +325,7 @@ const HabitItem: FC<HabitItemProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                <DropdownMenuItem onClick={() => {
-                  let targetDateForReflection = todayString; // Default to today
-                  // Try to find the most relevant log entry if needed, or pass specific date from somewhere else.
-                  // For now, simply using todayString for a note about today's (or general) reflection.
+                  let targetDateForReflection = todayString; 
                   onOpenReflectionDialog(habit.id, targetDateForReflection, habit.name);
                 }}>
                 <MessageSquarePlus className="mr-2 h-4 w-4" />
@@ -345,7 +353,8 @@ const HabitItem: FC<HabitItemProps> = ({
                  if (firstMissed) {
                     onOpenRescheduleDialog(habit, firstMissed.dateStr);
                  } else {
-                    toast({title: "Reschedule", description: "No past, scheduled, uncompleted days this week to reschedule."})
+                    console.log("Reschedule: No past, scheduled, uncompleted days this week to reschedule.")
+                    // toast({title: "Reschedule", description: "No past, scheduled, uncompleted days this week to reschedule."}) // Commented out
                  }
               }}>
                 <OptimalTimingIcon className="mr-2 h-4 w-4" />
@@ -357,7 +366,7 @@ const HabitItem: FC<HabitItemProps> = ({
       </CardHeader>
 
       <CardContent className="space-y-3 px-3 sm:px-4 pb-2 pt-1">
-        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
+         <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -449,18 +458,12 @@ const HabitItem: FC<HabitItemProps> = ({
                 }
 
                 switch(dayStatus) {
-                  case 'completed':
-                    dayBoxClasses = 'bg-accent/10'; IconComponent = CheckCircle2; iconClasses = 'text-accent'; titleText += ' (Completed)'; break;
-                  case 'skipped':
-                    dayBoxClasses = 'bg-muted/30'; IconComponent = CalendarX; iconClasses = 'text-muted-foreground'; titleText += ' (Skipped)'; break;
-                  case 'pending_makeup':
-                    dayBoxClasses = 'bg-blue-500/10'; IconComponent = OptimalTimingIcon; iconClasses = 'text-blue-500'; titleText += ' (Makeup Pending)'; break;
-                  case 'missed':
-                    dayBoxClasses = 'bg-destructive/10'; IconComponent = XCircle; iconClasses = 'text-destructive'; titleText += ' (Missed)'; break;
-                  case 'pending_scheduled':
-                    dayBoxClasses = 'ring-1 ring-orange-500 ring-offset-1 ring-offset-background bg-orange-500/5'; IconComponent = Circle; iconClasses = 'text-orange-500'; titleText += ' (Scheduled)'; break;
-                  default: 
-                     dayBoxClasses = 'bg-input/40 dark:bg-input/20 text-muted-foreground/60 dark:text-muted-foreground/50 hover:bg-input/50 dark:hover:bg-input/30'; iconClasses = 'text-muted-foreground/40'; titleText += ' (Not Scheduled)'; break;
+                    case 'completed': dayBoxClasses = 'bg-accent/10'; IconComponent = CheckCircle2; iconClasses = 'text-accent'; titleText += ' (Completed)'; break;
+                    case 'skipped': dayBoxClasses = 'bg-muted/30'; IconComponent = CalendarX; iconClasses = 'text-muted-foreground'; titleText += ' (Skipped)'; break;
+                    case 'pending_makeup': dayBoxClasses = 'bg-blue-500/10'; IconComponent = OptimalTimingIcon; iconClasses = 'text-blue-500'; titleText += ' (Makeup Pending)'; break;
+                    case 'missed': dayBoxClasses = 'bg-destructive/10'; IconComponent = XCircle; iconClasses = 'text-destructive'; titleText += ' (Missed)'; break;
+                    case 'pending_scheduled': dayBoxClasses = 'ring-1 ring-orange-500 ring-offset-1 ring-offset-background bg-orange-500/5'; IconComponent = Circle; iconClasses = 'text-orange-500'; titleText += ' (Scheduled)'; break;
+                    default: dayBoxClasses = 'bg-input/40 dark:bg-input/20 text-muted-foreground/60 dark:text-muted-foreground/50 hover:bg-input/50 dark:hover:bg-input/30'; iconClasses = 'text-muted-foreground/40'; titleText += ' (Not Scheduled)'; break;
                 }
                 
                 const canToggleDay = isScheduled || isPendingMakeup || (isDayCompleted && isScheduled);
@@ -557,5 +560,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-
-    
