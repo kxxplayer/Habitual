@@ -266,7 +266,7 @@ const HabitItem: FC<HabitItemProps> = ({
   const formattedSpecificTime = formatSpecificTime(habit.specificTime);
 
   const cardStyle: React.CSSProperties = {};
-  let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isSelected ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-background' : ''}`;
+  let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl rounded-[1.25rem]`; // Updated rounded corners
 
   const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && (log.status === 'completed' || (log.status === undefined && log.time !== 'N/A')));
 
@@ -275,9 +275,9 @@ const HabitItem: FC<HabitItemProps> = ({
   } else {
     const categoryColorVar = getCategoryColorVariable(habit.category);
     cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
-    cardClasses = cn(cardClasses, 'border-l-4');
+    cardClasses = cn(cardClasses, 'border-l-4 bg-gradient-to-br from-primary/10 dark:from-primary/20 via-card/10 to-card'); // Added subtle gradient
   }
-  cardClasses = cn(cardClasses, 'bg-card');
+  cardClasses = cn(cardClasses, 'bg-card'); // Base card background, gradient layers on top or overrides if opaque
 
   const handleToggleCurrentDayCompletion = () => {
     if (!todayString) return;
@@ -548,4 +548,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-
