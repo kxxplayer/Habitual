@@ -11,6 +11,7 @@ interface HabitListProps {
   onToggleComplete: (habitId: string, date: string, completed: boolean) => void;
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
+  onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
   selectedHabitIds: string[];
   onSelectHabit: (habitId: string) => void;
 }
@@ -20,6 +21,7 @@ const HabitList: FC<HabitListProps> = ({
     onToggleComplete, 
     onGetAISuggestion, 
     onOpenReflectionDialog,
+    onOpenRescheduleDialog,
     selectedHabitIds, 
     onSelectHabit 
 }) => {
@@ -44,7 +46,8 @@ const HabitList: FC<HabitListProps> = ({
           onToggleComplete={onToggleComplete}
           onGetAISuggestion={onGetAISuggestion}
           onOpenReflectionDialog={onOpenReflectionDialog}
-          isCompletedToday={habit.completionLog.some(log => log.date === today)}
+          onOpenRescheduleDialog={onOpenRescheduleDialog}
+          isCompletedToday={habit.completionLog.some(log => log.date === today && log.status === 'completed')}
           isSelected={selectedHabitIds.includes(habit.id)}
           onSelectToggle={onSelectHabit}
         />

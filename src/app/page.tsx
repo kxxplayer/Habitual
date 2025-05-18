@@ -7,6 +7,7 @@ import AppHeader from '@/components/layout/AppHeader';
 import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
 import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog';
+import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
 import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm';
 import HabitOverview from '@/components/overview/HabitOverview';
 import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory } from '@/types';
@@ -35,7 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote } from 'lucide-react';
+import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote, CalendarDays } from 'lucide-react';
 
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -61,13 +62,17 @@ const HabitualPage: NextPage = () => {
     habitName: string;
   } | null>(null);
 
+  const [rescheduleDialogData, setRescheduleDialogData] = useState<{
+    habit: Habit;
+    missedDate: string;
+  } | null>(null);
+
 
   useEffect(() => {
     const storedHabits = localStorage.getItem('habits');
     if (storedHabits) {
       try {
         const parsedHabits: Habit[] = JSON.parse(storedHabits).map((habit: any) => {
-          // START MIGRATION LOGIC
           let daysOfWeek: WeekDay[] = habit.daysOfWeek || [];
           if (!habit.daysOfWeek && habit.frequency) {
             const freqLower = habit.frequency.toLowerCase();
@@ -92,7 +97,6 @@ const HabitualPage: NextPage = () => {
             const minMatch = durationStr.match(/(\d+)\s*min/);
             if (hourMatch) migratedDurationHours = parseInt(hourMatch[1]);
             if (minMatch) migratedDurationMinutes = parseInt(minMatch[1]);
-
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
                 if (numVal <= 120) migratedDurationMinutes = numVal;
@@ -107,7 +111,6 @@ const HabitualPage: NextPage = () => {
               let hours = parseInt(hoursStr, 10);
               const minutes = parseInt(minutesStr, 10);
               const modifier = modifierPart ? modifierPart.toLowerCase() : '';
-
               if (modifier === 'pm' && hours < 12) hours += 12;
               if (modifier === 'am' && hours === 12) hours = 0;
               migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
@@ -118,19 +121,20 @@ const HabitualPage: NextPage = () => {
           }
 
           const migratedCompletionLog = (habit.completionLog || (habit.completedDates
-              ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A', note: undefined }))
+              ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A', note: undefined, status: 'completed' }))
               : [])).map((log: any) => ({
                 date: log.date,
                 time: log.time || 'N/A',
                 note: log.note || undefined,
+                status: log.status || 'completed', // Default old entries to 'completed'
+                originalMissedDate: log.originalMissedDate || undefined,
               }));
-          // END MIGRATION LOGIC
-
+          
           return {
             id: habit.id || Date.now().toString() + Math.random().toString(36).substring(2,7),
             name: habit.name || 'Unnamed Habit',
             description: habit.description || undefined,
-            category: habit.category || undefined, // Add category, default to undefined if not present
+            category: habit.category || undefined,
             daysOfWeek: daysOfWeek,
             optimalTiming: habit.optimalTiming || undefined,
             durationHours: migratedDurationHours,
@@ -155,7 +159,7 @@ const HabitualPage: NextPage = () => {
       ...newHabitData,
       id: Date.now().toString() + Math.random().toString(36).substring(2,7),
       completionLog: [],
-      category: newHabitData.category || 'Other', // Default category if not provided
+      category: newHabitData.category || 'Other',
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
     toast({
@@ -171,22 +175,33 @@ const HabitualPage: NextPage = () => {
       prevHabits.map((habit) => {
         if (habit.id === habitId) {
           let newCompletionLog = [...habit.completionLog];
+          const existingLogIndex = newCompletionLog.findIndex(log => log.date === date);
+          const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
           if (completed) {
-            const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-            const existingLogIndex = newCompletionLog.findIndex(log => log.date === date);
             if (existingLogIndex > -1) {
-              newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], time: currentTime };
-            } else {
-              newCompletionLog.push({ date, time: currentTime, note: undefined });
+              // If it's a pending makeup or skipped, update its status and time
+              if (newCompletionLog[existingLogIndex].status === 'pending_makeup' || newCompletionLog[existingLogIndex].status === 'skipped') {
+                newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'completed', time: currentTime };
+              } else { // Regular completion or re-completing
+                newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'completed', time: currentTime };
+              }
+            } else { // New completion for a regular day
+              newCompletionLog.push({ date, time: currentTime, status: 'completed', note: undefined });
             }
-            // This toast is handled directly in HabitItem for better UX with sparkle
-            // toast({
-            //     title: "Great Job!",
-            //     description: `You've completed "${habit.name}" for today!`,
-            //     className: "bg-accent border-green-600 text-accent-foreground",
-            // });
-          } else {
-            newCompletionLog = newCompletionLog.filter(log => log.date !== date);
+            // If you want audio feedback, this is a good place:
+            // const audio = new Audio('/sounds/completion-chime.mp3'); // Path to your sound file
+            // audio.play().catch(e => console.error("Error playing sound:", e));
+          } else { // Un-completing
+            if (existingLogIndex > -1) {
+              const logEntry = newCompletionLog[existingLogIndex];
+              // If it was a completed makeup task, revert to 'pending_makeup'
+              if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
+                newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
+              } else { // Otherwise, just remove the completion log entry
+                newCompletionLog.splice(existingLogIndex, 1);
+              }
+            }
           }
           return { ...habit, completionLog: newCompletionLog.sort((a, b) => b.date.localeCompare(a.date)) };
         }
@@ -203,17 +218,16 @@ const HabitualPage: NextPage = () => {
     try {
       const completionEntries = habit.completionLog.map(log => {
         let entry = `${log.date} at ${log.time}`;
-        if (log.note && log.note.trim() !== "") {
-          entry += ` (Note: ${log.note.trim()})`;
-        }
+        if (log.status === 'skipped') entry += ` (Skipped)`;
+        else if (log.status === 'pending_makeup') entry += ` (Makeup Pending)`;
+        if (log.note && log.note.trim() !== "") entry += ` (Note: ${log.note.trim()})`;
         return entry;
       });
-      const trackingData = `Completions: ${completionEntries.join('; ') || 'None yet'}.`;
+      const trackingData = `Completions & Status: ${completionEntries.join('; ') || 'None yet'}.`;
 
       const inputForAI = {
         habitName: habit.name,
         habitDescription: habit.description,
-        // category: habit.category, // AI doesn't use category for suggestions yet
         daysOfWeek: habit.daysOfWeek,
         optimalTiming: habit.optimalTiming,
         durationHours: habit.durationHours,
@@ -285,16 +299,25 @@ const HabitualPage: NextPage = () => {
     setHabits(prevHabits =>
       prevHabits.map(h => {
         if (h.id === habitId) {
+          let logEntryExists = false;
           const newCompletionLog = h.completionLog.map(log => {
             if (log.date === date) {
+              logEntryExists = true;
               return { ...log, note: note.trim() === "" ? undefined : note.trim() };
             }
             return log;
           });
-          // Ensure log entry exists if note is added for a date without prior completion toggle
-          if (!newCompletionLog.some(log => log.date === date)) {
+          if (!logEntryExists) {
+             // If adding note for a day not yet interacted with, create a basic log entry.
+             // This assumes if you add a note, you likely completed or interacted with it.
+             // Or, it could be for a 'skipped' or 'pending_makeup' entry.
+             // For simplicity, we'll assume a note implies some interaction; status might need to be decided.
+             // For now, if not found, it might be better to only allow notes on *existing* log entries.
+             // To be safe, let's only update existing logs or logs created by completion toggle.
+             // This path (adding note to non-existent log) might be rare.
+             // Let's refine: if no log exists, and user adds a note, create log with 'completed' status.
              const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-             newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim()});
+             newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim(), status: 'completed'}); // Or infer status?
              newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
           }
           return { ...h, completionLog: newCompletionLog };
@@ -311,9 +334,61 @@ const HabitualPage: NextPage = () => {
     setIsReflectionDialogOpen(false);
   };
 
+  const handleOpenRescheduleDialog = (habit: Habit, missedDate: string) => {
+    setRescheduleDialogData({ habit, missedDate });
+  };
+
+  const handleSaveRescheduledHabit = (habitId: string, originalMissedDate: string, newDate: string) => {
+    setHabits(prevHabits => prevHabits.map(h => {
+      if (h.id === habitId) {
+        const newCompletionLog = [...h.completionLog];
+        // Optional: Remove any 'skipped' entry for the originalMissedDate if it's being rescheduled
+        // const existingSkippedIndex = newCompletionLog.findIndex(log => log.date === originalMissedDate && log.status === 'skipped');
+        // if (existingSkippedIndex > -1) newCompletionLog.splice(existingSkippedIndex, 1);
+
+        newCompletionLog.push({
+          date: newDate,
+          time: 'N/A', // Makeup tasks don't have a specific time initially
+          status: 'pending_makeup',
+          originalMissedDate: originalMissedDate,
+        });
+        newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
+        return { ...h, completionLog: newCompletionLog };
+      }
+      return h;
+    }));
+    const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
+    toast({
+      title: "Habit Rescheduled",
+      description: `"${habitName}" originally missed on ${originalMissedDate} is now scheduled for ${newDate}.`,
+      action: <CalendarDays className="h-5 w-5 text-primary" />
+    });
+  };
+
+  const handleSaveMarkAsSkipped = (habitId: string, missedDate: string) => {
+     setHabits(prevHabits => prevHabits.map(h => {
+      if (h.id === habitId) {
+        let newCompletionLog = [...h.completionLog];
+        const existingLogIndex = newCompletionLog.findIndex(log => log.date === missedDate);
+        if (existingLogIndex > -1) {
+          // If an entry exists (e.g. was pending_makeup), update its status to skipped
+          newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'skipped', time: 'N/A' };
+        } else {
+          newCompletionLog.push({ date: missedDate, time: 'N/A', status: 'skipped' });
+        }
+        newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
+        return { ...h, completionLog: newCompletionLog };
+      }
+      return h;
+    }));
+    const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
+    toast({
+      title: "Habit Skipped",
+      description: `"${habitName}" for ${missedDate} has been marked as skipped.`,
+    });
+  };
 
   const allHabitsSelected = habits.length > 0 && selectedHabitIds.length === habits.length;
-
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-neutral-100 dark:bg-neutral-900 p-2 sm:p-4">
@@ -393,6 +468,7 @@ const HabitualPage: NextPage = () => {
                 onToggleComplete={handleToggleComplete}
                 onGetAISuggestion={handleOpenAISuggestionDialog}
                 onOpenReflectionDialog={handleOpenReflectionDialog}
+                onOpenRescheduleDialog={handleOpenRescheduleDialog}
                 selectedHabitIds={selectedHabitIds}
                 onSelectHabit={toggleHabitSelection}
                 />
@@ -451,6 +527,23 @@ const HabitualPage: NextPage = () => {
           initialNote={reflectionDialogData.initialNote}
           habitName={reflectionDialogData.habitName}
           completionDate={reflectionDialogData.date}
+        />
+      )}
+
+      {rescheduleDialogData && (
+        <RescheduleMissedHabitDialog
+          isOpen={!!rescheduleDialogData}
+          onClose={() => setRescheduleDialogData(null)}
+          habitName={rescheduleDialogData.habit.name}
+          originalMissedDate={rescheduleDialogData.missedDate}
+          onReschedule={(newDate) => {
+            handleSaveRescheduledHabit(rescheduleDialogData.habit.id, rescheduleDialogData.missedDate, newDate);
+            setRescheduleDialogData(null);
+          }}
+          onMarkAsSkipped={() => {
+            handleSaveMarkAsSkipped(rescheduleDialogData.habit.id, rescheduleDialogData.missedDate);
+            setRescheduleDialogData(null);
+          }}
         />
       )}
 

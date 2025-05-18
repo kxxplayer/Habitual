@@ -58,7 +58,7 @@ export const getDayAbbreviationFromDate = (date: Date): WeekDay => {
 /**
  * Calculates the current streak for a habit.
  * A streak is the number of consecutive days (going backward from referenceDate) 
- * that the habit was scheduled AND completed.
+ * that the habit was scheduled AND completed (status 'completed' or undefined).
  * @param habit The habit object.
  * @param referenceDate The date to calculate the streak up to (defaults to today).
  * @returns The current streak count.
@@ -68,28 +68,37 @@ export const calculateStreak = (habit: Habit, referenceDate: Date = new Date()):
     return 0; // No streak if not scheduled
   }
 
-  const completionDates = new Set(habit.completionLog.map(log => log.date));
+  const completionLogMap = new Map(habit.completionLog.map(log => [log.date, log]));
   let currentStreak = 0;
-  let tempDate = startOfDay(new Date(referenceDate)); // Ensure we compare date parts only
+  let tempDate = startOfDay(new Date(referenceDate)); 
 
-  for (let i = 0; i < 365 * 2; i++) { // Look back up to 2 years, an arbitrary limit
+  for (let i = 0; i < 365 * 2; i++) { 
     const dateStr = format(tempDate, 'yyyy-MM-dd');
     const dayOfWeek = dayIndexToWeekDay[getDay(tempDate)];
+    const logEntry = completionLogMap.get(dateStr);
 
-    if (habit.daysOfWeek.includes(dayOfWeek)) { // If the habit is scheduled for this day
-      if (completionDates.has(dateStr)) { // And it was completed
+    if (habit.daysOfWeek.includes(dayOfWeek)) { 
+      // If it's a scheduled day
+      if (logEntry && (logEntry.status === 'completed' || logEntry.status === undefined)) {
         currentStreak++;
-      } else { // Scheduled but not completed
-        // If checking today (i === 0 and tempDate is referenceDate) and it's missed, streak is 0.
+      } else {
+        // Scheduled but not completed, or skipped, or pending makeup.
+        // If checking today (i === 0) and it's not 'completed', current streak is 0.
+        // For past days, if not 'completed', streak is broken.
         if (i === 0 && format(tempDate, 'yyyy-MM-dd') === format(startOfDay(referenceDate), 'yyyy-MM-dd')) {
-             return 0; // Today was scheduled but not completed.
+             if (!logEntry || (logEntry.status !== 'completed' && logEntry.status !== undefined)) {
+                 return 0; // Today was scheduled but not truly completed.
+             }
+        } else {
+           break; // Streak broken before this day
         }
-        break; // Streak broken before this day
       }
+    } else if (logEntry && (logEntry.status === 'completed' || logEntry.status === undefined) && logEntry.originalMissedDate) {
+        // This is a completed makeup day for a non-scheduled day. It counts towards the streak.
+        currentStreak++;
     }
-    // If not scheduled (rest day), the streak is not broken, nor incremented.
+    // If not scheduled (and not a completed makeup day), the streak is not broken, nor incremented.
     // We just continue to the previous day.
-
     tempDate = subDays(tempDate, 1);
   }
   return currentStreak;
@@ -101,7 +110,7 @@ export interface WeekDayInfo {
   dayAbbrFull: WeekDay; // Sun, Mon, Tue...
   dateStr: string; // YYYY-MM-DD
   isToday: boolean;
-  isPast: boolean; // True if the day is strictly before today (at midnight)
+  isPast: boolean; 
 }
 
 /**
@@ -112,7 +121,7 @@ export interface WeekDayInfo {
 export const getCurrentWeekDays = (referenceDate: Date = new Date()): WeekDayInfo[] => {
   const weekSpan = getWeekSpan(referenceDate);
   const days = eachDayOfInterval({ start: weekSpan.start, end: weekSpan.end });
-  const todayRef = startOfDay(referenceDate); // For consistent "isPast" comparison
+  const todayRef = startOfDay(referenceDate); 
 
   return days.map(date => {
     const dayAbbrFull = getDayAbbreviationFromDate(date);
@@ -122,7 +131,8 @@ export const getCurrentWeekDays = (referenceDate: Date = new Date()): WeekDayInf
       dayAbbrFull: dayAbbrFull,
       dateStr: format(date, 'yyyy-MM-dd'),
       isToday: dateFnsIsToday(date),
-      isPast: dateFnsIsPast(date) && !dateFnsIsToday(date), // isPast is true only if it's *before* today
+      isPast: dateFnsIsPast(date) && !dateFnsIsToday(date), 
     };
   });
 };
+

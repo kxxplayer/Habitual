@@ -27,10 +27,11 @@ import {
   Home as HomeIcon, // For Chores (alias as HomeIcon to avoid conflict with Home from main page)
   Landmark, // For Finance
   Users, // For Social
-  Smile, // For Lifestyle
-  Sparkles as SparklesIcon // for Personal Growth & sparkle animation (alias if needed)
+  Smile as LifestyleIcon, // For Lifestyle (aliased)
+  Sparkles as SparklesIcon, // for Personal Growth & sparkle animation (alias if needed)
+  CalendarX // for skipped
 } from 'lucide-react';
-import type { Habit, WeekDay, HabitCategory } from '@/types';
+import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +45,7 @@ interface HabitItemProps {
   onToggleComplete: (habitId: string, date: string, completed: boolean) => void;
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
+  onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
   isCompletedToday: boolean;
   isSelected: boolean;
   onSelectToggle: (habitId: string) => void;
@@ -100,26 +102,16 @@ const getHabitIcon = (habit: Habit): React.ReactNode => {
   if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-blue-600" />;
   if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-red-500" />;
 
-
   switch (category) {
-    case 'Health & Wellness':
-      return <HeartPulse className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-red-500" />;
-    case 'Work/Study':
-      return <Briefcase className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-blue-600" />;
-    case 'Creative':
-      return <Paintbrush className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-orange-500" />;
-    case 'Chores':
-      return <HomeIcon className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-green-600" />;
-    case 'Finance':
-      return <Landmark className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-indigo-500" />;
-    case 'Social':
-      return <Users className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-pink-500" />;
-    case 'Personal Growth':
-      return <SparklesIcon className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-yellow-500" />;
-    case 'Lifestyle':
-      return <Smile className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-teal-500" />;
-    default:
-      return <ListChecks className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-muted-foreground" />;
+    case 'Health & Wellness': return <HeartPulse className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-red-500" />;
+    case 'Work/Study': return <Briefcase className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-blue-600" />;
+    case 'Creative': return <Paintbrush className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-orange-500" />;
+    case 'Chores': return <HomeIcon className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-green-600" />;
+    case 'Finance': return <Landmark className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-indigo-500" />;
+    case 'Social': return <Users className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-pink-500" />;
+    case 'Personal Growth': return <SparklesIcon className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-yellow-500" />;
+    case 'Lifestyle': return <LifestyleIcon className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-teal-500" />;
+    default: return <ListChecks className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-muted-foreground" />;
   }
 };
 
@@ -129,7 +121,8 @@ const HabitItem: FC<HabitItemProps> = ({
     onToggleComplete,
     onGetAISuggestion,
     onOpenReflectionDialog,
-    isCompletedToday,
+    onOpenRescheduleDialog,
+    isCompletedToday, // This specifically refers to status === 'completed' for today
     isSelected,
     onSelectToggle
 }) => {
@@ -143,24 +136,20 @@ const HabitItem: FC<HabitItemProps> = ({
     const now = new Date();
     setCurrentDate(now);
     setWeekViewDays(getCurrentWeekDays(now));
-  }, [todayString]); // Re-calculate week view if the day changes (e.g. past midnight)
+  }, [todayString]);
 
   const streak = calculateStreak(habit, currentDate);
-
+  const todaysLogEntry = habit.completionLog.find(log => log.date === todayString);
+  // isCompletedToday prop is based on status='completed'. For button state, check any relevant status.
+  const isTodayInteracted = !!todaysLogEntry && (todaysLogEntry.status === 'completed' || todaysLogEntry.status === 'pending_makeup');
+  
   const handleToggleDailyCompletion = () => {
-    const newCompletedState = !isCompletedToday;
+    const newCompletedState = !(todaysLogEntry && todaysLogEntry.status === 'completed');
     onToggleComplete(habit.id, todayString, newCompletedState);
+
     if (newCompletedState) {
       setShowSparkles(true);
-      // Toast is now handled by the page for consistency, but keeping this as a note
-      // toast({
-      //     title: "Great Job!",
-      //     description: `You've completed "${habit.name}" for today!`,
-      //     className: "bg-accent border-green-600 text-accent-foreground",
-      // });
-      setTimeout(() => {
-        setShowSparkles(false);
-      }, 1000); // Sparkle animation duration
+      setTimeout(() => setShowSparkles(false), 1000);
     }
   };
 
@@ -214,9 +203,8 @@ const HabitItem: FC<HabitItemProps> = ({
     }
   };
 
-  const todaysCompletionLog = habit.completionLog.find(log => log.date === todayString);
-  const latestCompletionTimeToday = todaysCompletionLog?.time;
-  const hasNoteToday = !!todaysCompletionLog?.note;
+  const latestCompletionTimeToday = todaysLogEntry?.time;
+  const hasNoteToday = !!todaysLogEntry?.note;
 
   const displayDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b)).join(', ');
   let durationDisplay = '';
@@ -227,16 +215,19 @@ const HabitItem: FC<HabitItemProps> = ({
   }
   const formattedSpecificTime = formatSpecificTime(habit.specificTime);
 
-  const scheduledDaysInWeek = habit.daysOfWeek.length;
   let completedCountInCurrentWeek = 0;
+  const scheduledDaysInWeek = habit.daysOfWeek.length;
   if (scheduledDaysInWeek > 0) {
     const completedOnScheduledDaysThisWeek = new Set<string>();
     habit.completionLog.forEach(log => {
-      if (isDateInCurrentWeek(log.date, currentDate)) {
+      if (isDateInCurrentWeek(log.date, currentDate) && log.status === 'completed') {
         try {
-            const completionDateObj = parseISO(log.date + 'T00:00:00Z'); // Treat as local date for day comparison
+            const completionDateObj = parseISO(log.date + 'T00:00:00Z');
             const dayOfCompletion = getDayAbbreviationFromDate(completionDateObj);
-            if (habit.daysOfWeek.includes(dayOfCompletion)) completedOnScheduledDaysThisWeek.add(log.date);
+            // Count completion if it's a normally scheduled day OR if it was a makeup for a scheduled day.
+            if (habit.daysOfWeek.includes(dayOfCompletion) || (log.originalMissedDate && habit.daysOfWeek.includes(getDayAbbreviationFromDate(parseISO(log.originalMissedDate + 'T00:00:00Z'))))) {
+              completedOnScheduledDaysThisWeek.add(log.date);
+            }
         } catch (e) { console.error("Error parsing log date for weekly progress:", log.date, e); }
       }
     });
@@ -252,10 +243,9 @@ const HabitItem: FC<HabitItemProps> = ({
   } else {
     const categoryColorVar = getCategoryColorVariable(habit.category);
     cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
-    cardStyle['--category-color-var' as any] = `var(${categoryColorVar})`; // For potential use elsewhere
+    cardStyle['--category-color-var' as any] = `var(${categoryColorVar})`;
     cardClasses = cn(cardClasses, 'border-l-4');
   }
-
   cardClasses = cn(cardClasses, 'bg-card');
 
   return (
@@ -272,7 +262,7 @@ const HabitItem: FC<HabitItemProps> = ({
       <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pr-12">
         <div className="flex justify-between items-start">
           <div className="flex-grow">
-             <div className="flex items-center gap-1 mb-0.5"> {/* Reduced gap from 2 to 1 */}
+             <div className="flex items-center gap-1 mb-0.5">
               {getHabitIcon(habit)}
               <CardTitle className="text-lg sm:text-xl font-semibold text-primary min-w-0 break-words">
                 {habit.name}
@@ -330,35 +320,59 @@ const HabitItem: FC<HabitItemProps> = ({
             <p className="text-xs font-medium text-muted-foreground mb-1.5">This Week</p>
             <div className="flex justify-around items-center space-x-1">
               {weekViewDays.map((dayInfo) => {
+                const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
                 const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
-                const isCompletedOnDay = isScheduled && habit.completionLog.some(log => log.date === dayInfo.dateStr);
-                const isMissed = isScheduled && !isCompletedOnDay && dayInfo.isPast;
+                
+                let dayStatus: 'completed' | 'skipped' | 'pending_makeup' | 'missed' | 'pending_scheduled' | 'not_scheduled' = 'not_scheduled';
+                let isClickableForReschedule = false;
 
-                let dayBgColor = 'bg-input/30';
-                let dayTextColor = 'text-muted-foreground/70';
-
-                if (isScheduled) {
-                  if (isCompletedOnDay) {
-                    dayBgColor = 'bg-accent';
-                    dayTextColor = 'text-accent-foreground';
-                  } else if (isMissed) {
-                    dayBgColor = 'bg-destructive';
-                    dayTextColor = 'text-destructive-foreground';
+                if (dayLog) {
+                  if (dayLog.status === 'completed') dayStatus = 'completed';
+                  else if (dayLog.status === 'skipped') dayStatus = 'skipped';
+                  else if (dayLog.status === 'pending_makeup') dayStatus = 'pending_makeup';
+                } else if (isScheduled) {
+                  if (dayInfo.isPast) {
+                    dayStatus = 'missed';
+                    isClickableForReschedule = true; // Only truly missed days can be rescheduled
                   } else {
-                    dayBgColor = 'bg-muted';
-                    dayTextColor = 'text-muted-foreground';
+                    dayStatus = 'pending_scheduled';
                   }
                 }
 
-                return (
+                let dayBgColor = 'bg-input/30';
+                let dayTextColor = 'text-muted-foreground/70';
+                let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
+
+                switch(dayStatus) {
+                  case 'completed':
+                    dayBgColor = 'bg-accent'; dayTextColor = 'text-accent-foreground'; titleText += ' (Completed)'; break;
+                  case 'skipped':
+                    dayBgColor = 'bg-muted'; dayTextColor = 'text-muted-foreground'; titleText += ' (Skipped)'; break;
+                  case 'pending_makeup':
+                    dayBgColor = 'bg-blue-500'; dayTextColor = 'text-white'; titleText += ' (Makeup Pending)'; break;
+                  case 'missed':
+                    dayBgColor = 'bg-destructive'; dayTextColor = 'text-destructive-foreground'; titleText += ' (Missed)'; break;
+                  case 'pending_scheduled':
+                    dayBgColor = 'bg-muted'; dayTextColor = 'text-muted-foreground'; titleText += ' (Pending)'; break;
+                  default: // not_scheduled
+                    titleText += ' (Not Scheduled)'; break;
+                }
+                
+                const dayElement = (
                   <div
                     key={dayInfo.dateStr}
-                    title={`${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}${isScheduled ? (isCompletedOnDay ? ' (Completed)' : (isMissed ? ' (Missed)' : ' (Pending)')) : ' (Not Scheduled)'}`}
-                    className={`flex flex-col items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-md text-xs font-medium transition-all ${dayBgColor} ${dayTextColor} ${dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : ''}`}
+                    title={titleText}
+                    className={cn(
+                      `flex flex-col items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-md text-xs font-medium transition-all ${dayBgColor} ${dayTextColor}`,
+                      dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : '',
+                      isClickableForReschedule ? 'cursor-pointer hover:opacity-80' : ''
+                    )}
+                    onClick={isClickableForReschedule ? () => onOpenRescheduleDialog(habit, dayInfo.dateStr) : undefined}
                   >
                     {dayInfo.dayAbbrShort}
                   </div>
                 );
+                return dayElement;
               })}
             </div>
           </div>
@@ -387,31 +401,32 @@ const HabitItem: FC<HabitItemProps> = ({
             variant={isCompletedToday ? "default" : "outline"}
             size="lg"
             onClick={handleToggleDailyCompletion}
-            className={`w-full font-semibold text-base h-11 transform transition-transform active:scale-95 ${isCompletedToday ? 'bg-accent hover:bg-accent/90 text-accent-foreground border-accent' : 'border-primary/50 text-primary hover:bg-primary/10'}`}
-            aria-label={isCompletedToday ? `Mark ${habit.name} as not done for today` : `Mark ${habit.name} as done for today`}
-          >
-            {isCompletedToday ? (
-              <CheckCircle2 className="mr-2 h-5 w-5" />
-            ) : (
-              <Circle className="mr-2 h-5 w-5" />
+            className={cn(
+                `w-full font-semibold text-base h-11 transform transition-transform active:scale-95`,
+                isCompletedToday ? 'bg-accent hover:bg-accent/90 text-accent-foreground border-accent' 
+                                 : (todaysLogEntry?.status === 'pending_makeup' ? 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500' 
+                                                                               : 'border-primary/50 text-primary hover:bg-primary/10')
             )}
-            {isCompletedToday ? "Completed!" : "Mark as Done"}
+            aria-label={isCompletedToday ? `Mark ${habit.name} as not done for today` : (todaysLogEntry?.status === 'pending_makeup' ? `Complete makeup for ${habit.name}` : `Mark ${habit.name} as done for today`)}
+          >
+            {isCompletedToday ? <CheckCircle2 className="mr-2 h-5 w-5" /> : (todaysLogEntry?.status === 'pending_makeup' ? <CalendarClock className="mr-2 h-5 w-5" /> : <Circle className="mr-2 h-5 w-5" />)}
+            {isCompletedToday ? "Completed!" : (todaysLogEntry?.status === 'pending_makeup' ? "Do Makeup Task" : "Mark as Done")}
           </Button>
           {showSparkles && (
             <>
-              <div className="sparkle sparkle-1" style={{ ['--tx' as any]: '-10px', ['--ty' as any]: '-20px' }}></div>
-              <div className="sparkle sparkle-2" style={{ ['--tx' as any]: '10px', ['--ty' as any]: '-20px' }}></div>
-              <div className="sparkle sparkle-3" style={{ ['--tx' as any]: '-15px', ['--ty' as any]: '0px' }}></div>
-              <div className="sparkle sparkle-4" style={{ ['--tx' as any]: '15px', ['--ty' as any]: '0px' }}></div>
-              <div className="sparkle sparkle-5" style={{ ['--tx' as any]: '0px', ['--ty' as any]: '-25px' }}></div>
-              <div className="sparkle sparkle-6" style={{ ['--tx' as any]: '5px', ['--ty' as any]: '15px', backgroundColor: 'hsl(var(--primary))' }}></div>
+              <div className="sparkle sparkle-1"></div>
+              <div className="sparkle sparkle-2"></div>
+              <div className="sparkle sparkle-3"></div>
+              <div className="sparkle sparkle-4"></div>
+              <div className="sparkle sparkle-5"></div>
+              <div className="sparkle sparkle-6" style={{ backgroundColor: 'hsl(var(--primary))' }}></div>
             </>
           )}
         </div>
 
         <div className="flex justify-between items-center mt-2 min-h-[20px]">
           <div className="text-xs text-muted-foreground">
-            {isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A' && (
+            {(isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A') && (
               <span className="flex items-center">
                 <Clock className="mr-1 h-3 w-3" />
                 <span>at {latestCompletionTimeToday}</span>
@@ -419,6 +434,12 @@ const HabitItem: FC<HabitItemProps> = ({
                   <StickyNote className="ml-2 h-3 w-3 text-blue-500" title="Reflection note added" />
                 )}
               </span>
+            )}
+            {todaysLogEntry?.status === 'skipped' && (
+                <span className="flex items-center text-destructive">
+                    <CalendarX className="mr-1 h-3 w-3" />
+                    <span>Skipped Today</span>
+                </span>
             )}
           </div>
 
@@ -430,13 +451,13 @@ const HabitItem: FC<HabitItemProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {isCompletedToday && (
+              {(isCompletedToday || todaysLogEntry?.status === 'skipped' || todaysLogEntry?.status === 'pending_makeup') && (
                 <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}>
                   <MessageSquarePlus className="mr-2 h-4 w-4" />
                   <span>{hasNoteToday ? "Edit Reflection" : "Add Reflection"}</span>
                 </DropdownMenuItem>
               )}
-              {isCompletedToday && <DropdownMenuSeparator />}
+              {(isCompletedToday || todaysLogEntry?.status === 'skipped' || todaysLogEntry?.status === 'pending_makeup') && <DropdownMenuSeparator />}
               <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
                 <Lightbulb className="mr-2 h-4 w-4" />
                 <span>AI Tip</span>
@@ -458,4 +479,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-

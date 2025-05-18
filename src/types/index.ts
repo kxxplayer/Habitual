@@ -1,8 +1,10 @@
 
 export interface HabitCompletionLogEntry {
   date: string; // 'YYYY-MM-DD'
-  time: string; // 'HH:MM'
+  time: string; // 'HH:MM', can be 'N/A' for skipped/pending
   note?: string; // Optional reflection note
+  status?: 'completed' | 'pending_makeup' | 'skipped'; // Status of the completion
+  originalMissedDate?: string; // 'YYYY-MM-DD', if this entry is a makeup for a previously missed date
 }
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
