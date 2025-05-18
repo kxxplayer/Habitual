@@ -9,13 +9,14 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { UserCircle, Settings, CalendarDays, Home, BellRing } from 'lucide-react';
+import { UserCircle, Settings, CalendarDays, Home, BellRing, Award } from 'lucide-react';
 import Link from 'next/link';
 
 const AppSidebar: FC = () => {
   const menuItems = [
     { href: '#profile', label: 'Profile', icon: UserCircle, tooltip: 'Profile' },
     { href: '#reminders', label: 'Reminders', icon: BellRing, tooltip: 'Reminders' },
+    { href: '#achievements', label: 'Achievements', icon: Award, tooltip: 'Achievements' },
     { href: '#settings', label: 'Settings', icon: Settings, tooltip: 'Settings' },
     { href: '#calendar', label: 'Calendar', icon: CalendarDays, tooltip: 'Calendar' },
   ];

@@ -54,3 +54,17 @@ export interface CreateHabitFormData {
   durationMinutes?: number | null;
   specificTime?: string;
 }
+
+// Badge Types
+export const SEVEN_DAY_STREAK_BADGE_ID = "sevenDayStreak";
+export const THIRTY_DAY_STREAK_BADGE_ID = "thirtyDayStreak";
+export const FIRST_HABIT_COMPLETED_BADGE_ID = "firstHabitCompleted";
+// Add more badge IDs as needed
+
+export interface EarnedBadge {
+  id: string; // e.g., SEVEN_DAY_STREAK_BADGE_ID
+  name: string;
+  description: string;
+  dateAchieved: string; // 'YYYY-MM-DD'
+  icon?: string; // Placeholder for future icon identifier or emoji
+}

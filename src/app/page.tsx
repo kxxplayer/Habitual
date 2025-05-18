@@ -10,8 +10,9 @@ import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
 import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm';
 import HabitOverview from '@/components/overview/HabitOverview';
-import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory } from '@/types';
+import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
+import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote, CalendarDays } from 'lucide-react';
+import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy } from 'lucide-react';
+import { format } from 'date-fns';
 
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -52,7 +54,11 @@ const HabitualPage: NextPage = () => {
   const [showInlineHabitForm, setShowInlineHabitForm] = useState(false);
   const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
+  const [isAchievementsDialogOpen, setIsAchievementsDialogOpen] = useState(false);
+  const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
+
 
   const [isReflectionDialogOpen, setIsReflectionDialogOpen] = useState(false);
   const [reflectionDialogData, setReflectionDialogData] = useState<{
@@ -148,11 +154,41 @@ const HabitualPage: NextPage = () => {
         console.error("Failed to parse habits from localStorage:", error);
       }
     }
+
+    const storedBadges = localStorage.getItem('earnedBadges');
+    if (storedBadges) {
+      try {
+        setEarnedBadges(JSON.parse(storedBadges));
+      } catch (error) {
+        console.error("Failed to parse badges from localStorage:", error);
+      }
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('habits', JSON.stringify(habits));
-  }, [habits]);
+    // Badge checking logic
+    const newlyEarned = checkAndAwardBadges(habits, earnedBadges);
+    if (newlyEarned.length > 0) {
+      const updatedBadges = [...earnedBadges];
+      newlyEarned.forEach(newBadge => {
+        if (!earnedBadges.some(eb => eb.id === newBadge.id)) { // Double check to prevent duplicates if logic runs fast
+            updatedBadges.push(newBadge);
+            toast({
+                title: "🏆 New Badge Unlocked! 🎉",
+                description: `You've earned the "${newBadge.name}" badge!`,
+                action: <Award className="h-5 w-5 text-yellow-500" />,
+            });
+        }
+      });
+      setEarnedBadges(updatedBadges);
+    }
+  }, [habits, earnedBadges, toast]); // Added earnedBadges and toast to dependency array
+
+  useEffect(() => {
+    localStorage.setItem('earnedBadges', JSON.stringify(earnedBadges));
+  }, [earnedBadges]);
+
 
   const handleAddHabit = (newHabitData: Omit<Habit, 'id' | 'completionLog'>) => {
     const newHabit: Habit = {
@@ -180,25 +216,20 @@ const HabitualPage: NextPage = () => {
 
           if (completed) {
             if (existingLogIndex > -1) {
-              // If it's a pending makeup or skipped, update its status and time
               if (newCompletionLog[existingLogIndex].status === 'pending_makeup' || newCompletionLog[existingLogIndex].status === 'skipped') {
                 newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'completed', time: currentTime };
-              } else { // Regular completion or re-completing
+              } else { 
                 newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'completed', time: currentTime };
               }
-            } else { // New completion for a regular day
+            } else { 
               newCompletionLog.push({ date, time: currentTime, status: 'completed', note: undefined });
             }
-            // If you want audio feedback, this is a good place:
-            // const audio = new Audio('/sounds/completion-chime.mp3'); // Path to your sound file
-            // audio.play().catch(e => console.error("Error playing sound:", e));
-          } else { // Un-completing
+          } else { 
             if (existingLogIndex > -1) {
               const logEntry = newCompletionLog[existingLogIndex];
-              // If it was a completed makeup task, revert to 'pending_makeup'
               if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-              } else { // Otherwise, just remove the completion log entry
+              } else { 
                 newCompletionLog.splice(existingLogIndex, 1);
               }
             }
@@ -308,16 +339,8 @@ const HabitualPage: NextPage = () => {
             return log;
           });
           if (!logEntryExists) {
-             // If adding note for a day not yet interacted with, create a basic log entry.
-             // This assumes if you add a note, you likely completed or interacted with it.
-             // Or, it could be for a 'skipped' or 'pending_makeup' entry.
-             // For simplicity, we'll assume a note implies some interaction; status might need to be decided.
-             // For now, if not found, it might be better to only allow notes on *existing* log entries.
-             // To be safe, let's only update existing logs or logs created by completion toggle.
-             // This path (adding note to non-existent log) might be rare.
-             // Let's refine: if no log exists, and user adds a note, create log with 'completed' status.
              const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-             newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim(), status: 'completed'}); // Or infer status?
+             newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim(), status: 'completed'}); 
              newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
           }
           return { ...h, completionLog: newCompletionLog };
@@ -342,13 +365,9 @@ const HabitualPage: NextPage = () => {
     setHabits(prevHabits => prevHabits.map(h => {
       if (h.id === habitId) {
         const newCompletionLog = [...h.completionLog];
-        // Optional: Remove any 'skipped' entry for the originalMissedDate if it's being rescheduled
-        // const existingSkippedIndex = newCompletionLog.findIndex(log => log.date === originalMissedDate && log.status === 'skipped');
-        // if (existingSkippedIndex > -1) newCompletionLog.splice(existingSkippedIndex, 1);
-
         newCompletionLog.push({
           date: newDate,
-          time: 'N/A', // Makeup tasks don't have a specific time initially
+          time: 'N/A', 
           status: 'pending_makeup',
           originalMissedDate: originalMissedDate,
         });
@@ -371,7 +390,6 @@ const HabitualPage: NextPage = () => {
         let newCompletionLog = [...h.completionLog];
         const existingLogIndex = newCompletionLog.findIndex(log => log.date === missedDate);
         if (existingLogIndex > -1) {
-          // If an entry exists (e.g. was pending_makeup), update its status to skipped
           newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'skipped', time: 'N/A' };
         } else {
           newCompletionLog.push({ date: missedDate, time: 'N/A', status: 'skipped' });
@@ -480,15 +498,19 @@ const HabitualPage: NextPage = () => {
         </div>
 
         <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16">
-          <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/3">
+          <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
             <Home className="h-5 w-5" />
             <span className="text-xs mt-0.5">Home</span>
           </Button>
-          <Button variant="ghost" onClick={() => setIsDashboardDialogOpen(true)} className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/3">
+          <Button variant="ghost" onClick={() => setIsDashboardDialogOpen(true)} className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
             <LayoutDashboard className="h-5 w-5" />
             <span className="text-xs mt-0.5">Dashboard</span>
           </Button>
-          <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/3">
+          <Button variant="ghost" onClick={() => setIsAchievementsDialogOpen(true)} className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
+            <Award className="h-5 w-5" />
+            <span className="text-xs mt-0.5">Badges</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
             <Settings className="h-5 w-5" />
             <span className="text-xs mt-0.5">Settings</span>
           </Button>
@@ -563,6 +585,39 @@ const HabitualPage: NextPage = () => {
           </div>
           <DialogFooter className="pt-2">
             <Button variant="outline" onClick={() => setIsDashboardDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAchievementsDialogOpen} onOpenChange={setIsAchievementsDialogOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-xl">
+              <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
+              Your Achievements
+            </DialogTitle>
+            <DialogDescription>
+              All the badges you've unlocked so far!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 max-h-[60vh] overflow-y-auto pr-2 space-y-3">
+            {earnedBadges.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No badges earned yet. Keep up the great work!</p>
+            ) : (
+              earnedBadges.map((badge) => (
+                <div key={badge.id} className="p-3 border rounded-md bg-card shadow-sm">
+                  <div className="flex items-center mb-1">
+                    <span className="text-2xl mr-2">{badge.icon || "🏆"}</span>
+                    <h4 className="font-semibold text-primary">{badge.name}</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">{badge.description}</p>
+                  <p className="text-xs text-muted-foreground">Achieved: {format(new Date(badge.dateAchieved), "MMMM d, yyyy")}</p>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setIsAchievementsDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
