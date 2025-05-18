@@ -30,7 +30,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  // AlertDialogTrigger, // No longer needed if selection toolbar is commented out
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -41,7 +41,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, Star, BookOpenText } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -56,8 +56,10 @@ const HabitualPage: NextPage = () => {
   const { toast } = useToast();
 
   const [showInlineHabitForm, setShowInlineHabitForm] = useState(false);
-  const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  
+  // Multi-select state - functionality will be dormant if checkbox on card is removed
+  // const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
+  // const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
   const [isAchievementsDialogOpen, setIsAchievementsDialogOpen] = useState(false);
@@ -110,7 +112,7 @@ const HabitualPage: NextPage = () => {
             if (minMatch) migratedDurationMinutes = parseInt(minMatch[1]);
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
-                if (numVal <= 120) migratedDurationMinutes = numVal; // Assume it's minutes if under 120 and no unit
+                if (numVal <= 120) migratedDurationMinutes = numVal;
             }
           }
 
@@ -123,11 +125,10 @@ const HabitualPage: NextPage = () => {
               const minutes = parseInt(minutesStr, 10);
               const modifier = modifierPart ? modifierPart.toLowerCase() : '';
               if (modifier === 'pm' && hours < 12) hours += 12;
-              if (modifier === 'am' && hours === 12) hours = 0; // Midnight case
+              if (modifier === 'am' && hours === 12) hours = 0; 
               migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
             } catch (e) { /* ignore format error, keep original */ }
           } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) {
-             // Already in HH:mm, ensure padding if needed
              const [hours, minutes] = migratedSpecificTime.split(':').map(Number);
              migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
           }
@@ -139,7 +140,7 @@ const HabitualPage: NextPage = () => {
                 date: log.date,
                 time: log.time || 'N/A',
                 note: log.note || undefined,
-                status: log.status || 'completed', // default old entries to completed
+                status: log.status || 'completed', 
                 originalMissedDate: log.originalMissedDate || undefined,
               }));
 
@@ -208,7 +209,6 @@ const HabitualPage: NextPage = () => {
                 });
               } catch (tipError) {
                 console.error("Failed to fetch SQL tip:", tipError);
-                // Do not toast an error here to avoid toast spam
               }
             }
         }
@@ -274,8 +274,6 @@ const HabitualPage: NextPage = () => {
               if (logEntry.status === 'completed') {
                  pointsChange = -POINTS_PER_COMPLETION;
               }
-              // If it was a completed makeup task, revert to pending_makeup
-              // If it was a regular completion, remove the log entry entirely
               if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
               } else {
@@ -359,31 +357,32 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-  const toggleHabitSelection = (habitId: string) => {
-    setSelectedHabitIds(prevSelected =>
-      prevSelected.includes(habitId)
-        ? prevSelected.filter(id => id !== habitId)
-        : [...prevSelected, habitId]
-    );
-  };
+  // Multi-select functionality is impacted by card checkbox removal
+  // const toggleHabitSelection = (habitId: string) => {
+  //   setSelectedHabitIds(prevSelected =>
+  //     prevSelected.includes(habitId)
+  //       ? prevSelected.filter(id => id !== habitId)
+  //       : [...prevSelected, habitId]
+  //   );
+  // };
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedHabitIds(habits.map(h => h.id));
-    } else {
-      setSelectedHabitIds([]);
-    }
-  };
+  // const handleSelectAll = (checked: boolean) => {
+  //   if (checked) {
+  //     setSelectedHabitIds(habits.map(h => h.id));
+  //   } else {
+  //     setSelectedHabitIds([]);
+  //   }
+  // };
 
-  const handleDeleteSelectedHabits = () => {
-    setHabits(prevHabits => prevHabits.filter(habit => !selectedHabitIds.includes(habit.id)));
-    toast({
-      title: "Habits Deleted",
-      description: `${selectedHabitIds.length} habit(s) have been removed.`,
-    });
-    setSelectedHabitIds([]);
-    setIsDeleteConfirmOpen(false);
-  };
+  // const handleDeleteSelectedHabits = () => {
+  //   setHabits(prevHabits => prevHabits.filter(habit => !selectedHabitIds.includes(habit.id)));
+  //   toast({
+  //     title: "Habits Deleted",
+  //     description: `${selectedHabitIds.length} habit(s) have been removed.`,
+  //   });
+  //   setSelectedHabitIds([]);
+  //   setIsDeleteConfirmOpen(false);
+  // };
 
   const handleOpenReflectionDialog = (habitId: string, date: string, habitName: string) => {
     const habit = habits.find(h => h.id === habitId);
@@ -412,15 +411,13 @@ const HabitualPage: NextPage = () => {
             }
             return log;
           });
-          // If no log entry exists for the date (e.g. adding note to a skipped day without prior log), create one.
           if (!logEntryExists) {
-             // Attempt to find if it was skipped or pending makeup to preserve that status
              const existingStatus = h.completionLog.find(l => l.date === date)?.status;
              newCompletionLog.push({
                 date,
-                time: 'N/A', // Notes can be added without completion time
+                time: 'N/A',
                 note: note.trim() === "" ? undefined : note.trim(),
-                status: existingStatus || 'skipped' // Default to skipped if no prior status, or use existing
+                status: existingStatus || 'skipped'
              });
              newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
           }
@@ -446,14 +443,12 @@ const HabitualPage: NextPage = () => {
     setHabits(prevHabits => prevHabits.map(h => {
       if (h.id === habitId) {
         const newCompletionLog = [...h.completionLog];
-        // Remove any existing entry for the originalMissedDate if it was purely a placeholder for being missed
         const existingMissedLogIndex = newCompletionLog.findIndex(log => log.date === originalMissedDate && (log.status === 'skipped' || !log.status));
-        if(existingMissedLogIndex > -1 && !newCompletionLog[existingMissedLogIndex].note) { // Only remove if no note
+        if(existingMissedLogIndex > -1 && !newCompletionLog[existingMissedLogIndex].note) {
             newCompletionLog.splice(existingMissedLogIndex, 1);
-        } else if (existingMissedLogIndex > -1) { // If it had a note, just mark as skipped
+        } else if (existingMissedLogIndex > -1) {
             newCompletionLog[existingMissedLogIndex].status = 'skipped';
         }
-
 
         newCompletionLog.push({
           date: newDate,
@@ -496,7 +491,7 @@ const HabitualPage: NextPage = () => {
     });
   };
 
-  const allHabitsSelected = habits.length > 0 && selectedHabitIds.length === habits.length;
+  // const allHabitsSelected = habits.length > 0 && selectedHabitIds.length === habits.length; // Related to multi-select
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-neutral-100 dark:bg-neutral-900 p-2 sm:p-4">
@@ -521,7 +516,8 @@ const HabitualPage: NextPage = () => {
               </div>
             )}
 
-            {selectedHabitIds.length > 0 && habits.length > 0 && !showInlineHabitForm && (
+            {/* Multi-select toolbar - commented out as card checkbox is removed */}
+            {/* {selectedHabitIds.length > 0 && habits.length > 0 && !showInlineHabitForm && (
               <div className="my-4 flex items-center gap-2 sm:gap-4 p-2 border rounded-md bg-card shadow-sm w-full justify-between">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -568,18 +564,18 @@ const HabitualPage: NextPage = () => {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
-            )}
+            )} */}
 
             {!showInlineHabitForm && (
                 <HabitList
-                habits={habits}
-                onToggleComplete={handleToggleComplete}
-                onGetAISuggestion={handleOpenAISuggestionDialog}
-                onOpenReflectionDialog={handleOpenReflectionDialog}
-                onOpenRescheduleDialog={handleOpenRescheduleDialog}
-                selectedHabitIds={selectedHabitIds}
-                onSelectHabit={toggleHabitSelection}
-                earnedBadges={earnedBadges}
+                  habits={habits}
+                  onToggleComplete={handleToggleComplete}
+                  onGetAISuggestion={handleOpenAISuggestionDialog}
+                  onOpenReflectionDialog={handleOpenReflectionDialog}
+                  onOpenRescheduleDialog={handleOpenRescheduleDialog}
+                  // selectedHabitIds={selectedHabitIds} // Removed
+                  // onSelectHabit={toggleHabitSelection} // Removed
+                  earnedBadges={earnedBadges}
                 />
             )}
           </main>

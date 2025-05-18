@@ -6,7 +6,7 @@ import * as React from 'react';
 import type { FC } from 'react';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+// Checkbox removed as per new header design
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
@@ -56,8 +56,8 @@ interface HabitItemProps {
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  isSelected: boolean;
-  onSelectToggle: (habitId: string) => void;
+  // isSelected: boolean; // Removed due to header redesign
+  // onSelectToggle: (habitId: string) => void; // Removed
   earnedBadges: EarnedBadge[];
 }
 
@@ -100,31 +100,32 @@ const getHabitIcon = (habit: Habit): React.ReactNode => {
   const nameLower = habit.name.toLowerCase();
   const category = habit.category;
 
-  if (nameLower.includes('gym') || nameLower.includes('workout') || nameLower.includes('exercise')) return <span className="text-lg ml-1.5 rtl:mr-1.5 rtl:ml-0">🏋️</span>;
-  if (nameLower.includes('sql') || nameLower.includes('code') || nameLower.includes('programming') || nameLower.includes('develop')) return <span className="text-lg ml-1.5 rtl:mr-1.5 rtl:ml-0">💻</span>;
-  if (nameLower.includes('walk') || nameLower.includes('run') || nameLower.includes('jog')) return <span className="text-lg ml-1.5 rtl:mr-1.5 rtl:ml-0">🚶</span>;
-  if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-lg ml-1.5 rtl:mr-1.5 rtl:ml-0">📚</span>;
-  if (nameLower.includes('meditate') || nameLower.includes('meditation') || nameLower.includes('mindfulness')) return <span className="text-lg ml-1.5 rtl:mr-1.5 rtl:ml-0">🧘</span>;
+  if (nameLower.includes('gym') || nameLower.includes('workout') || nameLower.includes('exercise')) return <span className="text-xl">🏋️</span>;
+  if (nameLower.includes('sql') || nameLower.includes('code') || nameLower.includes('programming') || nameLower.includes('develop')) return <span className="text-xl">💻</span>;
+  if (nameLower.includes('walk') || nameLower.includes('run') || nameLower.includes('jog')) return <span className="text-xl">🚶</span>;
+  if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-xl">📚</span>;
+  if (nameLower.includes('meditate') || nameLower.includes('meditation') || nameLower.includes('mindfulness')) return <span className="text-xl">🧘</span>;
 
-  if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-blue-500" />;
-  if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-purple-500" />;
-  if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-yellow-600" />;
-  if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-blue-600" />;
-  if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-red-500" />;
-
-  let iconComponent: React.ReactNode = <ListChecks className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-muted-foreground" />;
+  let iconComponent: React.ReactNode = <ListChecks className="h-5 w-5 text-muted-foreground" />;
   if(category && HABIT_CATEGORIES.includes(category)) {
     switch (category) {
-      case 'Health & Wellness': iconComponent = <HeartPulse className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-red-500" />; break;
-      case 'Work/Study': iconComponent = <Briefcase className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-blue-600" />; break;
-      case 'Creative': iconComponent = <Paintbrush className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-orange-500" />; break;
-      case 'Chores': iconComponent = <HomeIcon className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-green-600" />; break;
-      case 'Finance': iconComponent = <Landmark className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-indigo-500" />; break;
-      case 'Social': iconComponent = <Users className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-pink-500" />; break;
-      case 'Personal Growth': iconComponent = <SparklesIcon className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-yellow-500" />; break;
-      case 'Lifestyle': iconComponent = <LifestyleIcon className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-teal-500" />; break;
-      default: iconComponent = <ListChecks className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-muted-foreground" />; break;
+      case 'Health & Wellness': iconComponent = <HeartPulse className="h-5 w-5 text-red-500" />; break;
+      case 'Work/Study': iconComponent = <Briefcase className="h-5 w-5 text-blue-600" />; break;
+      case 'Creative': iconComponent = <Paintbrush className="h-5 w-5 text-orange-500" />; break;
+      case 'Chores': iconComponent = <HomeIcon className="h-5 w-5 text-green-600" />; break;
+      case 'Finance': iconComponent = <Landmark className="h-5 w-5 text-indigo-500" />; break;
+      case 'Social': iconComponent = <Users className="h-5 w-5 text-pink-500" />; break;
+      case 'Personal Growth': iconComponent = <SparklesIcon className="h-5 w-5 text-yellow-500" />; break;
+      case 'Lifestyle': iconComponent = <LifestyleIcon className="h-5 w-5 text-teal-500" />; break;
+      default: iconComponent = <ListChecks className="h-5 w-5 text-muted-foreground" />; break;
     }
+  } else {
+     // Fallback for specific names if no category match
+    if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="h-5 w-5 text-blue-500" />;
+    if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="h-5 w-5 text-purple-500" />;
+    if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="h-5 w-5 text-yellow-600" />;
+    if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="h-5 w-5 text-blue-600" />;
+    if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="h-5 w-5 text-red-500" />;
   }
   return iconComponent;
 };
@@ -136,8 +137,8 @@ const HabitItem: FC<HabitItemProps> = ({
     onGetAISuggestion,
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
-    isSelected,
-    onSelectToggle,
+    // isSelected, // Removed
+    // onSelectToggle, // Removed
     earnedBadges,
 }) => {
   const [todayString, setTodayString] = React.useState('');
@@ -265,19 +266,28 @@ const HabitItem: FC<HabitItemProps> = ({
   }
   const formattedSpecificTime = formatSpecificTime(habit.specificTime);
 
-  const cardStyle: React.CSSProperties = {};
-  let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl rounded-[1.25rem]`; // Updated rounded corners
-
   const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && (log.status === 'completed' || (log.status === undefined && log.time !== 'N/A')));
+
+  let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl rounded-[1.25rem]`;
 
   if (isTodayCompleted) {
     cardClasses = cn(cardClasses, 'border-accent bg-green-50 dark:bg-green-900/30');
   } else {
     const categoryColorVar = getCategoryColorVariable(habit.category);
     cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
-    cardClasses = cn(cardClasses, 'border-l-4 bg-gradient-to-br from-primary/10 dark:from-primary/20 via-card/10 to-card'); // Added subtle gradient
+    cardClasses = cn(cardClasses, 'border-l-4 bg-gradient-to-br from-primary/10 dark:from-primary/20 via-card/10 to-card');
   }
-  cardClasses = cn(cardClasses, 'bg-card'); // Base card background, gradient layers on top or overrides if opaque
+  cardClasses = cn(cardClasses, 'bg-card');
+  const cardStyle: React.CSSProperties = {};
+   if (!isTodayCompleted && habit.category) {
+    const categoryColorVar = getCategoryColorVariable(habit.category);
+    cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
+    cardStyle.borderLeftWidth = '4px';
+  } else if (isTodayCompleted) {
+     cardStyle.borderColor = `hsl(var(--accent))`; // Emphasize completion with full accent border
+     cardStyle.borderWidth = '1px'; // Or thicker if desired, e.g., '2px'
+  }
+
 
   const handleToggleCurrentDayCompletion = () => {
     if (!todayString) return;
@@ -285,67 +295,116 @@ const HabitItem: FC<HabitItemProps> = ({
     onToggleComplete(habit.id, todayString, newCompletedState);
     if (newCompletedState) {
       setShowSparkles(true);
-      setTimeout(() => setShowSparkles(false), 800);
+      setTimeout(() => setShowSparkles(false), 800); // Matches sparkle animation duration
     }
   };
 
   return (
     <Card className={cardClasses} style={cardStyle}>
-       <div className="absolute top-3 right-3 z-10">
-        <Checkbox
-          id={`select-${habit.id}`}
-          checked={isSelected}
-          onCheckedChange={() => onSelectToggle(habit.id)}
-          aria-label={`Select habit ${habit.name}`}
-          className="transform scale-110 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-        />
-      </div>
-
-      <CardHeader className="pt-3 pb-1 px-3 sm:px-4 pr-12">
-        <div className="flex items-center min-w-0">
-          <h2 className="text-base sm:text-lg font-semibold text-primary min-w-0 break-words">
-            {habit.name}
-          </h2>
+      <CardHeader className="flex items-center justify-between p-3 sm:p-4">
+        <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
           {getHabitIcon(habit)}
         </div>
-        <div className="flex items-center text-xs text-muted-foreground mt-0.5 space-x-2">
+        <h2 className="text-lg sm:text-xl font-bold text-primary text-center flex-grow mx-2 truncate">
+          {habit.name}
+        </h2>
+        <div className="flex-shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+                <span className="sr-only">More options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+               <DropdownMenuItem onClick={() => {
+                  let targetDateForReflection = todayString;
+                  const dayInfoForNote = weekViewDays.find(d => d.dateStr === targetDateForReflection);
+                  if (dayInfoForNote) {
+                     const logForReflection = habit.completionLog.find(l => l.date === targetDateForReflection);
+                     if(logForReflection || dayInfoForNote.isPast || dayInfoForNote.isToday){
+                        onOpenReflectionDialog(habit.id, targetDateForReflection, habit.name);
+                     } else {
+                       toast({ title: "Reflection Note", description: "Cannot add note for future, non-logged days.", variant: "default"});
+                     }
+                  } else if (todayString) {
+                     onOpenReflectionDialog(habit.id, todayString, habit.name);
+                  }
+                }}>
+                <MessageSquarePlus className="mr-2 h-4 w-4" />
+                <span>Add/Edit Note (Today)</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
+                <Lightbulb className="mr-2 h-4 w-4" />
+                <span>AI Tip</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleAddToCalendar}>
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                <span>Add to GCal</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareHabit}>
+                <Share2 className="mr-2 h-4 w-4" />
+                <span>Share</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                 const firstMissed = weekViewDays.find(d =>
+                    habit.daysOfWeek.includes(d.dayAbbrFull) &&
+                    d.isPast && !d.isToday &&
+                    !habit.completionLog.some(log => log.date === d.dateStr && (log.status === 'completed' || log.status === 'skipped' || log.status === 'pending_makeup' || (log.status === undefined && log.time !== 'N/A')))
+                 );
+                 if (firstMissed) {
+                    onOpenRescheduleDialog(habit, firstMissed.dateStr);
+                 } else {
+                    toast({title: "Reschedule", description: "No past, scheduled, uncompleted days this week to reschedule."})
+                 }
+              }}>
+                <CalendarClock className="mr-2 h-4 w-4" />
+                <span>Reschedule Missed</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-3 px-3 sm:px-4 pb-2 pt-1">
+        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
             <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center cursor-default">
-                    <Flame className={cn("h-4 w-4", streak > 0 ? "text-orange-500 animate-pulse" : "text-muted-foreground opacity-60")} />
-                    <span className={cn("ml-1 text-xs font-semibold", streak > 0 ? "text-orange-500" : "text-muted-foreground opacity-60")}>
-                        {streak}
-                    </span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    {streak > 0
-                      ? `Keep it up! You're on a ${streak}-day streak!`
-                      : "Start a streak by completing this habit on its scheduled days!"}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div className="flex items-center cursor-default">
+                            <Flame className={cn("h-4 w-4", streak > 0 ? "text-orange-500 animate-pulse" : "text-muted-foreground opacity-60")} />
+                            <span className={cn("ml-1 font-semibold", streak > 0 ? "text-orange-500" : "text-muted-foreground opacity-60")}>
+                                {streak > 0 ? `${streak} day${streak > 1 ? 's' : ''}` : '0 days'}
+                            </span>
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                         <p>
+                          {streak > 0
+                            ? `Keep it up! You're on a ${streak}-day streak!`
+                            : "Start a streak by completing this habit on its scheduled days!"}
+                        </p>
+                    </TooltipContent>
+                </Tooltip>
             </TooltipProvider>
-          <span className="text-muted-foreground/50">|</span>
-           <div className="flex items-center text-xs">
-              <span className="mr-1">🎯</span>
-              <span className="font-medium">{completedCountInCurrentWeek}/{scheduledDaysInWeek} days</span>
+            <span className="text-muted-foreground/50 mx-1 sm:mx-2">|</span>
+            <div className="flex items-center">
+                <span className="mr-1">🎯</span>
+                <span className="font-medium">{completedCountInCurrentWeek}/{scheduledDaysInWeek} days</span>
             </div>
         </div>
-         {scheduledDaysInWeek > 0 && <Progress value={weeklyProgressPercent} indicatorClassName="bg-accent" className="h-1.5 my-1" />}
+        {scheduledDaysInWeek > 0 && <Progress value={weeklyProgressPercent} indicatorClassName="bg-accent" className="h-1.5 mb-2" />}
+
         {habit.category && (
-          <div className="flex items-center text-xs text-muted-foreground -mt-0.5">
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
             <Tag className="mr-1 h-3 w-3 text-primary/70" />
             <span>{habit.category}</span>
           </div>
         )}
-      </CardHeader>
-
-      <CardContent className="space-y-2 px-3 sm:px-4 pb-2 pt-1">
+        
         {(formattedSpecificTime || durationDisplay) && (
-             <div className="flex items-center text-xs text-muted-foreground space-x-3">
+             <div className="flex items-center text-xs text-muted-foreground space-x-3 mt-1">
                 {formattedSpecificTime && (
                     <div className="flex items-center">
                         <Clock className="mr-1 h-3.5 w-3.5" />
@@ -364,8 +423,8 @@ const HabitItem: FC<HabitItemProps> = ({
         )}
 
         {weekViewDays.length > 0 && (
-          <div className="mt-1.5">
-            <div className="flex items-center text-xs text-muted-foreground mb-1">
+          <div className="mt-2.5"> {/* Increased margin-top */}
+            <div className="flex items-center text-xs text-muted-foreground mb-1.5"> {/* Increased margin-bottom */}
                 <CalendarDays className="mr-1 h-3.5 w-3.5" />
                 <span className="font-semibold mr-0.5">Days:</span>
             </div>
@@ -442,10 +501,10 @@ const HabitItem: FC<HabitItemProps> = ({
           <Button
             onClick={handleToggleCurrentDayCompletion}
             className={cn(
-              "rounded-full transition-all active:scale-95 py-2.5 px-6 text-sm", 
+              "rounded-full transition-all active:scale-95 py-2.5 px-6 text-sm",
               isTodayCompleted
                 ? `bg-accent hover:bg-accent/90 text-accent-foreground ${showSparkles && isTodayCompleted ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]"}`
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-primary text-primary-foreground hover:bg-primary/90" // Solid orange bar
             )}
           >
             {isTodayCompleted ? (
@@ -471,68 +530,11 @@ const HabitItem: FC<HabitItemProps> = ({
               </>
           )}
         </div>
-
-        <div className="flex justify-end items-center w-full mt-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                <span className="sr-only">More options</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-               <DropdownMenuItem onClick={() => {
-                  let targetDateForReflection = todayString;
-                  const dayInfoForNote = weekViewDays.find(d => d.dateStr === targetDateForReflection);
-                  if (dayInfoForNote) {
-                     const logForReflection = habit.completionLog.find(l => l.date === targetDateForReflection);
-                     if(logForReflection || dayInfoForNote.isPast || dayInfoForNote.isToday){
-                        onOpenReflectionDialog(habit.id, targetDateForReflection, habit.name);
-                     } else {
-                       toast({ title: "Reflection Note", description: "Cannot add note for future, non-logged days.", variant: "default"});
-                     }
-                  } else if (todayString) {
-                     onOpenReflectionDialog(habit.id, todayString, habit.name);
-                  }
-                }}>
-                <MessageSquarePlus className="mr-2 h-4 w-4" />
-                <span>Add/Edit Note (Today)</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
-                <Lightbulb className="mr-2 h-4 w-4" />
-                <span>AI Tip</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleAddToCalendar}>
-                <CalendarPlus className="mr-2 h-4 w-4" />
-                <span>Add to GCal</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleShareHabit}>
-                <Share2 className="mr-2 h-4 w-4" />
-                <span>Share</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                 const firstMissed = weekViewDays.find(d =>
-                    habit.daysOfWeek.includes(d.dayAbbrFull) &&
-                    d.isPast && !d.isToday &&
-                    !habit.completionLog.some(log => log.date === d.dateStr && (log.status === 'completed' || log.status === 'skipped' || log.status === 'pending_makeup' || (log.status === undefined && log.time !== 'N/A')))
-                 );
-                 if (firstMissed) {
-                    onOpenRescheduleDialog(habit, firstMissed.dateStr);
-                 } else {
-                    toast({title: "Reschedule", description: "No past, scheduled, uncompleted days this week to reschedule."})
-                 }
-              }}>
-                <CalendarClock className="mr-2 h-4 w-4" />
-                <span>Reschedule Missed</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
       </CardFooter>
       {showWeeklyConfetti && (
         <div className="weekly-goal-animation-container">
             <div className="weekly-goal-text">Weekly Goal Met!</div>
+            {/* Sparkles for weekly goal */}
             <div className="sparkle sparkle-1" style={{top: '15%', left: '10%', '--tx': '-20px', '--ty': '-25px'} as React.CSSProperties}></div>
             <div className="sparkle sparkle-2" style={{top: '25%', right: '5%', '--tx': '20px', '--ty': '-30px'} as React.CSSProperties}></div>
             <div className="sparkle sparkle-3" style={{bottom: '30%', left: '20%', '--tx': '-25px', '--ty': '10px'} as React.CSSProperties}></div>
@@ -548,3 +550,4 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
+

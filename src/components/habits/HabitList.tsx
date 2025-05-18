@@ -3,7 +3,7 @@
 
 import type { FC } from 'react';
 import HabitItem from './HabitItem';
-import type { Habit, EarnedBadge } from '@/types'; // Added EarnedBadge
+import type { Habit, EarnedBadge } from '@/types';
 import { ListChecks } from 'lucide-react';
 
 interface HabitListProps {
@@ -12,9 +12,9 @@ interface HabitListProps {
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  selectedHabitIds: string[];
-  onSelectHabit: (habitId: string) => void;
-  earnedBadges: EarnedBadge[]; // Added earnedBadges prop
+  // selectedHabitIds: string[]; // Removed as card checkbox is removed
+  // onSelectHabit: (habitId: string) => void; // Removed
+  earnedBadges: EarnedBadge[];
 }
 
 const HabitList: FC<HabitListProps> = ({
@@ -23,9 +23,9 @@ const HabitList: FC<HabitListProps> = ({
     onGetAISuggestion,
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
-    selectedHabitIds,
-    onSelectHabit,
-    earnedBadges, // Added earnedBadges
+    // selectedHabitIds, // Removed
+    // onSelectHabit, // Removed
+    earnedBadges,
 }) => {
   if (habits.length === 0) {
     return (
@@ -38,7 +38,7 @@ const HabitList: FC<HabitListProps> = ({
   }
 
   return (
-    <div className="space-y-4"> {/* Reduced space-y for compactness */}
+    <div className="space-y-4">
       {habits.map((habit) => (
         <HabitItem
           key={habit.id}
@@ -47,9 +47,9 @@ const HabitList: FC<HabitListProps> = ({
           onGetAISuggestion={onGetAISuggestion}
           onOpenReflectionDialog={onOpenReflectionDialog}
           onOpenRescheduleDialog={onOpenRescheduleDialog}
-          isSelected={selectedHabitIds.includes(habit.id)}
-          onSelectToggle={onSelectHabit}
-          earnedBadges={earnedBadges} // Pass earnedBadges down
+          // isSelected={selectedHabitIds.includes(habit.id)} // Removed
+          // onSelectToggle={onSelectHabit} // Removed
+          earnedBadges={earnedBadges}
         />
       ))}
     </div>
