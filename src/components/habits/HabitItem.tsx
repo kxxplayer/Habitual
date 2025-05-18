@@ -4,7 +4,7 @@
 
 import * as React from 'react';
 import type { FC } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
@@ -30,11 +30,12 @@ import {
   Smile as LifestyleIcon,
   Sparkles as SparklesIcon,
   CalendarX,
-  CheckCircle2, 
-  Circle 
+  CheckCircle2,
+  Circle,
+  CalendarIcon // Explicitly import CalendarIcon for "Days"
 } from 'lucide-react';
-import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry } from '@/types';
-import { HABIT_CATEGORIES } from '@/types';
+import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
+import { HABIT_CATEGORIES, FIRST_HABIT_COMPLETED_BADGE_ID, THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
@@ -50,13 +51,13 @@ interface HabitItemProps {
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
   isSelected: boolean;
   onSelectToggle: (habitId: string) => void;
-  isCompletedToday?: boolean; // Kept for potential direct use, though weekly view is primary
+  earnedBadges: EarnedBadge[]; // Pass earned badges for potential future on-card display
 }
 
 const weekDaysOrder: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const formatSpecificTime = (timeStr?: string): string | undefined => {
-  if (!timeStr || timeStr.toLowerCase() === "anytime" || timeStr.toLowerCase() === "flexible") return timeStr;
+  if (!timeStr || timeStr.toLowerCase() === "anytime" || timeStr.toLowerCase() === "flexible") return undefined; // Return undefined if not a specific time
   try {
     if (/^\d{2}:\d{2}$/.test(timeStr)) {
       const [hours, minutes] = timeStr.split(':');
@@ -66,7 +67,7 @@ const formatSpecificTime = (timeStr?: string): string | undefined => {
       return format(date, 'h:mm a');
     }
   } catch (e) { /* Fallback */ }
-  return timeStr;
+  return timeStr; // Return original if format is unexpected but present
 };
 
 const categoryColorMap: Record<HabitCategory, string> = {
@@ -75,7 +76,7 @@ const categoryColorMap: Record<HabitCategory, string> = {
   "Health & Wellness": "--chart-3",
   "Creative": "--chart-4",
   "Chores": "--chart-5",
-  "Finance": "--chart-1", // Re-using chart colors for more categories
+  "Finance": "--chart-1",
   "Social": "--chart-2",
   "Personal Growth": "--chart-3",
   "Other": "--chart-5",
@@ -92,29 +93,30 @@ const getHabitIcon = (habit: Habit): React.ReactNode => {
   const nameLower = habit.name.toLowerCase();
   const category = habit.category;
 
-  if (nameLower.includes('gym') || nameLower.includes('workout') || nameLower.includes('exercise')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">🏋️</span>;
-  if (nameLower.includes('sql') || nameLower.includes('code') || nameLower.includes('programming') || nameLower.includes('develop')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">💻</span>;
-  if (nameLower.includes('walk') || nameLower.includes('run') || nameLower.includes('jog')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">🚶</span>;
-  if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">📚</span>;
-  if (nameLower.includes('meditate') || nameLower.includes('meditation') || nameLower.includes('mindfulness')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">🧘</span>;
+  if (nameLower.includes('gym') || nameLower.includes('workout') || nameLower.includes('exercise')) return <span className="text-xl ml-1.5 rtl:mr-1.5 rtl:ml-0">🏋️</span>;
+  if (nameLower.includes('sql') || nameLower.includes('code') || nameLower.includes('programming') || nameLower.includes('develop')) return <span className="text-xl ml-1.5 rtl:mr-1.5 rtl:ml-0">💻</span>;
+  if (nameLower.includes('walk') || nameLower.includes('run') || nameLower.includes('jog')) return <span className="text-xl ml-1.5 rtl:mr-1.5 rtl:ml-0">🚶</span>;
+  if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-xl ml-1.5 rtl:mr-1.5 rtl:ml-0">📚</span>;
+  if (nameLower.includes('meditate') || nameLower.includes('meditation') || nameLower.includes('mindfulness')) return <span className="text-xl ml-1.5 rtl:mr-1.5 rtl:ml-0">🧘</span>;
 
-  if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-blue-500" />;
-  if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-purple-500" />;
-  if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-yellow-600" />;
-  if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-blue-600" />;
-  if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-red-500" />;
+  if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-blue-500" />;
+  if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-purple-500" />;
+  if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-yellow-600" />;
+  if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-blue-600" />;
+  if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-red-500" />;
 
+  let iconComponent: React.ReactNode = <ListChecks className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-muted-foreground" />;
   switch (category) {
-    case 'Health & Wellness': return <HeartPulse className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-red-500" />;
-    case 'Work/Study': return <Briefcase className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-blue-600" />;
-    case 'Creative': return <Paintbrush className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-orange-500" />;
-    case 'Chores': return <HomeIcon className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-green-600" />;
-    case 'Finance': return <Landmark className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-indigo-500" />;
-    case 'Social': return <Users className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-pink-500" />;
-    case 'Personal Growth': return <SparklesIcon className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-yellow-500" />;
-    case 'Lifestyle': return <LifestyleIcon className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-teal-500" />;
-    default: return <ListChecks className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-muted-foreground" />;
+    case 'Health & Wellness': iconComponent = <HeartPulse className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-red-500" />; break;
+    case 'Work/Study': iconComponent = <Briefcase className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-blue-600" />; break;
+    case 'Creative': iconComponent = <Paintbrush className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-orange-500" />; break;
+    case 'Chores': iconComponent = <HomeIcon className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-green-600" />; break;
+    case 'Finance': iconComponent = <Landmark className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-indigo-500" />; break;
+    case 'Social': iconComponent = <Users className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-pink-500" />; break;
+    case 'Personal Growth': iconComponent = <SparklesIcon className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-yellow-500" />; break;
+    case 'Lifestyle': iconComponent = <LifestyleIcon className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-5 w-5 text-teal-500" />; break;
   }
+  return iconComponent;
 };
 
 
@@ -126,22 +128,21 @@ const HabitItem: FC<HabitItemProps> = ({
     onOpenRescheduleDialog,
     isSelected,
     onSelectToggle,
-    isCompletedToday: _isCompletedToday // Prop not directly used for daily completion icon anymore
+    earnedBadges,
 }) => {
   const todayString = new Date().toISOString().split('T')[0];
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [weekViewDays, setWeekViewDays] = React.useState<WeekDayInfo[]>([]);
-  const [showSparkles, setShowSparkles] = React.useState(false); // For daily completion sparkles
-  const [showWeeklyConfetti, setShowWeeklyConfetti] = React.useState(false); // For weekly goal met
+  const [showSparkles, setShowSparkles] = React.useState(false);
+  const [showWeeklyConfetti, setShowWeeklyConfetti] = React.useState(false);
   const prevCompletedCountRef = React.useRef<number>(0);
-
 
   React.useEffect(() => {
     const now = new Date();
     setCurrentDate(now);
     setWeekViewDays(getCurrentWeekDays(now));
-  }, [todayString]); 
+  }, [todayString]);
 
   const streak = calculateStreak(habit, currentDate);
   const isHabitCompletedToday = habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
@@ -154,7 +155,7 @@ const HabitItem: FC<HabitItemProps> = ({
       weekViewDays.forEach(dayInfo => {
         if (habit.daysOfWeek.includes(dayInfo.dayAbbrFull)) {
             scheduled++;
-            const log = habit.completionLog.find(l => l.date === dayInfo.dateStr && l.status === 'completed');
+            const log = habit.completionLog.find(l => l.date === dayInfo.dateStr && (l.status === 'completed' || l.status === undefined));
             if (log) {
                 completedOnScheduled.add(dayInfo.dateStr);
             }
@@ -165,7 +166,7 @@ const HabitItem: FC<HabitItemProps> = ({
     return { completedCountInCurrentWeek: completed, scheduledDaysInWeek: scheduled };
   }, [habit.completionLog, habit.daysOfWeek, weekViewDays]);
 
-  const weeklyProgressPercent = scheduledDaysInWeek > 0 ? (completedCountInCurrentWeek / scheduledDaysInWeek) * 100 : 0;
+  const weeklyProgressPercent = scheduledDaysInWeek > 0 ? Math.round((completedCountInCurrentWeek / scheduledDaysInWeek) * 100) : 0;
 
   React.useEffect(() => {
     if (scheduledDaysInWeek > 0) {
@@ -173,12 +174,11 @@ const HabitItem: FC<HabitItemProps> = ({
             setShowWeeklyConfetti(true);
             setTimeout(() => {
                 setShowWeeklyConfetti(false);
-            }, 2500); 
+            }, 2500);
         }
     }
     prevCompletedCountRef.current = completedCountInCurrentWeek;
   }, [completedCountInCurrentWeek, scheduledDaysInWeek]);
-
 
   const handleAddToCalendar = () => {
     try {
@@ -242,7 +242,6 @@ const HabitItem: FC<HabitItemProps> = ({
     }
   };
 
-  const displayDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b)).join(', ');
   let durationDisplay = '';
   if (habit.durationHours && habit.durationHours > 0) durationDisplay += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
   if (habit.durationMinutes && habit.durationMinutes > 0) {
@@ -253,9 +252,13 @@ const HabitItem: FC<HabitItemProps> = ({
 
   const cardStyle: React.CSSProperties = {};
   let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isSelected ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-background' : ''}`;
-  
-  // Use isHabitCompletedToday for overall card styling related to *today's* specific status
-  if (isHabitCompletedToday) { 
+
+  // Determine if ANY day in the current week is completed for background highlight
+  const isAnyDayCompletedThisWeek = weekViewDays.some(dayInfo =>
+    habit.completionLog.some(log => log.date === dayInfo.dateStr && (log.status === 'completed' || log.status === undefined))
+  );
+
+  if (isAnyDayCompletedThisWeek) { // Simplified: if any day is done, slight green tint
     cardClasses = cn(cardClasses, 'border-accent bg-green-50 dark:bg-green-900/30');
   } else {
     const categoryColorVar = getCategoryColorVariable(habit.category);
@@ -276,83 +279,88 @@ const HabitItem: FC<HabitItemProps> = ({
           className="transform scale-110 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
       </div>
-      <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pr-12"> {/* Added pr-12 for checkbox */}
-        <div className="flex justify-between items-start">
-          <div className="flex-grow">
-             <div className="flex items-center gap-1 mb-0.5">
-              {getHabitIcon(habit)}
-              <CardTitle className="text-lg sm:text-xl font-semibold text-primary min-w-0 break-words">
-                {habit.name}
-              </CardTitle>
-              {streak > 0 ? (
-                <div className="flex items-center text-orange-500 animate-pulse ml-1" title={`Current streak: ${streak} days`}>
-                  <Flame className="h-5 w-5" />
-                  <span className="ml-1 text-sm font-semibold">{streak}</span>
-                </div>
-              ) : (
-                <div className="flex items-center text-muted-foreground opacity-60 ml-1" title="No active streak">
-                  <Flame className="h-5 w-5" />
-                   <span className="ml-1 text-sm font-semibold">0</span>
-                </div>
-              )}
-            </div>
-            {habit.description && <CardDescription className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">{habit.description}</CardDescription>}
-             {habit.category && (
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                <Tag className="mr-1 h-3 w-3 text-primary/70" />
-                <span>{habit.category}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 px-3 sm:px-4 pb-3 pt-2"> 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5 text-xs sm:text-sm text-muted-foreground">
-          <div className="flex items-center col-span-full sm:col-span-1">
-            <CalendarDays className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
-            <span>Days: {displayDays.length > 0 ? displayDays : 'Not specified'}</span>
-          </div>
-          {habit.optimalTiming && (
-            <div className="flex items-center">
-              <CalendarClock className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
-              <span>Timing: {habit.optimalTiming}</span>
-            </div>
-          )}
-          {durationDisplay && (
-            <div className="flex items-center">
-              <Hourglass className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
-              <span>Duration: {durationDisplay}</span>
-            </div>
-          )}
-          {formattedSpecificTime && (
-             <div className="flex items-center">
-              <Clock className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
-              <span>Time: {formattedSpecificTime}</span>
-            </div>
-          )}
-        </div>
 
-        {weekViewDays.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-border/50">
-            <div className="flex justify-between items-center text-xs font-medium text-muted-foreground mb-1">
-                <span className="flex items-center"><TrendingUp className="mr-1.5 h-3.5 w-3.5 text-primary/90" />This Week</span>
-                <span>{completedCountInCurrentWeek} / {scheduledDaysInWeek} days</span>
+      <CardHeader className="pt-3 pb-1 px-3 sm:px-4 pr-12">
+        <div className="flex items-center">
+          <h2 className="text-lg sm:text-xl font-semibold text-primary min-w-0 break-words">
+            {habit.name}
+          </h2>
+          {getHabitIcon(habit)}
+        </div>
+        {habit.category && (
+          <div className="flex items-center text-xs text-muted-foreground mt-0.5">
+            <Tag className="mr-1 h-3 w-3 text-primary/70" />
+            <span>{habit.category}</span>
+          </div>
+        )}
+      </CardHeader>
+
+      <CardContent className="space-y-2 px-3 sm:px-4 pb-2 pt-1">
+        {/* Streak & Weekly Goal */}
+        <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
+            <div className="flex items-center">
+                 {streak > 0 ? (
+                    <div className="flex items-center text-orange-500 mr-2" title={`Current streak: ${streak} days`}>
+                    <Flame className="h-4 w-4" />
+                    <span className="ml-0.5 text-xs font-semibold">Streak: {streak}</span>
+                    </div>
+                ) : (
+                    <div className="flex items-center text-muted-foreground opacity-60 mr-2" title="No active streak">
+                    <Flame className="h-4 w-4" />
+                    <span className="ml-0.5 text-xs font-semibold">Streak: 0</span>
+                    </div>
+                )}
             </div>
-            <Progress
-                value={weeklyProgressPercent}
-                indicatorClassName="bg-accent"
-                className="h-1.5 mb-1.5" // Added margin bottom
-                aria-label={`Weekly progress: ${completedCountInCurrentWeek} of ${scheduledDaysInWeek} days completed`}
-            />
-            <div className="flex justify-around items-center space-x-1 mt-2">
+            <div className="flex items-center">
+                <span className="mr-1">🎯</span>
+                <span className="text-xs font-medium">{completedCountInCurrentWeek}/{scheduledDaysInWeek} days</span>
+            </div>
+        </div>
+        <Progress
+            value={weeklyProgressPercent}
+            indicatorClassName="bg-accent"
+            className="h-1 mb-1.5"
+            aria-label={`Weekly progress: ${completedCountInCurrentWeek} of ${scheduledDaysInWeek} days completed`}
+        />
+
+        {/* Time & Duration */}
+        {(formattedSpecificTime || durationDisplay) && (
+             <div className="flex items-center text-xs sm:text-sm text-muted-foreground space-x-3">
+                {formattedSpecificTime && (
+                    <div className="flex items-center">
+                        <span className="mr-1">⏰</span>
+                        <span className="font-semibold mr-0.5">Time:</span>
+                        <span>{formattedSpecificTime}</span>
+                    </div>
+                )}
+                {durationDisplay && (
+                     <div className="flex items-center">
+                        <span className="mr-1">🕒</span>
+                        <span className="font-semibold mr-0.5">Duration:</span>
+                        <span>{durationDisplay}</span>
+                    </div>
+                )}
+            </div>
+        )}
+
+
+        {/* Days of the Week Indicators */}
+        {weekViewDays.length > 0 && (
+          <div className="mt-1.5">
+            <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-1">
+                <span className="mr-1">📅</span>
+                <span className="font-semibold mr-0.5">Days:</span>
+            </div>
+            <div className="flex justify-around items-center space-x-0.5">
               {weekViewDays.map((dayInfo) => {
                 const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
                 const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
-                const isDayCompleted = dayLog?.status === 'completed';
+                const isDayCompleted = dayLog?.status === 'completed' || (dayLog?.status === undefined && !!dayLog); // undefined status implies completed for old data
                 const isSkipped = dayLog?.status === 'skipped';
                 const isPendingMakeup = dayLog?.status === 'pending_makeup';
 
                 let dayStatus: 'completed' | 'skipped' | 'pending_makeup' | 'missed' | 'pending_scheduled' | 'not_scheduled' = 'not_scheduled';
+
                 if (isDayCompleted) dayStatus = 'completed';
                 else if (isSkipped) dayStatus = 'skipped';
                 else if (isPendingMakeup) dayStatus = 'pending_makeup';
@@ -364,7 +372,7 @@ const HabitItem: FC<HabitItemProps> = ({
                 let dayBgColor = 'bg-input/30 hover:bg-input/50';
                 let dayTextColor = 'text-muted-foreground/70';
                 let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
-                let IconComponent = Circle;
+                let IconComponent: React.ElementType = Circle; // Default to Circle for pending/not_scheduled
 
                 switch(dayStatus) {
                   case 'completed':
@@ -374,75 +382,67 @@ const HabitItem: FC<HabitItemProps> = ({
                   case 'pending_makeup':
                     dayBgColor = 'bg-blue-500 hover:bg-blue-600'; dayTextColor = 'text-white'; titleText += ' (Makeup Pending)'; IconComponent = CalendarClock; break;
                   case 'missed':
-                    // For missed days, we allow rescheduling, so it won't be directly marked here.
-                    // It should be clickable to open reschedule dialog if needed.
-                    // For now, it is red and clickable if not completed/skipped.
-                    dayBgColor = 'bg-destructive hover:bg-destructive/90'; dayTextColor = 'text-destructive-foreground'; titleText += ' (Missed)'; break;
+                    dayBgColor = 'bg-destructive hover:bg-destructive/90'; dayTextColor = 'text-destructive-foreground'; titleText += ' (Missed)'; IconComponent = Circle; break; // Still circle for missed, color indicates status
                   case 'pending_scheduled':
-                    dayBgColor = 'bg-muted hover:bg-muted/90'; dayTextColor = 'text-muted-foreground'; titleText += ' (Pending)'; break;
+                    dayBgColor = 'bg-muted hover:bg-muted/90'; dayTextColor = 'text-muted-foreground'; titleText += ' (Pending)'; IconComponent = Circle; break;
                   default: // not_scheduled
-                     dayBgColor = 'bg-input/20'; titleText += ' (Not Scheduled)'; break;
+                     dayBgColor = 'bg-input/20'; titleText += ' (Not Scheduled)'; IconComponent = Circle; dayTextColor = 'text-muted-foreground/50'; break;
                 }
-                
+
                 const handleDayClick = () => {
                   if (dayStatus === 'not_scheduled' && !isPendingMakeup) return;
 
-                  const newCompletedState = !isDayCompleted;
+                  const newCompletedState = !isDayCompleted; // Toggle based on current completion
                   onToggleComplete(habit.id, dayInfo.dateStr, newCompletedState);
-                  if (newCompletedState) {
+
+                  if (newCompletedState && dayStatus !== 'completed') { // Only sparkle on new completions
                     setShowSparkles(true);
-                    setTimeout(() => setShowSparkles(false), 1000);
+                    setTimeout(() => setShowSparkles(false), 800);
                   }
                 };
-                
-                const dayElement = (
+
+                return (
                   <button
                     key={dayInfo.dateStr}
                     title={titleText}
                     onClick={handleDayClick}
-                    disabled={dayStatus === 'not_scheduled' && !isPendingMakeup && dayStatus !== 'missed'} // Allow clicking missed for reschedule
+                    disabled={(dayStatus === 'not_scheduled' && !isPendingMakeup)}
                     className={cn(
-                      `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-xs font-medium transition-all transform active:scale-90`,
+                      `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-all transform active:scale-90`,
                       dayBgColor, dayTextColor,
                       dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : '',
-                      (dayStatus === 'not_scheduled' && !isPendingMakeup) ? 'cursor-default opacity-50' : 'cursor-pointer'
+                      (dayStatus === 'not_scheduled' && !isPendingMakeup) ? 'cursor-default opacity-60' : 'cursor-pointer'
                     )}
-                    aria-label={`Mark habit ${habit.name} for ${dayInfo.dayAbbrFull}, ${format(dayInfo.date, 'MMM d')} as ${isDayCompleted ? 'not done' : 'done'}`}
+                    aria-label={`Status for ${habit.name} on ${dayInfo.dayAbbrFull}, ${format(dayInfo.date, 'MMM d')}: ${dayStatus}`}
                   >
-                    <span className="font-semibold">{dayInfo.dayAbbrShort}</span>
-                    <IconComponent className={cn("h-3 w-3 mt-0.5", dayStatus === 'completed' || dayStatus === 'pending_makeup' || dayStatus === 'skipped' ? '' : 'opacity-70')}/>
+                    <span className="font-semibold text-[0.7rem] sm:text-xs">{dayInfo.dayAbbrShort}</span>
+                    <IconComponent className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5 mt-0.5", dayStatus === 'completed' || dayStatus === 'pending_makeup' || dayStatus === 'skipped' ? '' : 'opacity-70')}/>
                   </button>
                 );
-                 // If the day is missed, wrap it to trigger reschedule dialog
-                if (dayStatus === 'missed') {
-                  return (
-                    <div key={dayInfo.dateStr} onClick={() => onOpenRescheduleDialog(habit, dayInfo.dateStr)}>
-                      {dayElement}
-                    </div>
-                  );
-                }
-                return dayElement;
               })}
             </div>
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col items-stretch pt-2 pb-3 px-3">
-        {showSparkles && (
-             <div className="sparkle-container absolute inset-0 pointer-events-none z-20 flex items-center justify-center">
-                <div className="sparkle sparkle-1"></div>
-                <div className="sparkle sparkle-2"></div>
-                <div className="sparkle sparkle-3"></div>
-                <div className="sparkle sparkle-4"></div>
-                <div className="sparkle sparkle-5"></div>
-                <div className="sparkle sparkle-6" style={{ backgroundColor: 'hsl(var(--primary))' }}></div>
-            </div>
-        )}
-        <div className="flex justify-end items-center min-h-[20px]">
+
+      <CardFooter className="flex flex-col items-stretch pt-1 pb-2 px-3">
+         <div className="sparkle-container relative w-full min-h-[20px]"> {/* Ensure sparkle container is relative */}
+            {showSparkles && (
+                <>
+                    <div className="sparkle sparkle-1"></div>
+                    <div className="sparkle sparkle-2"></div>
+                    <div className="sparkle sparkle-3"></div>
+                    <div className="sparkle sparkle-4"></div>
+                    <div className="sparkle sparkle-5"></div>
+                    <div className="sparkle sparkle-6" style={{ backgroundColor: 'hsl(var(--primary))' }}></div>
+                </>
+            )}
+        </div>
+        <div className="flex justify-end items-center mt-1"> {/* Reduced top margin */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto">
-                <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+              <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto"> {/* Smaller icon button */}
+                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                 <span className="sr-only">More options</span>
               </Button>
             </DropdownMenuTrigger>
@@ -450,10 +450,11 @@ const HabitItem: FC<HabitItemProps> = ({
                <DropdownMenuItem onClick={() => {
                   const targetDateForReflection = weekViewDays.find(d => d.isToday)?.dateStr || todayString;
                   const logForReflection = habit.completionLog.find(l => l.date === targetDateForReflection);
-                  if(logForReflection && (logForReflection.status === 'completed' || logForReflection.status === 'skipped' || logForReflection.status === 'pending_makeup')){
+                  // Allow adding note if any log entry (completed, skipped, pending) exists for the day
+                  if(logForReflection){
                     onOpenReflectionDialog(habit.id, targetDateForReflection, habit.name);
                   } else {
-                     toast({ title: "Reflection Note", description: "Mark a day as complete/skipped to add a note.", variant: "default"});
+                     toast({ title: "Reflection Note", description: "Mark a day as complete/skipped or reschedule to add a note for that day.", variant: "default"});
                   }
                 }}>
                 <MessageSquarePlus className="mr-2 h-4 w-4" />
@@ -473,15 +474,15 @@ const HabitItem: FC<HabitItemProps> = ({
                 <span>Share</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => {
-                 const firstMissed = weekViewDays.find(d => 
-                    habit.daysOfWeek.includes(d.dayAbbrFull) && 
-                    d.isPast && 
-                    !habit.completionLog.some(log => log.date === d.dateStr && (log.status === 'completed' || log.status === 'skipped' || log.status === 'pending_makeup'))
+                 const firstMissed = weekViewDays.find(d =>
+                    habit.daysOfWeek.includes(d.dayAbbrFull) &&
+                    d.isPast &&
+                    !habit.completionLog.some(log => log.date === d.dateStr && (log.status === 'completed' || log.status === 'skipped' || log.status === 'pending_makeup' || log.status === undefined))
                  );
                  if (firstMissed) {
                     onOpenRescheduleDialog(habit, firstMissed.dateStr);
                  } else {
-                    toast({title: "Reschedule", description: "No missed scheduled days this week to reschedule."})
+                    toast({title: "Reschedule", description: "No past, scheduled, uncompleted days this week to reschedule."})
                  }
               }}>
                 <CalendarClock className="mr-2 h-4 w-4" />
@@ -494,6 +495,7 @@ const HabitItem: FC<HabitItemProps> = ({
       {showWeeklyConfetti && (
         <div className="weekly-goal-animation-container">
             <div className="weekly-goal-text">Weekly Goal Met!</div>
+            {/* More sparkle elements for weekly confetti */}
             <div className="sparkle sparkle-1" style={{top: '15%', left: '10%', '--tx': '-20px', '--ty': '-25px'} as React.CSSProperties}></div>
             <div className="sparkle sparkle-2" style={{top: '25%', right: '5%', '--tx': '20px', '--ty': '-30px'} as React.CSSProperties}></div>
             <div className="sparkle sparkle-3" style={{bottom: '30%', left: '20%', '--tx': '-25px', '--ty': '10px'} as React.CSSProperties}></div>
@@ -509,4 +511,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-

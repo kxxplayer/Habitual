@@ -14,7 +14,7 @@ import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionL
 import { THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { getSqlTip } from '@/ai/flows/sql-tip-flow';
-import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow'; // Added import
+import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,6 +30,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -109,7 +110,7 @@ const HabitualPage: NextPage = () => {
             if (minMatch) migratedDurationMinutes = parseInt(minMatch[1]);
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
-                if (numVal <= 120) migratedDurationMinutes = numVal;
+                if (numVal <= 120) migratedDurationMinutes = numVal; // Assume it's minutes if under 120 and no unit
             }
           }
 
@@ -122,13 +123,15 @@ const HabitualPage: NextPage = () => {
               const minutes = parseInt(minutesStr, 10);
               const modifier = modifierPart ? modifierPart.toLowerCase() : '';
               if (modifier === 'pm' && hours < 12) hours += 12;
-              if (modifier === 'am' && hours === 12) hours = 0;
+              if (modifier === 'am' && hours === 12) hours = 0; // Midnight case
               migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
             } catch (e) { /* ignore format error, keep original */ }
           } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) {
+             // Already in HH:mm, ensure padding if needed
              const [hours, minutes] = migratedSpecificTime.split(':').map(Number);
              migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
           }
+
 
           const migratedCompletionLog = (habit.completionLog || (habit.completedDates
               ? habit.completedDates.map((d: string) => ({ date: d, time: 'N/A', note: undefined, status: 'completed' }))
@@ -136,7 +139,7 @@ const HabitualPage: NextPage = () => {
                 date: log.date,
                 time: log.time || 'N/A',
                 note: log.note || undefined,
-                status: log.status || 'completed',
+                status: log.status || 'completed', // default old entries to completed
                 originalMissedDate: log.originalMissedDate || undefined,
               }));
 
@@ -200,16 +203,12 @@ const HabitualPage: NextPage = () => {
                 toast({
                   title: "💡 Bonus SQL Tip Unlocked!",
                   description: sqlTipResult.tip,
-                  duration: 9000, 
+                  duration: 9000,
                   action: <BookOpenText className="h-5 w-5 text-blue-500" />
                 });
               } catch (tipError) {
                 console.error("Failed to fetch SQL tip:", tipError);
-                toast({
-                  title: "SQL Tip Error",
-                  description: "Could not fetch bonus SQL tip at this time.",
-                  variant: "destructive"
-                });
+                // Do not toast an error here to avoid toast spam
               }
             }
         }
@@ -246,32 +245,37 @@ const HabitualPage: NextPage = () => {
   const handleToggleComplete = async (habitId: string, date: string, completed: boolean) => {
     let habitNameForQuote: string | undefined = undefined;
     let pointsChange = 0;
+    let justCompleted = false;
 
     setHabits((prevHabits) =>
       prevHabits.map((habit) => {
         if (habit.id === habitId) {
-          habitNameForQuote = habit.name; // Capture habit name for quote
+          habitNameForQuote = habit.name;
           let newCompletionLog = [...habit.completionLog];
           const existingLogIndex = newCompletionLog.findIndex(log => log.date === date);
           const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-          
+
           if (completed) {
             if (existingLogIndex > -1) {
               const existingLog = newCompletionLog[existingLogIndex];
               if (existingLog.status !== 'completed') {
-                pointsChange = POINTS_PER_COMPLETION; 
+                pointsChange = POINTS_PER_COMPLETION;
+                justCompleted = true;
               }
               newCompletionLog[existingLogIndex] = { ...existingLog, status: 'completed', time: currentTime };
             } else {
               pointsChange = POINTS_PER_COMPLETION;
+              justCompleted = true;
               newCompletionLog.push({ date, time: currentTime, status: 'completed', note: undefined });
             }
-          } else { 
+          } else {
             if (existingLogIndex > -1) {
               const logEntry = newCompletionLog[existingLogIndex];
               if (logEntry.status === 'completed') {
-                 pointsChange = -POINTS_PER_COMPLETION; 
+                 pointsChange = -POINTS_PER_COMPLETION;
               }
+              // If it was a completed makeup task, revert to pending_makeup
+              // If it was a regular completion, remove the log entry entirely
               if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
               } else {
@@ -285,7 +289,7 @@ const HabitualPage: NextPage = () => {
       })
     );
 
-    if (pointsChange > 0 && habitNameForQuote) { // Only show quote if points increased (new completion)
+    if (justCompleted && habitNameForQuote) {
       try {
         const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuote });
         toast({
@@ -295,24 +299,13 @@ const HabitualPage: NextPage = () => {
         });
       } catch (error) {
         console.error("Failed to fetch motivational quote:", error);
-        // Optionally show a generic positive toast if quote fails
         toast({
           title: "✨ Well Done!",
           description: "You're making progress!",
           duration: 3000,
         });
       }
-    } else if (pointsChange === 0 && completed && habitNameForQuote) {
-        // If it was already completed and re-marked (no points change, but still a 'completion' action)
-        // Could show a simpler toast or no toast, depending on desired behavior
-        // For now, let's show a generic one if a quote wasn't fetched.
-         toast({
-          title: "✨ Nicely Done!",
-          description: "Consistency is key!",
-          duration: 3000,
-        });
     }
-
 
     if (pointsChange !== 0) {
       setTotalPoints(prevPoints => Math.max(0, prevPoints + pointsChange));
@@ -327,10 +320,10 @@ const HabitualPage: NextPage = () => {
 
     try {
       const completionEntries = habit.completionLog.map(log => {
-        let entry = `${log.date} at ${log.time}`;
+        let entry = `${log.date} at ${log.time || 'N/A'}`;
         if (log.status === 'skipped') entry += ` (Skipped)`;
         else if (log.status === 'pending_makeup') entry += ` (Makeup Pending for ${log.originalMissedDate})`;
-        else if (log.status === 'completed') entry += ` (Completed)`;
+        else if (log.status === 'completed' || log.status === undefined) entry += ` (Completed)`;
 
         if (log.note && log.note.trim() !== "") entry += ` (Note: ${log.note.trim()})`;
         return entry;
@@ -419,9 +412,16 @@ const HabitualPage: NextPage = () => {
             }
             return log;
           });
+          // If no log entry exists for the date (e.g. adding note to a skipped day without prior log), create one.
           if (!logEntryExists) {
-             const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-             newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim(), status: 'completed'});
+             // Attempt to find if it was skipped or pending makeup to preserve that status
+             const existingStatus = h.completionLog.find(l => l.date === date)?.status;
+             newCompletionLog.push({
+                date,
+                time: 'N/A', // Notes can be added without completion time
+                note: note.trim() === "" ? undefined : note.trim(),
+                status: existingStatus || 'skipped' // Default to skipped if no prior status, or use existing
+             });
              newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
           }
           return { ...h, completionLog: newCompletionLog };
@@ -446,8 +446,14 @@ const HabitualPage: NextPage = () => {
     setHabits(prevHabits => prevHabits.map(h => {
       if (h.id === habitId) {
         const newCompletionLog = [...h.completionLog];
+        // Remove any existing entry for the originalMissedDate if it was purely a placeholder for being missed
         const existingMissedLogIndex = newCompletionLog.findIndex(log => log.date === originalMissedDate && (log.status === 'skipped' || !log.status));
-        if(existingMissedLogIndex > -1) newCompletionLog.splice(existingMissedLogIndex, 1);
+        if(existingMissedLogIndex > -1 && !newCompletionLog[existingMissedLogIndex].note) { // Only remove if no note
+            newCompletionLog.splice(existingMissedLogIndex, 1);
+        } else if (existingMissedLogIndex > -1) { // If it had a note, just mark as skipped
+            newCompletionLog[existingMissedLogIndex].status = 'skipped';
+        }
+
 
         newCompletionLog.push({
           date: newDate,
@@ -463,7 +469,7 @@ const HabitualPage: NextPage = () => {
     const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
     toast({
       title: "Habit Rescheduled",
-      description: `"${habitName}" originally missed on ${originalMissedDate} is now scheduled for ${newDate}.`,
+      description: `"${habitName}" originally missed on ${format(parseISO(originalMissedDate), "MMM d")} is now set for ${format(parseISO(newDate), "MMM d")}.`,
       action: <CalendarDays className="h-5 w-5 text-primary" />
     });
   };
@@ -486,7 +492,7 @@ const HabitualPage: NextPage = () => {
     const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
     toast({
       title: "Habit Skipped",
-      description: `"${habitName}" for ${missedDate} has been marked as skipped.`,
+      description: `"${habitName}" for ${format(parseISO(missedDate), "MMM d")} has been marked as skipped.`,
     });
   };
 
@@ -497,14 +503,14 @@ const HabitualPage: NextPage = () => {
       <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
-          maxWidth: 'clamp(320px, 100%, 450px)', 
-          height: 'clamp(600px, 90vh, 800px)', 
-          overflow: 'hidden', 
+          maxWidth: 'clamp(320px, 100%, 450px)',
+          height: 'clamp(600px, 90vh, 800px)',
+          overflow: 'hidden',
         }}
       >
         <AppHeader />
 
-        <div className="flex-grow overflow-y-auto"> 
+        <div className="flex-grow overflow-y-auto">
           <main className="px-3 sm:px-4 py-6">
             {showInlineHabitForm && (
               <div className="my-4">
@@ -573,6 +579,7 @@ const HabitualPage: NextPage = () => {
                 onOpenRescheduleDialog={handleOpenRescheduleDialog}
                 selectedHabitIds={selectedHabitIds}
                 onSelectHabit={toggleHabitSelection}
+                earnedBadges={earnedBadges}
                 />
             )}
           </main>
@@ -713,5 +720,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
-    

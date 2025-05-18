@@ -3,7 +3,7 @@
 
 import type { FC } from 'react';
 import HabitItem from './HabitItem';
-import type { Habit } from '@/types';
+import type { Habit, EarnedBadge } from '@/types'; // Added EarnedBadge
 import { ListChecks } from 'lucide-react';
 
 interface HabitListProps {
@@ -14,16 +14,18 @@ interface HabitListProps {
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
   selectedHabitIds: string[];
   onSelectHabit: (habitId: string) => void;
+  earnedBadges: EarnedBadge[]; // Added earnedBadges prop
 }
 
-const HabitList: FC<HabitListProps> = ({ 
-    habits, 
-    onToggleComplete, 
-    onGetAISuggestion, 
+const HabitList: FC<HabitListProps> = ({
+    habits,
+    onToggleComplete,
+    onGetAISuggestion,
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
-    selectedHabitIds, 
-    onSelectHabit 
+    selectedHabitIds,
+    onSelectHabit,
+    earnedBadges, // Added earnedBadges
 }) => {
   if (habits.length === 0) {
     return (
@@ -35,10 +37,8 @@ const HabitList: FC<HabitListProps> = ({
     );
   }
 
-  const today = new Date().toISOString().split('T')[0];
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4"> {/* Reduced space-y for compactness */}
       {habits.map((habit) => (
         <HabitItem
           key={habit.id}
@@ -47,9 +47,9 @@ const HabitList: FC<HabitListProps> = ({
           onGetAISuggestion={onGetAISuggestion}
           onOpenReflectionDialog={onOpenReflectionDialog}
           onOpenRescheduleDialog={onOpenRescheduleDialog}
-          isCompletedToday={habit.completionLog.some(log => log.date === today && log.status === 'completed')}
           isSelected={selectedHabitIds.includes(habit.id)}
           onSelectToggle={onSelectHabit}
+          earnedBadges={earnedBadges} // Pass earnedBadges down
         />
       ))}
     </div>
