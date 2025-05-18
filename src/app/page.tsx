@@ -3,6 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
+import { useRouter } from 'next/navigation'; // Added for redirection
+import { auth } from '@/lib/firebase'; // Added for Firebase auth
+import type { User } from 'firebase/auth'; // Added for User type
+import { onAuthStateChanged } from 'firebase/auth'; // Added for auth listener
+
 import AppHeader from '@/components/layout/AppHeader';
 import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
@@ -16,23 +21,9 @@ import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
-// import { useToast } from '@/hooks/use-toast'; // Commented out as toasts are removed
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
-// import { Checkbox } from '@/components/ui/checkbox'; // Commented out as multi-select is dormant
-// import { Label } from '@/components/ui/label'; // Commented out as multi-select is dormant
-// import {
-//   AlertDialog,
-//   AlertDialogAction,
-//   AlertDialogCancel,
-//   AlertDialogContent,
-//   AlertDialogDescription,
-//   AlertDialogFooter,
-//   AlertDialogHeader,
-//   AlertDialogTitle,
-//   AlertDialogTrigger, // Commented out as multi-select is dormant
-// } from "@/components/ui/alert-dialog"; // Commented out as multi-select is dormant
 import {
   Dialog,
   DialogContent,
@@ -49,7 +40,7 @@ import {
   SheetDescription,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Plus, Smile, /*Trash2, AlertTriangle,*/ LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, Star, BookOpenText, UserCircle, BellRing } from 'lucide-react';
+import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2 } from 'lucide-react'; // Added Loader2
 import { format, parseISO } from 'date-fns';
 
 
@@ -58,17 +49,16 @@ const POINTS_PER_COMPLETION = 10;
 
 
 const HabitualPage: NextPage = () => {
+  const router = useRouter();
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = useState(false);
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = useState<Habit | null>(null);
   const [aiSuggestion, setAISuggestion] = useState<AISuggestionType | null>(null);
-  // const { toast } = useToast(); // Commented out
 
   const [showInlineHabitForm, setShowInlineHabitForm] = useState(false);
-  
-  // Multi-select state - functionality will be dormant if checkbox on card is removed
-  // const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
-  // const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
   const [isAchievementsDialogOpen, setIsAchievementsDialogOpen] = useState(false);
@@ -90,8 +80,24 @@ const HabitualPage: NextPage = () => {
     missedDate: string;
   } | null>(null);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setAuthUser(user);
+      } else {
+        setAuthUser(null);
+        router.push('/auth/login'); // Redirect to login if not authenticated
+      }
+      setIsLoadingAuth(false);
+    });
+
+    return () => unsubscribe(); // Cleanup subscription on unmount
+  }, [router]);
+
 
   useEffect(() => {
+    if (!authUser || isLoadingAuth) return; // Don't load habits until auth is confirmed
+
     const storedHabits = localStorage.getItem('habits');
     if (storedHabits) {
       try {
@@ -122,7 +128,7 @@ const HabitualPage: NextPage = () => {
             if (minMatch) migratedDurationMinutes = parseInt(minMatch[1]);
             if (!hourMatch && !minMatch && /^\d+$/.test(durationStr)) {
                 const numVal = parseInt(durationStr);
-                if (numVal <= 120) migratedDurationMinutes = numVal;
+                if (numVal <= 120) migratedDurationMinutes = numVal; // Assuming single number duration < 120 is minutes
             }
           }
 
@@ -135,7 +141,7 @@ const HabitualPage: NextPage = () => {
               const minutes = parseInt(minutesStr, 10);
               const modifier = modifierPart ? modifierPart.toLowerCase() : '';
               if (modifier === 'pm' && hours < 12) hours += 12;
-              if (modifier === 'am' && hours === 12) hours = 0; 
+              if (modifier === 'am' && hours === 12) hours = 0;
               migratedSpecificTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
             } catch (e) { /* ignore format error, keep original */ }
           } else if (migratedSpecificTime && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime)) {
@@ -150,7 +156,7 @@ const HabitualPage: NextPage = () => {
                 date: log.date,
                 time: log.time || 'N/A',
                 note: log.note || undefined,
-                status: log.status || 'completed', 
+                status: log.status || 'completed',
                 originalMissedDate: log.originalMissedDate || undefined,
               }));
 
@@ -191,9 +197,10 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
       }
     }
-  }, []);
+  }, [authUser, isLoadingAuth]); // Rerun when authUser or isLoadingAuth changes
 
   useEffect(() => {
+    if (!authUser || isLoadingAuth) return; // Don't save habits until auth is confirmed
     localStorage.setItem('habits', JSON.stringify(habits));
 
     const newlyEarned = checkAndAwardBadges(habits, earnedBadges);
@@ -202,23 +209,11 @@ const HabitualPage: NextPage = () => {
       newlyEarned.forEach(async newBadge => {
         if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
             updatedBadges.push(newBadge);
-            // toast({ // Commented out
-            //     title: "🏆 New Badge Unlocked! 🎉",
-            //     description: `You've earned the "${newBadge.name}" badge!`,
-            //     action: <Award className="h-5 w-5 text-yellow-500" />,
-            // });
             console.log(`New Badge Unlocked: ${newBadge.name}`);
-
 
             if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) {
               try {
                 const sqlTipResult = await getSqlTip();
-                // toast({ // Commented out
-                //   title: "💡 Bonus SQL Tip Unlocked!",
-                //   description: sqlTipResult.tip,
-                //   duration: 9000,
-                //   action: <BookOpenText className="h-5 w-5 text-blue-500" />
-                // });
                 console.log(`Bonus SQL Tip Unlocked: ${sqlTipResult.tip}`);
               } catch (tipError) {
                 console.error("Failed to fetch SQL tip:", tipError);
@@ -228,15 +223,17 @@ const HabitualPage: NextPage = () => {
       });
       setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges /*, toast (removed dependency) */]);
+  }, [habits, earnedBadges, authUser, isLoadingAuth]);
 
   useEffect(() => {
+    if (!authUser || isLoadingAuth) return;
     localStorage.setItem('earnedBadges', JSON.stringify(earnedBadges));
-  }, [earnedBadges]);
+  }, [earnedBadges, authUser, isLoadingAuth]);
 
   useEffect(() => {
+    if (!authUser || isLoadingAuth) return;
     localStorage.setItem('totalPoints', totalPoints.toString());
-  }, [totalPoints]);
+  }, [totalPoints, authUser, isLoadingAuth]);
 
 
   const handleAddHabit = (newHabitData: Omit<Habit, 'id' | 'completionLog'>) => {
@@ -247,11 +244,6 @@ const HabitualPage: NextPage = () => {
       category: newHabitData.category || 'Other',
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
-    // toast({ // Commented out
-    //   title: "Habit Added!",
-    //   description: `"${newHabit.name}" is now ready to be tracked.`,
-    //   action: <Smile className="h-5 w-5 text-accent" />,
-    // });
     console.log(`Habit Added: ${newHabit.name}`);
     setShowInlineHabitForm(false);
   };
@@ -290,7 +282,7 @@ const HabitualPage: NextPage = () => {
               }
               if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-              } else if (logEntry.note) { // If there's a note, change status to skipped to retain note
+              } else if (logEntry.note) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'skipped', time: 'N/A' };
               }
               else {
@@ -307,19 +299,9 @@ const HabitualPage: NextPage = () => {
     if (justCompleted && habitNameForQuote) {
       try {
         const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuote });
-        // toast({ // Commented out
-        //   title: "✨ Keep Going!",
-        //   description: quoteResult.quote,
-        //   duration: 5000,
-        // });
         console.log(`Motivational Quote: ${quoteResult.quote}`);
       } catch (error) {
         console.error("Failed to fetch motivational quote:", error);
-        // toast({ // Commented out
-        //   title: "✨ Well Done!",
-        //   description: "You're making progress!",
-        //   duration: 3000,
-        // });
         console.log("Motivational Quote: Well Done! You're making progress!");
       }
     }
@@ -368,11 +350,6 @@ const HabitualPage: NextPage = () => {
         isLoading: false,
         error: 'Failed to get suggestion.'
       });
-      // toast({ // Commented out
-      //   title: "AI Suggestion Error",
-      //   description: "Could not fetch suggestion. Please try again later.",
-      //   variant: "destructive",
-      // });
       console.error("AI Suggestion Error: Could not fetch suggestion.");
     }
   };
@@ -410,7 +387,7 @@ const HabitualPage: NextPage = () => {
                 date,
                 time: 'N/A',
                 note: note.trim() === "" ? undefined : note.trim(),
-                status: existingStatus || 'skipped' // Default to skipped if no prior status
+                status: existingStatus || 'skipped'
              });
              newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
           }
@@ -419,11 +396,6 @@ const HabitualPage: NextPage = () => {
         return h;
       })
     );
-    // toast({ // Commented out
-    //   title: "Reflection Saved",
-    //   description: `Your note for "${reflectionDialogData.habitName}" has been saved.`,
-    //   action: <StickyNote className="h-5 w-5 text-accent" />
-    // });
     console.log(`Reflection Saved for ${reflectionDialogData.habitName}`);
     setReflectionDialogData(null);
     setIsReflectionDialogOpen(false);
@@ -438,9 +410,9 @@ const HabitualPage: NextPage = () => {
       if (h.id === habitId) {
         const newCompletionLog = [...h.completionLog];
         const existingMissedLogIndex = newCompletionLog.findIndex(log => log.date === originalMissedDate && (log.status === 'skipped' || !log.status));
-        if(existingMissedLogIndex > -1 && !newCompletionLog[existingMissedLogIndex].note) { // If skipped and no note, remove old entry
+        if(existingMissedLogIndex > -1 && !newCompletionLog[existingMissedLogIndex].note) {
             newCompletionLog.splice(existingMissedLogIndex, 1);
-        } else if (existingMissedLogIndex > -1) { // If skipped but has note, keep as skipped
+        } else if (existingMissedLogIndex > -1) {
             newCompletionLog[existingMissedLogIndex].status = 'skipped';
         }
 
@@ -456,11 +428,6 @@ const HabitualPage: NextPage = () => {
       return h;
     }));
     const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
-    // toast({ // Commented out
-    //   title: "Habit Rescheduled",
-    //   description: `"${habitName}" originally missed on ${format(parseISO(originalMissedDate), "MMM d")} is now set for ${format(parseISO(newDate), "MMM d")}.`,
-    //   action: <CalendarDays className="h-5 w-5 text-primary" />
-    // });
     console.log(`Habit Rescheduled: ${habitName}`);
   };
 
@@ -480,27 +447,43 @@ const HabitualPage: NextPage = () => {
       return h;
     }));
     const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
-    // toast({ // Commented out
-    //   title: "Habit Skipped",
-    //   description: `"${habitName}" for ${format(parseISO(missedDate), "MMM d")} has been marked as skipped.`,
-    // });
     console.log(`Habit Skipped: ${habitName}`);
   };
 
   const sheetMenuItems = [
     { href: '/', label: 'Home', icon: Home, action: () => setIsSettingsSheetOpen(false) },
     { href: '/profile', label: 'Profile', icon: UserCircle, action: () => setIsSettingsSheetOpen(false) },
-    { href: '#reminders', label: 'Reminders', icon: BellRing, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); console.log('Reminders settings coming soon!') /*toast({ title: 'Reminders', description: 'Reminder settings coming soon!' });*/ } },
-    { 
-      label: 'Achievements', 
-      icon: Award, 
-      action: () => { 
-        setIsSettingsSheetOpen(false); 
-        setIsAchievementsDialogOpen(true); 
-      } 
+    { href: '#reminders', label: 'Reminders', icon: BellRing, action: () => { setIsSettingsSheetOpen(false); console.log('Reminders settings coming soon!') } },
+    {
+      label: 'Achievements',
+      icon: Award,
+      action: () => {
+        setIsSettingsSheetOpen(false);
+        setIsAchievementsDialogOpen(true);
+      }
     },
-    { href: '#calendar', label: 'Calendar', icon: CalendarDays, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); console.log('Full calendar view coming soon!') /*toast({ title: 'Calendar', description: 'Full calendar view coming soon!' });*/ } },
+    { href: '#calendar', label: 'Calendar', icon: CalendarDays, action: () => { setIsSettingsSheetOpen(false); console.log('Full calendar view coming soon!') } },
   ];
+
+  if (isLoadingAuth) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading application...</p>
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    // This case should ideally not be reached if router.push works correctly in useEffect,
+    // but it's a fallback.
+    return (
+       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
+      </div>
+    );
+  }
 
 
   return (
@@ -525,56 +508,6 @@ const HabitualPage: NextPage = () => {
                 />
               </div>
             )}
-
-            {/* Multi-select toolbar - commented out as card checkbox is removed */}
-            {/* {selectedHabitIds.length > 0 && habits.length > 0 && !showInlineHabitForm && (
-              <div className="my-4 flex items-center gap-2 sm:gap-4 p-2 border rounded-md bg-card shadow-sm w-full justify-between">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="select-all-habits"
-                    checked={allHabitsSelected}
-                    onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
-                    disabled={habits.length === 0}
-                    aria-label="Select all habits"
-                  />
-                  <Label htmlFor="select-all-habits" className="text-xs sm:text-sm font-medium">
-                    {allHabitsSelected ? "Deselect All" : "Select All"}
-                  </Label>
-                </div>
-                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                  {`${selectedHabitIds.length} sel.`}
-                </span>
-                <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="px-2 sm:px-3"
-                    >
-                      <Trash2 className="mr-0 sm:mr-2 h-4 w-4" />
-                      <span className="hidden sm:inline">Delete</span>
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center">
-                        <AlertTriangle className="mr-2 h-5 w-5 text-destructive" />
-                        Confirm Deletion
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete {selectedHabitIds.length} selected habit(s)? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteSelectedHabits} className="bg-destructive hover:bg-destructive/90">
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )} */}
 
             {!showInlineHabitForm && (
                 <HabitList
@@ -769,3 +702,6 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
+
+    
