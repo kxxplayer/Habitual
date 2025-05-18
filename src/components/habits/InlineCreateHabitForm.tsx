@@ -91,7 +91,8 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
   });
 
   const isDescriptionEffectivelyEmpty = useMemo(() => {
-    return !habitDescriptionForAI || (typeof habitDescriptionForAI === 'string' && habitDescriptionForAI.trim() === '');
+    const desc = habitDescriptionForAI || "";
+    return desc.trim() === '';
   }, [habitDescriptionForAI]);
 
 
@@ -125,11 +126,6 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
   const handleAISuggestDetails = async () => {
     const currentDescription = habitDescriptionForAI || "";
     if (currentDescription.trim() === "") {
-      // toast({ // Commented out
-      //   title: "No Description Provided",
-      //   description: "Please enter a description for the AI to suggest habit details.",
-      //   variant: "destructive",
-      // });
       console.error("No Description Provided for AI suggestion.");
       return;
     }
@@ -163,19 +159,9 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       } else {
         setValue('specificTime', result.specificTime || '');
       }
-
-      // toast({ // Commented out
-      //   title: "AI Suggestion Applied",
-      //   description: "Habit details have been populated by AI.",
-      // });
       console.log("AI Suggestion Applied");
     } catch (error) {
       console.error("AI suggestion error:", error);
-      // toast({ // Commented out
-      //   title: "AI Suggestion Failed",
-      //   description: "Could not get suggestions from AI. Please try again or fill manually.",
-      //   variant: "destructive",
-      // });
       console.error("AI Suggestion Failed: Could not get suggestions from AI.");
     } finally {
       setIsAISuggesting(false);
@@ -208,7 +194,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
         </CardDescription>
       </CardHeader>
       <CardContent className="p-3 pt-2">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-1.5">
           <div className="space-y-1">
             <Label htmlFor="inline-ai-description" className="text-xs font-medium">Describe habit (for AI)</Label>
             <Controller
@@ -360,3 +346,4 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 };
 
 export default InlineCreateHabitForm;
+
