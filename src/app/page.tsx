@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/button';
 //   AlertDialogFooter,
 //   AlertDialogHeader,
 //   AlertDialogTitle,
-//   // AlertDialogTrigger, // Commented out as multi-select is dormant
+//   AlertDialogTrigger, // Commented out as multi-select is dormant
 // } from "@/components/ui/alert-dialog"; // Commented out as multi-select is dormant
 import {
   Dialog,
@@ -719,18 +719,23 @@ const HabitualPage: NextPage = () => {
           </SheetHeader>
           <div className="grid gap-2">
             {sheetMenuItems.map((item) => (
-              item.href && item.href !== "#profile" && item.href !== "#reminders" && item.href !== "#calendar" ? (
+              item.href && item.href !== "#reminders" && item.href !== "#calendar" ? (
                 <SheetClose asChild key={item.label}>
-                  <Link href={item.href} passHref legacyBehavior>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start text-base py-3"
-                      onClick={item.action}
-                    >
-                      <item.icon className="mr-3 h-5 w-5" />
-                      {item.label}
-                    </Button>
-                  </Link>
+                  {item.href === "/profile" ? (
+                     <Link href={item.href}>
+                        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action} >
+                            <item.icon className="mr-3 h-5 w-5" />
+                            {item.label}
+                        </Button>
+                    </Link>
+                  ) : (
+                    <Link href={item.href}>
+                        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action}>
+                        <item.icon className="mr-3 h-5 w-5" />
+                        {item.label}
+                        </Button>
+                    </Link>
+                  )}
                 </SheetClose>
               ) : (
                 <SheetClose asChild key={item.label}>
@@ -754,5 +759,7 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
+    
 
     
