@@ -23,8 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag } from 'lucide-react';
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import type { Habit, CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
-import { HABIT_CATEGORIES } from '@/types'; // Import categories
-// import { useToast } from '@/hooks/use-toast'; // Commented out
+import { HABIT_CATEGORIES } from '@/types';
 import {
   Select,
   SelectContent,
@@ -38,6 +37,7 @@ interface CreateHabitDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onAddHabit: (habit: Omit<Habit, 'id' | 'completionLog'>) => void;
+  initialData?: Partial<CreateHabitFormData> | null; // Added to pre-fill form
 }
 
 const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -45,7 +45,7 @@ const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
 const createHabitFormSchema = z.object({
   description: z.string().optional(),
   name: z.string().min(1, "Habit name is required."),
-  category: z.enum(HABIT_CATEGORIES).optional(), // Add category to schema
+  category: z.enum(HABIT_CATEGORIES).optional(),
   daysOfWeek: z.array(z.enum(weekDaysArray)).min(1, "Please select at least one day."),
   optimalTiming: z.string().optional(),
   durationHours: z.coerce.number().min(0).optional().nullable(),
@@ -54,24 +54,23 @@ const createHabitFormSchema = z.object({
 }).refine(data => data.durationHours || data.durationMinutes || (!data.durationHours && !data.durationMinutes), {});
 
 const dayMapFullToAbbr: { [key: string]: WeekDay } = {
-  "sunday": "Sun", "sun": "Sun", "sunday,": "Sun", "sun,": "Sun",
-  "monday": "Mon", "mon": "Mon", "monday,": "Mon", "mon,": "Mon",
-  "tuesday": "Tue", "tue": "Tue", "tuesday,": "Tue", "tue,": "Tue",
-  "wednesday": "Wed", "wed": "Wed", "wednesday,": "Wed", "wed,": "Wed",
-  "thursday": "Thu", "thu": "Thu", "thursday,": "Thu", "thu,": "Thu",
-  "friday": "Fri", "fri": "Fri", "friday,": "Fri", "fri,": "Fri",
-  "saturday": "Sat", "sat": "Sat", "saturday,": "Sat", "sat,": "Sat",
+  "sunday": "Sun", "sun": "Sun", "sunday,": "Sun", "sun,": "Sun", "sundays": "Sun",
+  "monday": "Mon", "mon": "Mon", "monday,": "Mon", "mon,": "Mon", "mondays": "Mon",
+  "tuesday": "Tue", "tue": "Tue", "tuesday,": "Tue", "tue,": "Tue", "tuesdays": "Tue",
+  "wednesday": "Wed", "wed": "Wed", "wednesday,": "Wed", "wed,": "Wed", "wednesdays": "Wed",
+  "thursday": "Thu", "thu": "Thu", "thursday,": "Thu", "thu,": "Thu", "thursdays": "Thu",
+  "friday": "Fri", "fri": "Fri", "friday,": "Fri", "fri,": "Fri", "fridays": "Fri",
+  "saturday": "Sat", "sat": "Sat", "saturday,": "Sat", "sat,": "Sat", "saturdays": "Sat",
 };
 
 const normalizeDay = (day: string): WeekDay | undefined => {
   if (typeof day !== 'string') return undefined;
   const lowerDay = day.trim().toLowerCase().replace(/,/g, '');
-  return dayMapFullToAbbr[lowerDay];
+  return dayMapFullToAbbr[lowerDay] || weekDaysArray.find(d => d.toLowerCase() === lowerDay) || undefined;
 };
 
-const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddHabit }) => {
+const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddHabit, initialData }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
-  // const { toast } = useToast(); // Commented out
 
   const {
     control,
@@ -85,7 +84,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
     defaultValues: {
       description: '',
       name: '',
-      category: 'Other', // Default category
+      category: 'Other',
       daysOfWeek: [],
       optimalTiming: '',
       durationHours: null,
@@ -97,28 +96,40 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
   const habitDescriptionForAI = watch('description');
 
   useEffect(() => {
-    if (!isOpen) {
-      reset({
-        description: '',
-        name: '',
-        category: 'Other',
-        daysOfWeek: [],
-        optimalTiming: '',
-        durationHours: null,
-        durationMinutes: null,
-        specificTime: '',
-      });
-      setIsAISuggesting(false);
+    if (isOpen) {
+      if (initialData) {
+        reset({
+          description: initialData.description || '',
+          name: initialData.name || '',
+          category: initialData.category || 'Other',
+          daysOfWeek: initialData.daysOfWeek || [],
+          optimalTiming: initialData.optimalTiming || '',
+          durationHours: initialData.durationHours === undefined ? null : initialData.durationHours,
+          durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
+          specificTime: initialData.specificTime || '',
+        });
+      } else {
+        reset({ // Reset to defaults if no initialData
+          description: '',
+          name: '',
+          category: 'Other',
+          daysOfWeek: [],
+          optimalTiming: '',
+          durationHours: null,
+          durationMinutes: null,
+          specificTime: '',
+        });
+      }
+    } else {
+      // Optionally, reset when dialog is simply closed without submission if needed
+      // reset(); // This would clear the form always on close
     }
-  }, [isOpen, reset]);
+    setIsAISuggesting(false); // Reset AI suggesting state when dialog visibility changes
+  }, [isOpen, initialData, reset]);
+
 
   const handleAISuggestDetails = async () => {
     if (!habitDescriptionForAI || habitDescriptionForAI.trim() === "") {
-      // toast({ // Commented out
-      //   title: "No Description Provided",
-      //   description: "Please enter a description for the AI to suggest habit details.",
-      //   variant: "destructive",
-      // });
       console.error("No Description Provided for AI suggestion.");
       return;
     }
@@ -129,6 +140,8 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
 
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
         setValue('category', result.category as HabitCategory);
+      } else {
+         setValue('category', 'Other');
       }
 
       let suggestedDays: WeekDay[] = [];
@@ -150,19 +163,9 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
       } else {
         setValue('specificTime', result.specificTime || '');
       }
-
-      // toast({ // Commented out
-      //   title: "AI Suggestion Applied",
-      //   description: "Habit details have been populated by AI.",
-      // });
       console.log("AI Suggestion Applied");
     } catch (error) {
       console.error("AI suggestion error:", error);
-      // toast({ // Commented out
-      //   title: "AI Suggestion Failed",
-      //   description: "Could not get suggestions from AI. Please try again or fill manually.",
-      //   variant: "destructive",
-      // });
       console.error("AI Suggestion Failed: Could not get suggestions from AI.");
     } finally {
       setIsAISuggesting(false);
@@ -173,14 +176,14 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
     onAddHabit({
       name: data.name,
       description: data.description,
-      category: data.category, // Pass category
+      category: data.category,
       daysOfWeek: data.daysOfWeek,
       optimalTiming: data.optimalTiming,
       durationHours: data.durationHours === null ? undefined : data.durationHours,
       durationMinutes: data.durationMinutes === null ? undefined : data.durationMinutes,
       specificTime: data.specificTime,
     });
-    onClose();
+    onClose(); // This will trigger reset in useEffect due to isOpen changing
   };
 
 
@@ -190,7 +193,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold flex items-center">
             <PlusCircle className="mr-3 h-7 w-7 text-primary" />
-            Create New Habit (Dialog)
+            Create New Habit
           </DialogTitle>
           <DialogDescription>
             Define your new habit below. You can describe it and let AI suggest details.
@@ -210,7 +213,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
               Suggest Details with AI
             </Button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="dialog-habit-name" className="font-medium">Habit Name</Label>
@@ -328,7 +331,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
           </div>
           <DialogFooter className="pt-4">
             <DialogClose asChild>
-                <Button type="button" variant="outline">
+                <Button type="button" variant="outline" onClick={onClose}>
                     Cancel
                 </Button>
             </DialogClose>
@@ -344,3 +347,4 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
 };
 
 export default CreateHabitDialog;
+

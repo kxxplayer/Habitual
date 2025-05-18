@@ -14,7 +14,7 @@ import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
 import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog';
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
-import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm';
+import CreateHabitDialog from '@/components/habits/CreateHabitDialog'; // Changed from InlineCreateHabitForm
 import HabitOverview from '@/components/overview/HabitOverview';
 import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit } from '@/types';
 import { THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
@@ -44,7 +44,7 @@ import {
   AlertDialogContent,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle as AlertTitle, 
+  AlertDialogTitle as AlertTitle,
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -54,7 +54,6 @@ import {
   SheetDescription,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal, PlusCircle, Lightbulb } from 'lucide-react';
 import { format, parseISO, isSameDay, getDay } from 'date-fns';
 
@@ -76,7 +75,7 @@ const HabitualPage: NextPage = () => {
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = React.useState<Habit | null>(null);
   const [aiSuggestion, setAISuggestion] = React.useState<AISuggestionType | null>(null);
 
-  const [showInlineHabitForm, setShowInlineHabitForm] = React.useState(false);
+  const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false); // Changed from showInlineHabitForm
 
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = React.useState(false);
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false);
@@ -107,7 +106,7 @@ const HabitualPage: NextPage = () => {
   const [commonHabitSuggestions, setCommonHabitSuggestions] = React.useState<SuggestedHabit[]>([]);
   const [isLoadingCommonSuggestions, setIsLoadingCommonSuggestions] = React.useState(false);
   const [commonSuggestionsFetched, setCommonSuggestionsFetched] = React.useState(false);
-  const [initialFormDataForInline, setInitialFormDataForInline] = React.useState<Partial<CreateHabitFormData> | null>(null);
+  const [initialFormDataForDialog, setInitialFormDataForDialog] = React.useState<Partial<CreateHabitFormData> | null>(null); // Renamed state
 
 
   React.useEffect(() => {
@@ -120,12 +119,12 @@ const HabitualPage: NextPage = () => {
         setEarnedBadges([]);
         setTotalPoints(0);
         setCommonHabitSuggestions([]);
-        setCommonSuggestionsFetched(false); 
+        setCommonSuggestionsFetched(false);
 
         localStorage.removeItem('habits');
         localStorage.removeItem('earnedBadges');
         localStorage.removeItem('totalPoints');
-        
+
         if (!currentUser) {
           console.log('User logged out, redirecting to login.');
           if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
@@ -149,16 +148,16 @@ const HabitualPage: NextPage = () => {
         Notification.requestPermission().then(permission => {
           setNotificationPermission(permission);
           if (permission === 'granted') {
-            // console.log('Notification permission granted.');
+             console.log('Notification permission granted.');
           } else {
-            // console.log('Notification permission denied or dismissed.');
+             console.log('Notification permission denied or dismissed.');
           }
         });
       } else {
         setNotificationPermission(Notification.permission);
       }
     } else {
-      // console.log('Notifications not supported by this browser.');
+      console.log('Notifications not supported by this browser.');
       setNotificationPermission('denied');
     }
   }, []);
@@ -166,7 +165,7 @@ const HabitualPage: NextPage = () => {
 
   React.useEffect(() => {
     if (isLoadingAuth) {
-      return; 
+      return;
     }
 
     if (!authUser) {
@@ -261,10 +260,10 @@ const HabitualPage: NextPage = () => {
         setHabits(parsedHabits);
       } catch (error) {
         console.error("Failed to parse habits from localStorage:", error);
-        setHabits([]); 
+        setHabits([]);
       }
     } else {
-        setHabits([]); 
+        setHabits([]);
     }
 
     if (authUser && parsedHabits.length === 0 && !commonSuggestionsFetched) {
@@ -309,7 +308,7 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
     }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth, router]); 
+  }, [authUser, isLoadingAuth, router, commonSuggestionsFetched]); // Added commonSuggestionsFetched
 
   useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -338,12 +337,12 @@ const HabitualPage: NextPage = () => {
   }, [habits, earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
   useEffect(() => {
-    if (!authUser || isLoadingAuth || isLoadingHabits) return; 
+    if (!authUser || isLoadingAuth || isLoadingHabits) return;
     localStorage.setItem('earnedBadges', JSON.stringify(earnedBadges));
   }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
   useEffect(() => {
-    if (!authUser || isLoadingAuth || isLoadingHabits) return; 
+    if (!authUser || isLoadingAuth || isLoadingHabits) return;
     localStorage.setItem('totalPoints', totalPoints.toString());
   }, [totalPoints, authUser, isLoadingAuth, isLoadingHabits]);
 
@@ -376,7 +375,7 @@ const HabitualPage: NextPage = () => {
 
           if (reminderDateTime && reminderDateTime > now) {
             const delay = reminderDateTime.getTime() - now.getTime();
-            // console.log(`Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
+            console.log(`Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
           }
         }
       });
@@ -398,8 +397,8 @@ const HabitualPage: NextPage = () => {
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
     console.log(`Habit Added: ${newHabit.name}`);
-    setShowInlineHabitForm(false);
-    setInitialFormDataForInline(null);
+    setIsCreateHabitDialogOpen(false); // Close dialog
+    setInitialFormDataForDialog(null); // Clear initial data
   };
 
   const handleToggleComplete = async (habitId: string, date: string, completed: boolean) => {
@@ -472,9 +471,9 @@ const HabitualPage: NextPage = () => {
       )
     );
     const habit = habits.find(h => h.id === habitId);
-    // console.log(`Reminder for habit "${habit?.name}" ${!currentReminderState ? 'enabled' : 'disabled'}`);
+    console.log(`Reminder for habit "${habit?.name}" ${!currentReminderState ? 'enabled' : 'disabled'}`);
     if (!currentReminderState && notificationPermission !== 'granted') {
-       // console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
+       console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
     }
   };
 
@@ -621,9 +620,9 @@ const HabitualPage: NextPage = () => {
         Notification.requestPermission().then(permission => {
             setNotificationPermission(permission);
             if (permission === 'granted') {
-                // console.log('Notification permission granted.');
+                console.log('Notification permission granted.');
             } else {
-                // console.log('Notification permission denied or dismissed.');
+                console.log('Notification permission denied or dismissed.');
             }
         });
     }
@@ -722,11 +721,11 @@ const HabitualPage: NextPage = () => {
       icon: BellRing,
       action: () => {
         if (notificationPermission === 'granted') {
-          // console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
+          console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
         } else if (notificationPermission === 'denied') {
-          // console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
+          console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
         } else {
-          // console.log('Reminder Settings: Notification permission not yet set. Requesting...');
+          console.log('Reminder Settings: Notification permission not yet set. Requesting...');
           handleRequestNotificationPermission();
         }
       }
@@ -743,13 +742,13 @@ const HabitualPage: NextPage = () => {
   ];
 
   const handleCustomizeSuggestedHabit = (suggestion: SuggestedHabit) => {
-    setInitialFormDataForInline({
+    setInitialFormDataForDialog({
       name: suggestion.name,
       category: suggestion.category || 'Other',
-      description: '', // Ensure description is empty for tile-like suggestions
-      daysOfWeek: [], 
+      description: '',
+      daysOfWeek: [],
     });
-    setShowInlineHabitForm(true);
+    setIsCreateHabitDialogOpen(true); // Open dialog
   };
 
 
@@ -786,20 +785,7 @@ const HabitualPage: NextPage = () => {
 
         <div className="flex-grow overflow-y-auto">
           <main className="px-3 sm:px-4 py-4">
-            {showInlineHabitForm && (
-              <div className="my-4">
-                <InlineCreateHabitForm
-                  onAddHabit={handleAddHabit}
-                  onCloseForm={() => {
-                    setShowInlineHabitForm(false);
-                    setInitialFormDataForInline(null);
-                  }}
-                  initialData={initialFormDataForInline}
-                />
-              </div>
-            )}
-
-            {authUser && !isLoadingAuth && !isLoadingHabits && habits.length === 0 && commonHabitSuggestions.length > 0 && !showInlineHabitForm && (
+            {authUser && !isLoadingAuth && !isLoadingHabits && habits.length === 0 && commonHabitSuggestions.length > 0 && (
               <Card className="my-4 p-4 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
                 <CardHeader className="p-2 pt-0">
                   <DialogCardTitle className="text-lg font-semibold flex items-center text-primary">
@@ -819,9 +805,9 @@ const HabitualPage: NextPage = () => {
                   ) : (
                     <div className="flex flex-wrap gap-2 justify-center">
                       {commonHabitSuggestions.map((suggestion, index) => (
-                        <Button 
-                          key={index} 
-                          variant="outline" 
+                        <Button
+                          key={index}
+                          variant="outline"
                           className="p-3 h-auto flex flex-col items-center justify-center space-y-1 min-w-[100px] text-center shadow-sm hover:shadow-md transition-shadow"
                           onClick={() => handleCustomizeSuggestedHabit(suggestion)}
                         >
@@ -835,17 +821,14 @@ const HabitualPage: NextPage = () => {
               </Card>
             )}
 
-
-            {!showInlineHabitForm && (
-                <HabitList
-                  habits={habits}
-                  onToggleComplete={handleToggleComplete}
-                  onGetAISuggestion={handleOpenAISuggestionDialog}
-                  onOpenReflectionDialog={handleOpenReflectionDialog}
-                  onOpenRescheduleDialog={handleOpenRescheduleDialog}
-                  onToggleReminder={handleToggleReminder}
-                />
-            )}
+            <HabitList
+              habits={habits}
+              onToggleComplete={handleToggleComplete}
+              onGetAISuggestion={handleOpenAISuggestionDialog}
+              onOpenReflectionDialog={handleOpenReflectionDialog}
+              onOpenRescheduleDialog={handleOpenRescheduleDialog}
+              onToggleReminder={handleToggleReminder}
+            />
           </main>
           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
             <p>&copy; {new Date().getFullYear()} Habitual.</p>
@@ -873,19 +856,26 @@ const HabitualPage: NextPage = () => {
         </div>
       </div>
 
-      {!showInlineHabitForm && (
-        <Button
-          className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
-          onClick={() => {
-            setInitialFormDataForInline(null);
-            setShowInlineHabitForm(true);
-           }}
-          aria-label="Add New Habit"
-        >
-          <Plus className="h-7 w-7" />
-        </Button>
-      )}
+      <Button
+        className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
+        onClick={() => {
+          setInitialFormDataForDialog(null); // Ensure no pre-filled data for manual add
+          setIsCreateHabitDialogOpen(true);
+         }}
+        aria-label="Add New Habit"
+      >
+        <Plus className="h-7 w-7" />
+      </Button>
 
+      <CreateHabitDialog
+        isOpen={isCreateHabitDialogOpen}
+        onClose={() => {
+            setIsCreateHabitDialogOpen(false);
+            setInitialFormDataForDialog(null); // Clear initial data when dialog closes
+        }}
+        onAddHabit={handleAddHabit}
+        initialData={initialFormDataForDialog}
+      />
 
       {selectedHabitForAISuggestion && aiSuggestion && (
         <AISuggestionDialog
@@ -1131,3 +1121,4 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
