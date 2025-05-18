@@ -1,13 +1,83 @@
 
+"use client";
+
 import type { NextPage } from 'next';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { GoogleIcon } from '@/components/ui/icons'; // We'll create this
+import { GoogleIcon } from '@/components/ui/icons';
+import { useToast } from '@/hooks/use-toast';
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
+
+const loginSchema = z.object({
+  email: z.string().email({ message: "Invalid email address" }),
+  password: z.string().min(1, { message: "Password is required" }), // Min 1 for login, actual length enforced by Firebase
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage: NextPage = () => {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onEmailLogin: SubmitHandler<LoginFormValues> = async (data) => {
+    setIsEmailLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      toast({
+        title: "Login Successful!",
+        description: "Welcome back!",
+      });
+      router.push('/'); // Redirect to home page
+    } catch (error: any) {
+      console.error("Error signing in with email:", error);
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid email or password.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEmailLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      toast({
+        title: "Login Successful!",
+        description: "Welcome!",
+      });
+      router.push('/'); // Redirect to home page
+    } catch (error: any) {
+      console.error("Error with Google sign-in:", error);
+      toast({
+        title: "Google Sign-In Failed",
+        description: error.message || "Could not sign in with Google.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-xl">
@@ -15,18 +85,25 @@ const LoginPage: NextPage = () => {
           <CardTitle className="text-2xl font-bold">Login</CardTitle>
           <CardDescription>Enter your email below to login to your account</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" />
-          </div>
-          <Button type="submit" className="w-full">
-            Login
-          </Button>
+        <form onSubmit={handleSubmit(onEmailLogin)}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" placeholder="m@example.com" {...register("email")} />
+              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type="password" {...register("password")} />
+              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+            </div>
+            <Button type="submit" className="w-full" disabled={isEmailLoading}>
+              {isEmailLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Login
+            </Button>
+          </CardContent>
+        </form>
+        <CardContent className="pb-4 pt-0">
           <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
@@ -37,8 +114,12 @@ const LoginPage: NextPage = () => {
               </span>
             </div>
           </div>
-          <Button variant="outline" className="w-full">
-            <GoogleIcon className="mr-2 h-4 w-4" />
+          <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
+            {isGoogleLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <GoogleIcon className="mr-2 h-4 w-4" />
+            )}
             Login with Google
           </Button>
         </CardContent>
