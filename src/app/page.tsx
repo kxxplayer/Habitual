@@ -1,8 +1,7 @@
-
 "use client";
 
-import * as React from 'react'; // Added this line
-import { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
@@ -33,7 +32,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/dialog';
 import {
   Sheet,
   SheetContent,
@@ -42,7 +50,8 @@ import {
   SheetDescription,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2 } from 'lucide-react';
 import { format, parseISO, set, subMinutes, isFuture } from 'date-fns';
 
 
@@ -84,6 +93,10 @@ const HabitualPage: NextPage = () => {
     habit: Habit;
     missedDate: string;
   } | null>(null);
+
+  const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -547,6 +560,33 @@ const HabitualPage: NextPage = () => {
     console.log(`Habit Skipped: ${habitName}`);
   };
 
+  const toggleHabitSelection = (habitId: string) => {
+    setSelectedHabitIds((prevSelected) =>
+      prevSelected.includes(habitId)
+        ? prevSelected.filter((id) => id !== habitId)
+        : [...prevSelected, habitId]
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedHabitIds(habits.map((habit) => habit.id));
+    } else {
+      setSelectedHabitIds([]);
+    }
+  };
+
+  const handleDeleteSelectedHabits = () => {
+    setHabits((prevHabits) =>
+      prevHabits.filter((habit) => !selectedHabitIds.includes(habit.id))
+    );
+    const numDeleted = selectedHabitIds.length;
+    console.log(`${numDeleted} habit(s) deleted.`);
+    setSelectedHabitIds([]);
+    setIsDeleteConfirmOpen(false);
+  };
+
+
   const handleRequestNotificationPermission = () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
         Notification.requestPermission().then(permission => {
@@ -586,7 +626,7 @@ const HabitualPage: NextPage = () => {
         setIsAchievementsDialogOpen(true);
       }
     },
-    { href: '#calendar', label: 'Calendar', icon: CalendarDays, action: () => { setIsSettingsSheetOpen(false); console.log('Full calendar view coming soon!') } },
+    { href: '/calendar', label: 'Calendar', icon: CalendarDays, action: () => { setIsSettingsSheetOpen(false); } },
   ];
 
   if (isLoadingAuth) {
@@ -621,6 +661,52 @@ const HabitualPage: NextPage = () => {
         <AppHeader />
 
         <div className="flex-grow overflow-y-auto">
+           {/* Selection Toolbar - Conditionally Rendered */}
+           {/*
+          {selectedHabitIds.length > 0 && (
+            <div className="p-2 sm:p-3 border-b bg-muted/50 sticky top-0 z-30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="select-all-habits"
+                    checked={selectedHabitIds.length === habits.length && habits.length > 0}
+                    onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                    aria-label="Select all habits"
+                  />
+                  <label htmlFor="select-all-habits" className="text-sm font-medium">
+                    {selectedHabitIds.length} selected
+                  </label>
+                </div>
+                <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={selectedHabitIds.length === 0}
+                    >
+                      <Trash2 className="mr-1.5 h-4 w-4" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the selected habit(s).
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteSelectedHabits}>
+                        Yes, delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          )}
+            */}
           <main className="px-3 sm:px-4 py-6">
             {showInlineHabitForm && (
               <div className="my-4">
@@ -639,6 +725,8 @@ const HabitualPage: NextPage = () => {
                   onOpenReflectionDialog={handleOpenReflectionDialog}
                   onOpenRescheduleDialog={handleOpenRescheduleDialog}
                   onToggleReminder={handleToggleReminder}
+                  // selectedHabitIds={selectedHabitIds} // Removed as multi-select is disabled from card header
+                  // onSelectHabit={toggleHabitSelection} // Removed
                 />
             )}
           </main>
@@ -784,7 +872,7 @@ const HabitualPage: NextPage = () => {
           </SheetHeader>
           <div className="grid gap-2">
             {sheetMenuItems.map((item) => (
-              item.href && item.href !== "#reminders" && item.href !== "#calendar" && item.href !== "/profile" ? ( 
+              item.href && item.href !== "/profile" && item.href !== "/calendar" ? ( 
                 <SheetClose asChild key={item.label}>
                     <Link href={item.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action}>
@@ -793,7 +881,7 @@ const HabitualPage: NextPage = () => {
                         </Button>
                     </Link>
                 </SheetClose>
-              ) : item.href === "/profile" ? ( 
+              ) : item.href === "/profile" || item.href === "/calendar" ? ( 
                  <SheetClose asChild key={item.label}>
                     <Link href={item.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action} >
@@ -845,3 +933,4 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
