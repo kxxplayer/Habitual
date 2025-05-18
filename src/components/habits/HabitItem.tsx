@@ -6,9 +6,8 @@ import * as React from 'react';
 import type { FC } from 'react';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-// Checkbox removed as selection is top-right
+import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Checkbox } from '@/components/ui/checkbox'; // Keep for top-right selection
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,10 +82,10 @@ const categoryColorMap: Record<HabitCategory, string> = {
   "Health & Wellness": "--chart-3",
   "Creative": "--chart-4",
   "Chores": "--chart-5",
-  "Finance": "--chart-1", // Re-using chart colors for more categories
+  "Finance": "--chart-1", 
   "Social": "--chart-2",
   "Personal Growth": "--chart-3",
-  "Other": "--chart-5", // Default/Other
+  "Other": "--chart-5", 
 };
 
 const getCategoryColorVariable = (category?: HabitCategory): string => {
@@ -135,7 +134,7 @@ const HabitItem: FC<HabitItemProps> = ({
     onOpenRescheduleDialog,
     isSelected,
     onSelectToggle,
-    earnedBadges, // Passed but not used for on-card reward display yet
+    earnedBadges,
 }) => {
   const [todayString, setTodayString] = React.useState('');
   const { toast } = useToast();
@@ -152,7 +151,7 @@ const HabitItem: FC<HabitItemProps> = ({
   }, []);
 
   React.useEffect(() => {
-    setWeekViewDays(getCurrentWeekDays(currentDate)); // Use currentDate for consistency
+    setWeekViewDays(getCurrentWeekDays(currentDate)); 
   }, [currentDate]);
 
 
@@ -265,20 +264,19 @@ const HabitItem: FC<HabitItemProps> = ({
   const cardStyle: React.CSSProperties = {};
   let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isSelected ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-background' : ''}`;
 
-  // isTodayCompleted should only be for the current day string.
   const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && (log.status === 'completed' || log.status === undefined));
 
-  if (isTodayCompleted) { // This condition will apply for the overall card styling if today is completed
+  if (isTodayCompleted) { 
     cardClasses = cn(cardClasses, 'border-accent bg-green-50 dark:bg-green-900/30');
   } else {
     const categoryColorVar = getCategoryColorVariable(habit.category);
     cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
-    cardClasses = cn(cardClasses, 'border-l-4'); // Use left border for category color
+    cardClasses = cn(cardClasses, 'border-l-4'); 
   }
   cardClasses = cn(cardClasses, 'bg-card');
 
   const handleTodayCompletionToggle = () => {
-    if (!todayString) return; // Ensure todayString is set
+    if (!todayString) return; 
     const newCompletedState = !isTodayCompleted;
     onToggleComplete(habit.id, todayString, newCompletedState);
     if (newCompletedState) {
@@ -286,7 +284,6 @@ const HabitItem: FC<HabitItemProps> = ({
       setTimeout(() => setShowSparkles(false), 800);
     }
   };
-
 
   return (
     <Card className={cardClasses} style={cardStyle}>
@@ -300,14 +297,14 @@ const HabitItem: FC<HabitItemProps> = ({
         />
       </div>
 
-      <CardHeader className="pt-3 pb-1 px-3 sm:px-4 pr-12"> {/* Added pr-12 for checkbox */}
+      <CardHeader className="pt-3 pb-1 px-3 sm:px-4 pr-12"> 
         <div className="flex items-center min-w-0">
           <h2 className="text-base sm:text-lg font-semibold text-primary min-w-0 break-words">
             {habit.name}
           </h2>
           {getHabitIcon(habit)}
         </div>
-        <div className="flex items-center text-xs sm:text-sm text-muted-foreground mt-0.5">
+        <div className="flex items-center text-xs text-muted-foreground mt-0.5 space-x-2">
           <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -327,7 +324,7 @@ const HabitItem: FC<HabitItemProps> = ({
                 </TooltipContent>
               </Tooltip>
           </TooltipProvider>
-          <span className="mx-1.5 text-muted-foreground/50">|</span>
+          <span className="text-muted-foreground/50">|</span>
            <div className="flex items-center text-xs">
               <span className="mr-1">🎯</span>
               <span className="font-medium">{completedCountInCurrentWeek}/{scheduledDaysInWeek} days</span>
@@ -372,8 +369,8 @@ const HabitItem: FC<HabitItemProps> = ({
               {weekViewDays.map((dayInfo) => {
                 const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
                 const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
-                let isDayCompleted = dayLog?.status === 'completed' || (dayLog?.status === undefined && !!dayLog && dayLog.time !== 'N/A'); // Ensure it was an actual completion if status is undefined
-                if(dayLog?.status === undefined && dayLog?.time === 'N/A' && dayLog.note) isDayCompleted = false; // Note added to a skipped day shouldn't mark it complete
+                let isDayCompleted = dayLog?.status === 'completed' || (dayLog?.status === undefined && !!dayLog && dayLog.time !== 'N/A'); 
+                if(dayLog?.status === undefined && dayLog?.time === 'N/A' && dayLog.note) isDayCompleted = false; 
 
                 const isSkipped = dayLog?.status === 'skipped';
                 const isPendingMakeup = dayLog?.status === 'pending_makeup';
@@ -407,7 +404,7 @@ const HabitItem: FC<HabitItemProps> = ({
                     titleText += ' (Pending)'; 
                     IconComponent = Circle; 
                     break;
-                  default: // not_scheduled
+                  default: 
                      dayBgColor = 'bg-input/40 dark:bg-input/20 hover:bg-input/50 dark:hover:bg-input/30'; 
                      titleText += ' (Not Scheduled)'; 
                      IconComponent = Circle; 
@@ -443,7 +440,7 @@ const HabitItem: FC<HabitItemProps> = ({
             className={cn(
               "w-full transition-all active:scale-95 py-2.5 text-sm",
               isTodayCompleted
-                ? "bg-accent hover:bg-accent/90 text-accent-foreground shadow-[0_0_8px_hsl(var(--accent))]"
+                ? `bg-accent hover:bg-accent/90 text-accent-foreground ${showSparkles ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]"}`
                 : "border border-primary/50 text-primary hover:bg-primary/10"
             )}
           >
@@ -490,7 +487,7 @@ const HabitItem: FC<HabitItemProps> = ({
                      } else {
                        toast({ title: "Reflection Note", description: "Cannot add note for future, non-logged days.", variant: "default"});
                      }
-                  } else if (todayString) { // Fallback if weekViewDays isn't ready but todayString is
+                  } else if (todayString) { 
                      onOpenReflectionDialog(habit.id, todayString, habit.name);
                   }
                 }}>

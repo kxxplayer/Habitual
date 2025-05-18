@@ -218,3 +218,14 @@
   80% { transform: scale(1) translateY(0); opacity: 1; } /* Hold longer */
   100% { transform: scale(0.5) translateY(-20px); opacity: 0; }
 }
+
+/* Animated Glow for Completed Button */
+@keyframes pulse-glow-accent {
+  0% { box-shadow: 0 0 6px hsl(var(--accent)); }
+  50% { box-shadow: 0 0 14px 3px hsl(var(--accent)); }
+  100% { box-shadow: 0 0 8px hsl(var(--accent)); }
+}
+
+.animate-pulse-glow-accent {
+  animation: pulse-glow-accent 0.8s ease-out forwards;
+}
