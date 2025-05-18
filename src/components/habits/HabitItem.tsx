@@ -437,12 +437,12 @@ const HabitItem: FC<HabitItemProps> = ({
         )}
       </CardContent>
 
-      <CardFooter className="flex flex-col items-stretch pt-2 pb-2 px-3 space-y-2">
+      <CardFooter className="flex flex-col items-stretch pt-4 pb-3 px-3 space-y-2">
         <div className="sparkle-container relative flex justify-center">
           <Button
             onClick={handleToggleCurrentDayCompletion}
             className={cn(
-              "transition-all active:scale-95 py-2.5 px-6 text-sm rounded-full", 
+              "rounded-full transition-all active:scale-95 py-2.5 px-6 text-sm", 
               isTodayCompleted
                 ? `bg-accent hover:bg-accent/90 text-accent-foreground ${showSparkles && isTodayCompleted ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]"}`
                 : "border border-primary/50 text-primary hover:bg-primary/10"
@@ -472,7 +472,7 @@ const HabitItem: FC<HabitItemProps> = ({
           )}
         </div>
 
-        <div className="flex justify-end items-center w-full">
+        <div className="flex justify-end items-center w-full mt-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-7 w-7">
