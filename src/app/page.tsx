@@ -16,18 +16,18 @@ import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
 import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm';
 import HabitOverview from '@/components/overview/HabitOverview';
-import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData } from '@/types'; // Added CreateHabitFormData
+import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData } from '@/types';
 import { THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
-import { getCommonHabitSuggestions, type SuggestedHabit } from '@/ai/flows/common-habit-suggestions-flow'; // Added
+import { getCommonHabitSuggestions, type SuggestedHabit } from '@/ai/flows/common-habit-suggestions-flow';
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import Link from 'next/link';
 import { cn } from "@/lib/utils";
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle as DialogCardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card'; // Renamed to avoid conflict
+import { Card, CardContent, CardHeader, CardTitle as DialogCardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import type { DayPicker } from 'react-day-picker';
 
@@ -38,14 +38,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  AlertDialog,
-  // AlertDialogAction, // No longer used here
-  // AlertDialogCancel, // No longer used here
-  // AlertDialogContent, // No longer used here
-  // AlertDialogDescription, // No longer used here
-  // AlertDialogFooter, // No longer used here
-  // AlertDialogHeader, // No longer used here
-  // AlertDialogTitle as AlertTitle,  // No longer used here
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -55,8 +47,7 @@ import {
   SheetDescription,
   SheetClose,
 } from "@/components/ui/sheet";
-// import { Checkbox } from '@/components/ui/checkbox'; // No longer used for top-level selection
-import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal, PlusCircle } from 'lucide-react';
+import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal, PlusCircle, Lightbulb } from 'lucide-react';
 import { format, parseISO, isSameDay, getDay } from 'date-fns';
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -69,9 +60,10 @@ const HabitualPage: NextPage = () => {
   const router = useRouter();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
+  const previousAuthUserUidRef = React.useRef<string | null>(null);
 
   const [habits, setHabits] = React.useState<Habit[]>([]);
-  const [isLoadingHabits, setIsLoadingHabits] = React.useState(true); // For initial load
+  const [isLoadingHabits, setIsLoadingHabits] = React.useState(true);
   const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = React.useState(false);
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = React.useState<Habit | null>(null);
   const [aiSuggestion, setAISuggestion] = React.useState<AISuggestionType | null>(null);
@@ -104,30 +96,53 @@ const HabitualPage: NextPage = () => {
     missedDate: string;
   } | null>(null);
 
-  // New states for common habit suggestions
   const [commonHabitSuggestions, setCommonHabitSuggestions] = React.useState<SuggestedHabit[]>([]);
   const [isLoadingCommonSuggestions, setIsLoadingCommonSuggestions] = React.useState(false);
   const [commonSuggestionsFetched, setCommonSuggestionsFetched] = React.useState(false);
   const [initialFormDataForInline, setInitialFormDataForInline] = React.useState<Partial<CreateHabitFormData> | null>(null);
 
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setAuthUser(user);
-      } else {
-        setAuthUser(null);
-        if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
-           router.push('/auth/login');
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      const hasUserChanged = previousAuthUserUidRef.current !== currentUser?.uid;
+
+      if (hasUserChanged) {
+        console.log('Authentication state changed. Clearing user-specific data. Previous UID:', previousAuthUserUidRef.current, 'New UID:', currentUser?.uid);
+        // Clear React state
+        setHabits([]);
+        setEarnedBadges([]);
+        setTotalPoints(0);
+        setCommonHabitSuggestions([]);
+        setCommonSuggestionsFetched(false); // Reset for new user
+        // Clear other user-specific React states if any
+
+        // Clear localStorage
+        localStorage.removeItem('habits');
+        localStorage.removeItem('earnedBadges');
+        localStorage.removeItem('totalPoints');
+        // Remove any other user-specific localStorage items here
+
+        // If user is logging out, redirect them to the login page
+        if (!currentUser) {
+          console.log('User logged out, redirecting to login.');
+          if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
+            router.push('/auth/login');
+          }
         }
       }
+
+      // Update the auth user state
+      setAuthUser(currentUser);
       setIsLoadingAuth(false);
+      // Update the ref to the current user's UID for the next change detection
+      previousAuthUserUidRef.current = currentUser?.uid || null;
     });
 
     return () => unsubscribe();
   }, [router]);
 
-  useEffect(() => {
+
+  React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
         Notification.requestPermission().then(permission => {
@@ -148,11 +163,26 @@ const HabitualPage: NextPage = () => {
   }, []);
 
 
-  useEffect(() => {
-    if (!authUser || isLoadingAuth) return;
+  React.useEffect(() => {
+    if (isLoadingAuth) {
+      return; // Wait for authentication check to complete
+    }
+
+    if (!authUser) {
+      // If auth check is complete and there's no user, ensure local state is clear
+      // and don't proceed to load from localStorage (which should have been cleared by onAuthStateChanged logic).
+      setHabits([]);
+      setEarnedBadges([]);
+      setTotalPoints(0);
+      setIsLoadingHabits(false);
+      return;
+    }
+
+    // User is authenticated, proceed to load data.
+    // This will load an empty state if localStorage was just cleared by onAuthStateChanged for a new user.
     setIsLoadingHabits(true);
-    const storedHabits = localStorage.getItem('habits');
     let parsedHabits: Habit[] = [];
+    const storedHabits = localStorage.getItem('habits');
     if (storedHabits) {
       try {
         parsedHabits = JSON.parse(storedHabits).map((habit: any) => {
@@ -231,14 +261,15 @@ const HabitualPage: NextPage = () => {
         setHabits(parsedHabits);
       } catch (error) {
         console.error("Failed to parse habits from localStorage:", error);
+        setHabits([]); // Reset to empty if parsing fails
       }
+    } else {
+        setHabits([]); // No habits in localStorage
     }
-    setIsLoadingHabits(false);
 
-    // Fetch common habit suggestions if user is new and has no habits
-    if (authUser && !isLoadingAuth && !commonSuggestionsFetched && parsedHabits.length === 0) {
+    if (authUser && parsedHabits.length === 0 && !commonSuggestionsFetched) {
       setIsLoadingCommonSuggestions(true);
-      setCommonSuggestionsFetched(true); // Mark as fetched
+      setCommonSuggestionsFetched(true);
       getCommonHabitSuggestions({ count: 4 })
         .then(response => {
           if (response && response.suggestions) {
@@ -260,7 +291,10 @@ const HabitualPage: NextPage = () => {
         setEarnedBadges(JSON.parse(storedBadges));
       } catch (error) {
         console.error("Failed to parse badges from localStorage:", error);
+        setEarnedBadges([]);
       }
+    } else {
+        setEarnedBadges([]);
     }
 
     const storedPoints = localStorage.getItem('totalPoints');
@@ -271,8 +305,11 @@ const HabitualPage: NextPage = () => {
         console.error("Failed to parse totalPoints from localStorage:", error);
         setTotalPoints(0);
       }
+    } else {
+        setTotalPoints(0);
     }
-  }, [authUser, isLoadingAuth, commonSuggestionsFetched]); // Added commonSuggestionsFetched
+    setIsLoadingHabits(false);
+  }, [authUser, isLoadingAuth]); // Only depend on authUser and isLoadingAuth
 
   useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -301,14 +338,14 @@ const HabitualPage: NextPage = () => {
   }, [habits, earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
   useEffect(() => {
-    if (!authUser || isLoadingAuth) return;
+    if (!authUser || isLoadingAuth || isLoadingHabits) return; // Don't save if habits are still loading
     localStorage.setItem('earnedBadges', JSON.stringify(earnedBadges));
-  }, [earnedBadges, authUser, isLoadingAuth]);
+  }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
   useEffect(() => {
-    if (!authUser || isLoadingAuth) return;
+    if (!authUser || isLoadingAuth || isLoadingHabits) return; // Don't save if habits are still loading
     localStorage.setItem('totalPoints', totalPoints.toString());
-  }, [totalPoints, authUser, isLoadingAuth]);
+  }, [totalPoints, authUser, isLoadingAuth, isLoadingHabits]);
 
   useEffect(() => {
     reminderTimeouts.current.forEach(clearTimeout);
@@ -365,7 +402,7 @@ const HabitualPage: NextPage = () => {
     setHabits((prevHabits) => [...prevHabits, newHabit]);
     console.log(`Habit Added: ${newHabit.name}`);
     setShowInlineHabitForm(false);
-    setInitialFormDataForInline(null); // Clear initial data after adding
+    setInitialFormDataForInline(null);
   };
 
   const handleToggleComplete = async (habitId: string, date: string, completed: boolean) => {
@@ -714,17 +751,28 @@ const HabitualPage: NextPage = () => {
       description: suggestion.description || '',
       name: suggestion.name,
       category: suggestion.category || 'Other',
-      daysOfWeek: [], // User must set this
+      daysOfWeek: [],
     });
     setShowInlineHabitForm(true);
   };
 
 
-  if (isLoadingAuth || (!authUser && typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register')) {
+  if (isLoadingAuth) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading application...</p>
+      </div>
+    );
+  }
+
+  if (!authUser) {
+     // This case should ideally be handled by the redirect in onAuthStateChanged,
+     // but it's a fallback.
+    return (
+       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
       </div>
     );
   }
@@ -750,14 +798,13 @@ const HabitualPage: NextPage = () => {
                   onAddHabit={handleAddHabit}
                   onCloseForm={() => {
                     setShowInlineHabitForm(false);
-                    setInitialFormDataForInline(null); // Clear initial data when form is closed
+                    setInitialFormDataForInline(null);
                   }}
                   initialData={initialFormDataForInline}
                 />
               </div>
             )}
 
-            {/* Suggestions for new users */}
             {authUser && !isLoadingAuth && !isLoadingHabits && habits.length === 0 && commonHabitSuggestions.length > 0 && !showInlineHabitForm && (
               <Card className="my-4 p-4 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
                 <CardHeader className="p-2 pt-0">
@@ -803,8 +850,6 @@ const HabitualPage: NextPage = () => {
                   onOpenReflectionDialog={handleOpenReflectionDialog}
                   onOpenRescheduleDialog={handleOpenRescheduleDialog}
                   onToggleReminder={handleToggleReminder}
-                  // onSelectToggle={toggleHabitSelection} // Commented out
-                  // selectedHabitIds={selectedHabitIds} // Commented out
                 />
             )}
           </main>
@@ -838,7 +883,7 @@ const HabitualPage: NextPage = () => {
         <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
           onClick={() => {
-            setInitialFormDataForInline(null); // Ensure form is fresh when opened manually
+            setInitialFormDataForInline(null);
             setShowInlineHabitForm(true);
            }}
           aria-label="Add New Habit"
@@ -1092,3 +1137,4 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
