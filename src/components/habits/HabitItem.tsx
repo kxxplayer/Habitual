@@ -37,7 +37,6 @@ import {
   CalendarX,
   CheckCircle2,
   Circle,
-  ChevronRightSquare,
   XCircle,
   // Checkbox, // Removed as multi-select is not active
 } from 'lucide-react';
@@ -48,6 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import { isDateInCurrentWeek, getDayAbbreviationFromDate, calculateStreak, getCurrentWeekDays, WeekDayInfo } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 interface HabitItemProps {
@@ -56,9 +56,7 @@ interface HabitItemProps {
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  earnedBadges: EarnedBadge[]; // Still passed for potential future use on card
-  // isSelected: boolean; // Removed as multi-select is not active
-  // onSelectToggle: (habitId: string) => void; // Removed
+  earnedBadges: EarnedBadge[];
 }
 
 const weekDaysOrder: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -137,8 +135,6 @@ const HabitItem: FC<HabitItemProps> = ({
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
     earnedBadges,
-    // isSelected, // Removed
-    // onSelectToggle, // Removed
 }) => {
   const [todayString, setTodayString] = React.useState('');
   const { toast } = useToast();
@@ -282,7 +278,7 @@ const HabitItem: FC<HabitItemProps> = ({
   cardClasses = cn(cardClasses, 'bg-card');
 
 
-  const handleToggleCurrentDayCompletion = () => {
+  const handleToggleDailyCompletion = () => {
     if (!todayString) return;
     const newCompletedState = !isTodayCompleted;
     onToggleComplete(habit.id, todayString, newCompletedState);
@@ -294,16 +290,6 @@ const HabitItem: FC<HabitItemProps> = ({
 
   return (
     <Card className={cardClasses} style={cardStyle}>
-      {/* Checkbox for multi-select - currently commented out in page.tsx */}
-      {/* <div className="absolute top-3 right-3 z-10">
-        <Checkbox
-          id={`select-${habit.id}`}
-          checked={isSelected}
-          onCheckedChange={() => onSelectToggle(habit.id)}
-          aria-label={`Select habit ${habit.name}`}
-          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary-foreground data-[state=checked]:text-primary-foreground"
-        />
-      </div> */}
       <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-4">
         <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
           {getHabitIcon(habit)}
@@ -456,17 +442,18 @@ const HabitItem: FC<HabitItemProps> = ({
                   case 'pending_scheduled':
                     dayBoxClasses = 'ring-1 ring-orange-500 ring-offset-1 ring-offset-background bg-orange-500/5'; IconComponent = Circle; iconClasses = 'text-orange-500'; titleText += ' (Scheduled)'; break;
                   default:
-                     dayBoxClasses = 'bg-input/10 text-muted-foreground/40'; iconClasses = 'text-muted-foreground/40'; titleText += ' (Not Scheduled)'; break;
+                     dayBoxClasses = 'bg-input/40 dark:bg-input/20 text-muted-foreground/60 dark:text-muted-foreground/50 hover:bg-input/50 dark:hover:bg-input/30'; iconClasses = 'text-muted-foreground/40'; titleText += ' (Not Scheduled)'; break;
                 }
                 
                 const canToggleDay = isScheduled || isPendingMakeup || (isDayCompleted && isScheduled);
+                const isMissedAndClickable = dayStatus === 'missed';
                                 
                 return (
                   <div
                     key={dayInfo.dateStr}
                     title={titleText}
                     onClick={() => {
-                        if (dayStatus === 'missed') {
+                        if (isMissedAndClickable) {
                            onOpenRescheduleDialog(habit, dayInfo.dateStr);
                         } else if (canToggleDay) {
                             const newCompletionState = !isDayCompleted;
@@ -480,8 +467,14 @@ const HabitItem: FC<HabitItemProps> = ({
                     className={cn(
                       `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-all`,
                       dayBoxClasses,
-                      (canToggleDay || dayStatus === 'missed') ? 'cursor-pointer active:scale-95 transform transition-transform' : 'cursor-default',
-                      dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : ''
+                      (canToggleDay || isMissedAndClickable) ? 'cursor-pointer active:scale-95 transform transition-transform' : 'cursor-default',
+                      dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : '',
+                       dayStatus === 'pending_scheduled' ? 'hover:bg-orange-500/10' :
+                       dayStatus === 'completed' ? 'hover:bg-accent/20' :
+                       dayStatus === 'missed' ? 'hover:bg-destructive/20' :
+                       dayStatus === 'skipped' ? 'hover:bg-muted/40' :
+                       dayStatus === 'pending_makeup' ? 'hover:bg-blue-500/20' :
+                       '' // Default hover for 'not_scheduled' is already in its dayBoxClasses
                     )}
                     aria-label={`Status for ${habit.name} on ${dayInfo.dayAbbrFull}, ${format(dayInfo.date, 'MMM d')}: ${dayStatus}`}
                   >
@@ -497,27 +490,30 @@ const HabitItem: FC<HabitItemProps> = ({
 
       <CardFooter className="flex flex-col items-stretch pt-6 pb-3 px-3 space-y-2">
         <div className="sparkle-container relative flex justify-center">
-          <Button
-            onClick={handleToggleCurrentDayCompletion}
-            className={cn(
-              "rounded-full transition-all active:scale-95 py-2.5 px-6 text-sm",
-              isTodayCompleted
-                ? `bg-accent hover:bg-accent/90 text-accent-foreground ${showSparkles && isTodayCompleted ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]"}`
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
-            )}
-          >
-            {isTodayCompleted ? (
-              <>
-                <CheckCircle2 className="mr-2 h-5 w-5" />
-                Done!
-              </>
-            ) : (
-              <>
-                <ChevronRightSquare className="mr-2 h-5 w-5" />
-                Mark as Done
-              </>
-            )}
-          </Button>
+        <Button
+          onClick={handleToggleDailyCompletion}
+          className={cn(
+            "rounded-full transition-all active:scale-95 py-2.5 px-6 text-sm", // Common classes
+            !isTodayCompleted
+              ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95" // Incomplete state: orange to red gradient
+              : [ // Completed state
+                  "bg-accent hover:bg-accent/90 text-accent-foreground",
+                  showSparkles ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]",
+                ]
+          )}
+        >
+          {!isTodayCompleted ? (
+            <>
+              <span role="img" aria-label="checkmark" className="mr-2 text-lg">✅</span>
+              Mark as Done
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="mr-2 h-5 w-5" />
+              Done!
+            </>
+          )}
+        </Button>
           {showSparkles && (
               <>
                   <div className="sparkle sparkle-1"></div>
@@ -548,4 +544,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-
