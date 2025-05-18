@@ -6,8 +6,7 @@ import * as React from 'react';
 import type { FC } from 'react';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-// Checkbox is no longer directly used in the header for completion
-// import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox } from '@/components/ui/checkbox'; // Added this import
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
@@ -279,7 +278,7 @@ const HabitItem: FC<HabitItemProps> = ({
   }
   cardClasses = cn(cardClasses, 'bg-card');
 
-  const handleToggleDailyCompletion = () => {
+  const handleToggleCurrentDayCompletion = () => {
     if (!todayString) return;
     const newCompletedState = !isTodayCompleted;
     onToggleComplete(habit.id, todayString, newCompletedState);
@@ -440,9 +439,9 @@ const HabitItem: FC<HabitItemProps> = ({
       <CardFooter className="flex flex-col items-stretch pt-2 pb-2 px-3 space-y-2">
         <div className="sparkle-container relative w-full">
           <Button
-            onClick={handleToggleDailyCompletion}
+            onClick={handleToggleCurrentDayCompletion}
             className={cn(
-              "w-full transition-all active:scale-95 py-2.5 text-sm rounded-full", // Added rounded-full
+              "w-full transition-all active:scale-95 py-2.5 text-sm rounded-full", 
               isTodayCompleted
                 ? `bg-accent hover:bg-accent/90 text-accent-foreground ${showSparkles ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]"}`
                 : "border border-primary/50 text-primary hover:bg-primary/10"
@@ -548,3 +547,4 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
+
