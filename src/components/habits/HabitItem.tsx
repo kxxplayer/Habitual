@@ -149,7 +149,7 @@ const HabitItem: FC<HabitItemProps> = ({
     setCurrentDate(now);
     setTodayString(format(now, 'yyyy-MM-dd'));
     setWeekViewDays(getCurrentWeekDays(now));
-  }, []); // Runs once on mount, can add dependency if live update for day change is needed without reload
+  }, []);
 
   const streak = calculateStreak(habit, currentDate);
 
@@ -262,7 +262,7 @@ const HabitItem: FC<HabitItemProps> = ({
 
   const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && (log.status === 'completed' || log.status === undefined));
 
-  if (isTodayCompleted) { // Prioritize today's completion for overall card highlight
+  if (isTodayCompleted) {
     cardClasses = cn(cardClasses, 'border-accent bg-green-50 dark:bg-green-900/30');
   } else {
     const categoryColorVar = getCategoryColorVariable(habit.category);
@@ -272,7 +272,7 @@ const HabitItem: FC<HabitItemProps> = ({
   cardClasses = cn(cardClasses, 'bg-card');
 
   const handleTodayCompletionToggle = () => {
-    if (!todayString) return; // Should not happen if todayString is set on mount
+    if (!todayString) return;
     const newCompletedState = !isTodayCompleted;
     onToggleComplete(habit.id, todayString, newCompletedState);
     if (newCompletedState) {
@@ -310,7 +310,6 @@ const HabitItem: FC<HabitItemProps> = ({
       </CardHeader>
 
       <CardContent className="space-y-2 px-3 sm:px-4 pb-2 pt-1">
-        {/* Streak & Weekly Goal Line */}
         <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
             <TooltipProvider>
                 <Tooltip>
@@ -343,7 +342,6 @@ const HabitItem: FC<HabitItemProps> = ({
             aria-label={`Weekly progress: ${completedCountInCurrentWeek} of ${scheduledDaysInWeek} days completed`}
         />
 
-        {/* Time & Duration Line */}
         {(formattedSpecificTime || durationDisplay) && (
              <div className="flex items-center text-xs sm:text-sm text-muted-foreground space-x-3">
                 {formattedSpecificTime && (
@@ -364,14 +362,13 @@ const HabitItem: FC<HabitItemProps> = ({
         )}
 
 
-        {/* Days of the Week Indicators */}
         {weekViewDays.length > 0 && (
           <div className="mt-1.5">
             <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-1">
                 <CalendarDays className="mr-1 h-3.5 w-3.5" />
                 <span className="font-semibold mr-0.5">Days:</span>
             </div>
-            <div className="flex justify-around items-center space-x-0.5 sm:space-x-1"> {/* Centered and spaced day boxes */}
+            <div className="flex justify-around items-center space-x-0.5 sm:space-x-1">
               {weekViewDays.map((dayInfo) => {
                 const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
                 const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
@@ -409,7 +406,6 @@ const HabitItem: FC<HabitItemProps> = ({
                      dayBgColor = 'bg-input/20'; titleText += ' (Not Scheduled)'; IconComponent = Circle; dayTextColor = 'text-muted-foreground/50'; break;
                 }
                 
-                // Day boxes are now for display only for weekly status. Completion handled by footer button.
                 return (
                   <div
                     key={dayInfo.dateStr}
@@ -418,7 +414,7 @@ const HabitItem: FC<HabitItemProps> = ({
                       `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-all`,
                       dayBgColor, dayTextColor,
                       dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : '',
-                       'cursor-default' // No longer clickable for completion
+                       'cursor-default'
                     )}
                     aria-label={`Status for ${habit.name} on ${dayInfo.dayAbbrFull}, ${format(dayInfo.date, 'MMM d')}: ${dayStatus}`}
                   >
@@ -447,9 +443,9 @@ const HabitItem: FC<HabitItemProps> = ({
             ) : (
               <ChevronRightSquare className="mr-2 h-5 w-5" />
             )}
-            {isTodayCompleted ? "Completed Today!" : "Slide to Mark Done"}
+            {isTodayCompleted ? "Completed Today!" : "Mark as Done"}
           </Button>
-          {showSparkles && isTodayCompleted && ( // Only show sparkles if it was just completed
+          {showSparkles && isTodayCompleted && (
               <>
                   <div className="sparkle sparkle-1"></div>
                   <div className="sparkle sparkle-2"></div>
@@ -471,7 +467,7 @@ const HabitItem: FC<HabitItemProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                <DropdownMenuItem onClick={() => {
-                  const targetDateForReflection = todayString; // Reflection always for today with this button
+                  const targetDateForReflection = todayString; 
                   const logForReflection = habit.completionLog.find(l => l.date === targetDateForReflection);
                   let allowNote = false;
                   if(logForReflection && (logForReflection.status === 'completed' || logForReflection.status === 'skipped' || logForReflection.status === 'pending_makeup' || logForReflection.status === undefined) ){
@@ -540,3 +536,5 @@ const HabitItem: FC<HabitItemProps> = ({
 export default HabitItem;
 
     
+
+      
