@@ -14,6 +14,7 @@ import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionL
 import { THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { getSqlTip } from '@/ai/flows/sql-tip-flow';
+import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow'; // Added import
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,7 +30,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -194,19 +194,17 @@ const HabitualPage: NextPage = () => {
                 action: <Award className="h-5 w-5 text-yellow-500" />,
             });
 
-            // Check if the newly earned badge is the SQL streak badge for the bonus tip
             if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) {
               try {
                 const sqlTipResult = await getSqlTip();
                 toast({
                   title: "💡 Bonus SQL Tip Unlocked!",
                   description: sqlTipResult.tip,
-                  duration: 9000, // Longer duration for a tip
+                  duration: 9000, 
                   action: <BookOpenText className="h-5 w-5 text-blue-500" />
                 });
               } catch (tipError) {
                 console.error("Failed to fetch SQL tip:", tipError);
-                // Optionally, inform user tip couldn't be fetched
                 toast({
                   title: "SQL Tip Error",
                   description: "Could not fetch bonus SQL tip at this time.",
@@ -245,15 +243,18 @@ const HabitualPage: NextPage = () => {
     setShowInlineHabitForm(false);
   };
 
-  const handleToggleComplete = (habitId: string, date: string, completed: boolean) => {
+  const handleToggleComplete = async (habitId: string, date: string, completed: boolean) => {
+    let habitNameForQuote: string | undefined = undefined;
+    let pointsChange = 0;
+
     setHabits((prevHabits) =>
       prevHabits.map((habit) => {
         if (habit.id === habitId) {
+          habitNameForQuote = habit.name; // Capture habit name for quote
           let newCompletionLog = [...habit.completionLog];
           const existingLogIndex = newCompletionLog.findIndex(log => log.date === date);
           const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-          let pointsChange = 0;
-
+          
           if (completed) {
             if (existingLogIndex > -1) {
               const existingLog = newCompletionLog[existingLogIndex];
@@ -278,15 +279,44 @@ const HabitualPage: NextPage = () => {
               }
             }
           }
-
-          if (pointsChange !== 0) {
-            setTotalPoints(prevPoints => Math.max(0, prevPoints + pointsChange));
-          }
           return { ...habit, completionLog: newCompletionLog.sort((a, b) => b.date.localeCompare(a.date)) };
         }
         return habit;
       })
     );
+
+    if (pointsChange > 0 && habitNameForQuote) { // Only show quote if points increased (new completion)
+      try {
+        const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuote });
+        toast({
+          title: "✨ Keep Going!",
+          description: quoteResult.quote,
+          duration: 5000,
+        });
+      } catch (error) {
+        console.error("Failed to fetch motivational quote:", error);
+        // Optionally show a generic positive toast if quote fails
+        toast({
+          title: "✨ Well Done!",
+          description: "You're making progress!",
+          duration: 3000,
+        });
+      }
+    } else if (pointsChange === 0 && completed && habitNameForQuote) {
+        // If it was already completed and re-marked (no points change, but still a 'completion' action)
+        // Could show a simpler toast or no toast, depending on desired behavior
+        // For now, let's show a generic one if a quote wasn't fetched.
+         toast({
+          title: "✨ Nicely Done!",
+          description: "Consistency is key!",
+          duration: 3000,
+        });
+    }
+
+
+    if (pointsChange !== 0) {
+      setTotalPoints(prevPoints => Math.max(0, prevPoints + pointsChange));
+    }
   };
 
 
@@ -683,3 +713,5 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
+    
