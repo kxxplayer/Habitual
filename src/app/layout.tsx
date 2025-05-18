@@ -4,9 +4,6 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-// import { SidebarProvider } from "@/components/ui/sidebar"; // Removed
-// import AppSidebar from "@/components/layout/AppSidebar"; // Removed
-// import { SidebarInset } from "@/components/ui/sidebar"; // Removed
 
 
 const geistSans = Geist({
@@ -33,16 +30,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider
-          defaultTheme="system"
+          defaultTheme="theme-calm-blue"
           storageKey="habitual-theme"
         >
-          {/* <SidebarProvider> Removed
-            <AppSidebar /> Removed
-            <SidebarInset> Removed */}
               {children}
               <Toaster />
-            {/* </SidebarInset> Removed
-          </SidebarProvider> Removed */}
         </ThemeProvider>
       </body>
     </html>
