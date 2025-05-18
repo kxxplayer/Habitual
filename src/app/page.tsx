@@ -17,21 +17,22 @@ import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  // AlertDialogTrigger, // No longer needed if selection toolbar is commented out
-} from "@/components/ui/alert-dialog";
+// import { Checkbox } from '@/components/ui/checkbox'; // Commented out as multi-select is dormant
+// import { Label } from '@/components/ui/label'; // Commented out as multi-select is dormant
+// import {
+//   AlertDialog,
+//   AlertDialogAction,
+//   AlertDialogCancel,
+//   AlertDialogContent,
+//   AlertDialogDescription,
+//   AlertDialogFooter,
+//   AlertDialogHeader,
+//   AlertDialogTitle,
+//   // AlertDialogTrigger, // Commented out as multi-select is dormant
+// } from "@/components/ui/alert-dialog"; // Commented out as multi-select is dormant
 import {
   Dialog,
   DialogContent,
@@ -40,7 +41,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, Star, BookOpenText } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { Plus, Smile, /*Trash2, AlertTriangle,*/ LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, Star, BookOpenText, UserCircle, BellRing } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 
@@ -63,6 +72,7 @@ const HabitualPage: NextPage = () => {
 
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
   const [isAchievementsDialogOpen, setIsAchievementsDialogOpen] = useState(false);
+  const [isSettingsSheetOpen, setIsSettingsSheetOpen] = useState(false);
   const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
   const [totalPoints, setTotalPoints] = useState<number>(0);
 
@@ -276,7 +286,10 @@ const HabitualPage: NextPage = () => {
               }
               if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-              } else {
+              } else if (logEntry.note) { // If there's a note, change status to skipped to retain note
+                newCompletionLog[existingLogIndex] = { ...logEntry, status: 'skipped', time: 'N/A' };
+              }
+              else {
                 newCompletionLog.splice(existingLogIndex, 1);
               }
             }
@@ -357,33 +370,6 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-  // Multi-select functionality is impacted by card checkbox removal
-  // const toggleHabitSelection = (habitId: string) => {
-  //   setSelectedHabitIds(prevSelected =>
-  //     prevSelected.includes(habitId)
-  //       ? prevSelected.filter(id => id !== habitId)
-  //       : [...prevSelected, habitId]
-  //   );
-  // };
-
-  // const handleSelectAll = (checked: boolean) => {
-  //   if (checked) {
-  //     setSelectedHabitIds(habits.map(h => h.id));
-  //   } else {
-  //     setSelectedHabitIds([]);
-  //   }
-  // };
-
-  // const handleDeleteSelectedHabits = () => {
-  //   setHabits(prevHabits => prevHabits.filter(habit => !selectedHabitIds.includes(habit.id)));
-  //   toast({
-  //     title: "Habits Deleted",
-  //     description: `${selectedHabitIds.length} habit(s) have been removed.`,
-  //   });
-  //   setSelectedHabitIds([]);
-  //   setIsDeleteConfirmOpen(false);
-  // };
-
   const handleOpenReflectionDialog = (habitId: string, date: string, habitName: string) => {
     const habit = habits.find(h => h.id === habitId);
     const logEntry = habit?.completionLog.find(log => log.date === date);
@@ -417,7 +403,7 @@ const HabitualPage: NextPage = () => {
                 date,
                 time: 'N/A',
                 note: note.trim() === "" ? undefined : note.trim(),
-                status: existingStatus || 'skipped'
+                status: existingStatus || 'skipped' // Default to skipped if no prior status
              });
              newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
           }
@@ -444,9 +430,9 @@ const HabitualPage: NextPage = () => {
       if (h.id === habitId) {
         const newCompletionLog = [...h.completionLog];
         const existingMissedLogIndex = newCompletionLog.findIndex(log => log.date === originalMissedDate && (log.status === 'skipped' || !log.status));
-        if(existingMissedLogIndex > -1 && !newCompletionLog[existingMissedLogIndex].note) {
+        if(existingMissedLogIndex > -1 && !newCompletionLog[existingMissedLogIndex].note) { // If skipped and no note, remove old entry
             newCompletionLog.splice(existingMissedLogIndex, 1);
-        } else if (existingMissedLogIndex > -1) {
+        } else if (existingMissedLogIndex > -1) { // If skipped but has note, keep as skipped
             newCompletionLog[existingMissedLogIndex].status = 'skipped';
         }
 
@@ -491,7 +477,21 @@ const HabitualPage: NextPage = () => {
     });
   };
 
-  // const allHabitsSelected = habits.length > 0 && selectedHabitIds.length === habits.length; // Related to multi-select
+  const sheetMenuItems = [
+    { href: '/', label: 'Home', icon: Home, action: () => setIsSettingsSheetOpen(false) },
+    { href: '#profile', label: 'Profile', icon: UserCircle, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); toast({ title: 'Profile', description: 'Profile page coming soon!' }); } },
+    { href: '#reminders', label: 'Reminders', icon: BellRing, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); toast({ title: 'Reminders', description: 'Reminder settings coming soon!' }); } },
+    { 
+      label: 'Achievements', 
+      icon: Award, 
+      action: () => { 
+        setIsSettingsSheetOpen(false); 
+        setIsAchievementsDialogOpen(true); 
+      } 
+    },
+    { href: '#calendar', label: 'Calendar', icon: CalendarDays, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); toast({ title: 'Calendar', description: 'Full calendar view coming soon!' }); } },
+  ];
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-neutral-100 dark:bg-neutral-900 p-2 sm:p-4">
@@ -573,8 +573,6 @@ const HabitualPage: NextPage = () => {
                   onGetAISuggestion={handleOpenAISuggestionDialog}
                   onOpenReflectionDialog={handleOpenReflectionDialog}
                   onOpenRescheduleDialog={handleOpenRescheduleDialog}
-                  // selectedHabitIds={selectedHabitIds} // Removed
-                  // onSelectHabit={toggleHabitSelection} // Removed
                   earnedBadges={earnedBadges}
                 />
             )}
@@ -598,7 +596,7 @@ const HabitualPage: NextPage = () => {
             <Award className="h-5 w-5" />
             <span className="text-xs mt-0.5">Badges</span>
           </Button>
-          <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
+          <Button variant="ghost" onClick={() => setIsSettingsSheetOpen(true)} className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
             <Settings className="h-5 w-5" />
             <span className="text-xs mt-0.5">Settings</span>
           </Button>
@@ -711,8 +709,50 @@ const HabitualPage: NextPage = () => {
         </DialogContent>
       </Dialog>
 
+      <Sheet open={isSettingsSheetOpen} onOpenChange={setIsSettingsSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-lg">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Menu</SheetTitle>
+            <SheetDescription>
+              Navigate to different sections of the app.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="grid gap-2">
+            {sheetMenuItems.map((item) => (
+              item.href ? (
+                <SheetClose asChild key={item.label}>
+                  <Link href={item.href} passHref legacyBehavior>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start text-base py-3"
+                      onClick={item.action}
+                    >
+                      <item.icon className="mr-3 h-5 w-5" />
+                      {item.label}
+                    </Button>
+                  </Link>
+                </SheetClose>
+              ) : (
+                <SheetClose asChild key={item.label}>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-base py-3"
+                    onClick={item.action}
+                  >
+                    <item.icon className="mr-3 h-5 w-5" />
+                    {item.label}
+                  </Button>
+                </SheetClose>
+              )
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
     </div>
   );
 };
 
 export default HabitualPage;
+
+    
