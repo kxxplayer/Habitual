@@ -6,7 +6,6 @@ import * as React from 'react';
 import type { FC } from 'react';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-// Checkbox removed as per new header design
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
@@ -39,7 +38,7 @@ import {
   CheckCircle2,
   Circle,
   ChevronRightSquare,
-  Type,
+  Type, // Assuming Type is for text input or similar, not used here.
 } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -56,8 +55,6 @@ interface HabitItemProps {
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  // isSelected: boolean; // Removed due to header redesign
-  // onSelectToggle: (habitId: string) => void; // Removed
   earnedBadges: EarnedBadge[];
 }
 
@@ -137,8 +134,6 @@ const HabitItem: FC<HabitItemProps> = ({
     onGetAISuggestion,
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
-    // isSelected, // Removed
-    // onSelectToggle, // Removed
     earnedBadges,
 }) => {
   const [todayString, setTodayString] = React.useState('');
@@ -202,7 +197,7 @@ const HabitItem: FC<HabitItemProps> = ({
       const filename = `${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_habit.ics`;
       downloadICS(filename, icsContent);
       toast({
-        title: "Added to GCal!",
+        title: "Added to calendar!",
         description: `The .ics file for "${habit.name}" has been generated. You can import it into Google Calendar or your preferred calendar app.`,
       });
     } catch (error) {
@@ -269,7 +264,7 @@ const HabitItem: FC<HabitItemProps> = ({
   const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && (log.status === 'completed' || (log.status === undefined && log.time !== 'N/A')));
 
   let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl rounded-[1.25rem]`;
-  const cardStyle: React.CSSProperties = {}; // Initialize cardStyle as an empty object
+  const cardStyle: React.CSSProperties = {};
 
   if (isTodayCompleted) {
     cardClasses = cn(cardClasses, 'bg-green-50 dark:bg-green-900/30');
@@ -290,7 +285,7 @@ const HabitItem: FC<HabitItemProps> = ({
     onToggleComplete(habit.id, todayString, newCompletedState);
     if (newCompletedState) {
       setShowSparkles(true);
-      setTimeout(() => setShowSparkles(false), 800); // Matches sparkle animation duration
+      setTimeout(() => setShowSparkles(false), 800);
     }
   };
 
@@ -327,7 +322,7 @@ const HabitItem: FC<HabitItemProps> = ({
                   }
                 }}>
                 <MessageSquarePlus className="mr-2 h-4 w-4" />
-                <span>Add/Edit Note (Today)</span>
+                <span>Add/Edit Note</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
@@ -363,15 +358,13 @@ const HabitItem: FC<HabitItemProps> = ({
       </CardHeader>
 
       <CardContent className="space-y-3 px-3 sm:px-4 pb-2 pt-1">
-        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <div className="flex items-center cursor-default">
-                            <Flame className={cn("h-4 w-4", streak > 0 ? "text-orange-500 animate-pulse" : "text-muted-foreground opacity-60")} />
-                            <span className={cn("ml-1 font-semibold", streak > 0 ? "text-orange-500" : "text-muted-foreground opacity-60")}>
-                                {streak > 0 ? `${streak} day${streak > 1 ? 's' : ''}` : '0 days'}
-                            </span>
+                        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-800/30 dark:text-yellow-300 cursor-default">
+                            <Flame className={cn("h-3.5 w-3.5 mr-1", streak > 0 ? "text-orange-500 animate-pulse" : "text-yellow-500/70 dark:text-yellow-400/70")} />
+                            <span>{`${streak}-Day Streak`}</span>
                         </div>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -383,10 +376,10 @@ const HabitItem: FC<HabitItemProps> = ({
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
-            <span className="text-muted-foreground/50 mx-1 sm:mx-2">|</span>
-            <div className="flex items-center">
+            
+            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full font-medium bg-rose-100 text-rose-700 dark:bg-rose-800/30 dark:text-rose-300">
                 <span className="mr-1">🎯</span>
-                <span className="font-medium">{completedCountInCurrentWeek}/{scheduledDaysInWeek} days</span>
+                <span>{`${completedCountInCurrentWeek} / ${scheduledDaysInWeek} Completed`}</span>
             </div>
         </div>
         {scheduledDaysInWeek > 0 && <Progress value={weeklyProgressPercent} indicatorClassName="bg-accent" className="h-1.5 mb-2" />}
@@ -418,8 +411,8 @@ const HabitItem: FC<HabitItemProps> = ({
         )}
 
         {weekViewDays.length > 0 && (
-          <div className="mt-2.5"> {/* Increased margin-top */}
-            <div className="flex items-center text-xs text-muted-foreground mb-1.5"> {/* Increased margin-bottom */}
+          <div className="mt-2.5">
+            <div className="flex items-center text-xs text-muted-foreground mb-1.5">
                 <CalendarDays className="mr-1 h-3.5 w-3.5" />
                 <span className="font-semibold mr-0.5">Days:</span>
             </div>
@@ -499,7 +492,7 @@ const HabitItem: FC<HabitItemProps> = ({
               "rounded-full transition-all active:scale-95 py-2.5 px-6 text-sm",
               isTodayCompleted
                 ? `bg-accent hover:bg-accent/90 text-accent-foreground ${showSparkles && isTodayCompleted ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]"}`
-                : "bg-primary text-primary-foreground hover:bg-primary/90" // Solid orange bar
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
             )}
           >
             {isTodayCompleted ? (
@@ -529,7 +522,6 @@ const HabitItem: FC<HabitItemProps> = ({
       {showWeeklyConfetti && (
         <div className="weekly-goal-animation-container">
             <div className="weekly-goal-text">Weekly Goal Met!</div>
-            {/* Sparkles for weekly goal */}
             <div className="sparkle sparkle-1" style={{top: '15%', left: '10%', '--tx': '-20px', '--ty': '-25px'} as React.CSSProperties}></div>
             <div className="sparkle sparkle-2" style={{top: '25%', right: '5%', '--tx': '20px', '--ty': '-30px'} as React.CSSProperties}></div>
             <div className="sparkle sparkle-3" style={{bottom: '30%', left: '20%', '--tx': '-25px', '--ty': '10px'} as React.CSSProperties}></div>
