@@ -2,8 +2,8 @@
 "use client";
 
 import type { FC } from 'react';
-import { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useState, useEffect, useMemo } from 'react';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -68,7 +68,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     control,
     handleSubmit,
     reset,
-    watch,
+    // watch, // Replaced by useWatch for 'description'
     setValue,
     formState: { errors, isSubmitting }
   } = useForm<CreateHabitFormData>({
@@ -85,9 +85,19 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     },
   });
 
-  const habitDescriptionForAI = watch('description');
+  const habitDescriptionForAI = useWatch({
+    control,
+    name: 'description',
+    defaultValue: ''
+  });
+
+  const isDescriptionEffectivelyEmpty = useMemo(() => {
+    return !habitDescriptionForAI || (typeof habitDescriptionForAI === 'string' && habitDescriptionForAI.trim() === '');
+  }, [habitDescriptionForAI]);
+
 
   useEffect(() => {
+    // This effect is for cleanup on unmount
     return () => {
         reset({
             description: '',
@@ -104,7 +114,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
 
   const handleAISuggestDetails = async () => {
-    const currentDescription = habitDescriptionForAI || ""; 
+    const currentDescription = habitDescriptionForAI || "";
     if (currentDescription.trim() === "") {
       toast({
         title: "No Description Provided",
@@ -169,8 +179,6 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     reset();
     onCloseForm();
   };
-
-  const isDescriptionEffectivelyEmpty = !habitDescriptionForAI || (typeof habitDescriptionForAI === 'string' && habitDescriptionForAI.trim() === '');
 
   return (
     <Card className="bg-card shadow-lg border border-primary/20">
@@ -336,3 +344,4 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 };
 
 export default InlineCreateHabitForm;
+
