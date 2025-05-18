@@ -15,21 +15,23 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { 
-  Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, CheckCircle2, Circle, TrendingUp, Flame, MoreHorizontal, MessageSquarePlus, StickyNote, Tag,
-  ListChecks, // Generic fallback
-  Droplets, // For water/hydrate
-  Bed, // For sleep
-  BookOpenText, // For journal/reading
-  HeartPulse, // For Health & Wellness
-  Briefcase, // For Work/Study
-  Paintbrush, // For Creative
-  Home as HomeIcon, // For Chores (alias as HomeIcon to avoid conflict with Home from main page)
-  Landmark, // For Finance
-  Users, // For Social
-  Smile as LifestyleIcon, // For Lifestyle (aliased)
-  Sparkles as SparklesIcon, // for Personal Growth & sparkle animation (alias if needed)
-  CalendarX // for skipped
+import {
+  Lightbulb, CalendarDays, Clock, Hourglass, CalendarClock, CalendarPlus, Share2, TrendingUp, Flame, MoreHorizontal, MessageSquarePlus, StickyNote, Tag,
+  ListChecks,
+  Droplets,
+  Bed,
+  BookOpenText,
+  HeartPulse,
+  Briefcase,
+  Paintbrush,
+  Home as HomeIcon,
+  Landmark,
+  Users,
+  Smile as LifestyleIcon,
+  Sparkles as SparklesIcon,
+  CalendarX,
+  CheckCircle2, // For completed day in weekly view
+  Circle // For pending day in weekly view
 } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -46,7 +48,6 @@ interface HabitItemProps {
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  isCompletedToday: boolean;
   isSelected: boolean;
   onSelectToggle: (habitId: string) => void;
 }
@@ -73,7 +74,7 @@ const categoryColorMap: Record<HabitCategory, string> = {
   "Health & Wellness": "--chart-3",
   "Creative": "--chart-4",
   "Chores": "--chart-5",
-  "Finance": "--chart-1", 
+  "Finance": "--chart-1",
   "Social": "--chart-2",
   "Personal Growth": "--chart-3",
   "Other": "--chart-5",
@@ -83,7 +84,7 @@ const getCategoryColorVariable = (category?: HabitCategory): string => {
   if (category && categoryColorMap[category]) {
     return categoryColorMap[category];
   }
-  return categoryColorMap["Other"]; 
+  return categoryColorMap["Other"];
 };
 
 const getHabitIcon = (habit: Habit): React.ReactNode => {
@@ -95,7 +96,7 @@ const getHabitIcon = (habit: Habit): React.ReactNode => {
   if (nameLower.includes('walk') || nameLower.includes('run') || nameLower.includes('jog')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">🚶</span>;
   if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">📚</span>;
   if (nameLower.includes('meditate') || nameLower.includes('meditation') || nameLower.includes('mindfulness')) return <span className="text-xl mr-1.5 rtl:ml-1.5 rtl:mr-0">🧘</span>;
-  
+
   if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-blue-500" />;
   if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-purple-500" />;
   if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="mr-1.5 rtl:ml-1.5 rtl:mr-0 h-5 w-5 text-yellow-600" />;
@@ -121,8 +122,7 @@ const HabitItem: FC<HabitItemProps> = ({
     onToggleComplete,
     onGetAISuggestion,
     onOpenReflectionDialog,
-    onOpenRescheduleDialog,
-    isCompletedToday, // This specifically refers to status === 'completed' for today
+    onOpenRescheduleDialog, // Prop is kept, but direct trigger from red day is removed
     isSelected,
     onSelectToggle
 }) => {
@@ -139,17 +139,8 @@ const HabitItem: FC<HabitItemProps> = ({
   }, [todayString]); // Re-calculate if todayString changes, e.g. app open overnight
 
   const streak = calculateStreak(habit, currentDate);
-  const todaysLogEntry = habit.completionLog.find(log => log.date === todayString);
-  
-  const handleToggleDailyCompletion = () => {
-    const newCompletedState = !(todaysLogEntry && todaysLogEntry.status === 'completed');
-    onToggleComplete(habit.id, todayString, newCompletedState);
+  const isCompletedToday = habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
 
-    if (newCompletedState) {
-      setShowSparkles(true);
-      setTimeout(() => setShowSparkles(false), 1000); // Sparkle duration
-    }
-  };
 
   const handleAddToCalendar = () => {
     try {
@@ -172,7 +163,7 @@ const HabitItem: FC<HabitItemProps> = ({
 
   const handleShareHabit = async () => {
     let shareText = "";
-    const streakCount = streak; // Use the calculated streak
+    const streakCount = streak;
 
     if (streakCount > 0) {
       shareText = `I've kept up my habit '${habit.name}' for ${streakCount} day${streakCount > 1 ? 's' : ''} straight with Habitual! 💪 #HabitStreak #HabitualApp`;
@@ -202,12 +193,9 @@ const HabitItem: FC<HabitItemProps> = ({
         await navigator.share({ title: `Habit: ${habit.name}`, text: shareText });
         toast({ title: "Habit Shared!", description: "The habit details have been shared." });
       } catch (error) {
-        // Check if error is AbortError (user cancelled share)
         if ((error as DOMException).name === 'AbortError') {
-          // User cancelled the share, optionally do nothing or provide subtle feedback
            console.log("User cancelled sharing.");
         } else {
-          // Fallback to copy for other errors
           copyToClipboard(shareText);
         }
       }
@@ -215,9 +203,6 @@ const HabitItem: FC<HabitItemProps> = ({
       copyToClipboard(shareText);
     }
   };
-
-  const latestCompletionTimeToday = todaysLogEntry?.time;
-  const hasNoteToday = !!todaysLogEntry?.note;
 
   const displayDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b)).join(', ');
   let durationDisplay = '';
@@ -228,34 +213,35 @@ const HabitItem: FC<HabitItemProps> = ({
   }
   const formattedSpecificTime = formatSpecificTime(habit.specificTime);
 
-  let completedCountInCurrentWeek = 0;
-  const scheduledDaysInWeek = habit.daysOfWeek.length;
-  if (scheduledDaysInWeek > 0) {
-    const completedOnScheduledDaysThisWeek = new Set<string>();
-    habit.completionLog.forEach(log => {
-      if (isDateInCurrentWeek(log.date, currentDate) && log.status === 'completed') {
-        try {
-            const completionDateObj = parseISO(log.date + 'T00:00:00Z');
-            const dayOfCompletion = getDayAbbreviationFromDate(completionDateObj);
-            if (habit.daysOfWeek.includes(dayOfCompletion) || (log.originalMissedDate && habit.daysOfWeek.includes(getDayAbbreviationFromDate(parseISO(log.originalMissedDate + 'T00:00:00Z'))))) {
-              completedOnScheduledDaysThisWeek.add(log.date);
+  const { completedCountInCurrentWeek, scheduledDaysInWeek } = React.useMemo(() => {
+    let completed = 0;
+    let scheduled = 0;
+    if (habit.daysOfWeek.length > 0) {
+      const completedOnScheduled = new Set<string>();
+      weekViewDays.forEach(dayInfo => {
+        if (habit.daysOfWeek.includes(dayInfo.dayAbbrFull)) {
+            scheduled++;
+            const log = habit.completionLog.find(l => l.date === dayInfo.dateStr && l.status === 'completed');
+            if (log) {
+                completedOnScheduled.add(dayInfo.dateStr);
             }
-        } catch (e) { console.error("Error parsing log date for weekly progress:", log.date, e); }
-      }
-    });
-    completedCountInCurrentWeek = completedOnScheduledDaysThisWeek.size;
-  }
+        }
+      });
+      completed = completedOnScheduled.size;
+    }
+    return { completedCountInCurrentWeek: completed, scheduledDaysInWeek: scheduled };
+  }, [habit.completionLog, habit.daysOfWeek, weekViewDays]);
+
   const weeklyProgressPercent = scheduledDaysInWeek > 0 ? (completedCountInCurrentWeek / scheduledDaysInWeek) * 100 : 0;
 
   const cardStyle: React.CSSProperties = {};
   let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${isSelected ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-background' : ''}`;
 
-  if (isCompletedToday) {
+  if (isCompletedToday) { // Card styling for today's completion. Per-day is handled in weekly view.
     cardClasses = cn(cardClasses, 'border-accent bg-green-50 dark:bg-green-900/30');
   } else {
     const categoryColorVar = getCategoryColorVariable(habit.category);
     cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
-    cardStyle['--category-color-var' as any] = `var(${categoryColorVar})`; // For potential future use with category styling
     cardClasses = cn(cardClasses, 'border-l-4');
   }
   cardClasses = cn(cardClasses, 'bg-card');
@@ -272,9 +258,9 @@ const HabitItem: FC<HabitItemProps> = ({
           className="transform scale-110 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
       </div>
-      <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pr-12"> {/* Added pr-12 for checkbox */}
+      <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pr-12">
         <div className="flex justify-between items-start">
-          <div className="flex-grow"> {/* mr-2 removed */}
+          <div className="flex-grow">
              <div className="flex items-center gap-1 mb-0.5">
               {getHabitIcon(habit)}
               <CardTitle className="text-lg sm:text-xl font-semibold text-primary min-w-0 break-words">
@@ -302,7 +288,17 @@ const HabitItem: FC<HabitItemProps> = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 px-3 sm:px-4 pb-3 pt-2">
+      <CardContent className="space-y-3 px-3 sm:px-4 pb-3 pt-2 relative"> {/* Sparkle container */}
+         {showSparkles && (
+            <div className="absolute inset-0 pointer-events-none sparkle-container z-20 flex items-center justify-center">
+              <div className="sparkle sparkle-1"></div>
+              <div className="sparkle sparkle-2"></div>
+              <div className="sparkle sparkle-3"></div>
+              <div className="sparkle sparkle-4"></div>
+              <div className="sparkle sparkle-5"></div>
+              <div className="sparkle sparkle-6" style={{ backgroundColor: 'hsl(var(--primary))' }}></div>
+            </div>
+          )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5 text-xs sm:text-sm text-muted-foreground">
           <div className="flex items-center col-span-full sm:col-span-1">
             <CalendarDays className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
@@ -330,132 +326,91 @@ const HabitItem: FC<HabitItemProps> = ({
 
         {weekViewDays.length > 0 && (
           <div className="mt-2 pt-2 border-t border-border/50">
-            <p className="text-xs font-medium text-muted-foreground mb-1.5">This Week</p>
-            <div className="flex justify-around items-center space-x-1">
+            <div className="flex justify-between items-center text-xs font-medium text-muted-foreground mb-1.5">
+                <span className="flex items-center"><TrendingUp className="mr-1.5 h-3.5 w-3.5 text-primary/90" />This Week</span>
+                <span>{completedCountInCurrentWeek} / {scheduledDaysInWeek} days</span>
+            </div>
+            <Progress
+                value={weeklyProgressPercent}
+                indicatorClassName="bg-accent"
+                className="h-1.5"
+                aria-label={`Weekly progress: ${completedCountInCurrentWeek} of ${scheduledDaysInWeek} days completed`}
+            />
+            <div className="flex justify-around items-center space-x-1 mt-2">
               {weekViewDays.map((dayInfo) => {
                 const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
                 const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
-                
-                let dayStatus: 'completed' | 'skipped' | 'pending_makeup' | 'missed' | 'pending_scheduled' | 'not_scheduled' = 'not_scheduled';
-                let isClickableForReschedule = false;
+                const isDayCompleted = dayLog?.status === 'completed';
+                const isSkipped = dayLog?.status === 'skipped';
+                const isPendingMakeup = dayLog?.status === 'pending_makeup';
 
-                if (dayLog) {
-                  if (dayLog.status === 'completed') dayStatus = 'completed';
-                  else if (dayLog.status === 'skipped') dayStatus = 'skipped';
-                  else if (dayLog.status === 'pending_makeup') dayStatus = 'pending_makeup';
-                } else if (isScheduled) {
-                  if (dayInfo.isPast) {
-                    dayStatus = 'missed';
-                    isClickableForReschedule = true; 
-                  } else {
-                    dayStatus = 'pending_scheduled';
-                  }
+                let dayStatus: 'completed' | 'skipped' | 'pending_makeup' | 'missed' | 'pending_scheduled' | 'not_scheduled' = 'not_scheduled';
+                if (isDayCompleted) dayStatus = 'completed';
+                else if (isSkipped) dayStatus = 'skipped';
+                else if (isPendingMakeup) dayStatus = 'pending_makeup';
+                else if (isScheduled) {
+                  if (dayInfo.isPast) dayStatus = 'missed';
+                  else dayStatus = 'pending_scheduled';
                 }
 
-                let dayBgColor = 'bg-input/30';
+                let dayBgColor = 'bg-input/30 hover:bg-input/50';
                 let dayTextColor = 'text-muted-foreground/70';
                 let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
+                let IconComponent = Circle;
 
                 switch(dayStatus) {
                   case 'completed':
-                    dayBgColor = 'bg-accent'; dayTextColor = 'text-accent-foreground'; titleText += ' (Completed)'; break;
+                    dayBgColor = 'bg-accent hover:bg-accent/90'; dayTextColor = 'text-accent-foreground'; titleText += ' (Completed)'; IconComponent = CheckCircle2; break;
                   case 'skipped':
-                    dayBgColor = 'bg-muted'; dayTextColor = 'text-muted-foreground'; titleText += ' (Skipped)'; break;
+                    dayBgColor = 'bg-muted hover:bg-muted/90'; dayTextColor = 'text-muted-foreground'; titleText += ' (Skipped)'; IconComponent = CalendarX; break;
                   case 'pending_makeup':
-                    dayBgColor = 'bg-blue-500'; dayTextColor = 'text-white'; titleText += ' (Makeup Pending)'; break;
+                    dayBgColor = 'bg-blue-500 hover:bg-blue-600'; dayTextColor = 'text-white'; titleText += ' (Makeup Pending)'; IconComponent = CalendarClock; break;
                   case 'missed':
-                    dayBgColor = 'bg-destructive'; dayTextColor = 'text-destructive-foreground'; titleText += ' (Missed)'; break;
+                    dayBgColor = 'bg-destructive hover:bg-destructive/90'; dayTextColor = 'text-destructive-foreground'; titleText += ' (Missed)'; break;
                   case 'pending_scheduled':
-                    dayBgColor = 'bg-muted'; dayTextColor = 'text-muted-foreground'; titleText += ' (Pending)'; break;
+                    dayBgColor = 'bg-muted hover:bg-muted/90'; dayTextColor = 'text-muted-foreground'; titleText += ' (Pending)'; break;
                   default: // not_scheduled
-                    titleText += ' (Not Scheduled)'; break;
+                     dayBgColor = 'bg-input/20'; titleText += ' (Not Scheduled)'; break;
                 }
                 
+                const handleDayClick = () => {
+                  if (dayStatus === 'not_scheduled' && !isPendingMakeup) return; // Don't toggle non-scheduled days unless it's a pending makeup
+
+                  const newCompletedState = !isDayCompleted;
+                  onToggleComplete(habit.id, dayInfo.dateStr, newCompletedState);
+                  if (newCompletedState) {
+                    setShowSparkles(true);
+                    setTimeout(() => setShowSparkles(false), 1000);
+                  }
+                };
+                
                 const dayElement = (
-                  <div
+                  <button
                     key={dayInfo.dateStr}
                     title={titleText}
+                    onClick={handleDayClick}
+                    disabled={dayStatus === 'not_scheduled' && !isPendingMakeup}
                     className={cn(
-                      `flex flex-col items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-md text-xs font-medium transition-all ${dayBgColor} ${dayTextColor}`,
+                      `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-xs font-medium transition-all transform active:scale-90`,
+                      dayBgColor, dayTextColor,
                       dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : '',
-                      isClickableForReschedule ? 'cursor-pointer hover:opacity-80' : ''
+                      (dayStatus === 'not_scheduled' && !isPendingMakeup) ? 'cursor-default opacity-50' : 'cursor-pointer'
                     )}
-                    onClick={isClickableForReschedule ? () => onOpenRescheduleDialog(habit, dayInfo.dateStr) : undefined}
+                    aria-label={`Mark habit ${habit.name} for ${dayInfo.dayAbbrFull}, ${format(dayInfo.date, 'MMM d')} as ${isDayCompleted ? 'not done' : 'done'}`}
                   >
-                    {dayInfo.dayAbbrShort}
-                  </div>
+                    <span className="font-semibold">{dayInfo.dayAbbrShort}</span>
+                    <IconComponent className={cn("h-3 w-3 mt-0.5", dayStatus === 'completed' || dayStatus === 'pending_makeup' || dayStatus === 'skipped' ? '' : 'opacity-70')}/>
+                  </button>
                 );
                 return dayElement;
               })}
             </div>
           </div>
         )}
-
-
-        {habit.daysOfWeek && habit.daysOfWeek.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-border/50">
-            <div className="flex justify-between items-center text-xs font-medium text-muted-foreground mb-1">
-              <span className="flex items-center"><TrendingUp className="mr-1.5 h-3.5 w-3.5 text-primary/90" />Weekly Goal</span>
-              <span>{completedCountInCurrentWeek} / {scheduledDaysInWeek} days</span>
-            </div>
-            <Progress
-              value={weeklyProgressPercent}
-              indicatorClassName="bg-accent"
-              className="h-2"
-              aria-label={`Weekly progress: ${completedCountInCurrentWeek} of ${scheduledDaysInWeek} days completed`}
-            />
-          </div>
-        )}
-
       </CardContent>
       <CardFooter className="flex flex-col items-stretch pt-2 pb-3 px-3">
-        <div className="relative sparkle-container w-full">
-          <Button
-            variant={isCompletedToday ? "default" : "outline"}
-            size="lg"
-            onClick={handleToggleDailyCompletion}
-            className={cn(
-                `w-full font-semibold text-base h-11 transform transition-transform active:scale-95`,
-                isCompletedToday ? 'bg-accent hover:bg-accent/90 text-accent-foreground border-accent' 
-                                 : (todaysLogEntry?.status === 'pending_makeup' ? 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500' 
-                                                                               : 'border-primary/50 text-primary hover:bg-primary/10')
-            )}
-            aria-label={isCompletedToday ? `Mark ${habit.name} as not done for today` : (todaysLogEntry?.status === 'pending_makeup' ? `Complete makeup for ${habit.name}` : `Mark ${habit.name} as done for today`)}
-          >
-            {isCompletedToday ? <CheckCircle2 className="mr-2 h-5 w-5" /> : (todaysLogEntry?.status === 'pending_makeup' ? <CalendarClock className="mr-2 h-5 w-5" /> : <Circle className="mr-2 h-5 w-5" />)}
-            {isCompletedToday ? "Completed!" : (todaysLogEntry?.status === 'pending_makeup' ? "Do Makeup Task" : "Mark as Done")}
-          </Button>
-          {showSparkles && (
-            <>
-              <div className="sparkle sparkle-1"></div>
-              <div className="sparkle sparkle-2"></div>
-              <div className="sparkle sparkle-3"></div>
-              <div className="sparkle sparkle-4"></div>
-              <div className="sparkle sparkle-5"></div>
-              <div className="sparkle sparkle-6" style={{ backgroundColor: 'hsl(var(--primary))' }}></div>
-            </>
-          )}
-        </div>
-
-        <div className="flex justify-between items-center mt-2 min-h-[20px]">
-          <div className="text-xs text-muted-foreground">
-            {(isCompletedToday && latestCompletionTimeToday && latestCompletionTimeToday !== 'N/A') && (
-              <span className="flex items-center">
-                <Clock className="mr-1 h-3 w-3" />
-                <span>at {latestCompletionTimeToday}</span>
-                {hasNoteToday && (
-                  <StickyNote className="ml-2 h-3 w-3 text-blue-500" title="Reflection note added" />
-                )}
-              </span>
-            )}
-            {todaysLogEntry?.status === 'skipped' && (
-                <span className="flex items-center text-destructive">
-                    <CalendarX className="mr-1 h-3 w-3" />
-                    <span>Skipped Today</span>
-                </span>
-            )}
-          </div>
-
+        <div className="flex justify-end items-center min-h-[20px]">
+          {/* Removed completion time/skipped text from here as it's per-day now */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto">
@@ -464,13 +419,26 @@ const HabitItem: FC<HabitItemProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {(isCompletedToday || todaysLogEntry?.status === 'skipped' || todaysLogEntry?.status === 'pending_makeup') && (
-                <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}>
-                  <MessageSquarePlus className="mr-2 h-4 w-4" />
-                  <span>{hasNoteToday ? "Edit Reflection" : "Add Reflection"}</span>
-                </DropdownMenuItem>
-              )}
-              {(isCompletedToday || todaysLogEntry?.status === 'skipped' || todaysLogEntry?.status === 'pending_makeup') && <DropdownMenuSeparator />}
+              {/* Reflection note can be added for any day, trigger needs to be specific to a date */}
+              {/* For simplicity, the reflection dialog could be opened for 'today' or the last interacted day */}
+               <DropdownMenuItem onClick={() => {
+                  // Determine which date to open reflection for.
+                  // For now, defaults to todayString, but could be more dynamic.
+                  // Or it could be disabled if no specific day is contextually "active"
+                  const targetDateForReflection = weekViewDays.find(d => d.isToday)?.dateStr || todayString;
+                  const logForReflection = habit.completionLog.find(l => l.date === targetDateForReflection);
+                  if(logForReflection && (logForReflection.status === 'completed' || logForReflection.status === 'skipped' || logForReflection.status === 'pending_makeup')){
+                    onOpenReflectionDialog(habit.id, targetDateForReflection, habit.name);
+                  } else {
+                     // Optionally, allow adding reflection even if not completed yet for today
+                     // For now, only if there's a log entry.
+                     toast({ title: "Reflection Note", description: "Mark a day as complete/skipped to add a note.", variant: "default"});
+                  }
+                }}>
+                <MessageSquarePlus className="mr-2 h-4 w-4" />
+                <span>Add/Edit Note</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
                 <Lightbulb className="mr-2 h-4 w-4" />
                 <span>AI Tip</span>
@@ -483,6 +451,22 @@ const HabitItem: FC<HabitItemProps> = ({
                 <Share2 className="mr-2 h-4 w-4" />
                 <span>Share</span>
               </DropdownMenuItem>
+               {/* Placeholder for rescheduling - could open a dialog to pick a missed date from THIS habit's log */}
+              <DropdownMenuItem onClick={() => {
+                 const firstMissed = weekViewDays.find(d => 
+                    habit.daysOfWeek.includes(d.dayAbbrFull) && 
+                    d.isPast && 
+                    !habit.completionLog.some(log => log.date === d.dateStr && (log.status === 'completed' || log.status === 'skipped' || log.status === 'pending_makeup'))
+                 );
+                 if (firstMissed) {
+                    onOpenRescheduleDialog(habit, firstMissed.dateStr);
+                 } else {
+                    toast({title: "Reschedule", description: "No missed scheduled days this week to reschedule."})
+                 }
+              }}>
+                <CalendarClock className="mr-2 h-4 w-4" />
+                <span>Reschedule Missed</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -492,4 +476,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-

@@ -55,7 +55,7 @@ const HabitualPage: NextPage = () => {
   const [showInlineHabitForm, setShowInlineHabitForm] = useState(false);
   const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  
+
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
   const [isAchievementsDialogOpen, setIsAchievementsDialogOpen] = useState(false);
   const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
@@ -134,10 +134,10 @@ const HabitualPage: NextPage = () => {
                 date: log.date,
                 time: log.time || 'N/A',
                 note: log.note || undefined,
-                status: log.status || 'completed', 
+                status: log.status || 'completed',
                 originalMissedDate: log.originalMissedDate || undefined,
               }));
-          
+
           return {
             id: habit.id || Date.now().toString() + Math.random().toString(36).substring(2,7),
             name: habit.name || 'Unnamed Habit',
@@ -179,13 +179,14 @@ const HabitualPage: NextPage = () => {
 
   useEffect(() => {
     localStorage.setItem('habits', JSON.stringify(habits));
-    
+
     const newlyEarned = checkAndAwardBadges(habits, earnedBadges);
     if (newlyEarned.length > 0) {
       const updatedBadges = [...earnedBadges];
       newlyEarned.forEach(newBadge => {
-        if (!earnedBadges.some(eb => eb.id === newBadge.id)) { 
+        if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
             updatedBadges.push(newBadge);
+            // This toast call is safe as it's in response to a state change (habits -> earnedBadges)
             toast({
                 title: "🏆 New Badge Unlocked! 🎉",
                 description: `You've earned the "${newBadge.name}" badge!`,
@@ -195,7 +196,7 @@ const HabitualPage: NextPage = () => {
       });
       setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, toast]);
+  }, [habits, earnedBadges, toast]); // toast is stable, fine in deps
 
   useEffect(() => {
     localStorage.setItem('earnedBadges', JSON.stringify(earnedBadges));
@@ -233,27 +234,31 @@ const HabitualPage: NextPage = () => {
 
           if (completed) {
             if (existingLogIndex > -1) {
-              if (newCompletionLog[existingLogIndex].status !== 'completed') { // Award points only if not already completed
-                pointsChange = POINTS_PER_COMPLETION;
+              const existingLog = newCompletionLog[existingLogIndex];
+              if (existingLog.status !== 'completed') {
+                pointsChange = POINTS_PER_COMPLETION; // Award points only if not already 'completed'
               }
-              newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'completed', time: currentTime };
-            } else { 
+              newCompletionLog[existingLogIndex] = { ...existingLog, status: 'completed', time: currentTime };
+            } else {
               pointsChange = POINTS_PER_COMPLETION;
               newCompletionLog.push({ date, time: currentTime, status: 'completed', note: undefined });
             }
-          } else { 
+          } else { // un-completing
             if (existingLogIndex > -1) {
               const logEntry = newCompletionLog[existingLogIndex];
-              if (logEntry.status === 'completed') { // Subtract points only if it was completed
-                 pointsChange = -POINTS_PER_COMPLETION;
+              if (logEntry.status === 'completed') {
+                 pointsChange = -POINTS_PER_COMPLETION; // Subtract points only if it was 'completed'
               }
-              if (logEntry.originalMissedDate) { // If it was a makeup, revert to pending
+              // If it was a makeup that was completed, revert to pending_makeup.
+              // Otherwise (it was a regular day's completion), remove the log.
+              if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-              } else { // Otherwise, remove the log
+              } else {
                 newCompletionLog.splice(existingLogIndex, 1);
               }
             }
           }
+
           if (pointsChange !== 0) {
             setTotalPoints(prevPoints => Math.max(0, prevPoints + pointsChange));
           }
@@ -264,6 +269,7 @@ const HabitualPage: NextPage = () => {
     );
   };
 
+
   const handleOpenAISuggestionDialog = async (habit: Habit) => {
     setSelectedHabitForAISuggestion(habit);
     setIsAISuggestionDialogOpen(true);
@@ -273,7 +279,7 @@ const HabitualPage: NextPage = () => {
       const completionEntries = habit.completionLog.map(log => {
         let entry = `${log.date} at ${log.time}`;
         if (log.status === 'skipped') entry += ` (Skipped)`;
-        else if (log.status === 'pending_makeup') entry += ` (Makeup Pending)`;
+        else if (log.status === 'pending_makeup') entry += ` (Makeup Pending for ${log.originalMissedDate})`;
         if (log.note && log.note.trim() !== "") entry += ` (Note: ${log.note.trim()})`;
         return entry;
       });
@@ -361,9 +367,18 @@ const HabitualPage: NextPage = () => {
             }
             return log;
           });
+          // If adding a note to a day that wasn't previously logged (e.g. a non-completed day),
+          // we should ideally create a basic log entry first or disallow.
+          // For simplicity, current logic updates existing or creates new if day was just completed.
+          // If user adds note to a day not in log (e.g. future, non-interacted past), it might not save correctly without a log.
+          // The UI flow should ideally only allow note for days with existing log (completed/skipped/pending).
           if (!logEntryExists) {
+             // This case should be rare if UI for reflection follows logged days.
+             // For robustness, create a minimal log if it doesn't exist.
              const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-             newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim(), status: 'completed'}); 
+             // Assuming a note is typically added to a completed task or a task being reviewed.
+             // Default to 'completed' if no prior status for that day's log.
+             newCompletionLog.push({date, time: currentTime, note: note.trim() === "" ? undefined : note.trim(), status: 'completed'});
              newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
           }
           return { ...h, completionLog: newCompletionLog };
@@ -388,9 +403,13 @@ const HabitualPage: NextPage = () => {
     setHabits(prevHabits => prevHabits.map(h => {
       if (h.id === habitId) {
         const newCompletionLog = [...h.completionLog];
+        // Remove any existing "skipped" or "missed" log for the originalMissedDate
+        const existingMissedLogIndex = newCompletionLog.findIndex(log => log.date === originalMissedDate && (log.status === 'skipped' || !log.status));
+        if(existingMissedLogIndex > -1) newCompletionLog.splice(existingMissedLogIndex, 1);
+
         newCompletionLog.push({
           date: newDate,
-          time: 'N/A', 
+          time: 'N/A',
           status: 'pending_makeup',
           originalMissedDate: originalMissedDate,
         });
@@ -413,6 +432,8 @@ const HabitualPage: NextPage = () => {
         let newCompletionLog = [...h.completionLog];
         const existingLogIndex = newCompletionLog.findIndex(log => log.date === missedDate);
         if (existingLogIndex > -1) {
+          // If it was a pending_makeup, remove it and mark original as skipped.
+          // Or just update current log to skipped. For simplicity, update current.
           newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'skipped', time: 'N/A' };
         } else {
           newCompletionLog.push({ date: missedDate, time: 'N/A', status: 'skipped' });
@@ -436,14 +457,14 @@ const HabitualPage: NextPage = () => {
       <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
-          maxWidth: 'clamp(320px, 100%, 450px)',
-          height: 'clamp(600px, 90vh, 800px)',
-          overflow: 'hidden',
+          maxWidth: 'clamp(320px, 100%, 450px)', // Max width of the "phone"
+          height: 'clamp(600px, 90vh, 800px)',  // Responsive height
+          overflow: 'hidden', // Clip content to the phone screen
         }}
       >
         <AppHeader />
 
-        <div className="flex-grow overflow-y-auto">
+        <div className="flex-grow overflow-y-auto"> {/* This div scrolls */}
           <main className="px-3 sm:px-4 py-6">
             {showInlineHabitForm && (
               <div className="my-4">
@@ -509,7 +530,7 @@ const HabitualPage: NextPage = () => {
                 onToggleComplete={handleToggleComplete}
                 onGetAISuggestion={handleOpenAISuggestionDialog}
                 onOpenReflectionDialog={handleOpenReflectionDialog}
-                onOpenRescheduleDialog={handleOpenRescheduleDialog}
+                onOpenRescheduleDialog={handleOpenRescheduleDialog} // Pass this down
                 selectedHabitIds={selectedHabitIds}
                 onSelectHabit={toggleHabitSelection}
                 />
@@ -520,6 +541,8 @@ const HabitualPage: NextPage = () => {
           </footer>
         </div>
 
+
+        {/* Bottom Navigation Bar */}
         <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16">
           <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
             <Home className="h-5 w-5" />
@@ -540,6 +563,7 @@ const HabitualPage: NextPage = () => {
         </div>
       </div>
 
+      {/* Floating Action Button for Add New Habit */}
       {!showInlineHabitForm && (
         <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
@@ -549,6 +573,7 @@ const HabitualPage: NextPage = () => {
           <Plus className="h-7 w-7" />
         </Button>
       )}
+
 
       {selectedHabitForAISuggestion && aiSuggestion && (
         <AISuggestionDialog
