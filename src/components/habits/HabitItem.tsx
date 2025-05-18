@@ -38,7 +38,7 @@ import {
   CheckCircle2,
   Circle,
   ChevronRightSquare,
-  Type, // Assuming Type is for text input or similar, not used here.
+  XCircle, // Added for missed state
 } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -117,7 +117,6 @@ const getHabitIcon = (habit: Habit): React.ReactNode => {
       default: iconComponent = <ListChecks className="h-5 w-5 text-muted-foreground" />; break;
     }
   } else {
-     // Fallback for specific names if no category match
     if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="h-5 w-5 text-blue-500" />;
     if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="h-5 w-5 text-purple-500" />;
     if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="h-5 w-5 text-yellow-600" />;
@@ -197,7 +196,7 @@ const HabitItem: FC<HabitItemProps> = ({
       const filename = `${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_habit.ics`;
       downloadICS(filename, icsContent);
       toast({
-        title: "Added to calendar!",
+        title: "Added to GCal!",
         description: `The .ics file for "${habit.name}" has been generated. You can import it into Google Calendar or your preferred calendar app.`,
       });
     } catch (error) {
@@ -266,15 +265,14 @@ const HabitItem: FC<HabitItemProps> = ({
   let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl rounded-[1.25rem]`;
   const cardStyle: React.CSSProperties = {};
 
-  if (isTodayCompleted) {
+  if (isTodayCompleted) { // If completed today, use accent border
     cardClasses = cn(cardClasses, 'bg-green-50 dark:bg-green-900/30');
     cardStyle.borderColor = `hsl(var(--accent))`;
     cardStyle.borderWidth = '1px';
-  } else {
+  } else { // Otherwise, use category-based or default gradient
     const categoryColorVar = getCategoryColorVariable(habit.category);
     cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
-    cardStyle.borderLeftWidth = '4px';
-    cardClasses = cn(cardClasses, 'bg-gradient-to-br from-primary/10 dark:from-primary/20 via-card/10 to-card');
+    cardClasses = cn(cardClasses, 'border-l-4 bg-gradient-to-br from-primary/10 dark:from-primary/20 via-card/10 to-card');
   }
   cardClasses = cn(cardClasses, 'bg-card');
 
@@ -317,7 +315,7 @@ const HabitItem: FC<HabitItemProps> = ({
                      } else {
                        toast({ title: "Reflection Note", description: "Cannot add note for future, non-logged days.", variant: "default"});
                      }
-                  } else if (todayString) {
+                  } else if (todayString) { // Fallback if weekViewDays isn't populated yet
                      onOpenReflectionDialog(habit.id, todayString, habit.name);
                   }
                 }}>
@@ -421,16 +419,16 @@ const HabitItem: FC<HabitItemProps> = ({
                 const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
                 const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
                 let isDayCompleted = dayLog?.status === 'completed' || (dayLog?.status === undefined && !!dayLog && dayLog.time !== 'N/A');
-                if(dayLog?.status === undefined && dayLog?.time === 'N/A' && dayLog.note) isDayCompleted = false;
+                if(dayLog?.status === undefined && dayLog?.time === 'N/A' && dayLog.note) isDayCompleted = false; // Note-only entry without completion
 
                 const isSkipped = dayLog?.status === 'skipped';
                 const isPendingMakeup = dayLog?.status === 'pending_makeup';
 
                 let dayStatus: 'completed' | 'skipped' | 'pending_makeup' | 'missed' | 'pending_scheduled' | 'not_scheduled' = 'not_scheduled';
-                let dayBgColor = '';
-                let dayTextColor = '';
-                let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
+                let dayBoxClasses = "bg-input/10 text-muted-foreground/40";
                 let IconComponent: React.ElementType = Circle;
+                let iconClasses = "text-muted-foreground/40";
+                let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
 
                 if (isDayCompleted) dayStatus = 'completed';
                 else if (isSkipped) dayStatus = 'skipped';
@@ -442,40 +440,48 @@ const HabitItem: FC<HabitItemProps> = ({
 
                 switch(dayStatus) {
                   case 'completed':
-                    dayBgColor = 'bg-accent hover:bg-accent/90'; dayTextColor = 'text-accent-foreground'; titleText += ' (Completed)'; IconComponent = CheckCircle2; break;
+                    dayBoxClasses = 'bg-accent/10'; IconComponent = CheckCircle2; iconClasses = 'text-accent'; titleText += ' (Completed)'; break;
                   case 'skipped':
-                    dayBgColor = 'bg-muted hover:bg-muted/90'; dayTextColor = 'text-muted-foreground'; titleText += ' (Skipped)'; IconComponent = CalendarX; break;
+                    dayBoxClasses = 'bg-muted/30'; IconComponent = CalendarX; iconClasses = 'text-muted-foreground'; titleText += ' (Skipped)'; break;
                   case 'pending_makeup':
-                    dayBgColor = 'bg-blue-500 hover:bg-blue-600'; dayTextColor = 'text-white'; titleText += ' (Makeup Pending)'; IconComponent = CalendarClock; break;
+                    dayBoxClasses = 'bg-blue-500/10'; IconComponent = CalendarClock; iconClasses = 'text-blue-500'; titleText += ' (Makeup Pending)'; break;
                   case 'missed':
-                    dayBgColor = 'bg-destructive hover:bg-destructive/90'; dayTextColor = 'text-destructive-foreground'; titleText += ' (Missed)'; IconComponent = Circle; break;
+                    dayBoxClasses = 'bg-destructive/10'; IconComponent = XCircle; iconClasses = 'text-destructive'; titleText += ' (Missed)'; break;
                   case 'pending_scheduled':
-                    dayBgColor = 'bg-secondary dark:bg-secondary/70 hover:bg-secondary/80 dark:hover:bg-secondary/90';
-                    dayTextColor = 'text-secondary-foreground dark:text-secondary-foreground/80';
-                    titleText += ' (Pending)';
-                    IconComponent = Circle;
-                    break;
-                  default:
-                     dayBgColor = 'bg-input/40 dark:bg-input/20 hover:bg-input/50 dark:hover:bg-input/30';
+                    dayBoxClasses = 'ring-1 ring-orange-500 ring-offset-1 ring-offset-background bg-orange-500/5'; IconComponent = Circle; iconClasses = 'text-orange-500'; titleText += ' (Scheduled)'; break;
+                  default: // not_scheduled
+                     // Classes already set
                      titleText += ' (Not Scheduled)';
-                     IconComponent = Circle;
-                     dayTextColor = 'text-muted-foreground/60 dark:text-muted-foreground/50';
                      break;
                 }
-
+                
+                const canToggleDay = isScheduled || isPendingMakeup || (isDayCompleted && isScheduled); // Allow unchecking completed scheduled days
+                                
                 return (
                   <div
                     key={dayInfo.dateStr}
                     title={titleText}
+                    onClick={() => {
+                        if (canToggleDay) {
+                            onToggleComplete(habit.id, dayInfo.dateStr, !isDayCompleted);
+                            if (!isDayCompleted) { // If just completed
+                                setShowSparkles(true);
+                                setTimeout(() => setShowSparkles(false), 800);
+                            }
+                        } else if (dayStatus === 'missed') { // If it's a missed day, allow toggling completion or opening reschedule dialog
+                            onOpenRescheduleDialog(habit, dayInfo.dateStr); // Or directly toggle: onToggleComplete(habit.id, dayInfo.dateStr, true);
+                        }
+                    }}
                     className={cn(
-                      `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-all cursor-default`,
-                      dayBgColor, dayTextColor,
+                      `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-all`,
+                      dayBoxClasses,
+                      canToggleDay ? 'cursor-pointer active:scale-95 transform transition-transform' : 'cursor-default',
                       dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : ''
                     )}
                     aria-label={`Status for ${habit.name} on ${dayInfo.dayAbbrFull}, ${format(dayInfo.date, 'MMM d')}: ${dayStatus}`}
                   >
-                    <span className="font-semibold text-[0.7rem] sm:text-xs">{dayInfo.dayAbbrShort}</span>
-                    <IconComponent className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5 mt-0.5", dayStatus === 'completed' || dayStatus === 'pending_makeup' || dayStatus === 'skipped' || dayStatus === 'missed' ? '' : 'opacity-70')}/>
+                    <span className={cn("font-semibold text-[0.7rem] sm:text-xs", iconClasses === 'text-muted-foreground/40' ? 'text-muted-foreground/80': '')}>{dayInfo.dayAbbrShort}</span>
+                    <IconComponent className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5 mt-0.5", iconClasses)}/>
                   </div>
                 );
               })}
@@ -492,7 +498,7 @@ const HabitItem: FC<HabitItemProps> = ({
               "rounded-full transition-all active:scale-95 py-2.5 px-6 text-sm",
               isTodayCompleted
                 ? `bg-accent hover:bg-accent/90 text-accent-foreground ${showSparkles && isTodayCompleted ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]"}`
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-primary text-primary-foreground hover:bg-primary/90" // Orange bar for "Mark as Done"
             )}
           >
             {isTodayCompleted ? (
@@ -507,7 +513,7 @@ const HabitItem: FC<HabitItemProps> = ({
               </>
             )}
           </Button>
-          {showSparkles && isTodayCompleted && (
+          {showSparkles && ( // Sparkles for any completion, including weekly day taps
               <>
                   <div className="sparkle sparkle-1"></div>
                   <div className="sparkle sparkle-2"></div>
