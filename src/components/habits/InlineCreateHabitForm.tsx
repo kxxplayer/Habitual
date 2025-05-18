@@ -28,7 +28,7 @@ import {
 interface InlineCreateHabitFormProps {
   onAddHabit: (habit: Omit<Habit, 'id' | 'completionLog'>) => void;
   onCloseForm: () => void;
-  initialData?: Partial<CreateHabitFormData> | null; // Added prop
+  initialData?: Partial<CreateHabitFormData> | null;
 }
 
 const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -57,7 +57,7 @@ const dayMapFullToAbbr: { [key: string]: WeekDay } = {
 
 const normalizeDay = (day: string): WeekDay | undefined => {
   if (typeof day !== 'string') return undefined;
-  const lowerDay = day.trim().toLowerCase().replace(/,/g, ''); // Remove commas for robustness
+  const lowerDay = day.trim().toLowerCase().replace(/,/g, '');
   return dayMapFullToAbbr[lowerDay] || weekDaysArray.find(d => d.toLowerCase() === lowerDay) || undefined;
 };
 
@@ -107,7 +107,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
         durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
         specificTime: initialData.specificTime || '',
       });
-    } else if (!initialData) { // Reset to truly default if form is closed without specific initial data
+    } else if (!initialData) {
         reset({
             description: '',
             name: '',
@@ -136,7 +136,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
         setValue('category', result.category as HabitCategory);
       } else {
-         setValue('category', 'Other'); // Default if AI doesn't suggest a valid one
+         setValue('category', 'Other');
       }
 
       let suggestedDays: WeekDay[] = [];
@@ -179,29 +179,28 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       durationMinutes: data.durationMinutes === null ? undefined : data.durationMinutes,
       specificTime: data.specificTime,
     });
-    // Reset is handled by useEffect when initialData changes or by onCloseForm setting initialData to null
     onCloseForm();
   };
 
   return (
     <Card className="bg-card shadow-lg border border-primary/20">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold flex items-center">
-          <PlusCircle className="mr-3 h-6 w-6 text-primary" />
+      <CardHeader className="p-4">
+        <CardTitle className="text-lg font-semibold flex items-center">
+          <PlusCircle className="mr-2 h-5 w-5 text-primary" />
           Add a New Habit
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs">
           Describe your new habit. AI can help suggest details.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <CardContent className="p-4 pt-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div className="space-y-1">
-            <Label htmlFor="inline-ai-description" className="text-sm font-medium">Describe habit (for AI)</Label>
+            <Label htmlFor="inline-ai-description" className="text-xs font-medium">Describe habit (for AI)</Label>
             <Controller
               name="description"
               control={control}
-              render={({ field }) => <Textarea id="inline-ai-description" placeholder="e.g., I want to read more books every morning for 30 mins" {...field} className="bg-input/50 text-sm" rows={2} />}
+              render={({ field }) => <Textarea id="inline-ai-description" placeholder="e.g., Read more books every morning for 30 mins" {...field} className="bg-input/50 text-sm" rows={2} />}
             />
             <Button
               type="button"
@@ -209,27 +208,27 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
               disabled={isAISuggesting || isDescriptionEffectivelyEmpty}
               variant="outline"
               size="sm"
-              className="w-full mt-1"
+              className="w-full mt-1 text-xs"
             >
-              {isAISuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+              {isAISuggesting ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Wand2 className="mr-2 h-3 w-3" />}
               Suggest Details with AI
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="inline-habit-name" className="text-sm font-medium">Habit Name</Label>
+              <Label htmlFor="inline-habit-name" className="text-xs font-medium">Habit Name</Label>
               <Controller
                 name="name"
                 control={control}
-                render={({ field }) => <Input id="inline-habit-name" placeholder="e.g., Read a chapter daily" {...field} className="bg-input/50 text-sm" />}
+                render={({ field }) => <Input id="inline-habit-name" placeholder="e.g., Read a chapter daily" {...field} className="bg-input/50 text-sm h-9" />}
               />
               {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="inline-habit-category" className="text-sm font-medium flex items-center">
-                <Tag className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Label htmlFor="inline-habit-category" className="text-xs font-medium flex items-center">
+                <Tag className="mr-1.5 h-3 w-3 text-muted-foreground" />
                 Category
               </Label>
               <Controller
@@ -256,15 +255,15 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
 
           <div className="space-y-1">
-            <Label className="text-sm font-medium">Days of the Week</Label>
-            <div className="grid grid-cols-4 gap-1 p-1.5 border rounded-md bg-input/20">
+            <Label className="text-xs font-medium">Days of the Week</Label>
+            <div className="grid grid-cols-4 gap-1 p-1 border rounded-md bg-input/20">
               {weekDaysArray.map((day) => (
                 <Controller
                   key={day}
                   name="daysOfWeek"
                   control={control}
                   render={({ field }) => (
-                    <div className="flex items-center space-x-1.5 p-1 rounded-md hover:bg-accent/10 transition-colors">
+                    <div className="flex items-center space-x-1 p-0.5 rounded-md hover:bg-accent/10 transition-colors">
                       <Checkbox
                         id={`inline-day-${day}`}
                         checked={field.value?.includes(day)}
@@ -287,9 +286,9 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
             {errors.daysOfWeek && <p className="text-xs text-destructive">{errors.daysOfWeek.message}</p>}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-sm font-medium flex items-center"><Hourglass className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />Duration</Label>
+              <Label className="text-xs font-medium flex items-center"><Hourglass className="mr-1.5 h-3 w-3 text-muted-foreground" />Duration</Label>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-0.5">
                   <Label htmlFor="inline-duration-hours" className="text-xs text-muted-foreground">Hours</Label>
@@ -313,7 +312,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="inline-habit-specificTime" className="text-sm font-medium flex items-center"><Clock className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />Specific Time</Label>
+              <Label htmlFor="inline-habit-specificTime" className="text-xs font-medium flex items-center"><Clock className="mr-1.5 h-3 w-3 text-muted-foreground" />Specific Time</Label>
               <Controller
                 name="specificTime"
                 control={control}
@@ -324,20 +323,20 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="inline-habit-optimalTiming" className="text-sm font-medium flex items-center"><CalendarClock className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />Optimal General Timing</Label>
+            <Label htmlFor="inline-habit-optimalTiming" className="text-xs font-medium flex items-center"><CalendarClock className="mr-1.5 h-3 w-3 text-muted-foreground" />Optimal General Timing</Label>
             <Controller
               name="optimalTiming"
               control={control}
               render={({ field }) => <Input id="inline-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50 text-sm h-9" />}
             />
           </div>
-          <CardFooter className="p-0 pt-4 flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => { onCloseForm(); }} disabled={isSubmitting || isAISuggesting}>
+          <CardFooter className="p-0 pt-3 flex justify-end space-x-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => { onCloseForm(); }} disabled={isSubmitting || isAISuggesting}>
                 <XCircle className="mr-2 h-4 w-4" /> Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || isAISuggesting} >
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-5 w-5" />}
-              Add This Habit
+            <Button type="submit" size="sm" disabled={isSubmitting || isAISuggesting} >
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+              Add Habit
             </Button>
           </CardFooter>
         </form>
@@ -347,3 +346,4 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 };
 
 export default InlineCreateHabitForm;
+
