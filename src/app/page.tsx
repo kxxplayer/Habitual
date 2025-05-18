@@ -1,7 +1,8 @@
+
 "use client";
 
 import * as React from 'react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
@@ -25,6 +26,10 @@ import Link from 'next/link';
 import { cn } from "@/lib/utils";
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle as DialogCardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card'; // Renamed to avoid conflict
+import { Calendar } from '@/components/ui/calendar';
+import type { DayPicker } from 'react-day-picker';
+
 import {
   Dialog,
   DialogContent,
@@ -39,8 +44,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTitle as AlertTitle, // Renamed to avoid conflict
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -51,9 +55,10 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2 } from 'lucide-react';
-import { format, parseISO, set, subMinutes, isFuture } from 'date-fns';
+import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon  } from 'lucide-react';
+import { format, parseISO, isSameDay, getDay } from 'date-fns';
 
+const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const POINTS_PER_COMPLETION = 10;
@@ -61,42 +66,41 @@ const POINTS_PER_COMPLETION = 10;
 
 const HabitualPage: NextPage = () => {
   const router = useRouter();
-  const [authUser, setAuthUser] = useState<User | null>(null);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [authUser, setAuthUser] = React.useState<User | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
 
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = useState(false);
-  const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = useState<Habit | null>(null);
-  const [aiSuggestion, setAISuggestion] = useState<AISuggestionType | null>(null);
+  const [habits, setHabits] = React.useState<Habit[]>([]);
+  const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = React.useState(false);
+  const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = React.useState<Habit | null>(null);
+  const [aiSuggestion, setAISuggestion] = React.useState<AISuggestionType | null>(null);
 
-  const [showInlineHabitForm, setShowInlineHabitForm] = useState(false);
+  const [showInlineHabitForm, setShowInlineHabitForm] = React.useState(false);
 
-  const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
-  const [isAchievementsDialogOpen, setIsAchievementsDialogOpen] = useState(false);
-  const [isSettingsSheetOpen, setIsSettingsSheetOpen] = useState(false);
-  const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
-  const [totalPoints, setTotalPoints] = useState<number>(0);
+  const [isDashboardDialogOpen, setIsDashboardDialogOpen] = React.useState(false);
+  const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false); // New state for calendar dialog
+  const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date()); // New state for calendar dialog date
 
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+  const [isAchievementsDialogOpen, setIsAchievementsDialogOpen] = React.useState(false);
+  const [isSettingsSheetOpen, setIsSettingsSheetOpen] = React.useState(false);
+  const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
+  const [totalPoints, setTotalPoints] = React.useState<number>(0);
+
+  const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission | null>(null);
   const reminderTimeouts = React.useRef<NodeJS.Timeout[]>([]);
 
 
-  const [isReflectionDialogOpen, setIsReflectionDialogOpen] = useState(false);
-  const [reflectionDialogData, setReflectionDialogData] = useState<{
+  const [isReflectionDialogOpen, setIsReflectionDialogOpen] = React.useState(false);
+  const [reflectionDialogData, setReflectionDialogData] = React.useState<{
     habitId: string;
     date: string;
     initialNote?: string;
     habitName: string;
   } | null>(null);
 
-  const [rescheduleDialogData, setRescheduleDialogData] = useState<{
+  const [rescheduleDialogData, setRescheduleDialogData] = React.useState<{
     habit: Habit;
     missedDate: string;
   } | null>(null);
-
-  const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -210,7 +214,7 @@ const HabitualPage: NextPage = () => {
             durationMinutes: migratedDurationMinutes,
             specificTime: migratedSpecificTime || undefined,
             completionLog: migratedCompletionLog as HabitCompletionLogEntry[],
-            reminderEnabled: habit.reminderEnabled || false, // Migration for reminderEnabled
+            reminderEnabled: habit.reminderEnabled || false, 
           };
         });
         setHabits(parsedHabits);
@@ -291,8 +295,8 @@ const HabitualPage: NextPage = () => {
           if (habit.specificTime) {
             try {
               const [hours, minutes] = habit.specificTime.split(':').map(Number);
-              let specificEventTime = set(now, { hours, minutes, seconds: 0, milliseconds: 0 });
-              reminderDateTime = subMinutes(specificEventTime, 30);
+              let specificEventTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000); // 30 minutes before
             } catch (e) { 
               console.error(`Error parsing specificTime "${habit.specificTime}" for habit "${habit.name}"`, e);
             }
@@ -301,10 +305,10 @@ const HabitualPage: NextPage = () => {
             if (habit.optimalTiming?.toLowerCase().includes('morning')) baseHour = 9;
             else if (habit.optimalTiming?.toLowerCase().includes('afternoon')) baseHour = 13;
             else if (habit.optimalTiming?.toLowerCase().includes('evening')) baseHour = 18;
-            reminderDateTime = set(now, { hours: baseHour, minutes: 0, seconds: 0, milliseconds: 0 });
+            reminderDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), baseHour, 0, 0, 0);
           }
 
-          if (reminderDateTime && isFuture(reminderDateTime)) {
+          if (reminderDateTime && reminderDateTime > now) {
             const delay = reminderDateTime.getTime() - now.getTime();
             console.log(`Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
             
@@ -560,33 +564,6 @@ const HabitualPage: NextPage = () => {
     console.log(`Habit Skipped: ${habitName}`);
   };
 
-  const toggleHabitSelection = (habitId: string) => {
-    setSelectedHabitIds((prevSelected) =>
-      prevSelected.includes(habitId)
-        ? prevSelected.filter((id) => id !== habitId)
-        : [...prevSelected, habitId]
-    );
-  };
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedHabitIds(habits.map((habit) => habit.id));
-    } else {
-      setSelectedHabitIds([]);
-    }
-  };
-
-  const handleDeleteSelectedHabits = () => {
-    setHabits((prevHabits) =>
-      prevHabits.filter((habit) => !selectedHabitIds.includes(habit.id))
-    );
-    const numDeleted = selectedHabitIds.length;
-    console.log(`${numDeleted} habit(s) deleted.`);
-    setSelectedHabitIds([]);
-    setIsDeleteConfirmOpen(false);
-  };
-
-
   const handleRequestNotificationPermission = () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
         Notification.requestPermission().then(permission => {
@@ -600,6 +577,90 @@ const HabitualPage: NextPage = () => {
     }
   };
 
+  // Calendar Dialog Logic
+  const habitsForSelectedCalendarDate = useMemo(() => {
+    if (!selectedCalendarDate) return [];
+    const dateStr = format(selectedCalendarDate, 'yyyy-MM-dd');
+    const dayOfWeek = dayIndexToWeekDayConstant[getDay(selectedCalendarDate)];
+
+    return habits.filter(habit => {
+      const isScheduled = habit.daysOfWeek.includes(dayOfWeek);
+      const logEntry = habit.completionLog.find(log => log.date === dateStr);
+      return isScheduled || logEntry;
+    });
+  }, [selectedCalendarDate, habits]);
+
+  const calendarDialogModifiers = useMemo(() => {
+    const completedDays: Date[] = [];
+    const scheduledMissedDays: Date[] = [];
+    const scheduledUpcomingDays: Date[] = [];
+    const makeupPendingDays: Date[] = [];
+
+    habits.forEach(habit => {
+      habit.completionLog.forEach(log => {
+        const logDate = parseISO(log.date);
+        if (log.status === 'completed') {
+          completedDays.push(logDate);
+        } else if (log.status === 'pending_makeup') {
+          makeupPendingDays.push(logDate);
+        }
+      });
+
+      const today = new Date();
+      for (let i = 0; i < 60; i++) { 
+          const pastDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+          const futureDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+          
+          [pastDate, futureDate].forEach(checkDate => {
+            if (isSameDay(checkDate, today) && i !== 0 && checkDate !== pastDate) return; 
+
+            const dateStr = format(checkDate, 'yyyy-MM-dd');
+            const dayOfWeek = dayIndexToWeekDayConstant[getDay(checkDate)];
+            const isScheduled = habit.daysOfWeek.includes(dayOfWeek);
+            const logEntry = habit.completionLog.find(log => log.date === dateStr);
+
+            if (isScheduled && !logEntry) {
+                if (checkDate < today && !isSameDay(checkDate, today)) {
+                    if (!scheduledMissedDays.some(d => isSameDay(d, checkDate))) {
+                       scheduledMissedDays.push(checkDate);
+                    }
+                } else {
+                    if (!scheduledUpcomingDays.some(d => isSameDay(d, checkDate)) && !completedDays.some(d => isSameDay(d, checkDate))) {
+                        scheduledUpcomingDays.push(checkDate);
+                    }
+                }
+            }
+          });
+      }
+    });
+    
+    const finalScheduledUpcoming = scheduledUpcomingDays.filter(sDate => 
+        !completedDays.some(cDate => isSameDay(sDate, cDate)) &&
+        !makeupPendingDays.some(mDate => isSameDay(sDate, mDate))
+    );
+    const finalScheduledMissed = scheduledMissedDays.filter(sDate => 
+        !completedDays.some(cDate => isSameDay(sDate, cDate)) &&
+        !makeupPendingDays.some(mDate => isSameDay(sDate, mDate))
+    );
+
+    return {
+      completed: completedDays,
+      missed: finalScheduledMissed,
+      scheduled: finalScheduledUpcoming,
+      makeup: makeupPendingDays,
+      selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+    };
+  }, [habits, selectedCalendarDate]);
+
+  const calendarDialogModifierStyles: DayPicker['modifiersStyles'] = {
+    completed: { backgroundColor: 'hsl(var(--accent)/0.15)', color: 'hsl(var(--accent))', fontWeight: 'bold' },
+    missed: { backgroundColor: 'hsl(var(--destructive)/0.1)', color: 'hsl(var(--destructive))' },
+    scheduled: { backgroundColor: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))' },
+    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15', color: 'hsl(200,100%,50%)' },
+    selected: { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
+  };
+
+
   const sheetMenuItems = [
     { href: '/', label: 'Home', icon: Home, action: () => setIsSettingsSheetOpen(false) },
     { href: '/profile', label: 'Profile', icon: UserCircle, action: () => setIsSettingsSheetOpen(false) },
@@ -607,14 +668,14 @@ const HabitualPage: NextPage = () => {
       label: 'Reminders',
       icon: BellRing,
       action: () => {
-        setIsSettingsSheetOpen(false);
+        // Keep sheet open for this interaction
         if (notificationPermission === 'granted') {
           console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
         } else if (notificationPermission === 'denied') {
           console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
         } else {
           console.log('Reminder Settings: Notification permission not yet set. Requesting...');
-          handleRequestNotificationPermission();
+          handleRequestNotificationPermission(); // This will trigger browser prompt if needed
         }
       }
     },
@@ -626,7 +687,7 @@ const HabitualPage: NextPage = () => {
         setIsAchievementsDialogOpen(true);
       }
     },
-    { href: '/calendar', label: 'Calendar', icon: CalendarDays, action: () => { setIsSettingsSheetOpen(false); } },
+    { label: 'Calendar', icon: CalendarDays, action: () => { setIsSettingsSheetOpen(false); setIsCalendarDialogOpen(true); } },
   ];
 
   if (isLoadingAuth) {
@@ -654,60 +715,23 @@ const HabitualPage: NextPage = () => {
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
           maxWidth: 'clamp(320px, 100%, 450px)',
-          height: 'clamp(600px, 90vh, 800px)',
+          height: 'clamp(700px, 90vh, 850px)', // Adjusted height
           overflow: 'hidden',
         }}
       >
         <AppHeader />
+        
+        {/* Top Action Bar */}
+        <div className="shrink-0 bg-card/80 backdrop-blur-sm border-b p-2 flex justify-end items-center space-x-2 sticky top-[60px] z-30">
+            <Button variant="ghost" size="icon" onClick={() => setIsCalendarDialogOpen(true)} aria-label="Open Calendar">
+                <CalendarDays className="h-5 w-5 text-primary" />
+            </Button>
+            {/* Add other top action buttons here if needed */}
+        </div>
+
 
         <div className="flex-grow overflow-y-auto">
-           {/* Selection Toolbar - Conditionally Rendered */}
-           {/*
-          {selectedHabitIds.length > 0 && (
-            <div className="p-2 sm:p-3 border-b bg-muted/50 sticky top-0 z-30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="select-all-habits"
-                    checked={selectedHabitIds.length === habits.length && habits.length > 0}
-                    onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
-                    aria-label="Select all habits"
-                  />
-                  <label htmlFor="select-all-habits" className="text-sm font-medium">
-                    {selectedHabitIds.length} selected
-                  </label>
-                </div>
-                <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={selectedHabitIds.length === 0}
-                    >
-                      <Trash2 className="mr-1.5 h-4 w-4" />
-                      Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the selected habit(s).
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteSelectedHabits}>
-                        Yes, delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
-          )}
-            */}
-          <main className="px-3 sm:px-4 py-6">
+          <main className="px-3 sm:px-4 py-4"> {/* Reduced py */}
             {showInlineHabitForm && (
               <div className="my-4">
                 <InlineCreateHabitForm
@@ -725,8 +749,6 @@ const HabitualPage: NextPage = () => {
                   onOpenReflectionDialog={handleOpenReflectionDialog}
                   onOpenRescheduleDialog={handleOpenRescheduleDialog}
                   onToggleReminder={handleToggleReminder}
-                  // selectedHabitIds={selectedHabitIds} // Removed as multi-select is disabled from card header
-                  // onSelectHabit={toggleHabitSelection} // Removed
                 />
             )}
           </main>
@@ -736,7 +758,7 @@ const HabitualPage: NextPage = () => {
         </div>
 
 
-        <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16">
+        <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16 sticky bottom-0 z-30">
           <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
             <Home className="h-5 w-5" />
             <span className="text-xs mt-0.5">Home</span>
@@ -829,6 +851,85 @@ const HabitualPage: NextPage = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] w-full max-w-[calc(100%-2rem)]">
+            <DialogHeader>
+                <DialogTitle className="flex items-center text-xl">
+                    <CalendarDays className="mr-2 h-5 w-5 text-primary" />
+                    Habit Calendar
+                </DialogTitle>
+                 <DialogDescription>
+                    View your habit activity on the calendar.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-2 max-h-[65vh] overflow-y-auto pr-2 flex flex-col items-center">
+                 <Calendar
+                    mode="single"
+                    selected={selectedCalendarDate}
+                    onSelect={setSelectedCalendarDate}
+                    modifiers={calendarDialogModifiers}
+                    modifiersStyles={calendarDialogModifierStyles}
+                    className="rounded-md border p-0 sm:p-2" // Adjusted padding
+                    month={selectedCalendarDate || new Date()}
+                    onMonthChange={setSelectedCalendarDate}   
+                 />
+                {selectedCalendarDate && (
+                <div className="mt-4 w-full">
+                    <h3 className="text-md font-semibold mb-2 text-center">
+                    Habits for {format(selectedCalendarDate, 'MMMM d, yyyy')}
+                    </h3>
+                    {habitsForSelectedCalendarDate.length > 0 ? (
+                    <ul className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
+                        {habitsForSelectedCalendarDate.map(habit => {
+                        const logEntry = habit.completionLog.find(log => log.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
+                        const dayOfWeekForSelected = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
+                        const isScheduledToday = habit.daysOfWeek.includes(dayOfWeekForSelected);
+                        let statusText = "Scheduled";
+                        let StatusIcon = CircleIcon;
+                        let iconColor = "text-orange-500";
+
+                        if (logEntry?.status === 'completed') {
+                            statusText = `Completed at ${logEntry.time || ''}`;
+                            StatusIcon = CheckCircle2;
+                            iconColor = "text-accent";
+                        } else if (logEntry?.status === 'pending_makeup') {
+                            statusText = `Makeup for ${logEntry.originalMissedDate}`;
+                            StatusIcon = MakeupIcon;
+                            iconColor = "text-blue-500";
+                        } else if (logEntry?.status === 'skipped') {
+                            statusText = "Skipped";
+                            StatusIcon = XCircle;
+                            iconColor = "text-muted-foreground";
+                        } else if (isScheduledToday && parseISO(format(selectedCalendarDate as Date, 'yyyy-MM-dd')) < parseISO(format(new Date(), 'yyyy-MM-dd')) && !logEntry) {
+                            statusText = "Missed";
+                            StatusIcon = XCircle;
+                            iconColor = "text-destructive";
+                        }
+                        
+                        return (
+                            <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
+                            <span className="font-medium truncate pr-2">{habit.name}</span>
+                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                                <StatusIcon className={cn("h-3.5 w-3.5", iconColor)} />
+                                <span>{statusText}</span>
+                            </div>
+                            </li>
+                        );
+                        })}
+                    </ul>
+                    ) : (
+                    <p className="text-sm text-muted-foreground text-center py-2">No habits for this day.</p>
+                    )}
+                </div>
+                )}
+            </div>
+            <DialogFooter className="pt-2">
+                <Button variant="outline" onClick={() => setIsCalendarDialogOpen(false)}>Close</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={isAchievementsDialogOpen} onOpenChange={setIsAchievementsDialogOpen}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
@@ -881,7 +982,7 @@ const HabitualPage: NextPage = () => {
                         </Button>
                     </Link>
                 </SheetClose>
-              ) : item.href === "/profile" || item.href === "/calendar" ? ( 
+              ) : item.href === "/profile" ? ( 
                  <SheetClose asChild key={item.label}>
                     <Link href={item.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action} >
@@ -934,3 +1035,5 @@ const HabitualPage: NextPage = () => {
 
 export default HabitualPage;
 
+
+    
