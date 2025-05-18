@@ -202,7 +202,7 @@ const HabitItem: FC<HabitItemProps> = ({
       const filename = `${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_habit.ics`;
       downloadICS(filename, icsContent);
       toast({
-        title: "Added to calendar!",
+        title: "Added to GCal!",
         description: `The .ics file for "${habit.name}" has been generated. You can import it into Google Calendar or your preferred calendar app.`,
       });
     } catch (error) {
@@ -269,24 +269,19 @@ const HabitItem: FC<HabitItemProps> = ({
   const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && (log.status === 'completed' || (log.status === undefined && log.time !== 'N/A')));
 
   let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl rounded-[1.25rem]`;
+  const cardStyle: React.CSSProperties = {}; // Initialize cardStyle as an empty object
 
   if (isTodayCompleted) {
-    cardClasses = cn(cardClasses, 'border-accent bg-green-50 dark:bg-green-900/30');
+    cardClasses = cn(cardClasses, 'bg-green-50 dark:bg-green-900/30');
+    cardStyle.borderColor = `hsl(var(--accent))`;
+    cardStyle.borderWidth = '1px';
   } else {
     const categoryColorVar = getCategoryColorVariable(habit.category);
     cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
-    cardClasses = cn(cardClasses, 'border-l-4 bg-gradient-to-br from-primary/10 dark:from-primary/20 via-card/10 to-card');
+    cardStyle.borderLeftWidth = '4px';
+    cardClasses = cn(cardClasses, 'bg-gradient-to-br from-primary/10 dark:from-primary/20 via-card/10 to-card');
   }
   cardClasses = cn(cardClasses, 'bg-card');
-  const cardStyle: React.CSSProperties = {};
-   if (!isTodayCompleted && habit.category) {
-    const categoryColorVar = getCategoryColorVariable(habit.category);
-    cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
-    cardStyle.borderLeftWidth = '4px';
-  } else if (isTodayCompleted) {
-     cardStyle.borderColor = `hsl(var(--accent))`; // Emphasize completion with full accent border
-     cardStyle.borderWidth = '1px'; // Or thicker if desired, e.g., '2px'
-  }
 
 
   const handleToggleCurrentDayCompletion = () => {
@@ -305,7 +300,7 @@ const HabitItem: FC<HabitItemProps> = ({
         <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
           {getHabitIcon(habit)}
         </div>
-        <h2 className="text-lg sm:text-xl font-bold text-primary text-center flex-grow mx-2 truncate">
+        <h2 className="text-lg sm:text-xl font-bold text-primary text-center flex-grow mx-2 truncate min-w-0 break-words">
           {habit.name}
         </h2>
         <div className="flex-shrink-0">
