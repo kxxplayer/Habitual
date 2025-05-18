@@ -50,7 +50,7 @@ const weekDayToShort: Record<WeekDay, string> = {
  * @returns The WeekDay abbreviation.
  */
 export const getDayAbbreviationFromDate = (date: Date): WeekDay => {
-  const dayIndex = getDay(date);
+  const dayIndex = getDay(date); // Sunday is 0, Monday is 1, etc.
   return dayIndexToWeekDay[dayIndex];
 };
 
@@ -74,7 +74,7 @@ export const calculateStreak = (habit: Habit, referenceDate: Date = new Date()):
 
   for (let i = 0; i < 365 * 2; i++) { 
     const dateStr = format(tempDate, 'yyyy-MM-dd');
-    const dayOfWeek = dayIndexToWeekDay[getDay(tempDate)];
+    const dayOfWeek = dayIndexToWeekDay[getDay(tempDate)]; // getDay from date-fns also maps Sun=0
     const logEntry = completionLogMap.get(dateStr);
 
     if (habit.daysOfWeek.includes(dayOfWeek)) { 
@@ -87,14 +87,21 @@ export const calculateStreak = (habit: Habit, referenceDate: Date = new Date()):
         // For past days, if not 'completed', streak is broken.
         if (i === 0 && format(tempDate, 'yyyy-MM-dd') === format(startOfDay(referenceDate), 'yyyy-MM-dd')) {
              if (!logEntry || (logEntry.status !== 'completed' && logEntry.status !== undefined)) {
-                 return 0; // Today was scheduled but not truly completed.
+                 // If today was scheduled but not completed, the streak is 0,
+                 // unless it's the very first day and it's not yet marked.
+                 // If it's a past day in the streak calculation that wasn't completed, it breaks the streak.
+                 // The current logic is that if today is scheduled and not completed, streak is 0.
+                 return 0; 
              }
         } else {
            break; // Streak broken before this day
         }
       }
     } else if (logEntry && (logEntry.status === 'completed' || logEntry.status === undefined) && logEntry.originalMissedDate) {
-        // This is a completed makeup day for a non-scheduled day. It counts towards the streak.
+        // This is a completed makeup day for a non-scheduled day. It counts towards the streak
+        // if the originalMissedDate *was* a scheduled day.
+        // For simplicity now, any completed makeup contributes to streak count.
+        // A more precise logic might check if the originalMissedDate was a scheduled day.
         currentStreak++;
     }
     // If not scheduled (and not a completed makeup day), the streak is not broken, nor incremented.
@@ -121,18 +128,19 @@ export interface WeekDayInfo {
 export const getCurrentWeekDays = (referenceDate: Date = new Date()): WeekDayInfo[] => {
   const weekSpan = getWeekSpan(referenceDate);
   const days = eachDayOfInterval({ start: weekSpan.start, end: weekSpan.end });
-  const todayRef = startOfDay(referenceDate); 
-
+  
   return days.map(date => {
     const dayAbbrFull = getDayAbbreviationFromDate(date);
+    const isTodayFlag = dateFnsIsToday(date);
+    const isPastFlag = dateFnsIsPast(date) && !isTodayFlag; 
+
     return {
       date: date,
       dayAbbrShort: weekDayToShort[dayAbbrFull],
       dayAbbrFull: dayAbbrFull,
       dateStr: format(date, 'yyyy-MM-dd'),
-      isToday: dateFnsIsToday(date),
-      isPast: dateFnsIsPast(date) && !dateFnsIsToday(date), 
+      isToday: isTodayFlag,
+      isPast: isPastFlag, 
     };
   });
 };
-
