@@ -6,7 +6,7 @@ import * as React from 'react';
 import type { FC } from 'react';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox'; // Added this import
+import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
@@ -123,6 +123,7 @@ const getHabitIcon = (habit: Habit): React.ReactNode => {
       case 'Social': iconComponent = <Users className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-pink-500" />; break;
       case 'Personal Growth': iconComponent = <SparklesIcon className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-yellow-500" />; break;
       case 'Lifestyle': iconComponent = <LifestyleIcon className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-teal-500" />; break;
+      default: iconComponent = <ListChecks className="ml-1.5 rtl:mr-1.5 rtl:ml-0 h-4 w-4 text-muted-foreground" />; break;
     }
   }
   return iconComponent;
@@ -437,13 +438,13 @@ const HabitItem: FC<HabitItemProps> = ({
       </CardContent>
 
       <CardFooter className="flex flex-col items-stretch pt-2 pb-2 px-3 space-y-2">
-        <div className="sparkle-container relative w-full">
+        <div className="sparkle-container relative flex justify-center">
           <Button
             onClick={handleToggleCurrentDayCompletion}
             className={cn(
-              "w-full transition-all active:scale-95 py-2.5 text-sm rounded-full", 
+              "transition-all active:scale-95 py-2.5 px-6 text-sm rounded-full", 
               isTodayCompleted
-                ? `bg-accent hover:bg-accent/90 text-accent-foreground ${showSparkles ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]"}`
+                ? `bg-accent hover:bg-accent/90 text-accent-foreground ${showSparkles && isTodayCompleted ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]"}`
                 : "border border-primary/50 text-primary hover:bg-primary/10"
             )}
           >
