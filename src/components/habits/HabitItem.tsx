@@ -149,7 +149,12 @@ const HabitItem: FC<HabitItemProps> = ({
     setCurrentDate(now);
     setTodayString(format(now, 'yyyy-MM-dd'));
     setWeekViewDays(getCurrentWeekDays(now));
-  }, []);
+  }, []); // Runs once on mount
+
+  React.useEffect(() => { // Re-evaluate weekViewDays if todayString changes (e.g. midnight crossing)
+     setWeekViewDays(getCurrentWeekDays(new Date()));
+  }, [todayString]);
+
 
   const streak = calculateStreak(habit, currentDate);
 
@@ -295,7 +300,7 @@ const HabitItem: FC<HabitItemProps> = ({
       </div>
 
       <CardHeader className="pt-3 pb-1 px-3 sm:px-4 pr-12">
-        <div className="flex items-center">
+        <div className="flex items-baseline">
           <h2 className="text-lg sm:text-xl font-semibold text-primary min-w-0 break-words">
             {habit.name}
           </h2>
@@ -377,6 +382,10 @@ const HabitItem: FC<HabitItemProps> = ({
                 const isPendingMakeup = dayLog?.status === 'pending_makeup';
 
                 let dayStatus: 'completed' | 'skipped' | 'pending_makeup' | 'missed' | 'pending_scheduled' | 'not_scheduled' = 'not_scheduled';
+                let dayBgColor = '';
+                let dayTextColor = '';
+                let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
+                let IconComponent: React.ElementType = Circle;
 
                 if (isDayCompleted) dayStatus = 'completed';
                 else if (isSkipped) dayStatus = 'skipped';
@@ -385,11 +394,6 @@ const HabitItem: FC<HabitItemProps> = ({
                   if (dayInfo.isPast && !dayInfo.isToday) dayStatus = 'missed';
                   else dayStatus = 'pending_scheduled';
                 }
-
-                let dayBgColor = 'bg-input/30 hover:bg-input/50';
-                let dayTextColor = 'text-muted-foreground/70';
-                let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
-                let IconComponent: React.ElementType = Circle;
 
                 switch(dayStatus) {
                   case 'completed':
@@ -401,9 +405,17 @@ const HabitItem: FC<HabitItemProps> = ({
                   case 'missed':
                     dayBgColor = 'bg-destructive hover:bg-destructive/90'; dayTextColor = 'text-destructive-foreground'; titleText += ' (Missed)'; IconComponent = Circle; break;
                   case 'pending_scheduled':
-                    dayBgColor = 'bg-muted hover:bg-muted/90'; dayTextColor = 'text-muted-foreground'; titleText += ' (Pending)'; IconComponent = Circle; break;
-                  default:
-                     dayBgColor = 'bg-input/20'; titleText += ' (Not Scheduled)'; IconComponent = Circle; dayTextColor = 'text-muted-foreground/50'; break;
+                    dayBgColor = 'bg-secondary dark:bg-secondary/70 hover:bg-secondary/80 dark:hover:bg-secondary/90'; 
+                    dayTextColor = 'text-secondary-foreground dark:text-secondary-foreground/80'; 
+                    titleText += ' (Pending)'; 
+                    IconComponent = Circle; 
+                    break;
+                  default: // not_scheduled
+                     dayBgColor = 'bg-input/40 dark:bg-input/20 hover:bg-input/50 dark:hover:bg-input/30'; 
+                     titleText += ' (Not Scheduled)'; 
+                     IconComponent = Circle; 
+                     dayTextColor = 'text-muted-foreground/60 dark:text-muted-foreground/50'; 
+                     break;
                 }
                 
                 return (
@@ -414,12 +426,12 @@ const HabitItem: FC<HabitItemProps> = ({
                       `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-all`,
                       dayBgColor, dayTextColor,
                       dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : '',
-                       'cursor-default'
+                       'cursor-default' // Kept as non-clickable for now, main button handles today's completion
                     )}
                     aria-label={`Status for ${habit.name} on ${dayInfo.dayAbbrFull}, ${format(dayInfo.date, 'MMM d')}: ${dayStatus}`}
                   >
                     <span className="font-semibold text-[0.7rem] sm:text-xs">{dayInfo.dayAbbrShort}</span>
-                    <IconComponent className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5 mt-0.5", dayStatus === 'completed' || dayStatus === 'pending_makeup' || dayStatus === 'skipped' ? '' : 'opacity-70')}/>
+                    <IconComponent className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5 mt-0.5", dayStatus === 'completed' || dayStatus === 'pending_makeup' || dayStatus === 'skipped' || dayStatus === 'missed' ? '' : 'opacity-70')}/>
                   </div>
                 );
               })}
@@ -468,17 +480,20 @@ const HabitItem: FC<HabitItemProps> = ({
             <DropdownMenuContent align="end">
                <DropdownMenuItem onClick={() => {
                   const targetDateForReflection = todayString; 
-                  const logForReflection = habit.completionLog.find(l => l.date === targetDateForReflection);
+                  // Allow note for any day in the current week, if it has a log or is past/today
                   let allowNote = false;
-                  if(logForReflection && (logForReflection.status === 'completed' || logForReflection.status === 'skipped' || logForReflection.status === 'pending_makeup' || logForReflection.status === undefined) ){
-                      allowNote = true;
-                  } else if (weekViewDays.some(d => d.dateStr === targetDateForReflection && (d.isPast || d.isToday))) {
-                      allowNote = true;
+                  const dayInfoForNote = weekViewDays.find(d => d.dateStr === targetDateForReflection);
+                  if (dayInfoForNote) {
+                     const logForReflection = habit.completionLog.find(l => l.date === targetDateForReflection);
+                     if(logForReflection || dayInfoForNote.isPast || dayInfoForNote.isToday){
+                         allowNote = true;
+                     }
                   }
+
                   if(allowNote){
                     onOpenReflectionDialog(habit.id, targetDateForReflection, habit.name);
                   } else {
-                     toast({ title: "Reflection Note", description: "Mark today as complete/skipped to add a note.", variant: "default"});
+                     toast({ title: "Reflection Note", description: "Cannot add note for future, non-logged days outside current week scope.", variant: "default"});
                   }
                 }}>
                 <MessageSquarePlus className="mr-2 h-4 w-4" />
@@ -534,7 +549,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-
-    
-
-      
