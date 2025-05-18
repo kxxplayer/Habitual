@@ -136,12 +136,10 @@ const HabitItem: FC<HabitItemProps> = ({
     const now = new Date();
     setCurrentDate(now);
     setWeekViewDays(getCurrentWeekDays(now));
-  }, [todayString]);
+  }, [todayString]); // Re-calculate if todayString changes, e.g. app open overnight
 
   const streak = calculateStreak(habit, currentDate);
   const todaysLogEntry = habit.completionLog.find(log => log.date === todayString);
-  // isCompletedToday prop is based on status='completed'. For button state, check any relevant status.
-  const isTodayInteracted = !!todaysLogEntry && (todaysLogEntry.status === 'completed' || todaysLogEntry.status === 'pending_makeup');
   
   const handleToggleDailyCompletion = () => {
     const newCompletedState = !(todaysLogEntry && todaysLogEntry.status === 'completed');
@@ -149,7 +147,7 @@ const HabitItem: FC<HabitItemProps> = ({
 
     if (newCompletedState) {
       setShowSparkles(true);
-      setTimeout(() => setShowSparkles(false), 1000);
+      setTimeout(() => setShowSparkles(false), 1000); // Sparkle duration
     }
   };
 
@@ -173,15 +171,23 @@ const HabitItem: FC<HabitItemProps> = ({
   };
 
   const handleShareHabit = async () => {
-    const sortedDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b));
-    const daysText = sortedDays.length === 7 ? "Daily" : sortedDays.join(', ');
-    let durationText = '';
-    if (habit.durationHours && habit.durationHours > 0) durationText += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
-    if (habit.durationMinutes && habit.durationMinutes > 0) {
-      if (durationText) durationText += ' ';
-      durationText += `${habit.durationMinutes} min`;
+    let shareText = "";
+    const streakCount = streak; // Use the calculated streak
+
+    if (streakCount > 0) {
+      shareText = `I've kept up my habit '${habit.name}' for ${streakCount} day${streakCount > 1 ? 's' : ''} straight with Habitual! 💪 #HabitStreak #HabitualApp`;
+    } else {
+      const sortedDays = habit.daysOfWeek.sort((a, b) => weekDaysOrder.indexOf(a) - weekDaysOrder.indexOf(b));
+      const daysText = sortedDays.length === 7 ? "Daily" : sortedDays.join(', ');
+      let durationText = '';
+      if (habit.durationHours && habit.durationHours > 0) durationText += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
+      if (habit.durationMinutes && habit.durationMinutes > 0) {
+        if (durationText) durationText += ' ';
+        durationText += `${habit.durationMinutes} min`;
+      }
+      shareText = `Check out this habit I'm tracking with Habitual!\n\nHabit: ${habit.name}\n${habit.description ? `Description: ${habit.description}\n` : ''}${habit.category ? `Category: ${habit.category}\n` : ''}Days: ${daysText}\n${habit.optimalTiming ? `Optimal Timing: ${habit.optimalTiming}\n` : ''}${durationText ? `Duration: ${durationText}\n` : ''}${habit.specificTime ? `Specific Time: ${formatSpecificTime(habit.specificTime)}\n` : ''}Track your habits with Habitual!`;
     }
-    const shareText = `Check out this habit I'm tracking with Habitual!\n\nHabit: ${habit.name}\n${habit.description ? `Description: ${habit.description}\n` : ''}${habit.category ? `Category: ${habit.category}\n` : ''}Days: ${daysText}\n${habit.optimalTiming ? `Optimal Timing: ${habit.optimalTiming}\n` : ''}${durationText ? `Duration: ${durationText}\n` : ''}${habit.specificTime ? `Specific Time: ${formatSpecificTime(habit.specificTime)}\n` : ''}${streak > 0 ? `Current Streak: ${streak} day(s)!\n` : ''}Track your habits with Habitual!`;
+
     const copyToClipboard = async (text: string) => {
       try {
         await navigator.clipboard.writeText(text);
@@ -190,13 +196,20 @@ const HabitItem: FC<HabitItemProps> = ({
         toast({ title: "Copy Failed", description: "Could not copy habit details.", variant: "destructive" });
       }
     };
+
     if (navigator.share) {
       try {
         await navigator.share({ title: `Habit: ${habit.name}`, text: shareText });
         toast({ title: "Habit Shared!", description: "The habit details have been shared." });
       } catch (error) {
-        if ((error as DOMException).name === 'AbortError') copyToClipboard(shareText);
-        else copyToClipboard(shareText);
+        // Check if error is AbortError (user cancelled share)
+        if ((error as DOMException).name === 'AbortError') {
+          // User cancelled the share, optionally do nothing or provide subtle feedback
+           console.log("User cancelled sharing.");
+        } else {
+          // Fallback to copy for other errors
+          copyToClipboard(shareText);
+        }
       }
     } else {
       copyToClipboard(shareText);
@@ -224,7 +237,6 @@ const HabitItem: FC<HabitItemProps> = ({
         try {
             const completionDateObj = parseISO(log.date + 'T00:00:00Z');
             const dayOfCompletion = getDayAbbreviationFromDate(completionDateObj);
-            // Count completion if it's a normally scheduled day OR if it was a makeup for a scheduled day.
             if (habit.daysOfWeek.includes(dayOfCompletion) || (log.originalMissedDate && habit.daysOfWeek.includes(getDayAbbreviationFromDate(parseISO(log.originalMissedDate + 'T00:00:00Z'))))) {
               completedOnScheduledDaysThisWeek.add(log.date);
             }
@@ -243,10 +255,11 @@ const HabitItem: FC<HabitItemProps> = ({
   } else {
     const categoryColorVar = getCategoryColorVariable(habit.category);
     cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
-    cardStyle['--category-color-var' as any] = `var(${categoryColorVar})`;
+    cardStyle['--category-color-var' as any] = `var(${categoryColorVar})`; // For potential future use with category styling
     cardClasses = cn(cardClasses, 'border-l-4');
   }
   cardClasses = cn(cardClasses, 'bg-card');
+
 
   return (
     <Card className={cardClasses} style={cardStyle}>
@@ -259,9 +272,9 @@ const HabitItem: FC<HabitItemProps> = ({
           className="transform scale-110 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
       </div>
-      <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pr-12">
+      <CardHeader className="pt-3 pb-2 px-3 sm:px-4 pr-12"> {/* Added pr-12 for checkbox */}
         <div className="flex justify-between items-start">
-          <div className="flex-grow">
+          <div className="flex-grow"> {/* mr-2 removed */}
              <div className="flex items-center gap-1 mb-0.5">
               {getHabitIcon(habit)}
               <CardTitle className="text-lg sm:text-xl font-semibold text-primary min-w-0 break-words">
@@ -333,7 +346,7 @@ const HabitItem: FC<HabitItemProps> = ({
                 } else if (isScheduled) {
                   if (dayInfo.isPast) {
                     dayStatus = 'missed';
-                    isClickableForReschedule = true; // Only truly missed days can be rescheduled
+                    isClickableForReschedule = true; 
                   } else {
                     dayStatus = 'pending_scheduled';
                   }
@@ -479,3 +492,4 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
+
