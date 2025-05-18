@@ -14,7 +14,7 @@ import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
 import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog';
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
-import CreateHabitDialog from '@/components/habits/CreateHabitDialog'; // Changed from InlineCreateHabitForm
+import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
 import HabitOverview from '@/components/overview/HabitOverview';
 import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit } from '@/types';
 import { THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle as DialogCardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import type { DayPicker } from 'react-day-picker';
+import { ScrollArea } from "@/components/ui/scroll-area"; // Added import
 
 import {
   Dialog,
@@ -75,7 +76,7 @@ const HabitualPage: NextPage = () => {
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = React.useState<Habit | null>(null);
   const [aiSuggestion, setAISuggestion] = React.useState<AISuggestionType | null>(null);
 
-  const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false); // Changed from showInlineHabitForm
+  const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
 
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = React.useState(false);
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false);
@@ -106,7 +107,7 @@ const HabitualPage: NextPage = () => {
   const [commonHabitSuggestions, setCommonHabitSuggestions] = React.useState<SuggestedHabit[]>([]);
   const [isLoadingCommonSuggestions, setIsLoadingCommonSuggestions] = React.useState(false);
   const [commonSuggestionsFetched, setCommonSuggestionsFetched] = React.useState(false);
-  const [initialFormDataForDialog, setInitialFormDataForDialog] = React.useState<Partial<CreateHabitFormData> | null>(null); // Renamed state
+  const [initialFormDataForDialog, setInitialFormDataForDialog] = React.useState<Partial<CreateHabitFormData> | null>(null);
 
 
   React.useEffect(() => {
@@ -172,6 +173,8 @@ const HabitualPage: NextPage = () => {
       setHabits([]);
       setEarnedBadges([]);
       setTotalPoints(0);
+      setCommonHabitSuggestions([]);
+      setCommonSuggestionsFetched(false);
       setIsLoadingHabits(false);
       if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
          router.push('/auth/login');
@@ -268,8 +271,7 @@ const HabitualPage: NextPage = () => {
 
     if (authUser && parsedHabits.length === 0 && !commonSuggestionsFetched) {
       setIsLoadingCommonSuggestions(true);
-      setCommonSuggestionsFetched(true);
-      getCommonHabitSuggestions({ count: 5 })
+      getCommonHabitSuggestions({ count: 5 }) // Fetch 5 suggestions
         .then(response => {
           if (response && response.suggestions) {
             setCommonHabitSuggestions(response.suggestions);
@@ -280,7 +282,10 @@ const HabitualPage: NextPage = () => {
         })
         .finally(() => {
           setIsLoadingCommonSuggestions(false);
+          setCommonSuggestionsFetched(true); // Mark as fetched even on error to avoid re-fetching
         });
+    } else if (parsedHabits.length > 0) {
+        setCommonHabitSuggestions([]); // Clear suggestions if habits exist
     }
 
 
@@ -308,7 +313,7 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
     }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth, router, commonSuggestionsFetched]); // Added commonSuggestionsFetched
+  }, [authUser, isLoadingAuth, router, commonSuggestionsFetched]);
 
   useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -351,7 +356,6 @@ const HabitualPage: NextPage = () => {
     reminderTimeouts.current = [];
 
     if (notificationPermission === 'granted') {
-      // console.log("Checking habits for reminders (placeholder)...");
       habits.forEach(habit => {
         if (habit.reminderEnabled) {
           let reminderDateTime: Date | null = null;
@@ -375,7 +379,7 @@ const HabitualPage: NextPage = () => {
 
           if (reminderDateTime && reminderDateTime > now) {
             const delay = reminderDateTime.getTime() - now.getTime();
-            console.log(`Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
+            console.log(`Placeholder: Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
           }
         }
       });
@@ -397,8 +401,8 @@ const HabitualPage: NextPage = () => {
     };
     setHabits((prevHabits) => [...prevHabits, newHabit]);
     console.log(`Habit Added: ${newHabit.name}`);
-    setIsCreateHabitDialogOpen(false); // Close dialog
-    setInitialFormDataForDialog(null); // Clear initial data
+    setIsCreateHabitDialogOpen(false);
+    setInitialFormDataForDialog(null);
   };
 
   const handleToggleComplete = async (habitId: string, date: string, completed: boolean) => {
@@ -455,7 +459,6 @@ const HabitualPage: NextPage = () => {
         console.log(`Motivational Quote: ${quoteResult.quote}`);
       } catch (error) {
         console.error("Failed to fetch motivational quote:", error);
-        console.log("Motivational Quote: Well Done! You're making progress!");
       }
     }
 
@@ -748,7 +751,7 @@ const HabitualPage: NextPage = () => {
       description: '',
       daysOfWeek: [],
     });
-    setIsCreateHabitDialogOpen(true); // Open dialog
+    setIsCreateHabitDialogOpen(true);
   };
 
 
@@ -783,7 +786,7 @@ const HabitualPage: NextPage = () => {
       >
         <AppHeader onOpenCalendar={() => setIsCalendarDialogOpen(true)} />
 
-        <div className="flex-grow overflow-y-auto">
+        <ScrollArea className="flex-grow">
           <main className="px-3 sm:px-4 py-4">
             {authUser && !isLoadingAuth && !isLoadingHabits && habits.length === 0 && commonHabitSuggestions.length > 0 && (
               <Card className="my-4 p-4 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
@@ -833,7 +836,7 @@ const HabitualPage: NextPage = () => {
           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
             <p>&copy; {new Date().getFullYear()} Habitual.</p>
           </footer>
-        </div>
+        </ScrollArea>
 
 
         <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16 sticky bottom-0 z-30">
@@ -859,7 +862,7 @@ const HabitualPage: NextPage = () => {
       <Button
         className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
         onClick={() => {
-          setInitialFormDataForDialog(null); // Ensure no pre-filled data for manual add
+          setInitialFormDataForDialog(null);
           setIsCreateHabitDialogOpen(true);
          }}
         aria-label="Add New Habit"
@@ -871,7 +874,7 @@ const HabitualPage: NextPage = () => {
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null); // Clear initial data when dialog closes
+            setInitialFormDataForDialog(null);
         }}
         onAddHabit={handleAddHabit}
         initialData={initialFormDataForDialog}
