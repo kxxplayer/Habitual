@@ -107,7 +107,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
         durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
         specificTime: initialData.specificTime || '',
       });
-    } else if (!initialData) {
+    } else if (!initialData) { // Ensure form resets if initialData becomes null (e.g., manual add after suggested)
         reset({
             description: '',
             name: '',
@@ -125,6 +125,11 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
   const handleAISuggestDetails = async () => {
     const currentDescription = habitDescriptionForAI || "";
     if (currentDescription.trim() === "") {
+      // toast({ // Commented out
+      //   title: "No Description Provided",
+      //   description: "Please enter a description for the AI to suggest habit details.",
+      //   variant: "destructive",
+      // });
       console.error("No Description Provided for AI suggestion.");
       return;
     }
@@ -159,9 +164,18 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
         setValue('specificTime', result.specificTime || '');
       }
 
+      // toast({ // Commented out
+      //   title: "AI Suggestion Applied",
+      //   description: "Habit details have been populated by AI.",
+      // });
       console.log("AI Suggestion Applied");
     } catch (error) {
       console.error("AI suggestion error:", error);
+      // toast({ // Commented out
+      //   title: "AI Suggestion Failed",
+      //   description: "Could not get suggestions from AI. Please try again or fill manually.",
+      //   variant: "destructive",
+      // });
       console.error("AI Suggestion Failed: Could not get suggestions from AI.");
     } finally {
       setIsAISuggesting(false);
@@ -184,8 +198,8 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 
   return (
     <Card className="bg-card shadow-lg border border-primary/20">
-      <CardHeader className="p-4">
-        <CardTitle className="text-lg font-semibold flex items-center">
+      <CardHeader className="p-3">
+        <CardTitle className="text-md font-semibold flex items-center">
           <PlusCircle className="mr-2 h-5 w-5 text-primary" />
           Add a New Habit
         </CardTitle>
@@ -193,14 +207,14 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
           Describe your new habit. AI can help suggest details.
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-4 pt-2">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+      <CardContent className="p-3 pt-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
           <div className="space-y-1">
             <Label htmlFor="inline-ai-description" className="text-xs font-medium">Describe habit (for AI)</Label>
             <Controller
               name="description"
               control={control}
-              render={({ field }) => <Textarea id="inline-ai-description" placeholder="e.g., Read more books every morning for 30 mins" {...field} className="bg-input/50 text-sm" rows={2} />}
+              render={({ field }) => <Textarea id="inline-ai-description" placeholder="e.g., Read daily for 30 mins" {...field} className="bg-input/50 text-sm" rows={1} />}
             />
             <Button
               type="button"
@@ -208,25 +222,25 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
               disabled={isAISuggesting || isDescriptionEffectivelyEmpty}
               variant="outline"
               size="sm"
-              className="w-full mt-1 text-xs"
+              className="w-full mt-1 text-xs h-8"
             >
               {isAISuggesting ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Wand2 className="mr-2 h-3 w-3" />}
               Suggest Details with AI
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="space-y-0.5">
               <Label htmlFor="inline-habit-name" className="text-xs font-medium">Habit Name</Label>
               <Controller
                 name="name"
                 control={control}
-                render={({ field }) => <Input id="inline-habit-name" placeholder="e.g., Read a chapter daily" {...field} className="bg-input/50 text-sm h-9" />}
+                render={({ field }) => <Input id="inline-habit-name" placeholder="e.g., Read a chapter" {...field} className="bg-input/50 text-sm h-8" />}
               />
               {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <Label htmlFor="inline-habit-category" className="text-xs font-medium flex items-center">
                 <Tag className="mr-1.5 h-3 w-3 text-muted-foreground" />
                 Category
@@ -236,7 +250,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
                 control={control}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value || "Other"}>
-                    <SelectTrigger id="inline-habit-category" className="bg-input/50 text-sm h-9">
+                    <SelectTrigger id="inline-habit-category" className="bg-input/50 text-sm h-8">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -254,9 +268,9 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
           </div>
 
 
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <Label className="text-xs font-medium">Days of the Week</Label>
-            <div className="grid grid-cols-4 gap-1 p-1 border rounded-md bg-input/20">
+            <div className="grid grid-cols-4 gap-0.5 p-1 border rounded-md bg-input/20">
               {weekDaysArray.map((day) => (
                 <Controller
                   key={day}
@@ -286,16 +300,16 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
             {errors.daysOfWeek && <p className="text-xs text-destructive">{errors.daysOfWeek.message}</p>}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="space-y-0.5">
               <Label className="text-xs font-medium flex items-center"><Hourglass className="mr-1.5 h-3 w-3 text-muted-foreground" />Duration</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1">
                 <div className="space-y-0.5">
                   <Label htmlFor="inline-duration-hours" className="text-xs text-muted-foreground">Hours</Label>
                   <Controller
                     name="durationHours"
                     control={control}
-                    render={({ field }) => <Input id="inline-duration-hours" type="number" placeholder="Hr" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm h-9" min="0" />}
+                    render={({ field }) => <Input id="inline-duration-hours" type="number" placeholder="Hr" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm h-8" min="0" />}
                   />
                    {errors.durationHours && <p className="text-xs text-destructive">{errors.durationHours.message}</p>}
                 </div>
@@ -304,37 +318,37 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
                   <Controller
                     name="durationMinutes"
                     control={control}
-                    render={({ field }) => <Input id="inline-duration-minutes" type="number" placeholder="Min" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm h-9" min="0" max="59"/>}
+                    render={({ field }) => <Input id="inline-duration-minutes" type="number" placeholder="Min" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm h-8" min="0" max="59"/>}
                   />
                    {errors.durationMinutes && <p className="text-xs text-destructive">{errors.durationMinutes.message}</p>}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <Label htmlFor="inline-habit-specificTime" className="text-xs font-medium flex items-center"><Clock className="mr-1.5 h-3 w-3 text-muted-foreground" />Specific Time</Label>
               <Controller
                 name="specificTime"
                 control={control}
-                render={({ field }) => <Input id="inline-habit-specificTime" type="time" {...field} className="bg-input/50 w-full text-sm h-9" />}
+                render={({ field }) => <Input id="inline-habit-specificTime" type="time" {...field} className="bg-input/50 w-full text-sm h-8" />}
               />
               {errors.specificTime && <p className="text-xs text-destructive">{errors.specificTime.message}</p>}
             </div>
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="inline-habit-optimalTiming" className="text-xs font-medium flex items-center"><CalendarClock className="mr-1.5 h-3 w-3 text-muted-foreground" />Optimal General Timing</Label>
+          <div className="space-y-0.5">
+            <Label htmlFor="inline-habit-optimalTiming" className="text-xs font-medium flex items-center"><CalendarClock className="mr-1.5 h-3 w-3 text-muted-foreground" />Optimal Timing (e.g. Morning)</Label>
             <Controller
               name="optimalTiming"
               control={control}
-              render={({ field }) => <Input id="inline-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50 text-sm h-9" />}
+              render={({ field }) => <Input id="inline-habit-optimalTiming" placeholder="e.g., After work" {...field} className="bg-input/50 text-sm h-8" />}
             />
           </div>
-          <CardFooter className="p-0 pt-3 flex justify-end space-x-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => { onCloseForm(); }} disabled={isSubmitting || isAISuggesting}>
+          <CardFooter className="p-0 pt-2 flex justify-end space-x-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => { onCloseForm(); }} disabled={isSubmitting || isAISuggesting} className="h-8">
                 <XCircle className="mr-2 h-4 w-4" /> Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={isSubmitting || isAISuggesting} >
+            <Button type="submit" size="sm" disabled={isSubmitting || isAISuggesting} className="h-8">
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
               Add Habit
             </Button>
@@ -346,4 +360,3 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 };
 
 export default InlineCreateHabitForm;
-
