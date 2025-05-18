@@ -479,7 +479,7 @@ const HabitualPage: NextPage = () => {
 
   const sheetMenuItems = [
     { href: '/', label: 'Home', icon: Home, action: () => setIsSettingsSheetOpen(false) },
-    { href: '#profile', label: 'Profile', icon: UserCircle, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); toast({ title: 'Profile', description: 'Profile page coming soon!' }); } },
+    { href: '/profile', label: 'Profile', icon: UserCircle, action: () => setIsSettingsSheetOpen(false) },
     { href: '#reminders', label: 'Reminders', icon: BellRing, action: () => { /* Placeholder */ setIsSettingsSheetOpen(false); toast({ title: 'Reminders', description: 'Reminder settings coming soon!' }); } },
     { 
       label: 'Achievements', 
@@ -719,7 +719,7 @@ const HabitualPage: NextPage = () => {
           </SheetHeader>
           <div className="grid gap-2">
             {sheetMenuItems.map((item) => (
-              item.href ? (
+              item.href && item.href !== "#profile" && item.href !== "#reminders" && item.href !== "#calendar" ? (
                 <SheetClose asChild key={item.label}>
                   <Link href={item.href} passHref legacyBehavior>
                     <Button
