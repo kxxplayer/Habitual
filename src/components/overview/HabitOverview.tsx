@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { format, subDays, startOfWeek, endOfWeek, isWithinInterval, subWeeks } from 'date-fns';
 import { getDayAbbreviationFromDate } from '@/lib/dateUtils';
-import { Target, Repeat, Award, ClipboardList, CheckCircle2, Circle, BarChart3, BookCopy } from 'lucide-react';
+import { Target, Repeat, Award, ClipboardList, CheckCircle2, Circle, BarChart3, BookCopy, Star } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -24,6 +24,7 @@ import { ChartContainer, ChartTooltipContent, ChartLegendContent } from "@/compo
 
 interface HabitOverviewProps {
   habits: Habit[];
+  totalPoints: number;
 }
 
 interface WeeklyConsistencyData {
@@ -81,7 +82,7 @@ const addDays = (date: Date, days: number): Date => {
 };
 
 
-const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
+const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => format(today, 'yyyy-MM-dd'), [today]);
   const todayAbbr = useMemo(() => getDayAbbreviationFromDate(today), [today]);
@@ -181,6 +182,15 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits }) => {
       <CardContent className="space-y-4 px-2 sm:px-4 py-3">
         {totalHabitsTracked > 0 ? (
           <>
+            <div className="flex justify-between items-center mb-1">
+                <p className="text-xs sm:text-sm font-medium text-foreground flex items-center">
+                  <Star className="mr-2 h-4 w-4 text-yellow-500" />
+                  Total Points
+                </p>
+                <span className="text-xs sm:text-sm font-semibold text-yellow-500">{totalPoints}</span>
+              </div>
+
+
             <div>
               <div className="flex justify-between items-center mb-1">
                 <p className="text-xs sm:text-sm font-medium text-foreground flex items-center">

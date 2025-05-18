@@ -37,11 +37,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy } from 'lucide-react';
+import { Plus, Smile, Trash2, AlertTriangle, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, Star } from 'lucide-react';
 import { format } from 'date-fns';
 
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const POINTS_PER_COMPLETION = 10;
 
 
 const HabitualPage: NextPage = () => {
@@ -58,6 +59,7 @@ const HabitualPage: NextPage = () => {
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = useState(false);
   const [isAchievementsDialogOpen, setIsAchievementsDialogOpen] = useState(false);
   const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
+  const [totalPoints, setTotalPoints] = useState<number>(0);
 
 
   const [isReflectionDialogOpen, setIsReflectionDialogOpen] = useState(false);
@@ -132,7 +134,7 @@ const HabitualPage: NextPage = () => {
                 date: log.date,
                 time: log.time || 'N/A',
                 note: log.note || undefined,
-                status: log.status || 'completed', // Default old entries to 'completed'
+                status: log.status || 'completed', 
                 originalMissedDate: log.originalMissedDate || undefined,
               }));
           
@@ -140,7 +142,7 @@ const HabitualPage: NextPage = () => {
             id: habit.id || Date.now().toString() + Math.random().toString(36).substring(2,7),
             name: habit.name || 'Unnamed Habit',
             description: habit.description || undefined,
-            category: habit.category || undefined,
+            category: habit.category || 'Other',
             daysOfWeek: daysOfWeek,
             optimalTiming: habit.optimalTiming || undefined,
             durationHours: migratedDurationHours,
@@ -163,16 +165,26 @@ const HabitualPage: NextPage = () => {
         console.error("Failed to parse badges from localStorage:", error);
       }
     }
+
+    const storedPoints = localStorage.getItem('totalPoints');
+    if (storedPoints) {
+      try {
+        setTotalPoints(parseInt(storedPoints, 10));
+      } catch (error) {
+        console.error("Failed to parse totalPoints from localStorage:", error);
+        setTotalPoints(0);
+      }
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('habits', JSON.stringify(habits));
-    // Badge checking logic
+    
     const newlyEarned = checkAndAwardBadges(habits, earnedBadges);
     if (newlyEarned.length > 0) {
       const updatedBadges = [...earnedBadges];
       newlyEarned.forEach(newBadge => {
-        if (!earnedBadges.some(eb => eb.id === newBadge.id)) { // Double check to prevent duplicates if logic runs fast
+        if (!earnedBadges.some(eb => eb.id === newBadge.id)) { 
             updatedBadges.push(newBadge);
             toast({
                 title: "🏆 New Badge Unlocked! 🎉",
@@ -183,11 +195,15 @@ const HabitualPage: NextPage = () => {
       });
       setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, toast]); // Added earnedBadges and toast to dependency array
+  }, [habits, earnedBadges, toast]);
 
   useEffect(() => {
     localStorage.setItem('earnedBadges', JSON.stringify(earnedBadges));
   }, [earnedBadges]);
+
+  useEffect(() => {
+    localStorage.setItem('totalPoints', totalPoints.toString());
+  }, [totalPoints]);
 
 
   const handleAddHabit = (newHabitData: Omit<Habit, 'id' | 'completionLog'>) => {
@@ -213,26 +229,33 @@ const HabitualPage: NextPage = () => {
           let newCompletionLog = [...habit.completionLog];
           const existingLogIndex = newCompletionLog.findIndex(log => log.date === date);
           const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+          let pointsChange = 0;
 
           if (completed) {
             if (existingLogIndex > -1) {
-              if (newCompletionLog[existingLogIndex].status === 'pending_makeup' || newCompletionLog[existingLogIndex].status === 'skipped') {
-                newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'completed', time: currentTime };
-              } else { 
-                newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'completed', time: currentTime };
+              if (newCompletionLog[existingLogIndex].status !== 'completed') { // Award points only if not already completed
+                pointsChange = POINTS_PER_COMPLETION;
               }
+              newCompletionLog[existingLogIndex] = { ...newCompletionLog[existingLogIndex], status: 'completed', time: currentTime };
             } else { 
+              pointsChange = POINTS_PER_COMPLETION;
               newCompletionLog.push({ date, time: currentTime, status: 'completed', note: undefined });
             }
           } else { 
             if (existingLogIndex > -1) {
               const logEntry = newCompletionLog[existingLogIndex];
-              if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
+              if (logEntry.status === 'completed') { // Subtract points only if it was completed
+                 pointsChange = -POINTS_PER_COMPLETION;
+              }
+              if (logEntry.originalMissedDate) { // If it was a makeup, revert to pending
                 newCompletionLog[existingLogIndex] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-              } else { 
+              } else { // Otherwise, remove the log
                 newCompletionLog.splice(existingLogIndex, 1);
               }
             }
+          }
+          if (pointsChange !== 0) {
+            setTotalPoints(prevPoints => Math.max(0, prevPoints + pointsChange));
           }
           return { ...habit, completionLog: newCompletionLog.sort((a, b) => b.date.localeCompare(a.date)) };
         }
@@ -581,7 +604,7 @@ const HabitualPage: NextPage = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="py-2 max-h-[65vh] overflow-y-auto pr-2">
-            <HabitOverview habits={habits} />
+            <HabitOverview habits={habits} totalPoints={totalPoints} />
           </div>
           <DialogFooter className="pt-2">
             <Button variant="outline" onClick={() => setIsDashboardDialogOpen(false)}>Close</Button>
