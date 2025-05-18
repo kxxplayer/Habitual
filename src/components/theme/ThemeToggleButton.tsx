@@ -5,31 +5,35 @@ import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 import { useTheme } from "./ThemeProvider";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Palette } from "lucide-react"; // Added Palette
 
 const ThemeToggleButton: FC = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme, cycleTheme } = useTheme(); // Use cycleTheme
   const [mounted, setMounted] = useState(false);
 
-  // useEffect only runs on the client, after the component has mounted
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) {
-    // Render a placeholder or null on the server and initial client render
-    // to avoid hydration mismatch. A button shell can prevent layout shifts.
-    return <Button variant="ghost" size="icon" aria-label="Toggle theme" disabled className="h-10 w-10" />;
+    return <Button variant="ghost" size="icon" aria-label="Change theme" disabled className="h-10 w-10" />;
   }
 
+  // Determine icon based on current theme (simplified, could be more complex)
+  const CurrentIcon = () => {
+    if (theme === "theme-vibrant-purple") return <Moon className="h-5 w-5" />;
+    if (theme === "theme-calm-blue") return <Sun className="h-5 w-5" />;
+    return <Palette className="h-5 w-5" />; // Generic palette icon for other themes
+  };
+  
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-      aria-label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+      onClick={cycleTheme} // Call cycleTheme
+      aria-label="Change theme"
     >
-      {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+      <CurrentIcon />
     </Button>
   );
 };
