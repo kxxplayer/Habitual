@@ -73,6 +73,5 @@ export interface EarnedBadge {
 // For AI common habit suggestions
 export interface SuggestedHabit {
   name: string;
-  description?: string;
   category?: HabitCategory;
 }

@@ -16,12 +16,12 @@ import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
 import InlineCreateHabitForm from '@/components/habits/InlineCreateHabitForm';
 import HabitOverview from '@/components/overview/HabitOverview';
-import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData } from '@/types';
+import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit } from '@/types';
 import { THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
-import { getCommonHabitSuggestions, type SuggestedHabit } from '@/ai/flows/common-habit-suggestions-flow';
+import { getCommonHabitSuggestions } from '@/ai/flows/common-habit-suggestions-flow';
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import Link from 'next/link';
 import { cn } from "@/lib/utils";
@@ -38,6 +38,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle as AlertTitle, 
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -47,6 +54,7 @@ import {
   SheetDescription,
   SheetClose,
 } from "@/components/ui/sheet";
+import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal, PlusCircle, Lightbulb } from 'lucide-react';
 import { format, parseISO, isSameDay, getDay } from 'date-fns';
 
@@ -108,21 +116,16 @@ const HabitualPage: NextPage = () => {
 
       if (hasUserChanged) {
         console.log('Authentication state changed. Clearing user-specific data. Previous UID:', previousAuthUserUidRef.current, 'New UID:', currentUser?.uid);
-        // Clear React state
         setHabits([]);
         setEarnedBadges([]);
         setTotalPoints(0);
         setCommonHabitSuggestions([]);
-        setCommonSuggestionsFetched(false); // Reset for new user
-        // Clear other user-specific React states if any
+        setCommonSuggestionsFetched(false); 
 
-        // Clear localStorage
         localStorage.removeItem('habits');
         localStorage.removeItem('earnedBadges');
         localStorage.removeItem('totalPoints');
-        // Remove any other user-specific localStorage items here
-
-        // If user is logging out, redirect them to the login page
+        
         if (!currentUser) {
           console.log('User logged out, redirecting to login.');
           if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
@@ -131,10 +134,8 @@ const HabitualPage: NextPage = () => {
         }
       }
 
-      // Update the auth user state
       setAuthUser(currentUser);
       setIsLoadingAuth(false);
-      // Update the ref to the current user's UID for the next change detection
       previousAuthUserUidRef.current = currentUser?.uid || null;
     });
 
@@ -148,16 +149,16 @@ const HabitualPage: NextPage = () => {
         Notification.requestPermission().then(permission => {
           setNotificationPermission(permission);
           if (permission === 'granted') {
-            console.log('Notification permission granted.');
+            // console.log('Notification permission granted.');
           } else {
-            console.log('Notification permission denied or dismissed.');
+            // console.log('Notification permission denied or dismissed.');
           }
         });
       } else {
         setNotificationPermission(Notification.permission);
       }
     } else {
-      console.log('Notifications not supported by this browser.');
+      // console.log('Notifications not supported by this browser.');
       setNotificationPermission('denied');
     }
   }, []);
@@ -165,21 +166,20 @@ const HabitualPage: NextPage = () => {
 
   React.useEffect(() => {
     if (isLoadingAuth) {
-      return; // Wait for authentication check to complete
+      return; 
     }
 
     if (!authUser) {
-      // If auth check is complete and there's no user, ensure local state is clear
-      // and don't proceed to load from localStorage (which should have been cleared by onAuthStateChanged logic).
       setHabits([]);
       setEarnedBadges([]);
       setTotalPoints(0);
       setIsLoadingHabits(false);
+      if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
+         router.push('/auth/login');
+      }
       return;
     }
 
-    // User is authenticated, proceed to load data.
-    // This will load an empty state if localStorage was just cleared by onAuthStateChanged for a new user.
     setIsLoadingHabits(true);
     let parsedHabits: Habit[] = [];
     const storedHabits = localStorage.getItem('habits');
@@ -261,16 +261,16 @@ const HabitualPage: NextPage = () => {
         setHabits(parsedHabits);
       } catch (error) {
         console.error("Failed to parse habits from localStorage:", error);
-        setHabits([]); // Reset to empty if parsing fails
+        setHabits([]); 
       }
     } else {
-        setHabits([]); // No habits in localStorage
+        setHabits([]); 
     }
 
     if (authUser && parsedHabits.length === 0 && !commonSuggestionsFetched) {
       setIsLoadingCommonSuggestions(true);
       setCommonSuggestionsFetched(true);
-      getCommonHabitSuggestions({ count: 4 })
+      getCommonHabitSuggestions({ count: 5 })
         .then(response => {
           if (response && response.suggestions) {
             setCommonHabitSuggestions(response.suggestions);
@@ -309,7 +309,7 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
     }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth]); // Only depend on authUser and isLoadingAuth
+  }, [authUser, isLoadingAuth, router]); 
 
   useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -338,12 +338,12 @@ const HabitualPage: NextPage = () => {
   }, [habits, earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
   useEffect(() => {
-    if (!authUser || isLoadingAuth || isLoadingHabits) return; // Don't save if habits are still loading
+    if (!authUser || isLoadingAuth || isLoadingHabits) return; 
     localStorage.setItem('earnedBadges', JSON.stringify(earnedBadges));
   }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
   useEffect(() => {
-    if (!authUser || isLoadingAuth || isLoadingHabits) return; // Don't save if habits are still loading
+    if (!authUser || isLoadingAuth || isLoadingHabits) return; 
     localStorage.setItem('totalPoints', totalPoints.toString());
   }, [totalPoints, authUser, isLoadingAuth, isLoadingHabits]);
 
@@ -352,7 +352,7 @@ const HabitualPage: NextPage = () => {
     reminderTimeouts.current = [];
 
     if (notificationPermission === 'granted') {
-      console.log("Checking habits for reminders (placeholder)...");
+      // console.log("Checking habits for reminders (placeholder)...");
       habits.forEach(habit => {
         if (habit.reminderEnabled) {
           let reminderDateTime: Date | null = null;
@@ -376,10 +376,7 @@ const HabitualPage: NextPage = () => {
 
           if (reminderDateTime && reminderDateTime > now) {
             const delay = reminderDateTime.getTime() - now.getTime();
-            console.log(`Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
-
-          } else if (reminderDateTime) {
-            // console.log(`Reminder time for "${habit.name}" (${reminderDateTime.toLocaleTimeString()}) has passed for today or is invalid.`);
+            // console.log(`Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
           }
         }
       });
@@ -475,9 +472,9 @@ const HabitualPage: NextPage = () => {
       )
     );
     const habit = habits.find(h => h.id === habitId);
-    console.log(`Reminder for habit "${habit?.name}" ${!currentReminderState ? 'enabled' : 'disabled'}`);
+    // console.log(`Reminder for habit "${habit?.name}" ${!currentReminderState ? 'enabled' : 'disabled'}`);
     if (!currentReminderState && notificationPermission !== 'granted') {
-       console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
+       // console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
     }
   };
 
@@ -520,7 +517,6 @@ const HabitualPage: NextPage = () => {
         isLoading: false,
         error: 'Failed to get suggestion.'
       });
-      console.error("AI Suggestion Error: Could not fetch suggestion.");
     }
   };
 
@@ -625,9 +621,9 @@ const HabitualPage: NextPage = () => {
         Notification.requestPermission().then(permission => {
             setNotificationPermission(permission);
             if (permission === 'granted') {
-                console.log('Notification permission granted.');
+                // console.log('Notification permission granted.');
             } else {
-                console.log('Notification permission denied or dismissed.');
+                // console.log('Notification permission denied or dismissed.');
             }
         });
     }
@@ -726,11 +722,11 @@ const HabitualPage: NextPage = () => {
       icon: BellRing,
       action: () => {
         if (notificationPermission === 'granted') {
-          console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
+          // console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
         } else if (notificationPermission === 'denied') {
-          console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
+          // console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
         } else {
-          console.log('Reminder Settings: Notification permission not yet set. Requesting...');
+          // console.log('Reminder Settings: Notification permission not yet set. Requesting...');
           handleRequestNotificationPermission();
         }
       }
@@ -748,10 +744,10 @@ const HabitualPage: NextPage = () => {
 
   const handleCustomizeSuggestedHabit = (suggestion: SuggestedHabit) => {
     setInitialFormDataForInline({
-      description: suggestion.description || '',
       name: suggestion.name,
       category: suggestion.category || 'Other',
-      daysOfWeek: [],
+      description: '', // Ensure description is empty for tile-like suggestions
+      daysOfWeek: [], 
     });
     setShowInlineHabitForm(true);
   };
@@ -767,8 +763,6 @@ const HabitualPage: NextPage = () => {
   }
 
   if (!authUser) {
-     // This case should ideally be handled by the redirect in onAuthStateChanged,
-     // but it's a fallback.
     return (
        <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -810,32 +804,32 @@ const HabitualPage: NextPage = () => {
                 <CardHeader className="p-2 pt-0">
                   <DialogCardTitle className="text-lg font-semibold flex items-center text-primary">
                      <Lightbulb className="mr-2 h-5 w-5"/>
-                     Welcome to Habitual!
+                     Start with these habits!
                   </DialogCardTitle>
                   <DialogCardDescription className="text-sm text-muted-foreground">
-                    Here are a few ideas to get you started:
+                    Click a tile to customize and add it:
                   </DialogCardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2 p-2">
+                <CardContent className="p-2">
                   {isLoadingCommonSuggestions ? (
                     <div className="flex items-center justify-center py-3">
                       <Loader2 className="h-5 w-5 animate-spin text-primary" />
                       <p className="ml-2 text-sm text-muted-foreground">Loading suggestions...</p>
                     </div>
                   ) : (
-                    commonHabitSuggestions.map((suggestion, index) => (
-                      <div key={index} className="flex items-center justify-between p-2.5 bg-background rounded-lg shadow-sm border border-border/70">
-                        <div>
-                          <p className="font-medium text-sm text-foreground">{suggestion.name}</p>
-                          {suggestion.description && <p className="text-xs text-muted-foreground mt-0.5">{suggestion.description}</p>}
-                          {suggestion.category && <p className="text-xs text-primary/90 mt-0.5 font-medium">{suggestion.category}</p>}
-                        </div>
-                        <Button size="sm" variant="outline" className="shrink-0" onClick={() => handleCustomizeSuggestedHabit(suggestion)}>
-                          <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
-                          Customize
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {commonHabitSuggestions.map((suggestion, index) => (
+                        <Button 
+                          key={index} 
+                          variant="outline" 
+                          className="p-3 h-auto flex flex-col items-center justify-center space-y-1 min-w-[100px] text-center shadow-sm hover:shadow-md transition-shadow"
+                          onClick={() => handleCustomizeSuggestedHabit(suggestion)}
+                        >
+                          <span className="font-medium text-sm">{suggestion.name}</span>
+                          {suggestion.category && <span className="text-xs text-primary/80">{suggestion.category}</span>}
                         </Button>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -1137,4 +1131,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
