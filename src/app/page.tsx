@@ -191,7 +191,7 @@ const HabitualPage: NextPage = () => {
       setEarnedBadges([]);
       setTotalPoints(0);
       setCommonHabitSuggestions([]);
-      setCommonSuggestionsFetched(false); // Allow fetching for next potential user
+      setCommonSuggestionsFetched(false);
       setIsLoadingHabits(false);
       return;
     }
@@ -301,7 +301,7 @@ const HabitualPage: NextPage = () => {
           setCommonSuggestionsFetched(true);
         });
     } else if (parsedHabits.length > 0) {
-        setCommonHabitSuggestions([]);
+        setCommonHabitSuggestions([]); // Clear suggestions if habits exist
     }
 
 
@@ -329,7 +329,7 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
     }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth]); // Removed commonSuggestionsFetched from deps
+  }, [authUser, isLoadingAuth]);
 
   useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -705,7 +705,7 @@ const HabitualPage: NextPage = () => {
                        scheduledMissedDays.push(checkDate);
                     }
                 } else {
-                    if (!scheduledUpcomingDays.some(d => isSameDay(d, checkDate)) && !completedDays.some(d => isSameDay(d, checkDate))) {
+                    if (!scheduledUpcomingDays.some(d => isSameDay(d, checkDate)) && !completedDays.some(d => isSameDay(d, cDate))) {
                         scheduledUpcomingDays.push(checkDate);
                     }
                 }
@@ -1153,3 +1153,5 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
+    
