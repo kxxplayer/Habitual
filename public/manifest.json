@@ -1,3 +1,4 @@
+
 {
   "name": "Habitual",
   "short_name": "Habitual",
@@ -5,17 +6,43 @@
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "sizes": "192x192"
+      "purpose": "any maskable"
     },
     {
       "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "sizes": "512x512"
+      "purpose": "any maskable"
     }
   ],
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#3498db"
+  "display_override": ["window-controls-overlay"],
+  "background_color": "#ffffff",
+  "theme_color": "#3498db",
+  "orientation": "portrait",
+  "scope": "/",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Habit Tracking View"
+    },
+    {
+      "src": "/screenshots/screenshot2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Dashboard View"
+    }
+  ],
+  "related_applications": []
 }
