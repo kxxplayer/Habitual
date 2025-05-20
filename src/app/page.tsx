@@ -133,12 +133,14 @@ const HabitualPage: NextPage = () => {
         setCommonSuggestionsFetched(false);
         setInitialFormDataForDialog(null);
         setEditingHabit(null);
+        // Keep dialogs closed on user switch for cleaner UX
         setIsDashboardDialogOpen(false);
         setIsCalendarDialogOpen(false);
         setIsAISuggestionDialogOpen(false);
         setIsReflectionDialogOpen(false);
         setRescheduleDialogData(null);
-        
+        setIsCreateHabitDialogOpen(false);
+
         if (previousUid) {
             console.log(`Clearing localStorage for previous user: ${previousUid}`);
             localStorage.removeItem(`${LS_KEY_PREFIX_HABITS}${previousUid}`);
@@ -151,7 +153,7 @@ const HabitualPage: NextPage = () => {
 
       setAuthUser(currentUser);
       setIsLoadingAuth(false);
-      previousAuthUserUidRef.current = currentUid; 
+      previousAuthUserUidRef.current = currentUid;
 
       if (!currentUser && typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
         console.log('No current user, redirecting to login from auth state change effect.');
@@ -166,8 +168,6 @@ const HabitualPage: NextPage = () => {
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-        // Do not auto-request permission here to avoid being intrusive on first load
-        // Permission request will be handled by user interaction (e.g., in settings)
         setNotificationPermission(Notification.permission);
       } else {
         setNotificationPermission(Notification.permission);
@@ -191,8 +191,8 @@ const HabitualPage: NextPage = () => {
       setEarnedBadges([]);
       setTotalPoints(0);
       setCommonHabitSuggestions([]);
-      setCommonSuggestionsFetched(false); 
-      setIsLoadingHabits(false); 
+      setCommonSuggestionsFetched(false);
+      setIsLoadingHabits(false);
 
       if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
          console.log('No authUser after auth check (data loading effect), redirecting to login. Pathname:', window.location.pathname);
@@ -242,7 +242,7 @@ const HabitualPage: NextPage = () => {
           }
 
           let migratedSpecificTime_val = habit_data_migration.specificTime;
-          if (migratedSpecificTime_val && /\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime_val)) { 
+          if (migratedSpecificTime_val && /\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime_val)) {
             try {
               const [timePart_migrated, modifierPart_migrated] = migratedSpecificTime_val.split(/\s+/);
               const [hoursStr_migrated, minutesStr_migrated] = timePart_migrated.split(':');
@@ -250,27 +250,27 @@ const HabitualPage: NextPage = () => {
               const minutes_migrated = parseInt(minutesStr_migrated, 10);
               const modifier_migrated = modifierPart_migrated ? modifierPart_migrated.toLowerCase() : '';
               if (modifier_migrated === 'pm' && hours_migrated < 12) hours_migrated += 12;
-              if (modifier_migrated === 'am' && hours_migrated === 12) hours_migrated = 0; 
+              if (modifier_migrated === 'am' && hours_migrated === 12) hours_migrated = 0;
               migratedSpecificTime_val = `${String(hours_migrated).padStart(2, '0')}:${String(minutes_migrated).padStart(2, '0')}`;
             } catch (e_time_parse) { console.warn("Error parsing 12hr time during migration", e_time_parse) }
-          } else if (migratedSpecificTime_val && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime_val)) { 
+          } else if (migratedSpecificTime_val && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime_val)) {
              const [hours_num_migrated, minutes_num_migrated] = migratedSpecificTime_val.split(':').map(Number);
              migratedSpecificTime_val = `${String(hours_num_migrated).padStart(2, '0')}:${String(minutes_num_migrated).padStart(2, '0')}`;
           }
 
 
           const migratedCompletionLog_arr = (habit_data_migration.completionLog || (habit_data_migration.completedDates
-              ? habit_data_migration.completedDates.map((d_log: string) => ({ date: d_log, time: 'N/A', note: undefined, status: 'completed' })) 
+              ? habit_data_migration.completedDates.map((d_log: string) => ({ date: d_log, time: 'N/A', note: undefined, status: 'completed' }))
               : [])).map((log_item_migrated: any) => ({
                 date: typeof log_item_migrated.date === 'string' ? log_item_migrated.date : '1970-01-01', // Ensure date is string
                 time: log_item_migrated.time || 'N/A',
                 note: log_item_migrated.note || undefined,
-                status: log_item_migrated.status || 'completed', 
+                status: log_item_migrated.status || 'completed',
                 originalMissedDate: log_item_migrated.originalMissedDate || undefined,
               }));
 
           return {
-            id: habit_data_migration.id || Date.now().toString() + Math.random().toString(36).substring(2,7), 
+            id: habit_data_migration.id || Date.now().toString() + Math.random().toString(36).substring(2,7),
             name: habit_data_migration.name || 'Unnamed Habit',
             description: habit_data_migration.description || undefined,
             category: habit_data_migration.category && HABIT_CATEGORIES.includes(habit_data_migration.category) ? habit_data_migration.category : 'Other',
@@ -280,16 +280,16 @@ const HabitualPage: NextPage = () => {
             durationMinutes: migratedDurationMinutes_val,
             specificTime: migratedSpecificTime_val || undefined,
             completionLog: migratedCompletionLog_arr as HabitCompletionLogEntry[],
-            reminderEnabled: habit_data_migration.reminderEnabled === undefined ? false : habit_data_migration.reminderEnabled, 
+            reminderEnabled: habit_data_migration.reminderEnabled === undefined ? false : habit_data_migration.reminderEnabled,
           };
         });
         setHabits(parsedHabits);
       } catch (error) {
         console.error(`Failed to parse habits from localStorage key ${userHabitsKey}:`, error);
-        setHabits([]); 
+        setHabits([]);
       }
     } else {
-        setHabits([]); 
+        setHabits([]);
     }
 
     if (authUser && parsedHabits.length === 0 && !commonSuggestionsFetched) {
@@ -305,11 +305,11 @@ const HabitualPage: NextPage = () => {
         })
         .finally(() => {
           setIsLoadingCommonSuggestions(false);
-          setCommonSuggestionsFetched(true); 
+          setCommonSuggestionsFetched(true);
         });
     } else if (parsedHabits.length > 0) {
-        setCommonHabitSuggestions([]); 
-        setCommonSuggestionsFetched(true); 
+        setCommonHabitSuggestions([]);
+        setCommonSuggestionsFetched(true);
     }
 
 
@@ -339,10 +339,10 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
     }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth, commonSuggestionsFetched, router]); 
+  }, [authUser, isLoadingAuth, commonSuggestionsFetched, router]);
 
   React.useEffect(() => {
-    if (!authUser || isLoadingAuth || isLoadingHabits) return; 
+    if (!authUser || isLoadingAuth || isLoadingHabits) return;
     const userHabitsKey = `${LS_KEY_PREFIX_HABITS}${authUser.uid}`;
     localStorage.setItem(userHabitsKey, JSON.stringify(habits));
 
@@ -365,7 +365,7 @@ const HabitualPage: NextPage = () => {
       });
       setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, authUser, isLoadingAuth, isLoadingHabits]); 
+  }, [habits, earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -395,22 +395,22 @@ const HabitualPage: NextPage = () => {
               const [hours, minutes] = habit_for_reminder.specificTime.split(':').map(Number);
               if (isNaN(hours) || isNaN(minutes)) throw new Error("Invalid time format");
               let specificEventTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000); 
-            } catch (e) { 
+              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000);
+            } catch (e) {
               console.error(`Error parsing specificTime "${habit_for_reminder.specificTime}" for habit "${habit_for_reminder.name}"`, e);
             }
           } else {
-            let baseHour = 10; 
-            if (habit_for_reminder.optimalTiming?.toLowerCase().includes('morning')) baseHour = 9; 
-            else if (habit_for_reminder.optimalTiming?.toLowerCase().includes('afternoon')) baseHour = 13; 
-            else if (habit_for_reminder.optimalTiming?.toLowerCase().includes('evening')) baseHour = 18; 
+            let baseHour = 10;
+            if (habit_for_reminder.optimalTiming?.toLowerCase().includes('morning')) baseHour = 9;
+            else if (habit_for_reminder.optimalTiming?.toLowerCase().includes('afternoon')) baseHour = 13;
+            else if (habit_for_reminder.optimalTiming?.toLowerCase().includes('evening')) baseHour = 18;
             reminderDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), baseHour, 0, 0, 0);
           }
 
           if (reminderDateTime && reminderDateTime > now) {
             const delay = reminderDateTime.getTime() - now.getTime();
             console.log(`Reminder for "${habit_for_reminder.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
-          } 
+          }
         }
       });
     }
@@ -426,8 +426,8 @@ const HabitualPage: NextPage = () => {
       setHabits(prevHabits =>
         prevHabits.map(h =>
           h.id === habitData.id
-            ? { 
-                ...h, 
+            ? {
+                ...h,
                 name: habitData.name,
                 description: habitData.description,
                 category: habitData.category || 'Other',
@@ -452,15 +452,15 @@ const HabitualPage: NextPage = () => {
         durationHours: habitData.durationHours === null ? undefined : habitData.durationHours,
         durationMinutes: habitData.durationMinutes === null ? undefined : habitData.durationMinutes,
         specificTime: habitData.specificTime,
-        completionLog: [], 
-        reminderEnabled: false, 
+        completionLog: [],
+        reminderEnabled: false,
       };
       setHabits(prevHabits => [...prevHabits, newHabit]);
       console.log(`Habit Added: ${newHabit.name}`);
     }
-    setIsCreateHabitDialogOpen(false); 
-    setInitialFormDataForDialog(null); 
-    setEditingHabit(null); 
+    setIsCreateHabitDialogOpen(false);
+    setInitialFormDataForDialog(null);
+    setEditingHabit(null);
   };
 
   const handleOpenEditDialog = (habitToEdit: Habit) => {
@@ -495,7 +495,7 @@ const HabitualPage: NextPage = () => {
           if (completed) {
             if (existingLogIndex_for_toggle > -1) {
               const existingLog_item_for_toggle = newCompletionLog_for_toggle[existingLogIndex_for_toggle];
-              if (existingLog_item_for_toggle.status !== 'completed') { 
+              if (existingLog_item_for_toggle.status !== 'completed') {
                 pointsChange = POINTS_PER_COMPLETION;
                 justCompleted = true;
               }
@@ -505,18 +505,18 @@ const HabitualPage: NextPage = () => {
               justCompleted = true;
               newCompletionLog_for_toggle.push({ date, time: currentTime_for_toggle, status: 'completed', note: undefined });
             }
-          } else { 
+          } else {
             if (existingLogIndex_for_toggle > -1) {
               const logEntry_item_for_toggle = newCompletionLog_for_toggle[existingLogIndex_for_toggle];
-              if (logEntry_item_for_toggle.status === 'completed') { 
+              if (logEntry_item_for_toggle.status === 'completed') {
                  pointsChange = -POINTS_PER_COMPLETION;
               }
               if (logEntry_item_for_toggle.status === 'completed' && logEntry_item_for_toggle.originalMissedDate) {
                 newCompletionLog_for_toggle[existingLogIndex_for_toggle] = { ...logEntry_item_for_toggle, status: 'pending_makeup', time: 'N/A' };
-              } else if (logEntry_item_for_toggle.note) { 
+              } else if (logEntry_item_for_toggle.note) {
                 newCompletionLog_for_toggle[existingLogIndex_for_toggle] = { ...logEntry_item_for_toggle, status: 'skipped', time: 'N/A' };
               }
-              else { 
+              else {
                 newCompletionLog_for_toggle.splice(existingLogIndex_for_toggle, 1);
               }
             }
@@ -538,7 +538,7 @@ const HabitualPage: NextPage = () => {
     }
 
     if (pointsChange !== 0) {
-      setTotalPoints(prevPoints => Math.max(0, prevPoints + pointsChange)); 
+      setTotalPoints(prevPoints => Math.max(0, prevPoints + pointsChange));
     }
   };
 
@@ -559,7 +559,7 @@ const HabitualPage: NextPage = () => {
   const handleOpenAISuggestionDialog = async (habit_for_ai: Habit) => {
     setSelectedHabitForAISuggestion(habit_for_ai);
     setIsAISuggestionDialogOpen(true);
-    setAISuggestion({ habitId: habit_for_ai.id, suggestionText: '', isLoading: true }); 
+    setAISuggestion({ habitId: habit_for_ai.id, suggestionText: '', isLoading: true });
 
     try {
       const completionEntries_for_ai = habit_for_ai.completionLog.map(log_for_ai => {
@@ -590,7 +590,7 @@ const HabitualPage: NextPage = () => {
       console.error("Error fetching AI suggestion:", error_fetching_ai);
       setAISuggestion({
         habitId: habit_for_ai.id,
-        suggestionText: '', 
+        suggestionText: '',
         isLoading: false,
         error: 'Failed to get suggestion.'
       });
@@ -628,14 +628,14 @@ const HabitualPage: NextPage = () => {
           if (!logEntryExists_for_note_save) {
              const dayOfWeekForDate = dayIndexToWeekDayConstant[getDay(parseISO(date))];
              const wasScheduled = h_for_note_save.daysOfWeek.includes(dayOfWeekForDate);
-             
-             const defaultStatusForNewLog = wasScheduled ? 'skipped' : 'completed'; 
+
+             const defaultStatusForNewLog = wasScheduled ? 'skipped' : 'completed';
 
              newCompletionLog_for_note_save.push({
                 date,
                 time: 'N/A',
                 note: note_to_save.trim() === "" ? undefined : note_to_save.trim(),
-                status: defaultStatusForNewLog 
+                status: defaultStatusForNewLog
              });
              newCompletionLog_for_note_save.sort((a_sort,b_sort) => b_sort.date.localeCompare(a_sort.date));
           }
@@ -674,7 +674,7 @@ const HabitualPage: NextPage = () => {
 
         newCompletionLog_rescheduled.push({
           date: newDate_rescheduled,
-          time: 'N/A', 
+          time: 'N/A',
           status: 'pending_makeup',
           originalMissedDate: originalMissedDate_rescheduled,
         });
@@ -693,10 +693,10 @@ const HabitualPage: NextPage = () => {
         let newCompletionLog_skipped = [...h_skipped_map.completionLog];
         const existingLogIndex_skipped = newCompletionLog_skipped.findIndex(log_skipped_find => log_skipped_find.date === missedDate_skipped);
         if (existingLogIndex_skipped > -1) {
-          newCompletionLog_skipped[existingLogIndex_skipped] = { 
-            ...newCompletionLog_skipped[existingLogIndex_skipped], 
-            status: 'skipped', 
-            time: 'N/A' 
+          newCompletionLog_skipped[existingLogIndex_skipped] = {
+            ...newCompletionLog_skipped[existingLogIndex_skipped],
+            status: 'skipped',
+            time: 'N/A'
           };
         } else {
           newCompletionLog_skipped.push({ date: missedDate_skipped, time: 'N/A', status: 'skipped' });
@@ -722,27 +722,99 @@ const HabitualPage: NextPage = () => {
         });
     }
   };
-  
-  // MINIMAL version of calendarDialogModifiers for debugging - STEP 1
+
+
   const calendarDialogModifiers = React.useMemo(() => {
-    console.log("DEBUG: Minimal calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
-    // This is the absolute minimal version that should not cause "cDate is not defined"
-    // If the error still occurs, it's highly likely not within this hook's logic.
-    return {
-      completed: [],
-      missed: [],
-      scheduled: [],
-      makeup: [],
-      selected: selectedCalendarDate ? [selectedCalendarDate] : [],
-    } as DayModifiers; // Cast to DayModifiers to satisfy the Calendar component
-  }, [selectedCalendarDate]); // Only selectedCalendarDate as dependency for this minimal version
+    try {
+      console.log("Recalculating calendarDialogModifiers (DEBUG). Habits:", habits, "Selected Date:", selectedCalendarDate);
+      const dates_completed_arr: Date[] = [];
+      const dates_scheduled_missed_arr: Date[] = [];
+      const dates_scheduled_upcoming_arr: Date[] = [];
+      const dates_makeup_pending_arr: Date[] = [];
+      const today_date_obj = startOfDay(new Date());
+
+      habits.forEach(habit_item_for_modifiers => {
+          habit_item_for_modifiers.completionLog.forEach(log_entry_for_modifiers => {
+              if (typeof log_entry_for_modifiers.date === 'string' && log_entry_for_modifiers.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                  try {
+                      const logDate_obj = parseISO(log_entry_for_modifiers.date);
+                      if (log_entry_for_modifiers.status === 'completed') {
+                          dates_completed_arr.push(logDate_obj);
+                      } else if (log_entry_for_modifiers.status === 'pending_makeup') {
+                          dates_makeup_pending_arr.push(logDate_obj);
+                      }
+                  } catch (e_parse_log) {
+                      console.error("Error parsing log date for calendar modifiers:", log_entry_for_modifiers.date, e_parse_log);
+                  }
+              } else {
+                  console.warn("Invalid or missing date in log entry for habit:", habit_item_for_modifiers.name, log_entry_for_modifiers);
+              }
+          });
+
+          const iteration_limit = 60;
+          for (let day_offset = 0; day_offset < iteration_limit; day_offset++) {
+              const pastDateToConsider_obj = subDays(today_date_obj, day_offset);
+              const futureDateToConsider_obj = dateFnsAddDays(today_date_obj, day_offset);
+
+              [pastDateToConsider_obj, futureDateToConsider_obj].forEach(current_day_being_checked_obj => {
+                  if (isSameDay(current_day_being_checked_obj, today_date_obj) && day_offset !== 0 && current_day_being_checked_obj !== pastDateToConsider_obj) return;
+
+                  const dateStrToMatch_str = format(current_day_being_checked_obj, 'yyyy-MM-dd');
+                  const dayOfWeekForDate_val = dayIndexToWeekDayConstant[getDay(current_day_being_checked_obj)];
+                  const isScheduledOnThisDay_bool = habit_item_for_modifiers.daysOfWeek.includes(dayOfWeekForDate_val);
+                  const logEntryForThisDay_obj = habit_item_for_modifiers.completionLog.find(log_find_item => log_find_item.date === dateStrToMatch_str);
+
+                  if (isScheduledOnThisDay_bool && !logEntryForThisDay_obj) {
+                      if (current_day_being_checked_obj < today_date_obj && !isSameDay(current_day_being_checked_obj, today_date_obj)) {
+                          if (!dates_scheduled_missed_arr.some(missed_day_item => isSameDay(missed_day_item, current_day_being_checked_obj))) {
+                              dates_scheduled_missed_arr.push(current_day_being_checked_obj);
+                          }
+                      } else {
+                          if (!dates_scheduled_upcoming_arr.some(upcoming_day_item => isSameDay(upcoming_day_item, current_day_being_checked_obj)) &&
+                              !dates_completed_arr.some(completed_d_inner_check => isSameDay(completed_d_inner_check, current_day_being_checked_obj))) {
+                              dates_scheduled_upcoming_arr.push(current_day_being_checked_obj);
+                          }
+                      }
+                  }
+              });
+          }
+      });
+
+      const finalScheduledUpcoming_arr = dates_scheduled_upcoming_arr.filter(s_date_upcoming_for_final_filter =>
+          !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
+          !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
+      );
+      const finalScheduledMissed_arr = dates_scheduled_missed_arr.filter(s_date_missed_for_final_filter =>
+          !dates_completed_arr.some(comp_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, comp_date_for_final_filter_missed)) &&
+          !dates_makeup_pending_arr.some(makeup_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, makeup_date_for_final_filter_missed))
+      );
+
+      return {
+          completed: dates_completed_arr,
+          missed: finalScheduledMissed_arr,
+          scheduled: finalScheduledUpcoming_arr,
+          makeup: dates_makeup_pending_arr,
+          selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+      };
+    } catch (error) {
+        console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error);
+        // Return a safe, default value to prevent app crash
+        return {
+            completed: [],
+            missed: [],
+            scheduled: [],
+            makeup: [],
+            selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+        };
+    }
+  }, [habits, selectedCalendarDate]);
 
 
   const calendarDialogModifierStyles: DayPicker['modifiersStyles'] = {
     completed: { backgroundColor: 'hsl(var(--accent)/0.15)', color: 'hsl(var(--accent))', fontWeight: 'bold' },
     missed: { backgroundColor: 'hsl(var(--destructive)/0.1)', color: 'hsl(var(--destructive))' },
-    scheduled: { backgroundColor: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))' }, 
-    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15)', color: 'hsl(200,100%,50%)' }, 
+    scheduled: { backgroundColor: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))' },
+    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15)', color: 'hsl(200,100%,50%)' },
     selected: { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
   };
 
@@ -754,7 +826,7 @@ const HabitualPage: NextPage = () => {
     return habits.filter(habit_instance_cal => {
       const isScheduledForDay = habit_instance_cal.daysOfWeek.includes(dayOfWeekForDate);
       const logEntryForDay = habit_instance_cal.completionLog.find(log_item_cal => log_item_cal.date === dateStrToCompare);
-      return isScheduledForDay || logEntryForDay; 
+      return isScheduledForDay || logEntryForDay;
     });
   }, [selectedCalendarDate, habits]);
 
@@ -773,20 +845,20 @@ const HabitualPage: NextPage = () => {
       label: 'Achievements',
       icon: Award,
       action: () => {
-        setIsSettingsSheetOpen(false); 
-        setIsAchievementsDialogOpen(true); 
+        setIsSettingsSheetOpen(false);
+        setIsAchievementsDialogOpen(true);
       }
     },
     { label: 'Calendar', icon: CalendarDays, action: () => { setIsSettingsSheetOpen(false); setIsCalendarDialogOpen(true); } },
   ];
 
   const handleCustomizeSuggestedHabit = (suggestion: SuggestedHabit) => {
-    setEditingHabit(null); 
+    setEditingHabit(null);
     setInitialFormDataForDialog({
       name: suggestion.name,
       category: suggestion.category || 'Other',
-      description: '', 
-      daysOfWeek: [], 
+      description: '',
+      daysOfWeek: [],
     });
     setIsCreateHabitDialogOpen(true);
   };
@@ -815,16 +887,16 @@ const HabitualPage: NextPage = () => {
       <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
-          maxWidth: 'clamp(320px, 100%, 450px)', 
-          height: 'clamp(700px, 90vh, 850px)', 
-          overflow: 'hidden', 
+          maxWidth: 'clamp(320px, 100%, 450px)',
+          height: 'clamp(700px, 90vh, 850px)',
+          overflow: 'hidden',
         }}
       >
-        <AppHeader onOpenCalendar={() => setIsCalendarDialogOpen(true)} /> 
-        
-        <ScrollArea className="flex-grow"> 
-          <main className="px-3 sm:px-4 py-4"> 
-            
+        <AppHeader onOpenCalendar={() => setIsCalendarDialogOpen(true)} />
+
+        <ScrollArea className="flex-grow">
+          <main className="px-3 sm:px-4 py-4">
+
             {authUser && !isLoadingAuth && !isLoadingHabits && habits.length === 0 && commonHabitSuggestions.length > 0 && (
               <Card className="my-4 p-4 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
                 <CardHeader className="p-2 pt-0">
@@ -868,7 +940,7 @@ const HabitualPage: NextPage = () => {
               onOpenReflectionDialog={handleOpenReflectionDialog}
               onOpenRescheduleDialog={handleOpenRescheduleDialog}
               onToggleReminder={handleToggleReminder}
-              onOpenEditDialog={handleOpenEditDialog} 
+              onOpenEditDialog={handleOpenEditDialog}
             />
           </main>
           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
@@ -899,9 +971,9 @@ const HabitualPage: NextPage = () => {
       <Button
         className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
         onClick={() => {
-          setEditingHabit(null); 
-          setInitialFormDataForDialog(null); 
-          setIsCreateHabitDialogOpen(true); 
+          setEditingHabit(null);
+          setInitialFormDataForDialog(null);
+          setIsCreateHabitDialogOpen(true);
          }}
         aria-label="Add New Habit"
       >
@@ -912,11 +984,11 @@ const HabitualPage: NextPage = () => {
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null); 
+            setInitialFormDataForDialog(null);
             setEditingHabit(null);
         }}
         onSaveHabit={handleSaveHabit}
-        initialData={initialFormDataForDialog} 
+        initialData={initialFormDataForDialog}
       />
 
       {selectedHabitForAISuggestion && aiSuggestion && (
@@ -935,7 +1007,7 @@ const HabitualPage: NextPage = () => {
           isOpen={isReflectionDialogOpen}
           onClose={() => {
             setIsReflectionDialogOpen(false);
-            setReflectionDialogData(null); 
+            setReflectionDialogData(null);
           }}
           onSaveNote={handleSaveReflectionNote}
           initialNote={reflectionDialogData.initialNote}
@@ -947,22 +1019,22 @@ const HabitualPage: NextPage = () => {
       {rescheduleDialogData && (
         <RescheduleMissedHabitDialog
           isOpen={!!rescheduleDialogData}
-          onClose={() => setRescheduleDialogData(null)} 
+          onClose={() => setRescheduleDialogData(null)}
           habitName={rescheduleDialogData.habit.name}
           originalMissedDate={rescheduleDialogData.missedDate}
           onReschedule={(newDate_reschedule_cb) => {
             handleSaveRescheduledHabit(rescheduleDialogData.habit.id, rescheduleDialogData.missedDate, newDate_reschedule_cb);
-            setRescheduleDialogData(null); 
+            setRescheduleDialogData(null);
           }}
           onMarkAsSkipped={() => {
             handleSaveMarkAsSkipped(rescheduleDialogData.habit.id, rescheduleDialogData.missedDate);
-            setRescheduleDialogData(null); 
+            setRescheduleDialogData(null);
           }}
         />
       )}
 
       <Dialog open={isDashboardDialogOpen} onOpenChange={setIsDashboardDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]"> 
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center text-xl">
               <LayoutDashboard className="mr-2 h-5 w-5 text-primary" />
@@ -972,7 +1044,7 @@ const HabitualPage: NextPage = () => {
               A snapshot of your progress and today's checklist.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2 max-h-[65vh] overflow-y-auto pr-2"> 
+          <div className="py-2 max-h-[65vh] overflow-y-auto pr-2">
             <HabitOverview habits={habits} totalPoints={totalPoints} />
           </div>
           <DialogFooter className="pt-2">
@@ -982,7 +1054,7 @@ const HabitualPage: NextPage = () => {
       </Dialog>
 
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] w-full max-w-[calc(100%-2rem)]"> 
+        <DialogContent className="sm:max-w-[500px] w-full max-w-[calc(100%-2rem)]">
             <DialogHeader>
                 <DialogTitle className="flex items-center text-xl">
                     <CalendarDays className="mr-2 h-5 w-5 text-primary" />
@@ -997,11 +1069,11 @@ const HabitualPage: NextPage = () => {
                     mode="single"
                     selected={selectedCalendarDate}
                     onSelect={setSelectedCalendarDate}
-                    // modifiers={calendarDialogModifiers} // DEBUG: Temporarily commented out
+                    modifiers={calendarDialogModifiers}
                     modifiersStyles={calendarDialogModifierStyles}
-                    className="rounded-md border p-0 sm:p-2" 
-                    month={selectedCalendarDate || new Date()} 
-                    onMonthChange={setSelectedCalendarDate} 
+                    className="rounded-md border p-0 sm:p-2"
+                    month={selectedCalendarDate || new Date()}
+                    onMonthChange={setSelectedCalendarDate}
                  />
                 {selectedCalendarDate && (
                 <div className="mt-4 w-full">
@@ -1014,9 +1086,9 @@ const HabitualPage: NextPage = () => {
                         const logEntryForCalDate_display = habit_item_for_cal_date_display.completionLog.find(log_cal_display => log_cal_display.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
                         const dayOfWeekForSelectedDate_display = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
                         const isScheduledOnSelectedDate_display = habit_item_for_cal_date_display.daysOfWeek.includes(dayOfWeekForSelectedDate_display);
-                        let statusTextForCalDate_display = "Scheduled"; 
-                        let StatusIconForCalDate_display = CircleIcon; 
-                        let iconColorForCalDate_display = "text-orange-500"; 
+                        let statusTextForCalDate_display = "Scheduled";
+                        let StatusIconForCalDate_display = CircleIcon;
+                        let iconColorForCalDate_display = "text-orange-500";
 
                         if (logEntryForCalDate_display?.status === 'completed') {
                             statusTextForCalDate_display = `Completed at ${logEntryForCalDate_display.time || ''}`;
@@ -1035,7 +1107,7 @@ const HabitualPage: NextPage = () => {
                             StatusIconForCalDate_display = XCircle;
                             iconColorForCalDate_display = "text-destructive";
                         }
-                        
+
                         return (
                             <li key={habit_item_for_cal_date_display.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
                             <span className="font-medium truncate pr-2">{habit_item_for_cal_date_display.name}</span>
@@ -1078,7 +1150,7 @@ const HabitualPage: NextPage = () => {
               earnedBadges.map((badge_item_display) => (
                 <div key={badge_item_display.id} className="p-3 border rounded-md bg-card shadow-sm">
                   <div className="flex items-center mb-1">
-                    <span className="text-2xl mr-2">{badge_item_display.icon || "🏆"}</span> 
+                    <span className="text-2xl mr-2">{badge_item_display.icon || "🏆"}</span>
                     <h4 className="font-semibold text-primary">{badge_item_display.name}</h4>
                   </div>
                   <p className="text-xs text-muted-foreground mb-1">{badge_item_display.description}</p>
@@ -1094,16 +1166,16 @@ const HabitualPage: NextPage = () => {
       </Dialog>
 
       <Sheet open={isSettingsSheetOpen} onOpenChange={setIsSettingsSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-lg"> 
+        <SheetContent side="bottom" className="rounded-t-lg">
           <SheetHeader className="mb-4">
             <SheetTitle>Menu</SheetTitle>
             <SheetDescription>
               Navigate to different sections of the app.
             </SheetDescription>
           </SheetHeader>
-          <div className="grid gap-2"> 
+          <div className="grid gap-2">
             {sheetMenuItems.map((item_menu_sheet) => (
-              item_menu_sheet.href && item_menu_sheet.href !== "/profile" && item_menu_sheet.href !== "/calendar" ? ( 
+              item_menu_sheet.href && item_menu_sheet.href !== "/profile" && item_menu_sheet.href !== "/calendar" ? (
                 <SheetClose asChild key={item_menu_sheet.label}>
                     <Link href={item_menu_sheet.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item_menu_sheet.action}>
@@ -1112,7 +1184,7 @@ const HabitualPage: NextPage = () => {
                         </Button>
                     </Link>
                 </SheetClose>
-              ) : item_menu_sheet.href === "/profile" ? ( 
+              ) : item_menu_sheet.href === "/profile" ? (
                  <SheetClose asChild key={item_menu_sheet.label}>
                     <Link href={item_menu_sheet.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item_menu_sheet.action} >
@@ -1121,12 +1193,12 @@ const HabitualPage: NextPage = () => {
                         </Button>
                     </Link>
                  </SheetClose>
-              ) : ( 
+              ) : (
                 <Button
                   variant="ghost"
                   className="w-full justify-start text-base py-3"
                   onClick={() => {
-                    item_menu_sheet.action(); 
+                    item_menu_sheet.action();
                     if (item_menu_sheet.label !== 'Reminders' && item_menu_sheet.label !== 'Calendar' && item_menu_sheet.label !== 'Achievements' ) {
                        setIsSettingsSheetOpen(false);
                     }
@@ -1144,7 +1216,7 @@ const HabitualPage: NextPage = () => {
                     <div className="flex items-center text-sm">
                         <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span>Notification Status:</span>
-                        <span className={cn("ml-1 font-semibold", 
+                        <span className={cn("ml-1 font-semibold",
                             notificationPermission === 'granted' ? 'text-green-600' :
                             notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
                         )}>
@@ -1167,6 +1239,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-    
-
-    
