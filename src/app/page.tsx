@@ -72,6 +72,8 @@ const LS_KEY_PREFIX_POINTS = "totalPoints_";
 
 
 const HabitualPage: NextPage = () => {
+  console.log("RENDERING HabitualPage - Calendar Modifiers COMPLETELY REMOVED (Version 1.0)");
+
   const router = useRouter();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
@@ -307,7 +309,7 @@ const HabitualPage: NextPage = () => {
             durationHours: migratedDurationHours_val_data_load,
             durationMinutes: migratedDurationMinutes_val_data_load,
             specificTime: migratedSpecificTime_val_data_load,
-            completionLog: migratedCompletionLog_arr_data_load.sort((a,b) => b.date.localeCompare(a.date)),
+            completionLog: migratedCompletionLog_arr_data_load.sort((a_sort_comp_log,b_sort_comp_log) => b_sort_comp_log.date.localeCompare(a_sort_comp_log.date)),
             reminderEnabled: habit_data_migration_map.reminderEnabled === undefined ? false : !!habit_data_migration_map.reminderEnabled,
           };
         });
@@ -371,7 +373,7 @@ const HabitualPage: NextPage = () => {
     }
     setIsLoadingHabits(false);
     console.log(`Data loading complete for user ${userUid}. Habits loaded: ${parsedHabits_data_load.length}`);
-  }, [authUser, isLoadingAuth, router, commonSuggestionsFetched]); // Removed habits from dependency array here
+  }, [authUser, isLoadingAuth, router, commonSuggestionsFetched]);
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -429,7 +431,7 @@ const HabitualPage: NextPage = () => {
             try {
               const [hours_effect, minutes_effect] = habit_for_reminder_effect.specificTime.split(':').map(Number);
               if (isNaN(hours_effect) || isNaN(minutes_effect)) throw new Error("Invalid time format");
-              let specificEventTime_effect = new Date(now_effect.getFullYear(), now_effect.getMonth(), now_effect.getDate(), hours_effect, minutes_effect, 0, 0, 0);
+              let specificEventTime_effect = new Date(now_effect.getFullYear(), now_effect.getMonth(), now_effect.getDate(), hours_effect, minutes_effect, 0, 0);
               reminderDateTime_effect = new Date(specificEventTime_effect.getTime() - 30 * 60 * 1000);
             } catch (e_effect) {
               console.error(`Error parsing specificTime "${habit_for_reminder_effect.specificTime}" for habit "${habit_for_reminder_effect.name}"`, e_effect);
@@ -756,24 +758,6 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-  // Completely removed custom modifiers for calendar dialog as per debugging steps
-  const calendarDialogModifiers = React.useMemo(() => {
-    console.log("DEBUG: Minimal calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
-    return {
-      selected: selectedCalendarDate ? [selectedCalendarDate] : [],
-      // completed: [], // Intentionally empty
-      // missed: [],    // Intentionally empty
-      // scheduled: [], // Intentionally empty
-      // makeup: [],    // Intentionally empty
-    };
-  }, [selectedCalendarDate]); // Minimal dependencies
-
-  const calendarDialogModifierStyles: DayPicker['modifiersStyles'] = {
-    selected: { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' },
-    // Other styles removed for diagnostics
-  };
-
-
   const habitsForSelectedCalendarDate = React.useMemo(() => {
     try {
       if (!selectedCalendarDate) return [];
@@ -1012,6 +996,7 @@ const HabitualPage: NextPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* COMPLETELY REMOVED calendarDialogModifiers and calendarDialogModifierStyles for diagnostics */}
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
         <DialogContent className="sm:max-w-[500px] w-full max-w-[calc(100%-2rem)]">
             <DialogHeader>
@@ -1028,8 +1013,8 @@ const HabitualPage: NextPage = () => {
                     mode="single"
                     selected={selectedCalendarDate}
                     onSelect={setSelectedCalendarDate}
-                    modifiers={undefined} // Completely removed custom modifiers for diagnostics
-                    modifiersStyles={undefined} // Completely removed custom styles for diagnostics
+                    modifiers={undefined} 
+                    modifiersStyles={undefined}
                     className="rounded-md border p-0 sm:p-2"
                     month={selectedCalendarDate || new Date()}
                     onMonthChange={setSelectedCalendarDate}
@@ -1040,46 +1025,49 @@ const HabitualPage: NextPage = () => {
                     Habits for {format(selectedCalendarDate, 'MMMM d, yyyy')}
                     </h3>
                     {habitsForSelectedCalendarDate.length > 0 ? (
-                    <ul className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
-                        {habitsForSelectedCalendarDate.map(habit_item_for_cal_date_display_page => {
-                        const logEntryForCalDate_display_page = habit_item_for_cal_date_display_page.completionLog.find(log_cal_display_page => log_cal_display_page.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
-                        const dayOfWeekForSelectedDate_display_page = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
-                        const isScheduledOnSelectedDate_display_page = habit_item_for_cal_date_display_page.daysOfWeek.includes(dayOfWeekForSelectedDate_display_page);
-                        let statusTextForCalDate_display_page = "Scheduled";
-                        let StatusIconForCalDate_display_page = CircleIcon;
-                        let iconColorForCalDate_display_page = "text-orange-500";
+                    <ScrollArea className="max-h-40">
+                      <ul className="space-y-1.5 text-sm pr-3">
+                          {habitsForSelectedCalendarDate.map(habit_item_for_cal_date_display_page => {
+                          const logEntryForCalDate_display_page = habit_item_for_cal_date_display_page.completionLog.find(log_cal_display_page => log_cal_display_page.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
+                          const dayOfWeekForSelectedDate_display_page = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
+                          const isScheduledOnSelectedDate_display_page = habit_item_for_cal_date_display_page.daysOfWeek.includes(dayOfWeekForSelectedDate_display_page);
+                          let statusTextForCalDate_display_page = "Scheduled";
+                          let StatusIconForCalDate_display_page = CircleIcon;
+                          let iconColorForCalDate_display_page = "text-orange-500"; // Default for scheduled
 
-                        if (logEntryForCalDate_display_page?.status === 'completed') {
-                            statusTextForCalDate_display_page = `Completed at ${logEntryForCalDate_display_page.time || ''}`;
-                            StatusIconForCalDate_display_page = CheckCircle2;
-                            iconColorForCalDate_display_page = "text-accent";
-                        } else if (logEntryForCalDate_display_page?.status === 'pending_makeup') {
-                            statusTextForCalDate_display_page = `Makeup for ${logEntryForCalDate_display_page.originalMissedDate}`;
-                            StatusIconForCalDate_display_page = MakeupIcon;
-                            iconColorForCalDate_display_page = "text-blue-500";
-                        } else if (logEntryForCalDate_display_page?.status === 'skipped') {
-                            statusTextForCalDate_display_page = "Skipped";
-                            StatusIconForCalDate_display_page = XCircle;
-                            iconColorForCalDate_display_page = "text-muted-foreground";
-                        } else if (isScheduledOnSelectedDate_display_page && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntryForCalDate_display_page) {
-                            statusTextForCalDate_display_page = "Missed";
-                            StatusIconForCalDate_display_page = XCircle;
-                            iconColorForCalDate_display_page = "text-destructive";
-                        } else if (!isScheduledOnSelectedDate_display_page && !logEntryForCalDate_display_page) {
-                           return null;
-                        }
-                        
-                        return (
-                            <li key={habit_item_for_cal_date_display_page.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
-                            <span className="font-medium truncate pr-2">{habit_item_for_cal_date_display_page.name}</span>
-                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                                <StatusIconForCalDate_display_page className={cn("h-3.5 w-3.5", iconColorForCalDate_display_page)} />
-                                <span>{statusTextForCalDate_display_page}</span>
-                            </div>
-                            </li>
-                        );
-                        })}
-                    </ul>
+                          if (logEntryForCalDate_display_page?.status === 'completed') {
+                              statusTextForCalDate_display_page = `Completed at ${logEntryForCalDate_display_page.time || ''}`;
+                              StatusIconForCalDate_display_page = CheckCircle2;
+                              iconColorForCalDate_display_page = "text-accent";
+                          } else if (logEntryForCalDate_display_page?.status === 'pending_makeup') {
+                              statusTextForCalDate_display_page = `Makeup for ${logEntryForCalDate_display_page.originalMissedDate}`;
+                              StatusIconForCalDate_display_page = MakeupIcon;
+                              iconColorForCalDate_display_page = "text-blue-500";
+                          } else if (logEntryForCalDate_display_page?.status === 'skipped') {
+                              statusTextForCalDate_display_page = "Skipped";
+                              StatusIconForCalDate_display_page = XCircle;
+                              iconColorForCalDate_display_page = "text-muted-foreground";
+                          } else if (isScheduledOnSelectedDate_display_page && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntryForCalDate_display_page) {
+                              statusTextForCalDate_display_page = "Missed";
+                              StatusIconForCalDate_display_page = XCircle;
+                              iconColorForCalDate_display_page = "text-destructive";
+                          } else if (!isScheduledOnSelectedDate_display_page && !logEntryForCalDate_display_page) {
+                            // If not scheduled and no log entry, don't show anything for this habit on this day
+                            return null; 
+                          }
+                          
+                          return (
+                              <li key={habit_item_for_cal_date_display_page.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
+                              <span className="font-medium truncate pr-2">{habit_item_for_cal_date_display_page.name}</span>
+                              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                                  <StatusIconForCalDate_display_page className={cn("h-3.5 w-3.5", iconColorForCalDate_display_page)} />
+                                  <span>{statusTextForCalDate_display_page}</span>
+                              </div>
+                              </li>
+                          );
+                          })}
+                      </ul>
+                    </ScrollArea>
                     ) : (
                     <p className="text-sm text-muted-foreground text-center py-2">No habits for this day.</p>
                     )}
@@ -1202,6 +1190,5 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-    
 
-    
+      
