@@ -20,8 +20,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Switch } from "@/components/ui/switch"; // Keep for reminder toggle
-import { Label } from "@/components/ui/label"; // Keep for reminder toggle
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from '@/components/ui/checkbox'; // Removed as it's not used in the current design
 import {
   Lightbulb, CalendarDays, CalendarClock, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag,
   ListChecks,
@@ -31,7 +32,7 @@ import {
   HeartPulse,
   Briefcase,
   Paintbrush,
-  Home as HomeIcon, // Renamed to avoid conflict with page component
+  Home as HomeIcon,
   Landmark,
   Users,
   Smile as LifestyleIcon,
@@ -40,10 +41,11 @@ import {
   CheckCircle2,
   Circle,
   XCircle,
-  Check, // For the "Mark as Done" button
+  Check,
   Bell,
-  FilePenLine, // For Edit
-  ChevronRightSquare, // For incomplete Mark as Done button
+  FilePenLine,
+  ChevronRightSquare,
+  StickyNote,
 } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -61,7 +63,7 @@ interface HabitItemProps {
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
   onToggleReminder: (habitId: string, currentReminderState: boolean) => void;
   onOpenEditDialog: (habit: Habit) => void;
-  earnedBadges?: EarnedBadge[]; // Optional, as it's not used on-card for now
+  earnedBadges?: EarnedBadge[];
 }
 
 const formatSpecificTime = (timeStr?: string): string | undefined => {
@@ -106,27 +108,28 @@ const getHabitIcon = (habit: Habit): React.ReactNode => {
   if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-xl">📚</span>;
   if (nameLower.includes('meditate') || nameLower.includes('meditation') || nameLower.includes('mindfulness')) return <span className="text-xl">🧘</span>;
 
-  let iconComponent: React.ReactNode = <ListChecks className="h-5 w-5 text-muted-foreground" />;
-  if(category && HABIT_CATEGORIES.includes(category)) {
+  if (category && HABIT_CATEGORIES.includes(category)) {
     switch (category) {
-      case 'Health & Wellness': iconComponent = <HeartPulse className="h-5 w-5 text-red-500" />; break;
-      case 'Work/Study': iconComponent = <Briefcase className="h-5 w-5 text-blue-600" />; break;
-      case 'Creative': iconComponent = <Paintbrush className="h-5 w-5 text-orange-500" />; break;
-      case 'Chores': iconComponent = <HomeIcon className="h-5 w-5 text-green-600" />; break;
-      case 'Finance': iconComponent = <Landmark className="h-5 w-5 text-indigo-500" />; break;
-      case 'Social': iconComponent = <Users className="h-5 w-5 text-pink-500" />; break;
-      case 'Personal Growth': iconComponent = <SparklesIcon className="h-5 w-5 text-yellow-500" />; break;
-      case 'Lifestyle': iconComponent = <LifestyleIcon className="h-5 w-5 text-teal-500" />; break;
-      default: iconComponent = <ListChecks className="h-5 w-5 text-muted-foreground" />; break;
+      case 'Health & Wellness': return <HeartPulse className="h-5 w-5 text-red-500" />;
+      case 'Work/Study': return <Briefcase className="h-5 w-5 text-blue-600" />;
+      case 'Creative': return <Paintbrush className="h-5 w-5 text-orange-500" />;
+      case 'Chores': return <HomeIcon className="h-5 w-5 text-green-600" />;
+      case 'Finance': return <Landmark className="h-5 w-5 text-indigo-500" />;
+      case 'Social': return <Users className="h-5 w-5 text-pink-500" />;
+      case 'Personal Growth': return <SparklesIcon className="h-5 w-5 text-yellow-500" />;
+      case 'Lifestyle': return <LifestyleIcon className="h-5 w-5 text-teal-500" />;
+      default: return <ListChecks className="h-5 w-5 text-muted-foreground" />;
     }
   } else {
+    // Fallback for name-based if no category
     if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="h-5 w-5 text-blue-500" />;
     if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="h-5 w-5 text-purple-500" />;
     if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="h-5 w-5 text-yellow-600" />;
     if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="h-5 w-5 text-blue-600" />;
     if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="h-5 w-5 text-red-500" />;
   }
-  return iconComponent;
+  // Final fallback if no category and no name-based fallbacks matched.
+  return <ListChecks className="h-5 w-5 text-muted-foreground" />;
 };
 
 
@@ -153,23 +156,15 @@ const HabitItem: FC<HabitItemProps> = ({
     setTodayString(format(now, 'yyyy-MM-dd'));
   }, []);
 
-  const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
-  const prevIsTodayCompletedRef = React.useRef<boolean>(isTodayCompleted);
+  const isTodayCompleted = React.useMemo(() => {
+    return habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
+  }, [habit.completionLog, todayString]);
 
   React.useEffect(() => {
     setWeekViewDays(getCurrentWeekDays(currentDate));
   }, [currentDate]);
 
- React.useEffect(() => {
-    if (isTodayCompleted && !prevIsTodayCompletedRef.current) {
-      // This effect is mainly for sparkles if toggled via daily button,
-      // but day-specific toggles handle their own sparkle logic.
-    }
-    prevIsTodayCompletedRef.current = isTodayCompleted;
-  }, [isTodayCompleted]);
-
-
-  const streak = calculateStreak(habit, currentDate);
+  const streak = React.useMemo(() => calculateStreak(habit, currentDate), [habit, currentDate]);
 
   const { completedCountInCurrentWeek, scheduledDaysInWeek } = React.useMemo(() => {
     let completed = 0;
@@ -288,7 +283,7 @@ const HabitItem: FC<HabitItemProps> = ({
 
     onToggleComplete(habit.id, dateToToggle, !currentCompletionState);
 
-    if (!currentCompletionState) {
+    if (!currentCompletionState) { // If just completed
         setShowSparkles(true);
         setTimeout(() => setShowSparkles(false), 800);
     }
@@ -306,7 +301,6 @@ const HabitItem: FC<HabitItemProps> = ({
           {habit.name}
         </h2>
         <div className="flex-shrink-0">
-          {habit.reminderEnabled && <Bell className="h-4 w-4 text-primary/70 flex-shrink-0 mr-1 inline-block" />}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -515,35 +509,33 @@ const HabitItem: FC<HabitItemProps> = ({
         )}
       </CardContent>
 
-      <CardFooter className="flex-col items-stretch pt-6 pb-3 px-3 space-y-2">
+       <CardFooter className="flex-col items-stretch pt-6 pb-3 px-3 space-y-2">
         <div className="flex justify-center space-x-2">
             <div className="relative flex justify-center flex-1 sparkle-container">
                 <Button
                     onClick={() => {
                         if(!isTodayCompleted) {
                             onToggleComplete(habit.id, todayString, true);
-                            setShowSparkles(true);
-                            setTimeout(() => setShowSparkles(false), 800);
                         }
                     }}
                     disabled={isTodayCompleted}
                     className={cn(
                         "rounded-full py-2.5 px-4 text-sm transition-all active:scale-95 w-full",
                         !isTodayCompleted
-                            ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95"
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90"
                             : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed",
                         isTodayCompleted && (showSparkles ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]")
                     )}
                 >
-                    {isTodayCompleted ? (
+                    {!isTodayCompleted ? (
                     <>
-                        <CheckCircle2 className="mr-2 h-5 w-5" />
-                        Done!
+                        <Check className="mr-2 h-5 w-5" />
+                         Mark Done
                     </>
                     ) : (
                     <>
-                        <Check className="mr-2 h-5 w-5" />
-                        Mark as Done
+                        <CheckCircle2 className="mr-2 h-5 w-5" />
+                        Done!
                     </>
                     )}
                 </Button>
@@ -563,6 +555,11 @@ const HabitItem: FC<HabitItemProps> = ({
                 </Button>
             </div>
         </div>
+        {isTodayCompleted && habit.completionLog.find(log => log.date === todayString && log.note) && (
+            <div className="flex items-center justify-center text-xs text-muted-foreground mt-1">
+                <StickyNote className="mr-1 h-3 w-3" /> Note added
+            </div>
+        )}
 
         {showSparkles && isTodayCompleted && (
           <>
@@ -594,4 +591,3 @@ const HabitItem: FC<HabitItemProps> = ({
 
 export default HabitItem;
 
-    
