@@ -63,12 +63,16 @@ const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu",
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const POINTS_PER_COMPLETION = 10;
 
+const LS_KEY_PREFIX_HABITS = "habits_";
+const LS_KEY_PREFIX_BADGES = "earnedBadges_";
+const LS_KEY_PREFIX_POINTS = "totalPoints_";
+
 
 const HabitualPage: NextPage = () => {
   const router = useRouter();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
-  const previousAuthUserUidRef = React.useRef<string | null | undefined>(undefined); // undefined initially
+  const previousAuthUserUidRef = React.useRef<string | null | undefined>(undefined);
 
   const [habits, setHabits] = React.useState<Habit[]>([]);
   const [isLoadingHabits, setIsLoadingHabits] = React.useState(true);
@@ -112,34 +116,19 @@ const HabitualPage: NextPage = () => {
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      let shouldClearData = false;
       const previousUid = previousAuthUserUidRef.current;
       const currentUid = currentUser?.uid || null;
 
-      if (previousUid !== undefined) { // Only consider clearing if previous state was known
-        if (previousUid !== null && currentUid === null) { // Logout
-          shouldClearData = true;
-          console.log('User logged out. Clearing data.');
-        } else if (previousUid !== null && currentUid !== null && previousUid !== currentUid) { // Different user logged in
-          shouldClearData = true;
-          console.log('Different user logged in. Clearing previous user data.');
-        }
-      }
-      // Note: Data is NOT cleared if previousUid was null/undefined and a user logs in for the first time.
-      // This allows "anonymous" localStorage data to be "adopted" by the first logged-in user.
-
-      if (shouldClearData) {
-        console.log('Clearing user-specific localStorage and state.');
+      if (previousUid !== currentUid) {
+        console.log(`Auth state changed. Previous UID: ${previousUid}, Current UID: ${currentUid}. Resetting app state.`);
+        // Clear React State immediately to prevent flicker of old user's data
         setHabits([]);
         setEarnedBadges([]);
         setTotalPoints(0);
         setCommonHabitSuggestions([]);
         setCommonSuggestionsFetched(false);
         setInitialFormDataForDialog(null);
-
-        localStorage.removeItem('habits');
-        localStorage.removeItem('earnedBadges');
-        localStorage.removeItem('totalPoints');
+        // Other state resets if needed
       }
 
       setAuthUser(currentUser);
@@ -179,33 +168,34 @@ const HabitualPage: NextPage = () => {
 
   React.useEffect(() => {
     if (isLoadingAuth) {
-      return;
+      return; // Don't do anything until auth state is resolved
     }
 
     if (!authUser) {
-      // If no authUser after auth check, means user is not logged in.
-      // State should have been cleared by the auth listener if it was a logout/user switch.
-      // If navigating directly to page while not logged in, auth listener will redirect.
-      // Ensure states are clear if somehow this effect runs when authUser is null.
+      // User is logged out or initial auth check resulted in no user.
+      // React state should have been cleared by onAuthStateChanged if it was a logout or user switch.
       setHabits([]);
       setEarnedBadges([]);
       setTotalPoints(0);
       setCommonHabitSuggestions([]);
       setCommonSuggestionsFetched(false);
-      setIsLoadingHabits(false);
+      setIsLoadingHabits(false); // No habits to load
       return;
     }
 
-    // User is authenticated, proceed to load data
+    // User is authenticated, proceed to load data for this user
     setIsLoadingHabits(true);
     console.log(`Loading data for user: ${authUser.uid}`);
+    
     let parsedHabits: Habit[] = [];
-    const storedHabits = localStorage.getItem('habits');
+    const userHabitsKey = `${LS_KEY_PREFIX_HABITS}${authUser.uid}`;
+    const storedHabits = localStorage.getItem(userHabitsKey);
+
     if (storedHabits) {
       try {
         parsedHabits = JSON.parse(storedHabits).map((habit: any) => {
           let daysOfWeek: WeekDay[] = habit.daysOfWeek || [];
-          if (!habit.daysOfWeek && habit.frequency) { // Basic migration from old 'frequency'
+          if (!habit.daysOfWeek && habit.frequency) {
             const freqLower = habit.frequency.toLowerCase();
             if (freqLower === 'daily') daysOfWeek = [...weekDays];
             else {
@@ -258,7 +248,7 @@ const HabitualPage: NextPage = () => {
                 date: log.date,
                 time: log.time || 'N/A',
                 note: log.note || undefined,
-                status: log.status || 'completed', // Default old entries to 'completed'
+                status: log.status || 'completed',
                 originalMissedDate: log.originalMissedDate || undefined,
               }));
 
@@ -278,11 +268,11 @@ const HabitualPage: NextPage = () => {
         });
         setHabits(parsedHabits);
       } catch (error) {
-        console.error("Failed to parse habits from localStorage:", error);
-        setHabits([]);
+        console.error(`Failed to parse habits from localStorage key ${userHabitsKey}:`, error);
+        setHabits([]); // Reset to empty if parsing fails
       }
     } else {
-        setHabits([]);
+        setHabits([]); // No habits for this user
     }
 
     if (authUser && parsedHabits.length === 0 && !commonSuggestionsFetched) {
@@ -298,43 +288,49 @@ const HabitualPage: NextPage = () => {
         })
         .finally(() => {
           setIsLoadingCommonSuggestions(false);
-          setCommonSuggestionsFetched(true);
+          setCommonSuggestionsFetched(true); // Mark as fetched even if it fails
         });
     } else if (parsedHabits.length > 0) {
         setCommonHabitSuggestions([]); // Clear suggestions if habits exist
+        setCommonSuggestionsFetched(true); // Mark as fetched if habits exist
     }
 
-
-    const storedBadges = localStorage.getItem('earnedBadges');
+    const userBadgesKey = `${LS_KEY_PREFIX_BADGES}${authUser.uid}`;
+    const storedBadges = localStorage.getItem(userBadgesKey);
     if (storedBadges) {
       try {
         setEarnedBadges(JSON.parse(storedBadges));
       } catch (error) {
-        console.error("Failed to parse badges from localStorage:", error);
+        console.error(`Failed to parse badges from localStorage key ${userBadgesKey}:`, error);
         setEarnedBadges([]);
       }
     } else {
         setEarnedBadges([]);
     }
 
-    const storedPoints = localStorage.getItem('totalPoints');
+    const userPointsKey = `${LS_KEY_PREFIX_POINTS}${authUser.uid}`;
+    const storedPoints = localStorage.getItem(userPointsKey);
     if (storedPoints) {
       try {
         setTotalPoints(parseInt(storedPoints, 10));
       } catch (error) {
-        console.error("Failed to parse totalPoints from localStorage:", error);
+        console.error(`Failed to parse totalPoints from localStorage key ${userPointsKey}:`, error);
         setTotalPoints(0);
       }
     } else {
         setTotalPoints(0);
     }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth]);
+  }, [authUser, isLoadingAuth]); // Rerun when authUser or isLoadingAuth changes
 
-  useEffect(() => {
+  // Effect for saving habits to localStorage (user-specific)
+  React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
-    localStorage.setItem('habits', JSON.stringify(habits));
+    
+    const userHabitsKey = `${LS_KEY_PREFIX_HABITS}${authUser.uid}`;
+    localStorage.setItem(userHabitsKey, JSON.stringify(habits));
 
+    // Badge awarding logic can stay general but saves to user-specific key
     const newlyEarned = checkAndAwardBadges(habits, earnedBadges);
     if (newlyEarned.length > 0) {
       const updatedBadges = [...earnedBadges];
@@ -342,7 +338,6 @@ const HabitualPage: NextPage = () => {
         if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
             updatedBadges.push(newBadge);
             console.log(`New Badge Unlocked: ${newBadge.name} - ${newBadge.description}`);
-
             if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) {
               try {
                 const sqlTipResult = await getSqlTip();
@@ -355,17 +350,22 @@ const HabitualPage: NextPage = () => {
       });
       setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
+  }, [habits, earnedBadges, authUser, isLoadingAuth, isLoadingHabits]); // Note: added earnedBadges here too
 
-  useEffect(() => {
+  // Effect for saving earned badges to localStorage (user-specific)
+  React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
-    localStorage.setItem('earnedBadges', JSON.stringify(earnedBadges));
+    const userBadgesKey = `${LS_KEY_PREFIX_BADGES}${authUser.uid}`;
+    localStorage.setItem(userBadgesKey, JSON.stringify(earnedBadges));
   }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
-  useEffect(() => {
+  // Effect for saving total points to localStorage (user-specific)
+  React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
-    localStorage.setItem('totalPoints', totalPoints.toString());
+    const userPointsKey = `${LS_KEY_PREFIX_POINTS}${authUser.uid}`;
+    localStorage.setItem(userPointsKey, totalPoints.toString());
   }, [totalPoints, authUser, isLoadingAuth, isLoadingHabits]);
+
 
   useEffect(() => {
     reminderTimeouts.current.forEach(clearTimeout);
@@ -381,17 +381,15 @@ const HabitualPage: NextPage = () => {
             try {
               const [hours, minutes] = habit.specificTime.split(':').map(Number);
               let specificEventTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-              // Reminder 30 minutes before if specific time is set
               reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000);
             } catch (e) {
               console.error(`Error parsing specificTime "${habit.specificTime}" for habit "${habit.name}"`, e);
             }
           } else {
-            // Reminder at the event of the day if no specific time
-            let baseHour = 10; // Default to 10 AM if no optimal timing
-            if (habit.optimalTiming?.toLowerCase().includes('morning')) baseHour = 9; // e.g. 9 AM for morning
-            else if (habit.optimalTiming?.toLowerCase().includes('afternoon')) baseHour = 13; // e.g. 1 PM for afternoon
-            else if (habit.optimalTiming?.toLowerCase().includes('evening')) baseHour = 18; // e.g. 6 PM for evening
+            let baseHour = 10; 
+            if (habit.optimalTiming?.toLowerCase().includes('morning')) baseHour = 9; 
+            else if (habit.optimalTiming?.toLowerCase().includes('afternoon')) baseHour = 13; 
+            else if (habit.optimalTiming?.toLowerCase().includes('evening')) baseHour = 18; 
             reminderDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), baseHour, 0, 0, 0);
           }
 
@@ -580,7 +578,7 @@ const HabitualPage: NextPage = () => {
                 date,
                 time: 'N/A',
                 note: note.trim() === "" ? undefined : note.trim(),
-                status: existingStatus || 'skipped' // Default to skipped if no prior status
+                status: existingStatus || 'skipped' 
              });
              newCompletionLog.sort((a,b) => b.date.localeCompare(a.date));
           }
@@ -687,12 +685,12 @@ const HabitualPage: NextPage = () => {
       });
 
       const today = new Date();
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 60; i++) { 
           const pastDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
           const futureDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-
+          
           [pastDate, futureDate].forEach(checkDate => {
-            if (isSameDay(checkDate, today) && i !== 0 && checkDate !== pastDate) return;
+            if (isSameDay(checkDate, today) && i !== 0 && checkDate !== pastDate) return; 
 
             const dateStr = format(checkDate, 'yyyy-MM-dd');
             const dayOfWeek = dayIndexToWeekDayConstant[getDay(checkDate)];
@@ -713,12 +711,12 @@ const HabitualPage: NextPage = () => {
           });
       }
     });
-
-    const finalScheduledUpcoming = scheduledUpcomingDays.filter(sDate =>
+    
+    const finalScheduledUpcoming = scheduledUpcomingDays.filter(sDate => 
         !completedDays.some(cDate => isSameDay(sDate, cDate)) &&
         !makeupPendingDays.some(mDate => isSameDay(sDate, mDate))
     );
-    const finalScheduledMissed = scheduledMissedDays.filter(sDate =>
+    const finalScheduledMissed = scheduledMissedDays.filter(sDate => 
         !completedDays.some(cDate => isSameDay(sDate, cDate)) &&
         !makeupPendingDays.some(mDate => isSameDay(sDate, mDate))
     );
@@ -773,8 +771,8 @@ const HabitualPage: NextPage = () => {
     setInitialFormDataForDialog({
       name: suggestion.name,
       category: suggestion.category || 'Other',
-      description: '', // Keep description empty as per tile suggestion
-      daysOfWeek: [], // Let user pick days
+      description: '', 
+      daysOfWeek: [], 
     });
     setIsCreateHabitDialogOpen(true);
   };
@@ -790,7 +788,6 @@ const HabitualPage: NextPage = () => {
   }
 
   if (!authUser) {
-    // This state should ideally be very brief as the auth listener effect should redirect.
     return (
        <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -811,7 +808,7 @@ const HabitualPage: NextPage = () => {
         }}
       >
         <AppHeader onOpenCalendar={() => setIsCalendarDialogOpen(true)} />
-
+        
         <ScrollArea className="flex-grow">
           <main className="px-3 sm:px-4 py-4">
             {authUser && !isLoadingAuth && !isLoadingHabits && habits.length === 0 && commonHabitSuggestions.length > 0 && (
@@ -888,7 +885,7 @@ const HabitualPage: NextPage = () => {
       <Button
         className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
         onClick={() => {
-          setInitialFormDataForDialog(null); // Clear any pre-fill data
+          setInitialFormDataForDialog(null); 
           setIsCreateHabitDialogOpen(true);
          }}
         aria-label="Add New Habit"
@@ -900,7 +897,7 @@ const HabitualPage: NextPage = () => {
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null); // Clear pre-fill on close
+            setInitialFormDataForDialog(null); 
         }}
         onAddHabit={handleAddHabit}
         initialData={initialFormDataForDialog}
@@ -986,9 +983,9 @@ const HabitualPage: NextPage = () => {
                     onSelect={setSelectedCalendarDate}
                     modifiers={calendarDialogModifiers}
                     modifiersStyles={calendarDialogModifierStyles}
-                    className="rounded-md border p-0 sm:p-2"
-                    month={selectedCalendarDate || new Date()} // Control month based on selected date
-                    onMonthChange={setSelectedCalendarDate} // Allow month navigation
+                    className="rounded-md border p-0 sm:p-2" 
+                    month={selectedCalendarDate || new Date()} 
+                    onMonthChange={setSelectedCalendarDate} 
                  />
                 {selectedCalendarDate && (
                 <div className="mt-4 w-full">
@@ -1003,7 +1000,7 @@ const HabitualPage: NextPage = () => {
                         const isScheduledToday = habit.daysOfWeek.includes(dayOfWeekForSelected);
                         let statusText = "Scheduled";
                         let StatusIcon = CircleIcon;
-                        let iconColor = "text-orange-500"; // Default for scheduled
+                        let iconColor = "text-orange-500"; 
 
                         if (logEntry?.status === 'completed') {
                             statusText = `Completed at ${logEntry.time || ''}`;
@@ -1018,13 +1015,11 @@ const HabitualPage: NextPage = () => {
                             StatusIcon = XCircle;
                             iconColor = "text-muted-foreground";
                         } else if (isScheduledToday && parseISO(format(selectedCalendarDate as Date, 'yyyy-MM-dd')) < parseISO(format(new Date(), 'yyyy-MM-dd')) && !logEntry) {
-                            // Only mark as missed if it's a past day, scheduled, and no log entry
                             statusText = "Missed";
                             StatusIcon = XCircle;
                             iconColor = "text-destructive";
                         }
-                        // Otherwise, it remains "Scheduled" (for today/future scheduled days with no log)
-
+                        
                         return (
                             <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
                             <span className="font-medium truncate pr-2">{habit.name}</span>
@@ -1092,7 +1087,7 @@ const HabitualPage: NextPage = () => {
           </SheetHeader>
           <div className="grid gap-2">
             {sheetMenuItems.map((item) => (
-              item.href && item.href !== "/profile" && item.href !== "/calendar" ? ( // For links like Home
+              item.href && item.href !== "/profile" && item.href !== "/calendar" ? ( 
                 <SheetClose asChild key={item.label}>
                     <Link href={item.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action}>
@@ -1101,7 +1096,7 @@ const HabitualPage: NextPage = () => {
                         </Button>
                     </Link>
                 </SheetClose>
-              ) : item.href === "/profile" ? ( // Special handling for /profile link if needed
+              ) : item.href === "/profile" ? ( 
                  <SheetClose asChild key={item.label}>
                     <Link href={item.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action} >
@@ -1110,12 +1105,12 @@ const HabitualPage: NextPage = () => {
                         </Button>
                     </Link>
                  </SheetClose>
-              ) : ( // For actions that don't navigate or have special handling
+              ) : ( 
                 <SheetClose asChild key={item.label}>
                   <Button
                     variant="ghost"
                     className="w-full justify-start text-base py-3"
-                    onClick={item.action} // Action might open dialog or do something else
+                    onClick={item.action}
                   >
                     <item.icon className="mr-3 h-5 w-5" />
                     {item.label}
@@ -1124,13 +1119,12 @@ const HabitualPage: NextPage = () => {
               )
             ))}
           </div>
-           {/* Section to show notification status and allow re-request */}
            <div className="mt-4 pt-4 border-t">
                 <div className="flex items-center justify-between px-1">
                     <div className="flex items-center text-sm">
                         <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span>Notification Status:</span>
-                        <span className={cn("ml-1 font-semibold",
+                        <span className={cn("ml-1 font-semibold", 
                             notificationPermission === 'granted' ? 'text-green-600' :
                             notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
                         )}>
