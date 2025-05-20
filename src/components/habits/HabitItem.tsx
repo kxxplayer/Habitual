@@ -20,8 +20,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Switch } from "@/components/ui/switch"; // Added for reminder toggle
-import { Label } from "@/components/ui/label"; // Added for reminder toggle label
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Lightbulb, CalendarDays, CalendarClock as OptimalTimingIcon, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag,
   ListChecks,
@@ -40,10 +40,11 @@ import {
   CheckCircle2,
   Circle,
   XCircle,
-  Check, // Used for incomplete "Mark as Done" button
-  Bell, // For reminder enabled indicator
+  Check,
+  Bell,
+  FilePenLine, // For Edit
 } from 'lucide-react';
-import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry } from '@/types';
+import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { format, parseISO } from 'date-fns';
@@ -57,7 +58,8 @@ interface HabitItemProps {
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  onToggleReminder: (habitId: string, currentReminderState: boolean) => void; // New prop
+  onToggleReminder: (habitId: string, currentReminderState: boolean) => void;
+  onOpenEditDialog: (habit: Habit) => void; // New prop for editing
 }
 
 const formatSpecificTime = (timeStr?: string): string | undefined => {
@@ -133,6 +135,7 @@ const HabitItem: FC<HabitItemProps> = ({
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
     onToggleReminder,
+    onOpenEditDialog,
 }) => {
   const [todayString, setTodayString] = React.useState('');
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -142,23 +145,24 @@ const HabitItem: FC<HabitItemProps> = ({
   const prevCompletedCountRef = React.useRef<number>(0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
 
-  const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && (log.status === 'completed' || (log.status === undefined && log.time !== 'N/A' && !(log.status === undefined && log.time === 'N/A' && log.note))));
-  const prevIsTodayCompletedRef = React.useRef<boolean>(isTodayCompleted);
-
+  
   React.useEffect(() => {
     const now = new Date();
     setCurrentDate(now);
     setTodayString(format(now, 'yyyy-MM-dd'));
   }, []);
+  
+  const isTodayCompleted = habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
+  const prevIsTodayCompletedRef = React.useRef<boolean>(isTodayCompleted);
 
   React.useEffect(() => {
     setWeekViewDays(getCurrentWeekDays(currentDate));
   }, [currentDate]);
 
   React.useEffect(() => {
-    if (isTodayCompleted && !prevIsTodayCompletedRef.current) { // Just completed today
-      setShowSparkles(true);
-      setTimeout(() => setShowSparkles(false), 800); // Duration of sparkle animation
+    if (isTodayCompleted && !prevIsTodayCompletedRef.current) {
+      // setShowSparkles(true); // Sparkles now handled by handleToggleDailyCompletion
+      // setTimeout(() => setShowSparkles(false), 800); 
     }
     prevIsTodayCompletedRef.current = isTodayCompleted;
   }, [isTodayCompleted]);
@@ -174,7 +178,7 @@ const HabitItem: FC<HabitItemProps> = ({
       weekViewDays.forEach(dayInfo => {
         if (habit.daysOfWeek.includes(dayInfo.dayAbbrFull)) {
             scheduled++;
-            const log = habit.completionLog.find(l => l.date === dayInfo.dateStr && (l.status === 'completed' || (l.status === undefined && l.time !== 'N/A' && !(l.status === undefined && l.time === 'N/A' && l.note))));
+            const log = habit.completionLog.find(l => l.date === dayInfo.dateStr && (l.status === 'completed'));
             if (log) {
                 completedOnScheduled.add(dayInfo.dateStr);
             }
@@ -205,10 +209,10 @@ const HabitItem: FC<HabitItemProps> = ({
       const icsContent = generateICS(habit);
       const filename = `${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_habit.ics`;
       downloadICS(filename, icsContent);
-      console.log(`Added to calendar! The .ics file for "${habit.name}" has been generated. You can import it into Google Calendar or your preferred calendar app.`);
+      // console.log(`Added to calendar! The .ics file for "${habit.name}" has been generated. You can import it into Google Calendar or your preferred calendar app.`);
     } catch (error) {
-      console.error("Error generating ICS file:", error);
-      console.error("ICS Generation Error");
+      // console.error("Error generating ICS file:", error);
+      // console.error("ICS Generation Error");
     }
   };
 
@@ -219,7 +223,7 @@ const HabitItem: FC<HabitItemProps> = ({
     if (streakCount > 0) {
       shareText = `I've kept up my habit '${habit.name}' for ${streakCount} day${streakCount > 1 ? 's' : ''} straight with Habitual! 💪 #HabitStreak #HabitualApp`;
     } else {
-      const sortedDays = habit.daysOfWeek.sort((a, b) => getCurrentWeekDays()[0].dayAbbrFull.indexOf(a) - getCurrentWeekDays()[0].dayAbbrFull.indexOf(b)); // Assuming weekDaysOrder exists
+      const sortedDays = habit.daysOfWeek.sort((a, b) => getCurrentWeekDays()[0].dayAbbrFull.indexOf(a) - getCurrentWeekDays()[0].dayAbbrFull.indexOf(b)); 
       const daysText = sortedDays.length === 7 ? "Daily" : sortedDays.join(', ');
       let durationText = '';
       if (habit.durationHours && habit.durationHours > 0) durationText += `${habit.durationHours} hr` + (habit.durationHours > 1 ? 's' : '');
@@ -233,19 +237,19 @@ const HabitItem: FC<HabitItemProps> = ({
     const copyToClipboard = async (text: string) => {
       try {
         await navigator.clipboard.writeText(text);
-        console.log("Copied habit details to clipboard.");
+        // console.log("Copied habit details to clipboard.");
       } catch (err) {
-        console.error("Copy failed.");
+        // console.error("Copy failed.");
       }
     };
 
     if (navigator.share) {
       try {
         await navigator.share({ title: `Habit: ${habit.name}`, text: shareText });
-        console.log("Habit shared.");
+        // console.log("Habit shared.");
       } catch (error) {
         if ((error as DOMException).name === 'AbortError') {
-           console.log("User cancelled sharing.");
+           // console.log("User cancelled sharing.");
         } else {
           copyToClipboard(shareText);
         }
@@ -279,9 +283,9 @@ const HabitItem: FC<HabitItemProps> = ({
   const handleToggleDailyCompletion = (dateToToggle: string) => {
     if (!dateToToggle) return;
     const logEntryForDate = habit.completionLog.find(log => log.date === dateToToggle);
-    const currentCompletionState = logEntryForDate?.status === 'completed' || (logEntryForDate?.status === undefined && !!logEntryForDate && logEntryForDate.time !== 'N/A' && !(logEntryForDate?.status === undefined && logEntryForDate?.time === 'N/A' && logEntryForDate.note));
+    const currentCompletionState = logEntryForDate?.status === 'completed';
     
-    if (!currentCompletionState) { // Only show sparkles if marking as newly complete
+    if (!currentCompletionState) { 
         setShowSparkles(true);
         setTimeout(() => setShowSparkles(false), 800);
     }
@@ -294,13 +298,13 @@ const HabitItem: FC<HabitItemProps> = ({
     <Card className={cardClasses} style={cardStyle}>
       <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-4">
         <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
-          {getHabitIcon(habit)}
+           {getHabitIcon(habit)}
         </div>
         <h2 className="text-lg sm:text-xl font-bold text-primary text-center flex-grow mx-2 truncate min-w-0 break-words">
           {habit.name}
         </h2>
-        {habit.reminderEnabled && <Bell className="h-4 w-4 text-primary/70 flex-shrink-0 mr-1" />}
         <div className="flex-shrink-0">
+          {habit.reminderEnabled && <Bell className="h-4 w-4 text-primary/70 flex-shrink-0 mr-1 inline-block" />}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -309,6 +313,10 @@ const HabitItem: FC<HabitItemProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+               <DropdownMenuItem onClick={() => onOpenEditDialog(habit)}>
+                <FilePenLine className="mr-2 h-4 w-4" />
+                <span>Edit</span>
+              </DropdownMenuItem>
                <DropdownMenuItem onClick={() => {
                   onOpenReflectionDialog(habit.id, todayString, habit.name);
                 }}>
@@ -317,7 +325,7 @@ const HabitItem: FC<HabitItemProps> = ({
               </DropdownMenuItem>
               <DropdownMenuItem 
                 className="flex items-center justify-between"
-                onSelect={(e) => e.preventDefault()} // Prevent menu from closing on switch click
+                onSelect={(e) => e.preventDefault()}
               >
                 <Label htmlFor={`reminder-switch-${habit.id}`} className="flex items-center cursor-pointer">
                     <Bell className="mr-2 h-4 w-4" />
@@ -347,12 +355,12 @@ const HabitItem: FC<HabitItemProps> = ({
                  const firstMissed = weekViewDays.find(d =>
                     habit.daysOfWeek.includes(d.dayAbbrFull) &&
                     d.isPast && !d.isToday &&
-                    !habit.completionLog.some(log => log.date === d.dateStr && (log.status === 'completed' || log.status === 'skipped' || log.status === 'pending_makeup' || (log.status === undefined && log.time !== 'N/A' && !(log.status === undefined && log.time === 'N/A' && log.note))))
+                    !habit.completionLog.some(log => log.date === d.dateStr && (log.status === 'completed' || log.status === 'skipped' || log.status === 'pending_makeup'))
                  );
                  if (firstMissed) {
                     onOpenRescheduleDialog(habit, firstMissed.dateStr);
                  } else {
-                    console.log("Reschedule: No past, scheduled, uncompleted days this week to reschedule.");
+                    // console.log("Reschedule: No past, scheduled, uncompleted days this week to reschedule.");
                  }
               }}>
                 <OptimalTimingIcon className="mr-2 h-4 w-4" />
@@ -393,9 +401,9 @@ const HabitItem: FC<HabitItemProps> = ({
         <div className="space-y-1 mt-2">
           {habit.category && (
             <div className="flex items-center text-xs text-muted-foreground">
-              <span role="img" aria-label="Category" className="mr-1.5 text-sm">📌</span>
-              <span className="font-medium mr-1">Category:</span>
-              <span>{habit.category}</span>
+                <span role="img" aria-label="Category" className="mr-1.5 text-sm">📌</span>
+                <span className="font-medium mr-1">Category:</span>
+                <span>{habit.category}</span>
             </div>
           )}
           {durationDisplay && (
@@ -405,10 +413,17 @@ const HabitItem: FC<HabitItemProps> = ({
               <span>{durationDisplay}</span>
             </div>
           )}
+           {habit.specificTime && habit.specificTime.toLowerCase() !== 'anytime' && habit.specificTime.toLowerCase() !== 'flexible' && (
+            <div className="flex items-center text-xs text-muted-foreground">
+                <span role="img" aria-label="Time" className="mr-1.5 text-sm">⏰</span>
+                <span className="font-medium mr-1">Time:</span>
+                <span>{formatSpecificTime(habit.specificTime)}</span>
+            </div>
+          )}
           {habit.description && (
             <div className="text-xs text-muted-foreground">
+              <span className="font-medium mr-1">📝 Desc:</span>
               <p className={cn("inline",!isDescriptionExpanded && habit.description.length > DESCRIPTION_TRUNCATE_LENGTH ? "line-clamp-2" : "")}>
-                <span className="font-medium mr-1">📝 Desc:</span>
                 {isDescriptionExpanded || habit.description.length <= DESCRIPTION_TRUNCATE_LENGTH 
                   ? habit.description 
                   : `${habit.description.substring(0, DESCRIPTION_TRUNCATE_LENGTH)}...`}
@@ -427,15 +442,15 @@ const HabitItem: FC<HabitItemProps> = ({
         
         {weekViewDays.length > 0 && (
           <div className="mt-2.5">
-            <div className="flex items-center text-xs text-muted-foreground mb-1.5">
+            <div className="flex items-center text-xs text-muted-foreground mb-0.5">
                 <CalendarDays className="mr-1 h-3.5 w-3.5" />
                 <span className="font-semibold mr-0.5">Days:</span>
             </div>
-            <div className="flex justify-around items-center space-x-0.5 sm:space-x-1">
+            <div className="flex justify-around items-center space-x-0.5 sm:space-x-1 py-1">
               {weekViewDays.map((dayInfo) => {
                 const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
                 const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
-                let isDayCompleted = dayLog?.status === 'completed' || (dayLog?.status === undefined && !!dayLog && dayLog.time !== 'N/A' && !(dayLog.status === undefined && dayLog.time === 'N/A' && dayLog.note));
+                let isDayCompleted = dayLog?.status === 'completed';
 
                 const isSkipped = dayLog?.status === 'skipped';
                 const isPendingMakeup = dayLog?.status === 'pending_makeup';
@@ -463,7 +478,7 @@ const HabitItem: FC<HabitItemProps> = ({
                     default: dayBoxClasses = 'bg-input/40 dark:bg-input/20 text-muted-foreground/60 dark:text-muted-foreground/50 hover:bg-input/50 dark:hover:bg-input/30'; iconClasses = 'text-muted-foreground/40'; titleText += ' (Not Scheduled)'; break;
                 }
                 
-                const canToggleDay = isScheduled || isPendingMakeup || (isDayCompleted && isScheduled);
+                const canToggleDay = isScheduled || isPendingMakeup || isDayCompleted;
                 const isMissedAndActionable = dayStatus === 'missed';
                                 
                 return (
@@ -501,48 +516,56 @@ const HabitItem: FC<HabitItemProps> = ({
         )}
       </CardContent>
 
-      <div className="flex flex-col items-stretch pt-6 pb-3 px-3 space-y-2"> {/* Changed from CardFooter to div to avoid default CardFooter padding */}
-        <div className="relative flex justify-center sparkle-container">
-          <Button
-            onClick={() => onToggleComplete(habit.id, todayString, true)}
-            disabled={isTodayCompleted}
-            className={cn(
-              "rounded-full py-2.5 px-6 text-sm transition-all active:scale-95",
-              !isTodayCompleted
-                ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95"
-                : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed",
-                 isTodayCompleted && (showSparkles ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]")
-            )}
-          >
-            {isTodayCompleted ? (
-              <>
-                <CheckCircle2 className="mr-2 h-5 w-5" />
-                Done!
-              </>
-            ) : (
-              <>
-                <Check className="mr-2 h-5 w-5" />
-                Mark as Done
-              </>
-            )}
-          </Button>
-        </div>
-         <div className="relative flex justify-center sparkle-container">
-             <Button
-                onClick={() => onToggleComplete(habit.id, todayString, false)}
-                disabled={!isTodayCompleted}
-                variant={isTodayCompleted ? "destructive" : "outline"}
-                className={cn(
-                "rounded-full py-2.5 px-6 text-sm transition-all active:scale-95",
-                !isTodayCompleted ? "border-muted text-muted-foreground cursor-not-allowed" : ""
-                )}
-            >
-                <XCircle className="mr-2 h-5 w-5" />
-                Not Done
-            </Button>
+      <div className="flex flex-col items-stretch pt-6 pb-3 px-3 space-y-2">
+        <div className="flex justify-center space-x-2">
+            <div className="relative flex justify-center sparkle-container flex-1">
+                <Button
+                    onClick={() => { 
+                        if(!isTodayCompleted) {
+                            onToggleComplete(habit.id, todayString, true);
+                            setShowSparkles(true);
+                            setTimeout(() => setShowSparkles(false), 800);
+                        }
+                    }}
+                    disabled={isTodayCompleted}
+                    className={cn(
+                    "rounded-full py-2.5 px-4 text-sm transition-all active:scale-95 w-full", // Added w-full
+                    !isTodayCompleted
+                        ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95"
+                        : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed",
+                    isTodayCompleted && (showSparkles ? "animate-pulse-glow-accent" : "shadow-[0_0_8px_hsl(var(--accent))]")
+                    )}
+                >
+                    {isTodayCompleted ? (
+                    <>
+                        <CheckCircle2 className="mr-2 h-5 w-5" />
+                        Done!
+                    </>
+                    ) : (
+                    <>
+                        <Check className="mr-2 h-5 w-5" />
+                        Mark Done
+                    </>
+                    )}
+                </Button>
+            </div>
+            <div className="relative flex justify-center flex-1">
+                <Button
+                    onClick={() => onToggleComplete(habit.id, todayString, false)}
+                    disabled={!isTodayCompleted}
+                    variant={isTodayCompleted ? "destructive" : "outline"}
+                    className={cn(
+                    "rounded-full py-2.5 px-4 text-sm transition-all active:scale-95 w-full", // Added w-full
+                    !isTodayCompleted ? "border-muted text-muted-foreground cursor-not-allowed" : ""
+                    )}
+                >
+                    <XCircle className="mr-2 h-5 w-5" />
+                    Not Done
+                </Button>
+            </div>
         </div>
         
-        {showSparkles && isTodayCompleted && ( // Only show sparkles if it's marked completed for today
+        {showSparkles && isTodayCompleted && (
           <>
               <div className="sparkle sparkle-1"></div>
               <div className="sparkle sparkle-2"></div>

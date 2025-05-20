@@ -46,6 +46,7 @@ export interface AISuggestion {
 
 // Form data type for habit creation
 export interface CreateHabitFormData {
+  id?: string; // Optional ID, present when editing
   description?: string;
   name: string;
   category?: HabitCategory;

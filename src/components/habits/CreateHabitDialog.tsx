@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag } from 'lucide-react';
+import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save } from 'lucide-react'; // Added Edit3, Save
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import type { Habit, CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -36,13 +36,14 @@ import {
 interface CreateHabitDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddHabit: (habit: Omit<Habit, 'id' | 'completionLog'>) => void;
-  initialData?: Partial<CreateHabitFormData> | null; // Added to pre-fill form
+  onSaveHabit: (habit: CreateHabitFormData & { id?: string }) => void; // Changed from onAddHabit
+  initialData?: Partial<CreateHabitFormData> | null;
 }
 
 const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 const createHabitFormSchema = z.object({
+  id: z.string().optional(), // Added for editing
   description: z.string().optional(),
   name: z.string().min(1, "Habit name is required."),
   category: z.enum(HABIT_CATEGORIES).optional(),
@@ -52,6 +53,7 @@ const createHabitFormSchema = z.object({
   durationMinutes: z.coerce.number().min(0).max(59).optional().nullable(),
   specificTime: z.string().optional(),
 }).refine(data => data.durationHours || data.durationMinutes || (!data.durationHours && !data.durationMinutes), {});
+
 
 const dayMapFullToAbbr: { [key: string]: WeekDay } = {
   "sunday": "Sun", "sun": "Sun", "sunday,": "Sun", "sun,": "Sun", "sundays": "Sun",
@@ -69,7 +71,7 @@ const normalizeDay = (day: string): WeekDay | undefined => {
   return dayMapFullToAbbr[lowerDay] || weekDaysArray.find(d => d.toLowerCase() === lowerDay) || undefined;
 };
 
-const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddHabit, initialData }) => {
+const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onSaveHabit, initialData }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
 
   const {
@@ -82,6 +84,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
   } = useForm<CreateHabitFormData>({
     resolver: zodResolver(createHabitFormSchema),
     defaultValues: {
+      id: undefined,
       description: '',
       name: '',
       category: 'Other',
@@ -94,11 +97,13 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
   });
 
   const habitDescriptionForAI = watch('description');
+  const isEditing = !!(initialData && initialData.id);
 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
         reset({
+          id: initialData.id,
           description: initialData.description || '',
           name: initialData.name || '',
           category: initialData.category || 'Other',
@@ -108,8 +113,9 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
           durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
           specificTime: initialData.specificTime || '',
         });
-      } else {
-        reset({ // Reset to defaults if no initialData
+      } else { // Reset to defaults if no initialData (i.e., adding new, not customizing suggestion)
+        reset({
+          id: undefined,
           description: '',
           name: '',
           category: 'Other',
@@ -120,17 +126,14 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
           specificTime: '',
         });
       }
-    } else {
-      // Optionally, reset when dialog is simply closed without submission if needed
-      // reset(); // This would clear the form always on close
     }
-    setIsAISuggesting(false); // Reset AI suggesting state when dialog visibility changes
+    setIsAISuggesting(false);
   }, [isOpen, initialData, reset]);
 
 
   const handleAISuggestDetails = async () => {
     if (!habitDescriptionForAI || habitDescriptionForAI.trim() === "") {
-      console.error("No Description Provided for AI suggestion.");
+      // console.error("No Description Provided for AI suggestion.");
       return;
     }
     setIsAISuggesting(true);
@@ -163,27 +166,20 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
       } else {
         setValue('specificTime', result.specificTime || '');
       }
-      console.log("AI Suggestion Applied");
+      // console.log("AI Suggestion Applied");
     } catch (error) {
-      console.error("AI suggestion error:", error);
-      console.error("AI Suggestion Failed: Could not get suggestions from AI.");
+      // console.error("AI suggestion error:", error);
+      // console.error("AI Suggestion Failed: Could not get suggestions from AI.");
     } finally {
       setIsAISuggesting(false);
     }
   };
 
   const onSubmit = (data: CreateHabitFormData) => {
-    onAddHabit({
-      name: data.name,
-      description: data.description,
-      category: data.category,
-      daysOfWeek: data.daysOfWeek,
-      optimalTiming: data.optimalTiming,
-      durationHours: data.durationHours === null ? undefined : data.durationHours,
-      durationMinutes: data.durationMinutes === null ? undefined : data.durationMinutes,
-      specificTime: data.specificTime,
-    });
-    onClose(); // This will trigger reset in useEffect due to isOpen changing
+    // Ensure id from initialData is passed if editing
+    const dataToSave = isEditing && initialData?.id ? { ...data, id: initialData.id } : data;
+    onSaveHabit(dataToSave); 
+    // onClose will be called by parent which also handles reset, so no reset() here directly
   };
 
 
@@ -192,11 +188,11 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
       <DialogContent className="sm:max-w-[600px] bg-card rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold flex items-center">
-            <PlusCircle className="mr-3 h-7 w-7 text-primary" />
-            Create New Habit
+            {isEditing ? <Edit3 className="mr-3 h-7 w-7 text-primary" /> : <PlusCircle className="mr-3 h-7 w-7 text-primary" />}
+            {isEditing ? "Edit Habit" : "Create New Habit"}
           </DialogTitle>
           <DialogDescription>
-            Define your new habit below. You can describe it and let AI suggest details.
+            {isEditing ? "Modify the details of your habit below." : "Define your new habit below. You can describe it and let AI suggest details."}
           </DialogDescription>
         </DialogHeader>
 
@@ -336,8 +332,8 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
                 </Button>
             </DialogClose>
             <Button type="submit" disabled={isSubmitting || isAISuggesting} >
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-5 w-5" />}
-              Add This Habit
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isEditing ? <Save className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-5 w-5" />) }
+              {isEditing ? "Save Changes" : "Add This Habit"}
             </Button>
           </DialogFooter>
         </form>
@@ -347,4 +343,3 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onAddH
 };
 
 export default CreateHabitDialog;
-

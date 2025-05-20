@@ -81,6 +81,8 @@ const HabitualPage: NextPage = () => {
   const [aiSuggestion, setAISuggestion] = React.useState<AISuggestionType | null>(null);
 
   const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
+  const [editingHabit, setEditingHabit] = React.useState<Habit | null>(null);
+
 
   const [isDashboardDialogOpen, setIsDashboardDialogOpen] = React.useState(false);
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false);
@@ -121,14 +123,19 @@ const HabitualPage: NextPage = () => {
 
       if (previousUid !== currentUid) {
         console.log(`Auth state changed. Previous UID: ${previousUid}, Current UID: ${currentUid}. Resetting app state.`);
-        // Clear React State immediately to prevent flicker of old user's data
         setHabits([]);
         setEarnedBadges([]);
         setTotalPoints(0);
         setCommonHabitSuggestions([]);
         setCommonSuggestionsFetched(false);
         setInitialFormDataForDialog(null);
-        // Other state resets if needed
+        setEditingHabit(null);
+
+        if (previousUid) { // Clear data for the previous user
+          localStorage.removeItem(`${LS_KEY_PREFIX_HABITS}${previousUid}`);
+          localStorage.removeItem(`${LS_KEY_PREFIX_BADGES}${previousUid}`);
+          localStorage.removeItem(`${LS_KEY_PREFIX_POINTS}${previousUid}`);
+        }
       }
 
       setAuthUser(currentUser);
@@ -151,16 +158,16 @@ const HabitualPage: NextPage = () => {
         Notification.requestPermission().then(permission => {
           setNotificationPermission(permission);
           if (permission === 'granted') {
-             console.log('Notification permission granted.');
+             // console.log('Notification permission granted.');
           } else {
-             console.log('Notification permission denied or dismissed.');
+             // console.log('Notification permission denied or dismissed.');
           }
         });
       } else {
         setNotificationPermission(Notification.permission);
       }
     } else {
-      console.log('Notifications not supported by this browser.');
+      // console.log('Notifications not supported by this browser.');
       setNotificationPermission('denied');
     }
   }, []);
@@ -168,24 +175,21 @@ const HabitualPage: NextPage = () => {
 
   React.useEffect(() => {
     if (isLoadingAuth) {
-      return; // Don't do anything until auth state is resolved
+      return;
     }
 
     if (!authUser) {
-      // User is logged out or initial auth check resulted in no user.
-      // React state should have been cleared by onAuthStateChanged if it was a logout or user switch.
       setHabits([]);
       setEarnedBadges([]);
       setTotalPoints(0);
       setCommonHabitSuggestions([]);
       setCommonSuggestionsFetched(false);
-      setIsLoadingHabits(false); // No habits to load
+      setIsLoadingHabits(false);
       return;
     }
 
-    // User is authenticated, proceed to load data for this user
     setIsLoadingHabits(true);
-    console.log(`Loading data for user: ${authUser.uid}`);
+    // console.log(`Loading data for user: ${authUser.uid}`);
     
     let parsedHabits: Habit[] = [];
     const userHabitsKey = `${LS_KEY_PREFIX_HABITS}${authUser.uid}`;
@@ -268,11 +272,11 @@ const HabitualPage: NextPage = () => {
         });
         setHabits(parsedHabits);
       } catch (error) {
-        console.error(`Failed to parse habits from localStorage key ${userHabitsKey}:`, error);
-        setHabits([]); // Reset to empty if parsing fails
+        // console.error(`Failed to parse habits from localStorage key ${userHabitsKey}:`, error);
+        setHabits([]);
       }
     } else {
-        setHabits([]); // No habits for this user
+        setHabits([]);
     }
 
     if (authUser && parsedHabits.length === 0 && !commonSuggestionsFetched) {
@@ -284,15 +288,15 @@ const HabitualPage: NextPage = () => {
           }
         })
         .catch(err => {
-          console.error("Failed to fetch common habit suggestions:", err);
+          // console.error("Failed to fetch common habit suggestions:", err);
         })
         .finally(() => {
           setIsLoadingCommonSuggestions(false);
-          setCommonSuggestionsFetched(true); // Mark as fetched even if it fails
+          setCommonSuggestionsFetched(true);
         });
     } else if (parsedHabits.length > 0) {
-        setCommonHabitSuggestions([]); // Clear suggestions if habits exist
-        setCommonSuggestionsFetched(true); // Mark as fetched if habits exist
+        setCommonHabitSuggestions([]);
+        setCommonSuggestionsFetched(true);
     }
 
     const userBadgesKey = `${LS_KEY_PREFIX_BADGES}${authUser.uid}`;
@@ -301,7 +305,7 @@ const HabitualPage: NextPage = () => {
       try {
         setEarnedBadges(JSON.parse(storedBadges));
       } catch (error) {
-        console.error(`Failed to parse badges from localStorage key ${userBadgesKey}:`, error);
+        // console.error(`Failed to parse badges from localStorage key ${userBadgesKey}:`, error);
         setEarnedBadges([]);
       }
     } else {
@@ -314,52 +318,48 @@ const HabitualPage: NextPage = () => {
       try {
         setTotalPoints(parseInt(storedPoints, 10));
       } catch (error) {
-        console.error(`Failed to parse totalPoints from localStorage key ${userPointsKey}:`, error);
+        // console.error(`Failed to parse totalPoints from localStorage key ${userPointsKey}:`, error);
         setTotalPoints(0);
       }
     } else {
         setTotalPoints(0);
     }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth]); // Rerun when authUser or isLoadingAuth changes
+  }, [authUser, isLoadingAuth]);
 
-  // Effect for saving habits to localStorage (user-specific)
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
     
     const userHabitsKey = `${LS_KEY_PREFIX_HABITS}${authUser.uid}`;
     localStorage.setItem(userHabitsKey, JSON.stringify(habits));
 
-    // Badge awarding logic can stay general but saves to user-specific key
     const newlyEarned = checkAndAwardBadges(habits, earnedBadges);
     if (newlyEarned.length > 0) {
       const updatedBadges = [...earnedBadges];
       newlyEarned.forEach(async newBadge => {
         if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
             updatedBadges.push(newBadge);
-            console.log(`New Badge Unlocked: ${newBadge.name} - ${newBadge.description}`);
+            // console.log(`New Badge Unlocked: ${newBadge.name} - ${newBadge.description}`);
             if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) {
               try {
                 const sqlTipResult = await getSqlTip();
-                console.log(`💡 Bonus SQL Tip Unlocked: ${sqlTipResult.tip}`);
+                // console.log(`💡 Bonus SQL Tip Unlocked: ${sqlTipResult.tip}`);
               } catch (tipError) {
-                console.error("Failed to fetch SQL tip:", tipError);
+                // console.error("Failed to fetch SQL tip:", tipError);
               }
             }
         }
       });
       setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, authUser, isLoadingAuth, isLoadingHabits]); // Note: added earnedBadges here too
+  }, [habits, earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
-  // Effect for saving earned badges to localStorage (user-specific)
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
     const userBadgesKey = `${LS_KEY_PREFIX_BADGES}${authUser.uid}`;
     localStorage.setItem(userBadgesKey, JSON.stringify(earnedBadges));
   }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
 
-  // Effect for saving total points to localStorage (user-specific)
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
     const userPointsKey = `${LS_KEY_PREFIX_POINTS}${authUser.uid}`;
@@ -383,7 +383,7 @@ const HabitualPage: NextPage = () => {
               let specificEventTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
               reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000);
             } catch (e) {
-              console.error(`Error parsing specificTime "${habit.specificTime}" for habit "${habit.name}"`, e);
+              // console.error(`Error parsing specificTime "${habit.specificTime}" for habit "${habit.name}"`, e);
             }
           } else {
             let baseHour = 10; 
@@ -395,14 +395,7 @@ const HabitualPage: NextPage = () => {
 
           if (reminderDateTime && reminderDateTime > now) {
             const delay = reminderDateTime.getTime() - now.getTime();
-            console.log(`Placeholder: Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
-            // const timeoutId = setTimeout(() => {
-            //   new Notification("Habitual Reminder", {
-            //     body: `Time for your habit: ${habit.name}!`,
-            //   });
-            //   console.log(`REMINDER FIRED for: ${habit.name}`);
-            // }, delay);
-            // reminderTimeouts.current.push(timeoutId);
+            // console.log(`Placeholder: Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
           }
         }
       });
@@ -414,18 +407,62 @@ const HabitualPage: NextPage = () => {
   }, [habits, notificationPermission]);
 
 
-  const handleAddHabit = (newHabitData: Omit<Habit, 'id' | 'completionLog'>) => {
-    const newHabit: Habit = {
-      ...newHabitData,
-      id: Date.now().toString() + Math.random().toString(36).substring(2,7),
-      completionLog: [],
-      category: newHabitData.category || 'Other',
-      reminderEnabled: false,
-    };
-    setHabits((prevHabits) => [...prevHabits, newHabit]);
-    console.log(`Habit Added: ${newHabit.name}`);
+  const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
+    if (editingHabit && habitData.id) { // Editing existing habit
+      setHabits(prevHabits =>
+        prevHabits.map(h =>
+          h.id === habitData.id
+            ? {
+                ...h, // Keep original ID, completionLog, and reminderEnabled
+                name: habitData.name,
+                description: habitData.description,
+                category: habitData.category || 'Other',
+                daysOfWeek: habitData.daysOfWeek,
+                optimalTiming: habitData.optimalTiming,
+                durationHours: habitData.durationHours === null ? undefined : habitData.durationHours,
+                durationMinutes: habitData.durationMinutes === null ? undefined : habitData.durationMinutes,
+                specificTime: habitData.specificTime,
+              }
+            : h
+        )
+      );
+      // console.log(`Habit Updated: ${habitData.name}`);
+    } else { // Adding new habit
+      const newHabit: Habit = {
+        id: Date.now().toString() + Math.random().toString(36).substring(2,7),
+        name: habitData.name,
+        description: habitData.description,
+        category: habitData.category || 'Other',
+        daysOfWeek: habitData.daysOfWeek,
+        optimalTiming: habitData.optimalTiming,
+        durationHours: habitData.durationHours === null ? undefined : habitData.durationHours,
+        durationMinutes: habitData.durationMinutes === null ? undefined : habitData.durationMinutes,
+        specificTime: habitData.specificTime,
+        completionLog: [],
+        reminderEnabled: false,
+      };
+      setHabits(prevHabits => [...prevHabits, newHabit]);
+      // console.log(`Habit Added: ${newHabit.name}`);
+    }
     setIsCreateHabitDialogOpen(false);
     setInitialFormDataForDialog(null);
+    setEditingHabit(null);
+  };
+
+  const handleOpenEditDialog = (habitToEdit: Habit) => {
+    setEditingHabit(habitToEdit);
+    setInitialFormDataForDialog({
+      id: habitToEdit.id,
+      name: habitToEdit.name,
+      description: habitToEdit.description || '',
+      category: habitToEdit.category || 'Other',
+      daysOfWeek: habitToEdit.daysOfWeek,
+      optimalTiming: habitToEdit.optimalTiming || '',
+      durationHours: habitToEdit.durationHours === undefined ? null : habitToEdit.durationHours,
+      durationMinutes: habitToEdit.durationMinutes === undefined ? null : habitToEdit.durationMinutes,
+      specificTime: habitToEdit.specificTime || '',
+    });
+    setIsCreateHabitDialogOpen(true);
   };
 
   const handleToggleComplete = async (habitId: string, date: string, completed: boolean) => {
@@ -479,9 +516,9 @@ const HabitualPage: NextPage = () => {
     if (justCompleted && habitNameForQuote) {
       try {
         const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuote });
-        console.log(`Motivational Quote: ${quoteResult.quote}`);
+        // console.log(`Motivational Quote: ${quoteResult.quote}`);
       } catch (error) {
-        console.error("Failed to fetch motivational quote:", error);
+        // console.error("Failed to fetch motivational quote:", error);
       }
     }
 
@@ -497,9 +534,9 @@ const HabitualPage: NextPage = () => {
       )
     );
     const habit = habits.find(h => h.id === habitId);
-    console.log(`Reminder for habit "${habit?.name}" ${!currentReminderState ? 'enabled' : 'disabled'}`);
+    // console.log(`Reminder for habit "${habit?.name}" ${!currentReminderState ? 'enabled' : 'disabled'}`);
     if (!currentReminderState && notificationPermission !== 'granted') {
-       console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
+       // console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
     }
   };
 
@@ -535,7 +572,7 @@ const HabitualPage: NextPage = () => {
       const result = await getHabitSuggestion(inputForAI);
       setAISuggestion({ habitId: habit.id, suggestionText: result.suggestion, isLoading: false });
     } catch (error) {
-      console.error("Error fetching AI suggestion:", error);
+      // console.error("Error fetching AI suggestion:", error);
       setAISuggestion({
         habitId: habit.id,
         suggestionText: '',
@@ -587,7 +624,7 @@ const HabitualPage: NextPage = () => {
         return h;
       })
     );
-    console.log(`Reflection Saved for ${reflectionDialogData.habitName}`);
+    // console.log(`Reflection Saved for ${reflectionDialogData.habitName}`);
     setReflectionDialogData(null);
     setIsReflectionDialogOpen(false);
   };
@@ -619,7 +656,7 @@ const HabitualPage: NextPage = () => {
       return h;
     }));
     const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
-    console.log(`Habit Rescheduled: ${habitName}`);
+    // console.log(`Habit Rescheduled: ${habitName}`);
   };
 
   const handleSaveMarkAsSkipped = (habitId: string, missedDate: string) => {
@@ -638,7 +675,7 @@ const HabitualPage: NextPage = () => {
       return h;
     }));
     const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
-    console.log(`Habit Skipped: ${habitName}`);
+    // console.log(`Habit Skipped: ${habitName}`);
   };
 
   const handleRequestNotificationPermission = () => {
@@ -646,9 +683,9 @@ const HabitualPage: NextPage = () => {
         Notification.requestPermission().then(permission => {
             setNotificationPermission(permission);
             if (permission === 'granted') {
-                console.log('Notification permission granted.');
+                // console.log('Notification permission granted.');
             } else {
-                console.log('Notification permission denied or dismissed.');
+                // console.log('Notification permission denied or dismissed.');
             }
         });
     }
@@ -747,11 +784,11 @@ const HabitualPage: NextPage = () => {
       icon: BellRing,
       action: () => {
         if (notificationPermission === 'granted') {
-          console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
+          // console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
         } else if (notificationPermission === 'denied') {
-          console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
+          // console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
         } else {
-          console.log('Reminder Settings: Notification permission not yet set. Requesting...');
+          // console.log('Reminder Settings: Notification permission not yet set. Requesting...');
           handleRequestNotificationPermission();
         }
       }
@@ -854,6 +891,7 @@ const HabitualPage: NextPage = () => {
               onOpenReflectionDialog={handleOpenReflectionDialog}
               onOpenRescheduleDialog={handleOpenRescheduleDialog}
               onToggleReminder={handleToggleReminder}
+              onOpenEditDialog={handleOpenEditDialog} // Pass down edit handler
             />
           </main>
           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
@@ -885,6 +923,7 @@ const HabitualPage: NextPage = () => {
       <Button
         className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
         onClick={() => {
+          setEditingHabit(null); // Ensure not in edit mode
           setInitialFormDataForDialog(null); 
           setIsCreateHabitDialogOpen(true);
          }}
@@ -898,8 +937,9 @@ const HabitualPage: NextPage = () => {
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
             setInitialFormDataForDialog(null); 
+            setEditingHabit(null); // Clear editing state on close
         }}
-        onAddHabit={handleAddHabit}
+        onSaveHabit={handleSaveHabit} // Changed from onAddHabit
         initialData={initialFormDataForDialog}
       />
 
@@ -1087,7 +1127,7 @@ const HabitualPage: NextPage = () => {
           </SheetHeader>
           <div className="grid gap-2">
             {sheetMenuItems.map((item) => (
-              item.href && item.href !== "/profile" && item.href !== "/calendar" ? ( 
+              item.href && item.href === "/" ? ( 
                 <SheetClose asChild key={item.label}>
                     <Link href={item.href}>
                         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={item.action}>
@@ -1147,5 +1187,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
-    

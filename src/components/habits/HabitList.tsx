@@ -3,7 +3,7 @@
 
 import type { FC } from 'react';
 import HabitItem from './HabitItem';
-import type { Habit } from '@/types'; // Removed EarnedBadge import as it's not used here
+import type { Habit } from '@/types';
 import { ListChecks } from 'lucide-react';
 
 interface HabitListProps {
@@ -12,7 +12,8 @@ interface HabitListProps {
   onGetAISuggestion: (habit: Habit) => void;
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  onToggleReminder: (habitId: string, currentReminderState: boolean) => void; // New prop
+  onToggleReminder: (habitId: string, currentReminderState: boolean) => void;
+  onOpenEditDialog: (habit: Habit) => void; // New prop for editing
 }
 
 const HabitList: FC<HabitListProps> = ({
@@ -21,7 +22,8 @@ const HabitList: FC<HabitListProps> = ({
     onGetAISuggestion,
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
-    onToggleReminder, // Pass down
+    onToggleReminder,
+    onOpenEditDialog, // Pass down
 }) => {
   if (habits.length === 0) {
     return (
@@ -43,7 +45,8 @@ const HabitList: FC<HabitListProps> = ({
           onGetAISuggestion={onGetAISuggestion}
           onOpenReflectionDialog={onOpenReflectionDialog}
           onOpenRescheduleDialog={onOpenRescheduleDialog}
-          onToggleReminder={onToggleReminder} // Pass down
+          onToggleReminder={onToggleReminder}
+          onOpenEditDialog={onOpenEditDialog} // Pass down
         />
       ))}
     </div>
