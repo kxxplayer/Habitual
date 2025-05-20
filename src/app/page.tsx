@@ -45,7 +45,7 @@ import {
   AlertDialogContent,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle as AlertTitle,
+  AlertDialogTitle as AlertTitle, // Renamed to avoid conflict
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -55,7 +55,7 @@ import {
   SheetDescription,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal, PlusCircle, Lightbulb } from 'lucide-react';
+import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal, PlusCircle, Lightbulb, FilePenLine } from 'lucide-react';
 import { format, parseISO, isSameDay, getDay } from 'date-fns';
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -131,7 +131,7 @@ const HabitualPage: NextPage = () => {
         setInitialFormDataForDialog(null);
         setEditingHabit(null);
 
-        if (previousUid) { // Clear data for the previous user
+        if (previousUid) { 
           localStorage.removeItem(`${LS_KEY_PREFIX_HABITS}${previousUid}`);
           localStorage.removeItem(`${LS_KEY_PREFIX_BADGES}${previousUid}`);
           localStorage.removeItem(`${LS_KEY_PREFIX_POINTS}${previousUid}`);
@@ -158,16 +158,16 @@ const HabitualPage: NextPage = () => {
         Notification.requestPermission().then(permission => {
           setNotificationPermission(permission);
           if (permission === 'granted') {
-             // console.log('Notification permission granted.');
+             console.log('Notification permission granted.');
           } else {
-             // console.log('Notification permission denied or dismissed.');
+             console.log('Notification permission denied or dismissed.');
           }
         });
       } else {
         setNotificationPermission(Notification.permission);
       }
     } else {
-      // console.log('Notifications not supported by this browser.');
+      console.log('Notifications not supported by this browser.');
       setNotificationPermission('denied');
     }
   }, []);
@@ -189,7 +189,7 @@ const HabitualPage: NextPage = () => {
     }
 
     setIsLoadingHabits(true);
-    // console.log(`Loading data for user: ${authUser.uid}`);
+    console.log(`Loading data for user: ${authUser.uid}`);
     
     let parsedHabits: Habit[] = [];
     const userHabitsKey = `${LS_KEY_PREFIX_HABITS}${authUser.uid}`;
@@ -272,7 +272,7 @@ const HabitualPage: NextPage = () => {
         });
         setHabits(parsedHabits);
       } catch (error) {
-        // console.error(`Failed to parse habits from localStorage key ${userHabitsKey}:`, error);
+        console.error(`Failed to parse habits from localStorage key ${userHabitsKey}:`, error);
         setHabits([]);
       }
     } else {
@@ -288,7 +288,7 @@ const HabitualPage: NextPage = () => {
           }
         })
         .catch(err => {
-          // console.error("Failed to fetch common habit suggestions:", err);
+          console.error("Failed to fetch common habit suggestions:", err);
         })
         .finally(() => {
           setIsLoadingCommonSuggestions(false);
@@ -305,7 +305,7 @@ const HabitualPage: NextPage = () => {
       try {
         setEarnedBadges(JSON.parse(storedBadges));
       } catch (error) {
-        // console.error(`Failed to parse badges from localStorage key ${userBadgesKey}:`, error);
+        console.error(`Failed to parse badges from localStorage key ${userBadgesKey}:`, error);
         setEarnedBadges([]);
       }
     } else {
@@ -318,7 +318,7 @@ const HabitualPage: NextPage = () => {
       try {
         setTotalPoints(parseInt(storedPoints, 10));
       } catch (error) {
-        // console.error(`Failed to parse totalPoints from localStorage key ${userPointsKey}:`, error);
+        console.error(`Failed to parse totalPoints from localStorage key ${userPointsKey}:`, error);
         setTotalPoints(0);
       }
     } else {
@@ -339,13 +339,13 @@ const HabitualPage: NextPage = () => {
       newlyEarned.forEach(async newBadge => {
         if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
             updatedBadges.push(newBadge);
-            // console.log(`New Badge Unlocked: ${newBadge.name} - ${newBadge.description}`);
+            console.log(`New Badge Unlocked: ${newBadge.name} - ${newBadge.description}`);
             if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) {
               try {
                 const sqlTipResult = await getSqlTip();
-                // console.log(`💡 Bonus SQL Tip Unlocked: ${sqlTipResult.tip}`);
+                console.log(`💡 Bonus SQL Tip Unlocked: ${sqlTipResult.tip}`);
               } catch (tipError) {
-                // console.error("Failed to fetch SQL tip:", tipError);
+                console.error("Failed to fetch SQL tip:", tipError);
               }
             }
         }
@@ -372,6 +372,7 @@ const HabitualPage: NextPage = () => {
     reminderTimeouts.current = [];
 
     if (notificationPermission === 'granted') {
+      console.log("Checking habits for reminders (placeholder)...");
       habits.forEach(habit => {
         if (habit.reminderEnabled) {
           let reminderDateTime: Date | null = null;
@@ -382,8 +383,8 @@ const HabitualPage: NextPage = () => {
               const [hours, minutes] = habit.specificTime.split(':').map(Number);
               let specificEventTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
               reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000);
-            } catch (e) {
-              // console.error(`Error parsing specificTime "${habit.specificTime}" for habit "${habit.name}"`, e);
+            } catch (e) { 
+              console.error(`Error parsing specificTime "${habit.specificTime}" for habit "${habit.name}"`, e);
             }
           } else {
             let baseHour = 10; 
@@ -395,7 +396,7 @@ const HabitualPage: NextPage = () => {
 
           if (reminderDateTime && reminderDateTime > now) {
             const delay = reminderDateTime.getTime() - now.getTime();
-            // console.log(`Placeholder: Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
+            console.log(`Reminder for "${habit.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
           }
         }
       });
@@ -408,12 +409,12 @@ const HabitualPage: NextPage = () => {
 
 
   const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
-    if (editingHabit && habitData.id) { // Editing existing habit
+    if (editingHabit && habitData.id) { 
       setHabits(prevHabits =>
         prevHabits.map(h =>
           h.id === habitData.id
             ? {
-                ...h, // Keep original ID, completionLog, and reminderEnabled
+                ...h, 
                 name: habitData.name,
                 description: habitData.description,
                 category: habitData.category || 'Other',
@@ -426,8 +427,8 @@ const HabitualPage: NextPage = () => {
             : h
         )
       );
-      // console.log(`Habit Updated: ${habitData.name}`);
-    } else { // Adding new habit
+      console.log(`Habit Updated: ${habitData.name}`);
+    } else { 
       const newHabit: Habit = {
         id: Date.now().toString() + Math.random().toString(36).substring(2,7),
         name: habitData.name,
@@ -442,7 +443,7 @@ const HabitualPage: NextPage = () => {
         reminderEnabled: false,
       };
       setHabits(prevHabits => [...prevHabits, newHabit]);
-      // console.log(`Habit Added: ${newHabit.name}`);
+      console.log(`Habit Added: ${newHabit.name}`);
     }
     setIsCreateHabitDialogOpen(false);
     setInitialFormDataForDialog(null);
@@ -516,9 +517,9 @@ const HabitualPage: NextPage = () => {
     if (justCompleted && habitNameForQuote) {
       try {
         const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuote });
-        // console.log(`Motivational Quote: ${quoteResult.quote}`);
+        console.log(`Motivational Quote: ${quoteResult.quote}`);
       } catch (error) {
-        // console.error("Failed to fetch motivational quote:", error);
+        console.error("Failed to fetch motivational quote:", error);
       }
     }
 
@@ -534,9 +535,9 @@ const HabitualPage: NextPage = () => {
       )
     );
     const habit = habits.find(h => h.id === habitId);
-    // console.log(`Reminder for habit "${habit?.name}" ${!currentReminderState ? 'enabled' : 'disabled'}`);
+    console.log(`Reminder for habit "${habit?.name}" ${!currentReminderState ? 'enabled' : 'disabled'}`);
     if (!currentReminderState && notificationPermission !== 'granted') {
-       // console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
+       console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
     }
   };
 
@@ -572,7 +573,7 @@ const HabitualPage: NextPage = () => {
       const result = await getHabitSuggestion(inputForAI);
       setAISuggestion({ habitId: habit.id, suggestionText: result.suggestion, isLoading: false });
     } catch (error) {
-      // console.error("Error fetching AI suggestion:", error);
+      console.error("Error fetching AI suggestion:", error);
       setAISuggestion({
         habitId: habit.id,
         suggestionText: '',
@@ -624,7 +625,7 @@ const HabitualPage: NextPage = () => {
         return h;
       })
     );
-    // console.log(`Reflection Saved for ${reflectionDialogData.habitName}`);
+    console.log(`Reflection Saved for ${reflectionDialogData.habitName}`);
     setReflectionDialogData(null);
     setIsReflectionDialogOpen(false);
   };
@@ -656,7 +657,7 @@ const HabitualPage: NextPage = () => {
       return h;
     }));
     const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
-    // console.log(`Habit Rescheduled: ${habitName}`);
+    console.log(`Habit Rescheduled: ${habitName}`);
   };
 
   const handleSaveMarkAsSkipped = (habitId: string, missedDate: string) => {
@@ -675,7 +676,7 @@ const HabitualPage: NextPage = () => {
       return h;
     }));
     const habitName = habits.find(h => h.id === habitId)?.name || "Habit";
-    // console.log(`Habit Skipped: ${habitName}`);
+    console.log(`Habit Skipped: ${habitName}`);
   };
 
   const handleRequestNotificationPermission = () => {
@@ -683,9 +684,9 @@ const HabitualPage: NextPage = () => {
         Notification.requestPermission().then(permission => {
             setNotificationPermission(permission);
             if (permission === 'granted') {
-                // console.log('Notification permission granted.');
+                console.log('Notification permission granted.');
             } else {
-                // console.log('Notification permission denied or dismissed.');
+                console.log('Notification permission denied or dismissed.');
             }
         });
     }
@@ -740,7 +741,8 @@ const HabitualPage: NextPage = () => {
                        scheduledMissedDays.push(checkDate);
                     }
                 } else {
-                    if (!scheduledUpcomingDays.some(d => isSameDay(d, checkDate)) && !completedDays.some(d => isSameDay(d, cDate))) {
+                    if (!scheduledUpcomingDays.some(d_upcoming => isSameDay(d_upcoming, checkDate)) && 
+                        !completedDays.some(d_completed => isSameDay(d_completed, checkDate))) {
                         scheduledUpcomingDays.push(checkDate);
                     }
                 }
@@ -784,11 +786,11 @@ const HabitualPage: NextPage = () => {
       icon: BellRing,
       action: () => {
         if (notificationPermission === 'granted') {
-          // console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
+          console.log('Reminder Settings: Notification permission is granted. Reminders can be set per habit.');
         } else if (notificationPermission === 'denied') {
-          // console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
+          console.log('Reminder Settings: Notification permission is denied. Please enable it in your browser settings.');
         } else {
-          // console.log('Reminder Settings: Notification permission not yet set. Requesting...');
+          console.log('Reminder Settings: Notification permission not yet set. Requesting...');
           handleRequestNotificationPermission();
         }
       }
@@ -805,6 +807,7 @@ const HabitualPage: NextPage = () => {
   ];
 
   const handleCustomizeSuggestedHabit = (suggestion: SuggestedHabit) => {
+    setEditingHabit(null); // Ensure we're not in edit mode
     setInitialFormDataForDialog({
       name: suggestion.name,
       category: suggestion.category || 'Other',
@@ -891,7 +894,7 @@ const HabitualPage: NextPage = () => {
               onOpenReflectionDialog={handleOpenReflectionDialog}
               onOpenRescheduleDialog={handleOpenRescheduleDialog}
               onToggleReminder={handleToggleReminder}
-              onOpenEditDialog={handleOpenEditDialog} // Pass down edit handler
+              onOpenEditDialog={handleOpenEditDialog} 
             />
           </main>
           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
@@ -923,7 +926,7 @@ const HabitualPage: NextPage = () => {
       <Button
         className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
         onClick={() => {
-          setEditingHabit(null); // Ensure not in edit mode
+          setEditingHabit(null); 
           setInitialFormDataForDialog(null); 
           setIsCreateHabitDialogOpen(true);
          }}
@@ -937,9 +940,9 @@ const HabitualPage: NextPage = () => {
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
             setInitialFormDataForDialog(null); 
-            setEditingHabit(null); // Clear editing state on close
+            setEditingHabit(null); 
         }}
-        onSaveHabit={handleSaveHabit} // Changed from onAddHabit
+        onSaveHabit={handleSaveHabit} 
         initialData={initialFormDataForDialog}
       />
 
@@ -1187,3 +1190,5 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
+    
