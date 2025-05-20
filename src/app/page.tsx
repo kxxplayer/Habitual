@@ -43,7 +43,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogFooter,
+  AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle as AlertTitle,
 } from '@/components/ui/dialog';
@@ -56,7 +56,8 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal, PlusCircle, Lightbulb, FilePenLine } from 'lucide-react';
-import { format, parseISO, isSameDay, getDay } from 'date-fns';
+import { format, parseISO, isSameDay, getDay, subDays, addDays as dateFnsAddDays, startOfWeek, endOfWeek, isWithinInterval, isPast as dateFnsIsPast, isToday as dateFnsIsToday, startOfDay } from 'date-fns';
+
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -130,7 +131,7 @@ const HabitualPage: NextPage = () => {
         setCommonSuggestionsFetched(false);
         setInitialFormDataForDialog(null);
         setEditingHabit(null);
-
+        // Clear localStorage for the previous user
         if (previousUid) {
           localStorage.removeItem(`${LS_KEY_PREFIX_HABITS}${previousUid}`);
           localStorage.removeItem(`${LS_KEY_PREFIX_BADGES}${previousUid}`);
@@ -325,7 +326,7 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
     }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth, commonSuggestionsFetched, router]); // Added commonSuggestionsFetched and router
+  }, [authUser, isLoadingAuth, commonSuggestionsFetched, router]); 
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -709,9 +710,10 @@ const HabitualPage: NextPage = () => {
     const scheduledMissedDays: Date[] = [];
     const scheduledUpcomingDays: Date[] = [];
     const makeupPendingDays: Date[] = [];
+    const today = startOfDay(new Date());
 
-    habits.forEach(habit => {
-      habit.completionLog.forEach(log => {
+    habits.forEach(habit_item => {
+      habit_item.completionLog.forEach(log => {
         try {
           const logDate = parseISO(log.date);
           if (log.status === 'completed') {
@@ -722,42 +724,41 @@ const HabitualPage: NextPage = () => {
         } catch (e) { console.error("Error parsing log date for calendar modifiers:", log.date, e); }
       });
 
-      const today = new Date();
-      for (let i = 0; i < 60; i++) {
-          const pastDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
-          const futureDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      for (let i = 0; i < 60; i++) { 
+          const pastDate = subDays(today, i);
+          const futureDate = dateFnsAddDays(today, i);
+          
+          [pastDate, futureDate].forEach(current_check_date => {
+            if (isSameDay(current_check_date, today) && i !== 0 && current_check_date !== pastDate) return; 
 
-          [pastDate, futureDate].forEach(checkDate => {
-            if (isSameDay(checkDate, today) && i !== 0 && checkDate !== pastDate) return;
-
-            const dateStr = format(checkDate, 'yyyy-MM-dd');
-            const dayOfWeek = dayIndexToWeekDayConstant[getDay(checkDate)];
-            const isScheduled = habit.daysOfWeek.includes(dayOfWeek);
-            const logEntry = habit.completionLog.find(log => log.date === dateStr);
+            const dateStr = format(current_check_date, 'yyyy-MM-dd');
+            const dayOfWeek = dayIndexToWeekDayConstant[getDay(current_check_date)];
+            const isScheduled = habit_item.daysOfWeek.includes(dayOfWeek);
+            const logEntry = habit_item.completionLog.find(log => log.date === dateStr);
 
             if (isScheduled && !logEntry) {
-                if (checkDate < today && !isSameDay(checkDate, today)) {
-                    if (!scheduledMissedDays.some(d => isSameDay(d, checkDate))) {
-                       scheduledMissedDays.push(checkDate);
+                if (current_check_date < today && !isSameDay(current_check_date, today)) {
+                    if (!scheduledMissedDays.some(missed_d => isSameDay(missed_d, current_check_date))) {
+                       scheduledMissedDays.push(current_check_date);
                     }
                 } else {
-                    if (!scheduledUpcomingDays.some(d_upcoming => isSameDay(d_upcoming, checkDate)) &&
-                        !completedDays.some(d_completed => isSameDay(d_completed, checkDate))) {
-                        scheduledUpcomingDays.push(checkDate);
+                    if (!scheduledUpcomingDays.some(upcoming_d => isSameDay(upcoming_d, current_check_date)) &&
+                        !completedDays.some(completed_d => isSameDay(completed_d, current_check_date))) {
+                        scheduledUpcomingDays.push(current_check_date);
                     }
                 }
             }
           });
       }
     });
-
-    const finalScheduledUpcoming = scheduledUpcomingDays.filter(sDate =>
-        !completedDays.some(cDate_param => isSameDay(sDate, cDate_param)) &&
-        !makeupPendingDays.some(mDate => isSameDay(sDate, mDate))
+    
+    const finalScheduledUpcoming = scheduledUpcomingDays.filter(s_date_upcoming => 
+        !completedDays.some(comp_date => isSameDay(s_date_upcoming, comp_date)) &&
+        !makeupPendingDays.some(makeup_date => isSameDay(s_date_upcoming, makeup_date))
     );
-    const finalScheduledMissed = scheduledMissedDays.filter(sDate_param =>
-        !completedDays.some(cDate_param => isSameDay(sDate_param, cDate_param)) &&
-        !makeupPendingDays.some(mDate => isSameDay(sDate_param, mDate))
+    const finalScheduledMissed = scheduledMissedDays.filter(s_date_missed => 
+        !completedDays.some(comp_date => isSameDay(s_date_missed, comp_date)) &&
+        !makeupPendingDays.some(makeup_date => isSameDay(s_date_missed, makeup_date))
     );
 
     return {
@@ -1037,10 +1038,10 @@ const HabitualPage: NextPage = () => {
                     </h3>
                     {habitsForSelectedCalendarDate.length > 0 ? (
                     <ul className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
-                        {habitsForSelectedCalendarDate.map(habit => {
-                        const logEntry = habit.completionLog.find(log => log.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
+                        {habitsForSelectedCalendarDate.map(habit_item_for_date => {
+                        const logEntry = habit_item_for_date.completionLog.find(log => log.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
                         const dayOfWeekForSelected = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
-                        const isScheduledToday = habit.daysOfWeek.includes(dayOfWeekForSelected);
+                        const isScheduledToday = habit_item_for_date.daysOfWeek.includes(dayOfWeekForSelected);
                         let statusText = "Scheduled";
                         let StatusIcon = CircleIcon;
                         let iconColor = "text-orange-500";
@@ -1057,15 +1058,15 @@ const HabitualPage: NextPage = () => {
                             statusText = "Skipped";
                             StatusIcon = XCircle;
                             iconColor = "text-muted-foreground";
-                        } else if (isScheduledToday && parseISO(format(selectedCalendarDate as Date, 'yyyy-MM-dd')) < parseISO(format(new Date(), 'yyyy-MM-dd')) && !logEntry) {
+                        } else if (isScheduledToday && dateFnsIsPast(selectedCalendarDate as Date) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry) {
                             statusText = "Missed";
                             StatusIcon = XCircle;
                             iconColor = "text-destructive";
                         }
-
+                        
                         return (
-                            <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
-                            <span className="font-medium truncate pr-2">{habit.name}</span>
+                            <li key={habit_item_for_date.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
+                            <span className="font-medium truncate pr-2">{habit_item_for_date.name}</span>
                             <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                                 <StatusIcon className={cn("h-3.5 w-3.5", iconColor)} />
                                 <span>{statusText}</span>
@@ -1190,5 +1191,7 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
+    
 
     
