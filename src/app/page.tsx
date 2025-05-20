@@ -46,7 +46,7 @@ import {
   AlertDialogContent,
   AlertDialogDescription as AlertDialogDescriptionEl,
   AlertDialogHeader as AlertDialogHeaderEl,
-  AlertDialogTitle as AlertTitle, 
+  AlertDialogTitle as AlertTitle,
   AlertDialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -218,10 +218,7 @@ const HabitualPage: NextPage = () => {
           let daysOfWeek_migrated_data_load: WeekDay[] = [];
           if (Array.isArray(habit_data_migration_map.daysOfWeek)) {
             daysOfWeek_migrated_data_load = habit_data_migration_map.daysOfWeek.filter((d: any) => weekDays.includes(d as WeekDay));
-            if (daysOfWeek_migrated_data_load.length !== habit_data_migration_map.daysOfWeek.length) {
-                console.warn(`Sanitizing: Invalid daysOfWeek for habit '${habitName_safe}' (ID: ${habitId_safe})`, habit_data_migration_map.daysOfWeek);
-            }
-          } else if (habit_data_migration_map.frequency) { 
+          } else if (habit_data_migration_map.frequency) {
             const freqLower_migrated_data_load = habit_data_migration_map.frequency.toLowerCase();
             if (freqLower_migrated_data_load === 'daily') daysOfWeek_migrated_data_load = [...weekDays];
             else {
@@ -306,14 +303,14 @@ const HabitualPage: NextPage = () => {
             durationHours: migratedDurationHours_val_data_load,
             durationMinutes: migratedDurationMinutes_val_data_load,
             specificTime: migratedSpecificTime_val_data_load,
-            completionLog: migratedCompletionLog_arr_data_load,
+            completionLog: migratedCompletionLog_arr_data_load.sort((a,b) => b.date.localeCompare(a.date)),
             reminderEnabled: habit_data_migration_map.reminderEnabled === undefined ? false : !!habit_data_migration_map.reminderEnabled,
           };
         });
         setHabits(parsedHabits_data_load);
       } catch (error_data_load) {
         console.error(`Failed to parse/sanitize habits from localStorage key ${userHabitsKey_data_load}:`, error_data_load);
-        setHabits([]); 
+        setHabits([]);
       }
     } else {
         console.log(`No habits found in localStorage for user ${authUser.uid}`);
@@ -339,7 +336,7 @@ const HabitualPage: NextPage = () => {
     } else if (parsedHabits_data_load.length > 0) {
         console.log("User has existing habits, not fetching common suggestions.");
         if (commonHabitSuggestions.length > 0) setCommonHabitSuggestions([]);
-        setCommonSuggestionsFetched(true);
+        setCommonSuggestionsFetched(true); // Mark as fetched even if not needed
     }
 
 
@@ -370,7 +367,7 @@ const HabitualPage: NextPage = () => {
     }
     setIsLoadingHabits(false);
     console.log(`Data loading complete for user ${authUser.uid}. Habits loaded: ${parsedHabits_data_load.length}`);
-  }, [authUser, isLoadingAuth, router]);
+  }, [authUser, isLoadingAuth, router, commonSuggestionsFetched]); // Added commonSuggestionsFetched
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -536,18 +533,18 @@ const HabitualPage: NextPage = () => {
               justCompleted_toggle_complete = true;
               newCompletionLog_for_toggle_map.push({ date: date_toggle_complete, time: currentTime_for_toggle_map, status: 'completed', note: undefined });
             }
-          } else { 
+          } else {
             if (existingLogIndex_for_toggle_map > -1) {
               const logEntry_item_for_toggle_map = newCompletionLog_for_toggle_map[existingLogIndex_for_toggle_map];
-              if (logEntry_item_for_toggle_map.status === 'completed') { 
+              if (logEntry_item_for_toggle_map.status === 'completed') {
                  pointsChange_toggle_complete = -POINTS_PER_COMPLETION;
               }
               if (logEntry_item_for_toggle_map.status === 'completed' && logEntry_item_for_toggle_map.originalMissedDate) {
                 newCompletionLog_for_toggle_map[existingLogIndex_for_toggle_map] = { ...logEntry_item_for_toggle_map, status: 'pending_makeup', time: 'N/A' };
-              } else if (logEntry_item_for_toggle_map.note) { 
+              } else if (logEntry_item_for_toggle_map.note) {
                 newCompletionLog_for_toggle_map[existingLogIndex_for_toggle_map] = { ...logEntry_item_for_toggle_map, status: 'skipped', time: 'N/A' };
               }
-              else { 
+              else {
                 newCompletionLog_for_toggle_map.splice(existingLogIndex_for_toggle_map, 1);
               }
             }
@@ -662,7 +659,7 @@ const HabitualPage: NextPage = () => {
                 date: date_reflection_save,
                 time: 'N/A',
                 note: note_to_save_reflection.trim() === "" ? undefined : note_to_save_reflection.trim(),
-                status: existingStatus_reflection_save || 'skipped' 
+                status: existingStatus_reflection_save || 'skipped'
              });
              newCompletionLog_for_note_save_reflection.sort((a_sort_reflection,b_sort_reflection) => b_sort_reflection.date.localeCompare(a_sort_reflection.date));
           }
@@ -691,7 +688,7 @@ const HabitualPage: NextPage = () => {
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped';
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].time = 'N/A';
             }
-        } else { 
+        } else {
             newCompletionLog_rescheduled_save.push({
                 date: originalMissedDate_rescheduled_save,
                 time: 'N/A',
@@ -767,32 +764,34 @@ const HabitualPage: NextPage = () => {
     }
   }, [selectedCalendarDate, habits]);
 
-  // Ultra-minimal version of calendarDialogModifiers for diagnostics
   const calendarDialogModifiers = React.useMemo(() => {
-    console.log("Recalculating calendarDialogModifiers (ULTRA-MINIMAL). Habits:", habits, "Selected Date:", selectedCalendarDate);
-    // Intentional minimal access to habits to see if dependency itself is an issue
-    if (habits && habits.length > 0 && habits[0]) {
-      // console.log("Minimal check, first habit name:", habits[0].name);
-    }
+    console.log(
+      "Recalculating calendarDialogModifiers (DIAGNOSTIC - REMOVE HABITS DEPENDENCY). Selected Date:",
+      selectedCalendarDate
+    );
+    // ULTRA-MINIMAL: No processing of habits array for this diagnostic step.
     try {
       return {
-        completed: [] as Date[], // Empty
-        missed: [] as Date[],    // Empty
-        scheduled: [] as Date[], // Empty
-        makeup: [] as Date[],   // Empty
-        selected: selectedCalendarDate ? [selectedCalendarDate] : [], // Keep selected logic
+        completed: [] as Date[], // Hardcoded empty
+        missed: [] as Date[],    // Hardcoded empty
+        scheduled: [] as Date[], // Hardcoded empty
+        makeup: [] as Date[],   // Hardcoded empty
+        selected: selectedCalendarDate ? [selectedCalendarDate] : [],
       };
-    } catch (error) {
-        console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error);
-        return {
-            completed: [],
-            missed: [],
-            scheduled: [],
-            makeup: [],
-            selected: selectedCalendarDate ? [selectedCalendarDate] : [],
-        };
+    } catch (error_in_minimal_memo) {
+      console.error(
+        "CRITICAL ERROR in ULTRA-MINIMAL (NO HABITS DEP) calendarDialogModifiers calculation:",
+        error_in_minimal_memo
+      );
+      return { // Safe fallback
+        completed: [],
+        missed: [],
+        scheduled: [],
+        makeup: [],
+        selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+      };
     }
-  }, [habits, selectedCalendarDate]);
+  }, [selectedCalendarDate]); // INTENTIONALLY REMOVED `habits` for DIAGNOSTICS
 
 
   const calendarDialogModifierStyles: DayPicker['modifiersStyles'] = {
@@ -828,8 +827,8 @@ const HabitualPage: NextPage = () => {
     setInitialFormDataForDialog({
       name: suggestion_customize.name,
       category: suggestion_customize.category || 'Other',
-      description: '', 
-      daysOfWeek: [], 
+      description: '',
+      daysOfWeek: [],
     });
     setIsCreateHabitDialogOpen(true);
   };
@@ -1041,7 +1040,7 @@ const HabitualPage: NextPage = () => {
                     mode="single"
                     selected={selectedCalendarDate}
                     onSelect={setSelectedCalendarDate}
-                    modifiers={calendarDialogModifiers} 
+                    modifiers={calendarDialogModifiers}
                     modifiersStyles={calendarDialogModifierStyles}
                     className="rounded-md border p-0 sm:p-2"
                     month={selectedCalendarDate || new Date()}
@@ -1060,7 +1059,7 @@ const HabitualPage: NextPage = () => {
                         const isScheduledOnSelectedDate_display_page = habit_item_for_cal_date_display_page.daysOfWeek.includes(dayOfWeekForSelectedDate_display_page);
                         let statusTextForCalDate_display_page = "Scheduled";
                         let StatusIconForCalDate_display_page = CircleIcon;
-                        let iconColorForCalDate_display_page = "text-orange-500"; 
+                        let iconColorForCalDate_display_page = "text-orange-500";
 
                         if (logEntryForCalDate_display_page?.status === 'completed') {
                             statusTextForCalDate_display_page = `Completed at ${logEntryForCalDate_display_page.time || ''}`;
@@ -1081,7 +1080,7 @@ const HabitualPage: NextPage = () => {
                         } else if (!isScheduledOnSelectedDate_display_page && !logEntryForCalDate_display_page) {
                            return null;
                         }
-                        
+
                         return (
                             <li key={habit_item_for_cal_date_display_page.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
                             <span className="font-medium truncate pr-2">{habit_item_for_cal_date_display_page.name}</span>
@@ -1173,8 +1172,8 @@ const HabitualPage: NextPage = () => {
                   className="w-full justify-start text-base py-3"
                   onClick={() => {
                     item_menu_sheet_page.action();
-                    if (item_menu_sheet_page.label !== 'Reminders' && 
-                        item_menu_sheet_page.label !== 'Calendar' && 
+                    if (item_menu_sheet_page.label !== 'Reminders' &&
+                        item_menu_sheet_page.label !== 'Calendar' &&
                         item_menu_sheet_page.label !== 'Achievements') {
                         setIsSettingsSheetOpen(false);
                     }
@@ -1217,3 +1216,5 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
+    
