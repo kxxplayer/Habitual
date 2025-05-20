@@ -46,7 +46,7 @@ import {
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogHeader,
-  AlertDialogTitle as AlertTitle, // Renamed to avoid conflict
+  AlertDialogTitle as AlertTitle, 
   AlertDialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -133,7 +133,7 @@ const HabitualPage: NextPage = () => {
         setCommonSuggestionsFetched(false);
         setInitialFormDataForDialog(null);
         setEditingHabit(null);
-        // Keep dialogs closed on user switch for cleaner UX
+        
         setIsDashboardDialogOpen(false);
         setIsCalendarDialogOpen(false);
         setIsAISuggestionDialogOpen(false);
@@ -262,7 +262,7 @@ const HabitualPage: NextPage = () => {
           const migratedCompletionLog_arr = (habit_data_migration.completionLog || (habit_data_migration.completedDates
               ? habit_data_migration.completedDates.map((d_log: string) => ({ date: d_log, time: 'N/A', note: undefined, status: 'completed' }))
               : [])).map((log_item_migrated: any) => ({
-                date: typeof log_item_migrated.date === 'string' ? log_item_migrated.date : '1970-01-01', // Ensure date is string
+                date: typeof log_item_migrated.date === 'string' ? log_item_migrated.date : '1970-01-01', 
                 time: log_item_migrated.time || 'N/A',
                 note: log_item_migrated.note || undefined,
                 status: log_item_migrated.status || 'completed',
@@ -733,46 +733,46 @@ const HabitualPage: NextPage = () => {
       const dates_makeup_pending_arr: Date[] = [];
       const today_date_obj = startOfDay(new Date());
 
-      habits.forEach(habit_item_for_modifiers => {
-          habit_item_for_modifiers.completionLog.forEach(log_entry_for_modifiers => {
-              if (typeof log_entry_for_modifiers.date === 'string' && log_entry_for_modifiers.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      habits.forEach(habit_item_for_cal_modifiers => {
+          habit_item_for_cal_modifiers.completionLog.forEach(log_entry_for_cal_modifiers => {
+              if (typeof log_entry_for_cal_modifiers.date === 'string' && log_entry_for_cal_modifiers.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
                   try {
-                      const logDate_obj = parseISO(log_entry_for_modifiers.date);
-                      if (log_entry_for_modifiers.status === 'completed') {
-                          dates_completed_arr.push(logDate_obj);
-                      } else if (log_entry_for_modifiers.status === 'pending_makeup') {
-                          dates_makeup_pending_arr.push(logDate_obj);
+                      const logDate_obj_for_cal_mod = parseISO(log_entry_for_cal_modifiers.date);
+                      if (log_entry_for_cal_modifiers.status === 'completed') {
+                          dates_completed_arr.push(logDate_obj_for_cal_mod);
+                      } else if (log_entry_for_cal_modifiers.status === 'pending_makeup') {
+                          dates_makeup_pending_arr.push(logDate_obj_for_cal_mod);
                       }
-                  } catch (e_parse_log) {
-                      console.error("Error parsing log date for calendar modifiers:", log_entry_for_modifiers.date, e_parse_log);
+                  } catch (e_parse_log_cal_mod) {
+                      console.error("Error parsing log date for calendar modifiers:", log_entry_for_cal_modifiers.date, e_parse_log_cal_mod);
                   }
               } else {
-                  console.warn("Invalid or missing date in log entry for habit:", habit_item_for_modifiers.name, log_entry_for_modifiers);
+                  console.warn("Invalid or missing date in log entry for habit:", habit_item_for_cal_modifiers.name, log_entry_for_cal_modifiers);
               }
           });
 
-          const iteration_limit = 60;
-          for (let day_offset = 0; day_offset < iteration_limit; day_offset++) {
-              const pastDateToConsider_obj = subDays(today_date_obj, day_offset);
-              const futureDateToConsider_obj = dateFnsAddDays(today_date_obj, day_offset);
+          const iteration_limit_cal_mod = 60;
+          for (let day_offset_cal_mod = 0; day_offset_cal_mod < iteration_limit_cal_mod; day_offset_cal_mod++) {
+              const pastDateToConsider_obj_cal_mod = subDays(today_date_obj, day_offset_cal_mod);
+              const futureDateToConsider_obj_cal_mod = dateFnsAddDays(today_date_obj, day_offset_cal_mod);
 
-              [pastDateToConsider_obj, futureDateToConsider_obj].forEach(current_day_being_checked_obj => {
-                  if (isSameDay(current_day_being_checked_obj, today_date_obj) && day_offset !== 0 && current_day_being_checked_obj !== pastDateToConsider_obj) return;
+              [pastDateToConsider_obj_cal_mod, futureDateToConsider_obj_cal_mod].forEach(current_check_date_cal_mod => {
+                  if (isSameDay(current_check_date_cal_mod, today_date_obj) && day_offset_cal_mod !== 0 && current_check_date_cal_mod !== pastDateToConsider_obj_cal_mod) return;
 
-                  const dateStrToMatch_str = format(current_day_being_checked_obj, 'yyyy-MM-dd');
-                  const dayOfWeekForDate_val = dayIndexToWeekDayConstant[getDay(current_day_being_checked_obj)];
-                  const isScheduledOnThisDay_bool = habit_item_for_modifiers.daysOfWeek.includes(dayOfWeekForDate_val);
-                  const logEntryForThisDay_obj = habit_item_for_modifiers.completionLog.find(log_find_item => log_find_item.date === dateStrToMatch_str);
+                  const dateStrToMatch_str_cal_mod = format(current_check_date_cal_mod, 'yyyy-MM-dd');
+                  const dayOfWeekForDate_val_cal_mod = dayIndexToWeekDayConstant[getDay(current_check_date_cal_mod)];
+                  const isScheduledOnThisDay_bool_cal_mod = habit_item_for_cal_modifiers.daysOfWeek.includes(dayOfWeekForDate_val_cal_mod);
+                  const logEntryForThisDay_obj_cal_mod = habit_item_for_cal_modifiers.completionLog.find(log_find_item_cal_mod => log_find_item_cal_mod.date === dateStrToMatch_str_cal_mod);
 
-                  if (isScheduledOnThisDay_bool && !logEntryForThisDay_obj) {
-                      if (current_day_being_checked_obj < today_date_obj && !isSameDay(current_day_being_checked_obj, today_date_obj)) {
-                          if (!dates_scheduled_missed_arr.some(missed_day_item => isSameDay(missed_day_item, current_day_being_checked_obj))) {
-                              dates_scheduled_missed_arr.push(current_day_being_checked_obj);
+                  if (isScheduledOnThisDay_bool_cal_mod && !logEntryForThisDay_obj_cal_mod) {
+                      if (current_check_date_cal_mod < today_date_obj && !isSameDay(current_check_date_cal_mod, today_date_obj)) {
+                          if (!dates_scheduled_missed_arr.some(missed_day_item_cal_mod => isSameDay(missed_day_item_cal_mod, current_check_date_cal_mod))) {
+                              dates_scheduled_missed_arr.push(current_check_date_cal_mod);
                           }
                       } else {
-                          if (!dates_scheduled_upcoming_arr.some(upcoming_day_item => isSameDay(upcoming_day_item, current_day_being_checked_obj)) &&
-                              !dates_completed_arr.some(completed_d_inner_check => isSameDay(completed_d_inner_check, current_day_being_checked_obj))) {
-                              dates_scheduled_upcoming_arr.push(current_day_being_checked_obj);
+                          if (!dates_scheduled_upcoming_arr.some(upcoming_day_item_cal_mod => isSameDay(upcoming_day_item_cal_mod, current_check_date_cal_mod)) &&
+                              !dates_completed_arr.some(completed_d_inner_check_cal_mod => isSameDay(completed_d_inner_check_cal_mod, current_check_date_cal_mod))) {
+                              dates_scheduled_upcoming_arr.push(current_check_date_cal_mod);
                           }
                       }
                   }
@@ -798,7 +798,6 @@ const HabitualPage: NextPage = () => {
       };
     } catch (error) {
         console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error);
-        // Return a safe, default value to prevent app crash
         return {
             completed: [],
             missed: [],
@@ -1239,3 +1238,6 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
+
+    
