@@ -46,7 +46,7 @@ import {
   AlertDialogContent,
   AlertDialogDescription as AlertDialogDescriptionEl,
   AlertDialogHeader as AlertDialogHeaderEl,
-  AlertDialogTitle as AlertTitle, // Renamed to avoid conflict
+  AlertDialogTitle as AlertTitle, 
   AlertDialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -168,7 +168,6 @@ const HabitualPage: NextPage = () => {
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-        // Don't request permission automatically here, let user do it via settings
         setNotificationPermission(Notification.permission);
       } else {
         setNotificationPermission(Notification.permission);
@@ -213,7 +212,6 @@ const HabitualPage: NextPage = () => {
       try {
         const potentiallyUnsafeHabits: any[] = JSON.parse(storedHabits_data_load);
         parsedHabits_data_load = potentiallyUnsafeHabits.map((habit_data_migration_map: any): Habit => {
-          // Robust Sanitization
           const habitId_safe = habit_data_migration_map.id || String(Date.now() + Math.random());
           const habitName_safe = habit_data_migration_map.name || 'Unnamed Habit';
 
@@ -223,7 +221,7 @@ const HabitualPage: NextPage = () => {
             if (daysOfWeek_migrated_data_load.length !== habit_data_migration_map.daysOfWeek.length) {
                 console.warn(`Sanitizing: Invalid daysOfWeek for habit '${habitName_safe}' (ID: ${habitId_safe})`, habit_data_migration_map.daysOfWeek);
             }
-          } else if (habit_data_migration_map.frequency) { // Migration from old frequency
+          } else if (habit_data_migration_map.frequency) { 
             const freqLower_migrated_data_load = habit_data_migration_map.frequency.toLowerCase();
             if (freqLower_migrated_data_load === 'daily') daysOfWeek_migrated_data_load = [...weekDays];
             else {
@@ -315,7 +313,7 @@ const HabitualPage: NextPage = () => {
         setHabits(parsedHabits_data_load);
       } catch (error_data_load) {
         console.error(`Failed to parse/sanitize habits from localStorage key ${userHabitsKey_data_load}:`, error_data_load);
-        setHabits([]); // Set to empty on error to prevent bad data propagation
+        setHabits([]); 
       }
     } else {
         console.log(`No habits found in localStorage for user ${authUser.uid}`);
@@ -538,19 +536,18 @@ const HabitualPage: NextPage = () => {
               justCompleted_toggle_complete = true;
               newCompletionLog_for_toggle_map.push({ date: date_toggle_complete, time: currentTime_for_toggle_map, status: 'completed', note: undefined });
             }
-          } else { // Un-completing
+          } else { 
             if (existingLogIndex_for_toggle_map > -1) {
               const logEntry_item_for_toggle_map = newCompletionLog_for_toggle_map[existingLogIndex_for_toggle_map];
-              if (logEntry_item_for_toggle_map.status === 'completed') { // Only deduct points if it was actually completed
+              if (logEntry_item_for_toggle_map.status === 'completed') { 
                  pointsChange_toggle_complete = -POINTS_PER_COMPLETION;
               }
-              // If it was a completed makeup task, revert to pending_makeup
               if (logEntry_item_for_toggle_map.status === 'completed' && logEntry_item_for_toggle_map.originalMissedDate) {
                 newCompletionLog_for_toggle_map[existingLogIndex_for_toggle_map] = { ...logEntry_item_for_toggle_map, status: 'pending_makeup', time: 'N/A' };
-              } else if (logEntry_item_for_toggle_map.note) { // If there's a note, mark as skipped instead of removing
+              } else if (logEntry_item_for_toggle_map.note) { 
                 newCompletionLog_for_toggle_map[existingLogIndex_for_toggle_map] = { ...logEntry_item_for_toggle_map, status: 'skipped', time: 'N/A' };
               }
-              else { // Otherwise, remove the log if it has no note and wasn't a makeup
+              else { 
                 newCompletionLog_for_toggle_map.splice(existingLogIndex_for_toggle_map, 1);
               }
             }
@@ -665,7 +662,7 @@ const HabitualPage: NextPage = () => {
                 date: date_reflection_save,
                 time: 'N/A',
                 note: note_to_save_reflection.trim() === "" ? undefined : note_to_save_reflection.trim(),
-                status: existingStatus_reflection_save || 'skipped'
+                status: existingStatus_reflection_save || 'skipped' 
              });
              newCompletionLog_for_note_save_reflection.sort((a_sort_reflection,b_sort_reflection) => b_sort_reflection.date.localeCompare(a_sort_reflection.date));
           }
@@ -694,7 +691,7 @@ const HabitualPage: NextPage = () => {
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped';
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].time = 'N/A';
             }
-        } else {
+        } else { 
             newCompletionLog_rescheduled_save.push({
                 date: originalMissedDate_rescheduled_save,
                 time: 'N/A',
@@ -772,15 +769,18 @@ const HabitualPage: NextPage = () => {
 
   // Ultra-minimal version of calendarDialogModifiers for diagnostics
   const calendarDialogModifiers = React.useMemo(() => {
+    console.log("Recalculating calendarDialogModifiers (ULTRA-MINIMAL). Habits:", habits, "Selected Date:", selectedCalendarDate);
+    // Intentional minimal access to habits to see if dependency itself is an issue
+    if (habits && habits.length > 0 && habits[0]) {
+      // console.log("Minimal check, first habit name:", habits[0].name);
+    }
     try {
-      console.log("Recalculating calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
-      // Return a very simple structure to see if the hook itself or its dependencies are the issue
       return {
-        completed: [] as Date[],
-        missed: [] as Date[],
-        scheduled: [] as Date[],
-        makeup: [] as Date[],
-        selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+        completed: [] as Date[], // Empty
+        missed: [] as Date[],    // Empty
+        scheduled: [] as Date[], // Empty
+        makeup: [] as Date[],   // Empty
+        selected: selectedCalendarDate ? [selectedCalendarDate] : [], // Keep selected logic
       };
     } catch (error) {
         console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error);
@@ -828,8 +828,8 @@ const HabitualPage: NextPage = () => {
     setInitialFormDataForDialog({
       name: suggestion_customize.name,
       category: suggestion_customize.category || 'Other',
-      description: '', // Keep description empty for tile-based suggestions
-      daysOfWeek: [], // User will define days
+      description: '', 
+      daysOfWeek: [], 
     });
     setIsCreateHabitDialogOpen(true);
   };
@@ -1041,7 +1041,7 @@ const HabitualPage: NextPage = () => {
                     mode="single"
                     selected={selectedCalendarDate}
                     onSelect={setSelectedCalendarDate}
-                    modifiers={calendarDialogModifiers} // Using the ultra-minimal version for diagnostics
+                    modifiers={calendarDialogModifiers} 
                     modifiersStyles={calendarDialogModifierStyles}
                     className="rounded-md border p-0 sm:p-2"
                     month={selectedCalendarDate || new Date()}
@@ -1060,7 +1060,7 @@ const HabitualPage: NextPage = () => {
                         const isScheduledOnSelectedDate_display_page = habit_item_for_cal_date_display_page.daysOfWeek.includes(dayOfWeekForSelectedDate_display_page);
                         let statusTextForCalDate_display_page = "Scheduled";
                         let StatusIconForCalDate_display_page = CircleIcon;
-                        let iconColorForCalDate_display_page = "text-orange-500"; // Default to orange for scheduled
+                        let iconColorForCalDate_display_page = "text-orange-500"; 
 
                         if (logEntryForCalDate_display_page?.status === 'completed') {
                             statusTextForCalDate_display_page = `Completed at ${logEntryForCalDate_display_page.time || ''}`;
@@ -1079,7 +1079,6 @@ const HabitualPage: NextPage = () => {
                             StatusIconForCalDate_display_page = XCircle;
                             iconColorForCalDate_display_page = "text-destructive";
                         } else if (!isScheduledOnSelectedDate_display_page && !logEntryForCalDate_display_page) {
-                           // If not scheduled and no log entry, don't display it in this "Habits for {date}" list
                            return null;
                         }
                         
@@ -1218,5 +1217,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
-    
