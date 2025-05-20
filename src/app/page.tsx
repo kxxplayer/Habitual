@@ -41,13 +41,13 @@ import {
   DialogHeader,
   DialogTitle,
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle as AlertTitle, 
-  AlertDialogTrigger,
+  // AlertDialogAction, // Not used, can be removed if only confirm/cancel
+  // AlertDialogCancel, // Not used, can be removed if only confirm/cancel
+  // AlertDialogContent, // Not used, can be removed if only confirm/cancel
+  // AlertDialogDescription, // Not used, can be removed if only confirm/cancel
+  // AlertDialogHeader, // Not used, can be removed if only confirm/cancel
+  // AlertDialogTitle as AlertTitle, // Renamed for Alert Dialog Title
+  // AlertDialogTrigger, // Not used directly for delete confirmation
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -723,82 +723,94 @@ const HabitualPage: NextPage = () => {
     }
   };
 
+  // Calendar Dialog Logic
+  const habitsForSelectedCalendarDate = useMemo(() => {
+    if (!selectedCalendarDate) return [];
+    const dateStr_for_cal_dialog_display = format(selectedCalendarDate, 'yyyy-MM-dd');
+    const dayOfWeek_for_cal_dialog_display = dayIndexToWeekDayConstant[getDay(selectedCalendarDate)];
+
+    return habits.filter(habit_item_for_cal_dialog => {
+      const isScheduled_for_cal_dialog = habit_item_for_cal_dialog.daysOfWeek.includes(dayOfWeek_for_cal_dialog_display);
+      const logEntry_for_cal_dialog = habit_item_for_cal_dialog.completionLog.find(log_cal_dialog => log_cal_dialog.date === dateStr_for_cal_dialog_display);
+      return isScheduled_for_cal_dialog || logEntry_for_cal_dialog; // Show if scheduled OR if there's any log entry (completed, skipped, makeup)
+    });
+  }, [selectedCalendarDate, habits]);
 
   const calendarDialogModifiers = React.useMemo(() => {
     try {
-      console.log("Recalculating calendarDialogModifiers (DEBUG). Habits:", habits, "Selected Date:", selectedCalendarDate);
+      console.log("Recalculating calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate); // MINIMAL DEBUG LOG
       const dates_completed_arr: Date[] = [];
       const dates_scheduled_missed_arr: Date[] = [];
       const dates_scheduled_upcoming_arr: Date[] = [];
       const dates_makeup_pending_arr: Date[] = [];
       const today_date_obj = startOfDay(new Date());
 
-      habits.forEach(habit_item_for_cal_modifiers => {
-          habit_item_for_cal_modifiers.completionLog.forEach(log_entry_for_cal_modifiers => {
-              if (typeof log_entry_for_cal_modifiers.date === 'string' && log_entry_for_cal_modifiers.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                  try {
-                      const logDate_obj_for_cal_mod = parseISO(log_entry_for_cal_modifiers.date);
-                      if (log_entry_for_cal_modifiers.status === 'completed') {
-                          dates_completed_arr.push(logDate_obj_for_cal_mod);
-                      } else if (log_entry_for_cal_modifiers.status === 'pending_makeup') {
-                          dates_makeup_pending_arr.push(logDate_obj_for_cal_mod);
-                      }
-                  } catch (e_parse_log_cal_mod) {
-                      console.error("Error parsing log date for calendar modifiers:", log_entry_for_cal_modifiers.date, e_parse_log_cal_mod);
-                  }
-              } else {
-                  console.warn("Invalid or missing date in log entry for habit:", habit_item_for_cal_modifiers.name, log_entry_for_cal_modifiers);
+      habits.forEach(habit_item_for_modifiers => {
+        habit_item_for_modifiers.completionLog.forEach(log_entry_for_modifiers => {
+          if (typeof log_entry_for_modifiers.date === 'string' && log_entry_for_modifiers.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            try {
+              const logDate_obj = parseISO(log_entry_for_modifiers.date);
+              if (log_entry_for_modifiers.status === 'completed') {
+                dates_completed_arr.push(logDate_obj);
+              } else if (log_entry_for_modifiers.status === 'pending_makeup') {
+                dates_makeup_pending_arr.push(logDate_obj);
               }
-          });
-
-          const iteration_limit_cal_mod = 60;
-          for (let day_offset_cal_mod = 0; day_offset_cal_mod < iteration_limit_cal_mod; day_offset_cal_mod++) {
-              const pastDateToConsider_obj_cal_mod = subDays(today_date_obj, day_offset_cal_mod);
-              const futureDateToConsider_obj_cal_mod = dateFnsAddDays(today_date_obj, day_offset_cal_mod);
-
-              [pastDateToConsider_obj_cal_mod, futureDateToConsider_obj_cal_mod].forEach(current_check_date_cal_mod => {
-                  if (isSameDay(current_check_date_cal_mod, today_date_obj) && day_offset_cal_mod !== 0 && current_check_date_cal_mod !== pastDateToConsider_obj_cal_mod) return;
-
-                  const dateStrToMatch_str_cal_mod = format(current_check_date_cal_mod, 'yyyy-MM-dd');
-                  const dayOfWeekForDate_val_cal_mod = dayIndexToWeekDayConstant[getDay(current_check_date_cal_mod)];
-                  const isScheduledOnThisDay_bool_cal_mod = habit_item_for_cal_modifiers.daysOfWeek.includes(dayOfWeekForDate_val_cal_mod);
-                  const logEntryForThisDay_obj_cal_mod = habit_item_for_cal_modifiers.completionLog.find(log_find_item_cal_mod => log_find_item_cal_mod.date === dateStrToMatch_str_cal_mod);
-
-                  if (isScheduledOnThisDay_bool_cal_mod && !logEntryForThisDay_obj_cal_mod) {
-                      if (current_check_date_cal_mod < today_date_obj && !isSameDay(current_check_date_cal_mod, today_date_obj)) {
-                          if (!dates_scheduled_missed_arr.some(missed_day_item_cal_mod => isSameDay(missed_day_item_cal_mod, current_check_date_cal_mod))) {
-                              dates_scheduled_missed_arr.push(current_check_date_cal_mod);
-                          }
-                      } else {
-                          if (!dates_scheduled_upcoming_arr.some(upcoming_day_item_cal_mod => isSameDay(upcoming_day_item_cal_mod, current_check_date_cal_mod)) &&
-                              !dates_completed_arr.some(completed_d_inner_check_cal_mod => isSameDay(completed_d_inner_check_cal_mod, current_check_date_cal_mod))) {
-                              dates_scheduled_upcoming_arr.push(current_check_date_cal_mod);
-                          }
-                      }
-                  }
-              });
+            } catch (e_parse_log) {
+              console.error("Error parsing log date for calendar modifiers:", log_entry_for_modifiers.date, e_parse_log);
+            }
+          } else {
+            console.warn("Invalid or missing date in log entry for habit:", habit_item_for_modifiers.name, log_entry_for_modifiers);
           }
+        });
+
+        const iteration_limit = 60;
+        for (let day_offset = 0; day_offset < iteration_limit; day_offset++) {
+          const pastDateToConsider_obj = subDays(today_date_obj, day_offset);
+          const futureDateToConsider_obj = dateFnsAddDays(today_date_obj, day_offset);
+
+          [pastDateToConsider_obj, futureDateToConsider_obj].forEach(current_day_being_checked_obj => {
+            if (isSameDay(current_day_being_checked_obj, today_date_obj) && day_offset !== 0 && current_day_being_checked_obj !== pastDateToConsider_obj) return;
+
+            const dateStrToMatch_str = format(current_day_being_checked_obj, 'yyyy-MM-dd');
+            const dayOfWeekForDate_val = dayIndexToWeekDayConstant[getDay(current_day_being_checked_obj)];
+            const isScheduledOnThisDay_bool = habit_item_for_modifiers.daysOfWeek.includes(dayOfWeekForDate_val);
+            const logEntryForThisDay_obj = habit_item_for_modifiers.completionLog.find(log_find_item => log_find_item.date === dateStrToMatch_str);
+
+            if (isScheduledOnThisDay_bool && !logEntryForThisDay_obj) {
+              if (current_day_being_checked_obj < today_date_obj && !isSameDay(current_day_being_checked_obj, today_date_obj)) {
+                if (!dates_scheduled_missed_arr.some(missed_day_item => isSameDay(missed_day_item, current_day_being_checked_obj))) {
+                  dates_scheduled_missed_arr.push(current_day_being_checked_obj);
+                }
+              } else {
+                if (!dates_scheduled_upcoming_arr.some(upcoming_day_item => isSameDay(upcoming_day_item, current_day_being_checked_obj)) &&
+                    !dates_completed_arr.some(completed_day_item_for_check => isSameDay(completed_day_item_for_check, current_day_being_checked_obj))) {
+                  dates_scheduled_upcoming_arr.push(current_day_being_checked_obj);
+                }
+              }
+            }
+          });
+        }
       });
 
       const finalScheduledUpcoming_arr = dates_scheduled_upcoming_arr.filter(s_date_upcoming_for_final_filter =>
-          !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
-          !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
+        !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
+        !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
       );
       const finalScheduledMissed_arr = dates_scheduled_missed_arr.filter(s_date_missed_for_final_filter =>
-          !dates_completed_arr.some(comp_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, comp_date_for_final_filter_missed)) &&
-          !dates_makeup_pending_arr.some(makeup_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, makeup_date_for_final_filter_missed))
+        !dates_completed_arr.some(comp_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, comp_date_for_final_filter_missed)) &&
+        !dates_makeup_pending_arr.some(makeup_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, makeup_date_for_final_filter_missed))
       );
 
       return {
-          completed: dates_completed_arr,
-          missed: finalScheduledMissed_arr,
-          scheduled: finalScheduledUpcoming_arr,
-          makeup: dates_makeup_pending_arr,
-          selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+        completed: dates_completed_arr,
+        missed: finalScheduledMissed_arr,
+        scheduled: finalScheduledUpcoming_arr,
+        makeup: dates_makeup_pending_arr,
+        selected: selectedCalendarDate ? [selectedCalendarDate] : [],
       };
-    } catch (error) {
-        console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error);
-        return {
+    } catch (error_in_calendar_modifiers) {
+        console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error_in_calendar_modifiers);
+        return { // Fallback to prevent app crash
             completed: [],
             missed: [],
             scheduled: [],
@@ -813,21 +825,9 @@ const HabitualPage: NextPage = () => {
     completed: { backgroundColor: 'hsl(var(--accent)/0.15)', color: 'hsl(var(--accent))', fontWeight: 'bold' },
     missed: { backgroundColor: 'hsl(var(--destructive)/0.1)', color: 'hsl(var(--destructive))' },
     scheduled: { backgroundColor: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))' },
-    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15)', color: 'hsl(200,100%,50%)' },
+    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15', color: 'hsl(200,100%,50%)' },
     selected: { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
   };
-
-  const habitsForSelectedCalendarDate = React.useMemo(() => {
-    if (!selectedCalendarDate) return [];
-    const dateStrToCompare = format(selectedCalendarDate, 'yyyy-MM-dd');
-    const dayOfWeekForDate = dayIndexToWeekDayConstant[getDay(selectedCalendarDate)];
-
-    return habits.filter(habit_instance_cal => {
-      const isScheduledForDay = habit_instance_cal.daysOfWeek.includes(dayOfWeekForDate);
-      const logEntryForDay = habit_instance_cal.completionLog.find(log_item_cal => log_item_cal.date === dateStrToCompare);
-      return isScheduledForDay || logEntryForDay;
-    });
-  }, [selectedCalendarDate, habits]);
 
 
   const sheetMenuItems = [
@@ -873,6 +873,8 @@ const HabitualPage: NextPage = () => {
   }
 
   if (!authUser) {
+    // This case should ideally be handled by the redirect in the authUser effect,
+    // but it's a fallback.
     return (
        <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -1068,7 +1070,7 @@ const HabitualPage: NextPage = () => {
                     mode="single"
                     selected={selectedCalendarDate}
                     onSelect={setSelectedCalendarDate}
-                    modifiers={calendarDialogModifiers}
+                    // modifiers={calendarDialogModifiers} // MINIMAL DEBUG: Commented out
                     modifiersStyles={calendarDialogModifierStyles}
                     className="rounded-md border p-0 sm:p-2"
                     month={selectedCalendarDate || new Date()}
@@ -1238,6 +1240,5 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
 
     
