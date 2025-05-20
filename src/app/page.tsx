@@ -18,7 +18,7 @@ import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHab
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
 import HabitOverview from '@/components/overview/HabitOverview';
 import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit } from '@/types';
-import { THREE_DAY_SQL_STREAK_BADGE_ID, HABIT_CATEGORIES } from '@/types';
+import { THREE_DAY_SQL_STREAK_BADGE_ID, HABIT_CATEGORIES, SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID } from '@/types';
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
@@ -46,7 +46,7 @@ import {
   AlertDialogContent,
   AlertDialogDescription as AlertDialogDescriptionEl,
   AlertDialogHeader as AlertDialogHeaderEl,
-  AlertDialogTitle as AlertTitle,
+  AlertDialogTitle as AlertTitle, // Renamed to avoid conflict
   AlertDialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -168,6 +168,7 @@ const HabitualPage: NextPage = () => {
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        // Don't request permission automatically here, let user do it via settings
         setNotificationPermission(Notification.permission);
       } else {
         setNotificationPermission(Notification.permission);
@@ -210,9 +211,19 @@ const HabitualPage: NextPage = () => {
 
     if (storedHabits_data_load) {
       try {
-        parsedHabits_data_load = JSON.parse(storedHabits_data_load).map((habit_data_migration_map: any) => {
-          let daysOfWeek_migrated_data_load: WeekDay[] = habit_data_migration_map.daysOfWeek || [];
-          if (!habit_data_migration_map.daysOfWeek && habit_data_migration_map.frequency) {
+        const potentiallyUnsafeHabits: any[] = JSON.parse(storedHabits_data_load);
+        parsedHabits_data_load = potentiallyUnsafeHabits.map((habit_data_migration_map: any): Habit => {
+          // Robust Sanitization
+          const habitId_safe = habit_data_migration_map.id || String(Date.now() + Math.random());
+          const habitName_safe = habit_data_migration_map.name || 'Unnamed Habit';
+
+          let daysOfWeek_migrated_data_load: WeekDay[] = [];
+          if (Array.isArray(habit_data_migration_map.daysOfWeek)) {
+            daysOfWeek_migrated_data_load = habit_data_migration_map.daysOfWeek.filter((d: any) => weekDays.includes(d as WeekDay));
+            if (daysOfWeek_migrated_data_load.length !== habit_data_migration_map.daysOfWeek.length) {
+                console.warn(`Sanitizing: Invalid daysOfWeek for habit '${habitName_safe}' (ID: ${habitId_safe})`, habit_data_migration_map.daysOfWeek);
+            }
+          } else if (habit_data_migration_map.frequency) { // Migration from old frequency
             const freqLower_migrated_data_load = habit_data_migration_map.frequency.toLowerCase();
             if (freqLower_migrated_data_load === 'daily') daysOfWeek_migrated_data_load = [...weekDays];
             else {
@@ -226,8 +237,8 @@ const HabitualPage: NextPage = () => {
             }
           }
 
-          let migratedDurationHours_val_data_load: number | undefined = habit_data_migration_map.durationHours;
-          let migratedDurationMinutes_val_data_load: number | undefined = habit_data_migration_map.durationMinutes;
+          let migratedDurationHours_val_data_load: number | undefined = typeof habit_data_migration_map.durationHours === 'number' ? habit_data_migration_map.durationHours : undefined;
+          let migratedDurationMinutes_val_data_load: number | undefined = typeof habit_data_migration_map.durationMinutes === 'number' ? habit_data_migration_map.durationMinutes : undefined;
 
           if (habit_data_migration_map.duration && typeof habit_data_migration_map.duration === 'string' && migratedDurationHours_val_data_load === undefined && migratedDurationMinutes_val_data_load === undefined) {
             const durationStr_migrated_data_load = habit_data_migration_map.duration.toLowerCase();
@@ -241,52 +252,70 @@ const HabitualPage: NextPage = () => {
             }
           }
 
-          let migratedSpecificTime_val_data_load = habit_data_migration_map.specificTime;
-          if (migratedSpecificTime_val_data_load && /\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime_val_data_load)) {
-            try {
-              const [timePart_migrated_data_load, modifierPart_migrated_data_load] = migratedSpecificTime_val_data_load.split(/\s+/);
-              const [hoursStr_migrated_data_load, minutesStr_migrated_data_load] = timePart_migrated_data_load.split(':');
-              let hours_migrated_data_load = parseInt(hoursStr_migrated_data_load, 10);
-              const minutes_migrated_data_load = parseInt(minutesStr_migrated_data_load, 10);
-              const modifier_migrated_data_load = modifierPart_migrated_data_load ? modifierPart_migrated_data_load.toLowerCase() : '';
-              if (modifier_migrated_data_load === 'pm' && hours_migrated_data_load < 12) hours_migrated_data_load += 12;
-              if (modifier_migrated_data_load === 'am' && hours_migrated_data_load === 12) hours_migrated_data_load = 0; // Midnight case
-              migratedSpecificTime_val_data_load = `${String(hours_migrated_data_load).padStart(2, '0')}:${String(minutes_migrated_data_load).padStart(2, '0')}`;
-            } catch (e_time_parse_data_load) { console.warn("Error parsing 12hr time during migration", e_time_parse_data_load) }
-          } else if (migratedSpecificTime_val_data_load && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime_val_data_load)) {
-             const [hours_num_migrated_data_load, minutes_num_migrated_data_load] = migratedSpecificTime_val_data_load.split(':').map(Number);
-             migratedSpecificTime_val_data_load = `${String(hours_num_migrated_data_load).padStart(2, '0')}:${String(minutes_num_migrated_data_load).padStart(2, '0')}`;
+          let migratedSpecificTime_val_data_load = habit_data_migration_map.specificTime || undefined;
+          if (migratedSpecificTime_val_data_load && typeof migratedSpecificTime_val_data_load === 'string') {
+              if (/\d{1,2}:\d{2}\s*(am|pm)/i.test(migratedSpecificTime_val_data_load)) {
+                try {
+                  const [timePart_migrated_data_load, modifierPart_migrated_data_load] = migratedSpecificTime_val_data_load.split(/\s+/);
+                  const [hoursStr_migrated_data_load, minutesStr_migrated_data_load] = timePart_migrated_data_load.split(':');
+                  let hours_migrated_data_load = parseInt(hoursStr_migrated_data_load, 10);
+                  const minutes_migrated_data_load = parseInt(minutesStr_migrated_data_load, 10);
+                  const modifier_migrated_data_load = modifierPart_migrated_data_load ? modifierPart_migrated_data_load.toLowerCase() : '';
+                  if (modifier_migrated_data_load === 'pm' && hours_migrated_data_load < 12) hours_migrated_data_load += 12;
+                  if (modifier_migrated_data_load === 'am' && hours_migrated_data_load === 12) hours_migrated_data_load = 0;
+                  migratedSpecificTime_val_data_load = `${String(hours_migrated_data_load).padStart(2, '0')}:${String(minutes_migrated_data_load).padStart(2, '0')}`;
+                } catch (e_time_parse_data_load) { console.warn("Error parsing 12hr time during migration for habit:", habitName_safe, e_time_parse_data_load); migratedSpecificTime_val_data_load = undefined; }
+              } else if (/^\d{1,2}:\d{2}$/.test(migratedSpecificTime_val_data_load)) {
+                 const [hours_num_migrated_data_load, minutes_num_migrated_data_load] = migratedSpecificTime_val_data_load.split(':').map(Number);
+                 migratedSpecificTime_val_data_load = `${String(hours_num_migrated_data_load).padStart(2, '0')}:${String(minutes_num_migrated_data_load).padStart(2, '0')}`;
+              } else if (migratedSpecificTime_val_data_load.toLowerCase() === 'anytime' || migratedSpecificTime_val_data_load.toLowerCase() === 'flexible') {
+                migratedSpecificTime_val_data_load = undefined;
+              }
+          } else {
+             migratedSpecificTime_val_data_load = undefined;
           }
 
-
-          const migratedCompletionLog_arr_data_load = (habit_data_migration_map.completionLog || (habit_data_migration_map.completedDates
-              ? habit_data_migration_map.completedDates.map((d_log_data_load: string) => ({ date: d_log_data_load, time: 'N/A', note: undefined, status: 'completed' }))
-              : [])).map((log_item_migrated_data_load: any) => ({
-                date: typeof log_item_migrated_data_load.date === 'string' && log_item_migrated_data_load.date.match(/^\d{4}-\d{2}-\d{2}$/) ? log_item_migrated_data_load.date : '1970-01-01',
-                time: log_item_migrated_data_load.time || 'N/A',
-                note: log_item_migrated_data_load.note || undefined,
-                status: log_item_migrated_data_load.status || 'completed',
-                originalMissedDate: log_item_migrated_data_load.originalMissedDate || undefined,
-              }));
+          const migratedCompletionLog_arr_data_load: HabitCompletionLogEntry[] = (habit_data_migration_map.completionLog || (habit_data_migration_map.completedDates
+              ? habit_data_migration_map.completedDates.map((d_log_data_load: any) => ({ date: typeof d_log_data_load === 'string' && d_log_data_load.match(/^\d{4}-\d{2}-\d{2}$/) ? d_log_data_load : '1970-01-01', time: 'N/A', note: undefined, status: 'completed' }))
+              : [])).filter((log_item_migrated_data_load: any) => {
+                if (typeof log_item_migrated_data_load.date !== 'string' || !log_item_migrated_data_load.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                  console.warn(`Sanitizing: Filtering out completionLog entry with invalid date for habit '${habitName_safe}' (ID: ${habitId_safe}):`, log_item_migrated_data_load);
+                  return false;
+                }
+                return true;
+              }).map((log_item_migrated_data_load: any) => {
+                  let status_safe = log_item_migrated_data_load.status || 'completed';
+                  if (!['completed', 'pending_makeup', 'skipped'].includes(status_safe)) {
+                      console.warn(`Sanitizing: Invalid status '${status_safe}' in log for habit '${habitName_safe}'. Defaulting to 'completed'.`, log_item_migrated_data_load);
+                      status_safe = 'completed';
+                  }
+                  return {
+                    date: log_item_migrated_data_load.date,
+                    time: log_item_migrated_data_load.time || 'N/A',
+                    note: log_item_migrated_data_load.note || undefined,
+                    status: status_safe as 'completed' | 'pending_makeup' | 'skipped',
+                    originalMissedDate: (typeof log_item_migrated_data_load.originalMissedDate === 'string' && log_item_migrated_data_load.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/)) ? log_item_migrated_data_load.originalMissedDate : undefined,
+                  };
+              });
 
           return {
-            id: habit_data_migration_map.id || Date.now().toString() + Math.random().toString(36).substring(2,7),
-            name: habit_data_migration_map.name || 'Unnamed Habit',
+            id: habitId_safe,
+            name: habitName_safe,
             description: habit_data_migration_map.description || undefined,
             category: habit_data_migration_map.category && HABIT_CATEGORIES.includes(habit_data_migration_map.category as HabitCategory) ? habit_data_migration_map.category : 'Other',
             daysOfWeek: daysOfWeek_migrated_data_load,
             optimalTiming: habit_data_migration_map.optimalTiming || undefined,
             durationHours: migratedDurationHours_val_data_load,
             durationMinutes: migratedDurationMinutes_val_data_load,
-            specificTime: migratedSpecificTime_val_data_load || undefined,
-            completionLog: migratedCompletionLog_arr_data_load as HabitCompletionLogEntry[],
-            reminderEnabled: habit_data_migration_map.reminderEnabled === undefined ? false : habit_data_migration_map.reminderEnabled,
+            specificTime: migratedSpecificTime_val_data_load,
+            completionLog: migratedCompletionLog_arr_data_load,
+            reminderEnabled: habit_data_migration_map.reminderEnabled === undefined ? false : !!habit_data_migration_map.reminderEnabled,
           };
         });
         setHabits(parsedHabits_data_load);
       } catch (error_data_load) {
-        console.error(`Failed to parse habits from localStorage key ${userHabitsKey_data_load}:`, error_data_load);
-        setHabits([]);
+        console.error(`Failed to parse/sanitize habits from localStorage key ${userHabitsKey_data_load}:`, error_data_load);
+        setHabits([]); // Set to empty on error to prevent bad data propagation
       }
     } else {
         console.log(`No habits found in localStorage for user ${authUser.uid}`);
@@ -311,7 +340,7 @@ const HabitualPage: NextPage = () => {
         });
     } else if (parsedHabits_data_load.length > 0) {
         console.log("User has existing habits, not fetching common suggestions.");
-        if (commonHabitSuggestions.length > 0) setCommonHabitSuggestions([]); // Clear if any were present
+        if (commonHabitSuggestions.length > 0) setCommonHabitSuggestions([]);
         setCommonSuggestionsFetched(true);
     }
 
@@ -343,7 +372,7 @@ const HabitualPage: NextPage = () => {
     }
     setIsLoadingHabits(false);
     console.log(`Data loading complete for user ${authUser.uid}. Habits loaded: ${parsedHabits_data_load.length}`);
-  }, [authUser, isLoadingAuth, router]); // Removed commonSuggestionsFetched from here as it's managed internally
+  }, [authUser, isLoadingAuth, router]);
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -447,7 +476,7 @@ const HabitualPage: NextPage = () => {
       console.log(`Habit Updated for user ${authUser?.uid}: ${habitData_save.name}`);
     } else {
       const newHabit_save: Habit = {
-        id: Date.now().toString() + Math.random().toString(36).substring(2,7),
+        id: String(Date.now() + Math.random()),
         name: habitData_save.name,
         description: habitData_save.description,
         category: habitData_save.category || 'Other',
@@ -509,18 +538,19 @@ const HabitualPage: NextPage = () => {
               justCompleted_toggle_complete = true;
               newCompletionLog_for_toggle_map.push({ date: date_toggle_complete, time: currentTime_for_toggle_map, status: 'completed', note: undefined });
             }
-          } else {
+          } else { // Un-completing
             if (existingLogIndex_for_toggle_map > -1) {
               const logEntry_item_for_toggle_map = newCompletionLog_for_toggle_map[existingLogIndex_for_toggle_map];
-              if (logEntry_item_for_toggle_map.status === 'completed') {
+              if (logEntry_item_for_toggle_map.status === 'completed') { // Only deduct points if it was actually completed
                  pointsChange_toggle_complete = -POINTS_PER_COMPLETION;
               }
+              // If it was a completed makeup task, revert to pending_makeup
               if (logEntry_item_for_toggle_map.status === 'completed' && logEntry_item_for_toggle_map.originalMissedDate) {
                 newCompletionLog_for_toggle_map[existingLogIndex_for_toggle_map] = { ...logEntry_item_for_toggle_map, status: 'pending_makeup', time: 'N/A' };
-              } else if (logEntry_item_for_toggle_map.note) {
+              } else if (logEntry_item_for_toggle_map.note) { // If there's a note, mark as skipped instead of removing
                 newCompletionLog_for_toggle_map[existingLogIndex_for_toggle_map] = { ...logEntry_item_for_toggle_map, status: 'skipped', time: 'N/A' };
               }
-              else {
+              else { // Otherwise, remove the log if it has no note and wasn't a makeup
                 newCompletionLog_for_toggle_map.splice(existingLogIndex_for_toggle_map, 1);
               }
             }
@@ -596,7 +626,7 @@ const HabitualPage: NextPage = () => {
         habitId: habit_for_ai_open.id,
         suggestionText: '',
         isLoading: false,
-        error: 'Failed to get suggestion.'
+        error: 'Failed to get AI suggestion.'
       });
       console.error(`AI Suggestion Error for user ${authUser?.uid}: Could not fetch suggestion.`);
     }
@@ -635,7 +665,7 @@ const HabitualPage: NextPage = () => {
                 date: date_reflection_save,
                 time: 'N/A',
                 note: note_to_save_reflection.trim() === "" ? undefined : note_to_save_reflection.trim(),
-                status: existingStatus_reflection_save || 'skipped' // Default to skipped if adding a note to an uncompleted day
+                status: existingStatus_reflection_save || 'skipped'
              });
              newCompletionLog_for_note_save_reflection.sort((a_sort_reflection,b_sort_reflection) => b_sort_reflection.date.localeCompare(a_sort_reflection.date));
           }
@@ -660,11 +690,11 @@ const HabitualPage: NextPage = () => {
         const existingMissedLogIndex_rescheduled_save = newCompletionLog_rescheduled_save.findIndex(log_rescheduled_find_save => log_rescheduled_find_save.date === originalMissedDate_rescheduled_save);
 
         if(existingMissedLogIndex_rescheduled_save > -1) {
-            if (newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status !== 'completed') { // Only change if not already completed
+            if (newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status !== 'completed') {
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped';
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].time = 'N/A';
             }
-        } else { // If no log entry exists for the original missed date, add a skipped one
+        } else {
             newCompletionLog_rescheduled_save.push({
                 date: originalMissedDate_rescheduled_save,
                 time: 'N/A',
@@ -740,23 +770,28 @@ const HabitualPage: NextPage = () => {
     }
   }, [selectedCalendarDate, habits]);
 
-
-  // ULTRA-MINIMAL version for debugging "cDate is not defined" on Vercel
+  // Ultra-minimal version of calendarDialogModifiers for diagnostics
   const calendarDialogModifiers = React.useMemo(() => {
-    console.log("MINIMAL calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
-    // If habits array exists and has items, log the first one to see structure.
-    // This is a minimal access to 'habits' to ensure React considers it "used"
-    // if there's a very strange dependency array issue.
-    if (habits && habits.length > 0) {
-      // console.log("First habit for dependency check:", habits[0]);
+    try {
+      console.log("Recalculating calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
+      // Return a very simple structure to see if the hook itself or its dependencies are the issue
+      return {
+        completed: [] as Date[],
+        missed: [] as Date[],
+        scheduled: [] as Date[],
+        makeup: [] as Date[],
+        selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+      };
+    } catch (error) {
+        console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error);
+        return {
+            completed: [],
+            missed: [],
+            scheduled: [],
+            makeup: [],
+            selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+        };
     }
-    return {
-      completed: [],
-      missed: [],
-      scheduled: [],
-      makeup: [],
-      selected: selectedCalendarDate ? [selectedCalendarDate] : [],
-    };
   }, [habits, selectedCalendarDate]);
 
 
@@ -789,12 +824,12 @@ const HabitualPage: NextPage = () => {
   ];
 
   const handleCustomizeSuggestedHabit = (suggestion_customize: SuggestedHabit) => {
-    setEditingHabit(null); // Ensure not in edit mode
+    setEditingHabit(null);
     setInitialFormDataForDialog({
       name: suggestion_customize.name,
       category: suggestion_customize.category || 'Other',
-      description: '',
-      daysOfWeek: [],
+      description: '', // Keep description empty for tile-based suggestions
+      daysOfWeek: [], // User will define days
     });
     setIsCreateHabitDialogOpen(true);
   };
@@ -921,7 +956,7 @@ const HabitualPage: NextPage = () => {
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null); // Clear initial data on close
+            setInitialFormDataForDialog(null);
             setEditingHabit(null);
         }}
         onSaveHabit={handleSaveHabit}
@@ -1006,7 +1041,7 @@ const HabitualPage: NextPage = () => {
                     mode="single"
                     selected={selectedCalendarDate}
                     onSelect={setSelectedCalendarDate}
-                    modifiers={calendarDialogModifiers} // Using the simplified version
+                    modifiers={calendarDialogModifiers} // Using the ultra-minimal version for diagnostics
                     modifiersStyles={calendarDialogModifierStyles}
                     className="rounded-md border p-0 sm:p-2"
                     month={selectedCalendarDate || new Date()}
@@ -1025,7 +1060,7 @@ const HabitualPage: NextPage = () => {
                         const isScheduledOnSelectedDate_display_page = habit_item_for_cal_date_display_page.daysOfWeek.includes(dayOfWeekForSelectedDate_display_page);
                         let statusTextForCalDate_display_page = "Scheduled";
                         let StatusIconForCalDate_display_page = CircleIcon;
-                        let iconColorForCalDate_display_page = "text-orange-500";
+                        let iconColorForCalDate_display_page = "text-orange-500"; // Default to orange for scheduled
 
                         if (logEntryForCalDate_display_page?.status === 'completed') {
                             statusTextForCalDate_display_page = `Completed at ${logEntryForCalDate_display_page.time || ''}`;
@@ -1044,10 +1079,10 @@ const HabitualPage: NextPage = () => {
                             StatusIconForCalDate_display_page = XCircle;
                             iconColorForCalDate_display_page = "text-destructive";
                         } else if (!isScheduledOnSelectedDate_display_page && !logEntryForCalDate_display_page) {
+                           // If not scheduled and no log entry, don't display it in this "Habits for {date}" list
                            return null;
                         }
-
-
+                        
                         return (
                             <li key={habit_item_for_cal_date_display_page.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
                             <span className="font-medium truncate pr-2">{habit_item_for_cal_date_display_page.name}</span>
@@ -1139,8 +1174,6 @@ const HabitualPage: NextPage = () => {
                   className="w-full justify-start text-base py-3"
                   onClick={() => {
                     item_menu_sheet_page.action();
-                    // Close sheet unless it's Reminders (which manages its own interaction)
-                    // or Calendar/Achievements which open dialogs and close the sheet via their action.
                     if (item_menu_sheet_page.label !== 'Reminders' && 
                         item_menu_sheet_page.label !== 'Calendar' && 
                         item_menu_sheet_page.label !== 'Achievements') {
