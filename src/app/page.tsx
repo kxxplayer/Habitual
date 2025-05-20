@@ -656,11 +656,11 @@ const HabitualPage: NextPage = () => {
         const existingMissedLogIndex_rescheduled_save = newCompletionLog_rescheduled_save.findIndex(log_rescheduled_find_save => log_rescheduled_find_save.date === originalMissedDate_rescheduled_save);
 
         if(existingMissedLogIndex_rescheduled_save > -1) {
-            if (newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status !== 'completed') {
+            if (newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status !== 'completed') { // Only change if not already completed
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped';
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].time = 'N/A';
             }
-        } else {
+        } else { // If no log entry exists for the original missed date, add a skipped one
             newCompletionLog_rescheduled_save.push({
                 date: originalMissedDate_rescheduled_save,
                 time: 'N/A',
@@ -764,12 +764,14 @@ const HabitualPage: NextPage = () => {
             });
 
             const today_date_obj_loop = startOfDay(new Date());
-            const iteration_limit_loop = 60;
+            const iteration_limit_loop = 60; // Look back/forward 60 days
             for (let day_offset_loop = 0; day_offset_loop < iteration_limit_loop; day_offset_loop++) {
                 const pastDateToConsider_obj_loop = subDays(today_date_obj_loop, day_offset_loop);
                 const futureDateToConsider_obj_loop = dateFnsAddDays(today_date_obj_loop, day_offset_loop);
 
+                // Process both past and future dates, but ensure today is processed only once if day_offset_loop is 0
                 [pastDateToConsider_obj_loop, futureDateToConsider_obj_loop].forEach(current_day_being_checked_obj => {
+                    // Skip duplicate processing of today if futureDate is same as pastDate (when day_offset_loop is 0)
                     if (isSameDay(current_day_being_checked_obj, today_date_obj_loop) && day_offset_loop !== 0 && current_day_being_checked_obj !== pastDateToConsider_obj_loop) return;
 
                     const dateStrToMatch_str_loop = format(current_day_being_checked_obj, 'yyyy-MM-dd');
@@ -777,12 +779,12 @@ const HabitualPage: NextPage = () => {
                     const isScheduledOnThisDay_bool_loop = habit_item_for_modifiers_loop.daysOfWeek.includes(dayOfWeekForDate_val_loop);
                     const logEntryForThisDay_obj_loop = habit_item_for_modifiers_loop.completionLog.find(log_find_item_loop => log_find_item_loop.date === dateStrToMatch_str_loop);
 
-                    if (isScheduledOnThisDay_bool_loop && !logEntryForThisDay_obj_loop) {
-                        if (dateFnsIsPast(current_day_being_checked_obj) && !isSameDay(current_day_being_checked_obj, today_date_obj_loop)) {
+                    if (isScheduledOnThisDay_bool_loop && !logEntryForThisDay_obj_loop) { // Scheduled but no log entry
+                        if (dateFnsIsPast(current_day_being_checked_obj) && !isSameDay(current_day_being_checked_obj, today_date_obj_loop)) { // Past date (not today)
                             if (!dates_scheduled_missed_arr.some(missed_day_item_loop => isSameDay(missed_day_item_loop, current_day_being_checked_obj))) {
                                 dates_scheduled_missed_arr.push(current_day_being_checked_obj);
                             }
-                        } else {
+                        } else { // Today or future date
                             if (!dates_scheduled_upcoming_arr.some(upcoming_day_item_loop => isSameDay(upcoming_day_item_loop, current_day_being_checked_obj)) &&
                                 !dates_completed_arr.some(completed_day_item_for_check_loop => isSameDay(completed_day_item_for_check_loop, current_day_being_checked_obj))) {
                                 dates_scheduled_upcoming_arr.push(current_day_being_checked_obj);
@@ -793,6 +795,7 @@ const HabitualPage: NextPage = () => {
             }
         });
 
+        // Filter out days from scheduled arrays if they are now in completed or makeup pending
         const finalScheduledUpcoming_arr = dates_scheduled_upcoming_arr.filter(s_date_upcoming_for_final_filter =>
             !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
             !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
@@ -826,7 +829,7 @@ const HabitualPage: NextPage = () => {
     completed: { backgroundColor: 'hsl(var(--accent)/0.15)', color: 'hsl(var(--accent))', fontWeight: 'bold' },
     missed: { backgroundColor: 'hsl(var(--destructive)/0.1)', color: 'hsl(var(--destructive))' },
     scheduled: { backgroundColor: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))' },
-    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15', color: 'hsl(200,100%,50%)' },
+    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15)', color: 'hsl(200,100%,50%)' },
     selected: { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
   };
 
@@ -1087,7 +1090,7 @@ const HabitualPage: NextPage = () => {
                         const isScheduledOnSelectedDate_display_page = habit_item_for_cal_date_display_page.daysOfWeek.includes(dayOfWeekForSelectedDate_display_page);
                         let statusTextForCalDate_display_page = "Scheduled";
                         let StatusIconForCalDate_display_page = CircleIcon;
-                        let iconColorForCalDate_display_page = "text-orange-500";
+                        let iconColorForCalDate_display_page = "text-orange-500"; // Default for scheduled
 
                         if (logEntryForCalDate_display_page?.status === 'completed') {
                             statusTextForCalDate_display_page = `Completed at ${logEntryForCalDate_display_page.time || ''}`;
@@ -1106,11 +1109,11 @@ const HabitualPage: NextPage = () => {
                             StatusIconForCalDate_display_page = XCircle;
                             iconColorForCalDate_display_page = "text-destructive";
                         } else if (!isScheduledOnSelectedDate_display_page && !logEntryForCalDate_display_page) {
-                            statusTextForCalDate_display_page = "Not Scheduled";
-                            StatusIconForCalDate_display_page = CircleIcon;
-                            iconColorForCalDate_display_page = "text-muted-foreground/50";
+                           // If not scheduled and no log, don't show an entry or show "Not Scheduled"
+                           // This part might need adjustment based on desired behavior for non-scheduled, non-logged days
+                           return null; // Or some "Not Scheduled" UI
                         }
-                        
+                        // If it's scheduled and today/future, it remains "Scheduled" (orange)
 
                         return (
                             <li key={habit_item_for_cal_date_display_page.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
@@ -1246,6 +1249,4 @@ const HabitualPage: NextPage = () => {
 
 export default HabitualPage;
 
-
-    
     
