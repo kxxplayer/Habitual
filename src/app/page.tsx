@@ -46,7 +46,7 @@ import {
   AlertDialogContent,
   AlertDialogDescription as AlertDialogDescriptionEl,
   AlertDialogHeader as AlertDialogHeaderEl,
-  AlertDialogTitle as AlertTitle, // Renamed to avoid conflict
+  AlertDialogTitle as AlertTitle,
   AlertDialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -168,7 +168,7 @@ const HabitualPage: NextPage = () => {
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-        setNotificationPermission(Notification.permission); 
+        setNotificationPermission(Notification.permission);
       } else {
         setNotificationPermission(Notification.permission);
       }
@@ -212,7 +212,7 @@ const HabitualPage: NextPage = () => {
       try {
         parsedHabits = JSON.parse(storedHabits).map((habit_data_migration: any) => {
           let daysOfWeek_migrated: WeekDay[] = habit_data_migration.daysOfWeek || [];
-          if (!habit_data_migration.daysOfWeek && habit_data_migration.frequency) { 
+          if (!habit_data_migration.daysOfWeek && habit_data_migration.frequency) {
             const freqLower_migrated = habit_data_migration.frequency.toLowerCase();
             if (freqLower_migrated === 'daily') daysOfWeek_migrated = [...weekDays];
             else {
@@ -250,22 +250,22 @@ const HabitualPage: NextPage = () => {
               const minutes_migrated = parseInt(minutesStr_migrated, 10);
               const modifier_migrated = modifierPart_migrated ? modifierPart_migrated.toLowerCase() : '';
               if (modifier_migrated === 'pm' && hours_migrated < 12) hours_migrated += 12;
-              if (modifier_migrated === 'am' && hours_migrated === 12) hours_migrated = 0; 
+              if (modifier_migrated === 'am' && hours_migrated === 12) hours_migrated = 0;
               migratedSpecificTime_val = `${String(hours_migrated).padStart(2, '0')}:${String(minutes_migrated).padStart(2, '0')}`;
             } catch (e_time_parse) { console.warn("Error parsing 12hr time during migration", e_time_parse) }
-          } else if (migratedSpecificTime_val && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime_val)) { 
+          } else if (migratedSpecificTime_val && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime_val)) {
              const [hours_num_migrated, minutes_num_migrated] = migratedSpecificTime_val.split(':').map(Number);
              migratedSpecificTime_val = `${String(hours_num_migrated).padStart(2, '0')}:${String(minutes_num_migrated).padStart(2, '0')}`;
           }
 
 
-          const migratedCompletionLog_arr = (habit_data_migration.completionLog || (habit_data_migration.completedDates 
+          const migratedCompletionLog_arr = (habit_data_migration.completionLog || (habit_data_migration.completedDates
               ? habit_data_migration.completedDates.map((d_log: string) => ({ date: d_log, time: 'N/A', note: undefined, status: 'completed' }))
               : [])).map((log_item_migrated: any) => ({
-                date: typeof log_item_migrated.date === 'string' && log_item_migrated.date.match(/^\d{4}-\d{2}-\d{2}$/) ? log_item_migrated.date : '1970-01-01', 
+                date: typeof log_item_migrated.date === 'string' && log_item_migrated.date.match(/^\d{4}-\d{2}-\d{2}$/) ? log_item_migrated.date : '1970-01-01',
                 time: log_item_migrated.time || 'N/A',
                 note: log_item_migrated.note || undefined,
-                status: log_item_migrated.status || 'completed', 
+                status: log_item_migrated.status || 'completed',
                 originalMissedDate: log_item_migrated.originalMissedDate || undefined,
               }));
 
@@ -280,16 +280,16 @@ const HabitualPage: NextPage = () => {
             durationMinutes: migratedDurationMinutes_val,
             specificTime: migratedSpecificTime_val || undefined,
             completionLog: migratedCompletionLog_arr as HabitCompletionLogEntry[],
-            reminderEnabled: habit_data_migration.reminderEnabled === undefined ? false : habit_data_migration.reminderEnabled, 
+            reminderEnabled: habit_data_migration.reminderEnabled === undefined ? false : habit_data_migration.reminderEnabled,
           };
         });
         setHabits(parsedHabits);
       } catch (error) {
         console.error(`Failed to parse habits from localStorage key ${userHabitsKey}:`, error);
-        setHabits([]); 
+        setHabits([]);
       }
     } else {
-        setHabits([]); 
+        setHabits([]);
     }
 
     if (authUser && parsedHabits.length === 0 && !commonSuggestionsFetched) {
@@ -339,7 +339,7 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
     }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth, commonSuggestionsFetched, router]);
+  }, [authUser, isLoadingAuth, commonSuggestionsFetched, router]); // Removed habits from dependency array of data loading
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -395,7 +395,7 @@ const HabitualPage: NextPage = () => {
               const [hours, minutes] = habit_for_reminder.specificTime.split(':').map(Number);
               if (isNaN(hours) || isNaN(minutes)) throw new Error("Invalid time format");
               let specificEventTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000); 
+              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000);
             } catch (e) {
               console.error(`Error parsing specificTime "${habit_for_reminder.specificTime}" for habit "${habit_for_reminder.name}"`, e);
             }
@@ -631,7 +631,7 @@ const HabitualPage: NextPage = () => {
                 date,
                 time: 'N/A',
                 note: note_to_save.trim() === "" ? undefined : note_to_save.trim(),
-                status: existingStatus || 'skipped' 
+                status: existingStatus || 'skipped'
              });
              newCompletionLog_for_note_save.sort((a_sort,b_sort) => b_sort.date.localeCompare(a_sort.date));
           }
@@ -720,26 +720,25 @@ const HabitualPage: NextPage = () => {
   };
 
   const habitsForSelectedCalendarDate = React.useMemo(() => {
-    if (!selectedCalendarDate) return [];
-    const dateStr_for_cal_dialog_display = format(selectedCalendarDate, 'yyyy-MM-dd');
-    const dayOfWeek_for_cal_dialog_display = dayIndexToWeekDayConstant[getDay(selectedCalendarDate)];
+    try {
+      if (!selectedCalendarDate) return [];
+      const dateStr_for_cal_dialog_display = format(selectedCalendarDate, 'yyyy-MM-dd');
+      const dayOfWeek_for_cal_dialog_display = dayIndexToWeekDayConstant[getDay(selectedCalendarDate)];
 
-    return habits.filter(habit_item_for_cal_dialog => {
-      const isScheduled_for_cal_dialog = habit_item_for_cal_dialog.daysOfWeek.includes(dayOfWeek_for_cal_dialog_display);
-      const logEntry_for_cal_dialog = habit_item_for_cal_dialog.completionLog.find(log_cal_dialog => log_cal_dialog.date === dateStr_for_cal_dialog_display);
-      return isScheduled_for_cal_dialog || logEntry_for_cal_dialog; 
-    });
+      return habits.filter(habit_item_for_cal_dialog => {
+        const isScheduled_for_cal_dialog = habit_item_for_cal_dialog.daysOfWeek.includes(dayOfWeek_for_cal_dialog_display);
+        const logEntry_for_cal_dialog = habit_item_for_cal_dialog.completionLog.find(log_cal_dialog => log_cal_dialog.date === dateStr_for_cal_dialog_display);
+        return isScheduled_for_cal_dialog || logEntry_for_cal_dialog;
+      });
+    } catch (error) {
+      console.error("Error in habitsForSelectedCalendarDate: ", error);
+      return [];
+    }
   }, [selectedCalendarDate, habits]);
 
 
-  const calendarDialogModifierStyles: DayPicker['modifiersStyles'] = {
-    completed: { backgroundColor: 'hsl(var(--accent)/0.15)', color: 'hsl(var(--accent))', fontWeight: 'bold' },
-    missed: { backgroundColor: 'hsl(var(--destructive)/0.1)', color: 'hsl(var(--destructive))' },
-    scheduled: { backgroundColor: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))' },
-    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15)', color: 'hsl(200,100%,50%)' }, 
-    selected: { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
-  };
-
+  // DIAGNOSTIC: Completely remove custom day styling from calendar
+  // This ensures the Calendar component itself or its basic props aren't the issue.
 
   const sheetMenuItems = [
     { href: '/', label: 'Home', icon: Home, action: () => setIsSettingsSheetOpen(false) },
@@ -761,14 +760,14 @@ const HabitualPage: NextPage = () => {
   ];
 
   const handleCustomizeSuggestedHabit = (suggestion: SuggestedHabit) => {
-    setEditingHabit(null); 
-    setInitialFormDataForDialog({ 
+    setEditingHabit(null);
+    setInitialFormDataForDialog({
       name: suggestion.name,
       category: suggestion.category || 'Other',
-      description: '', 
-      daysOfWeek: [], 
+      description: '',
+      daysOfWeek: [],
     });
-    setIsCreateHabitDialogOpen(true); 
+    setIsCreateHabitDialogOpen(true);
   };
 
 
@@ -795,15 +794,15 @@ const HabitualPage: NextPage = () => {
       <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
-          maxWidth: 'clamp(320px, 100%, 450px)', 
-          height: 'clamp(700px, 90vh, 850px)', 
-          overflow: 'hidden', 
+          maxWidth: 'clamp(320px, 100%, 450px)',
+          height: 'clamp(700px, 90vh, 850px)',
+          overflow: 'hidden',
         }}
       >
         <AppHeader onOpenCalendar={() => setIsCalendarDialogOpen(true)} />
 
-        <ScrollArea className="flex-grow"> 
-          <main className="px-3 sm:px-4 py-4"> 
+        <ScrollArea className="flex-grow">
+          <main className="px-3 sm:px-4 py-4">
 
             {authUser && !isLoadingAuth && !isLoadingHabits && habits.length === 0 && commonHabitSuggestions.length > 0 && (
               <Card className="my-4 p-4 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
@@ -848,7 +847,7 @@ const HabitualPage: NextPage = () => {
               onOpenReflectionDialog={handleOpenReflectionDialog}
               onOpenRescheduleDialog={handleOpenRescheduleDialog}
               onToggleReminder={handleToggleReminder}
-              onOpenEditDialog={handleOpenEditDialog} 
+              onOpenEditDialog={handleOpenEditDialog}
             />
           </main>
           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
@@ -880,9 +879,9 @@ const HabitualPage: NextPage = () => {
       <Button
         className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
         onClick={() => {
-          setEditingHabit(null); 
-          setInitialFormDataForDialog(null); 
-          setIsCreateHabitDialogOpen(true); 
+          setEditingHabit(null);
+          setInitialFormDataForDialog(null);
+          setIsCreateHabitDialogOpen(true);
          }}
         aria-label="Add New Habit"
       >
@@ -893,11 +892,11 @@ const HabitualPage: NextPage = () => {
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null); 
-            setEditingHabit(null); 
+            setInitialFormDataForDialog(null);
+            setEditingHabit(null);
         }}
         onSaveHabit={handleSaveHabit}
-        initialData={initialFormDataForDialog} 
+        initialData={initialFormDataForDialog}
       />
 
       {selectedHabitForAISuggestion && aiSuggestion && (
@@ -978,8 +977,8 @@ const HabitualPage: NextPage = () => {
                     mode="single"
                     selected={selectedCalendarDate}
                     onSelect={setSelectedCalendarDate}
-                    modifiers={undefined} // DIAGNOSTIC: Modifiers temporarily removed
-                    modifiersStyles={undefined} // DIAGNOSTIC: Modifier styles temporarily removed
+                    modifiers={undefined} // DIAGNOSTIC: Modifiers explicitly undefined
+                    modifiersStyles={undefined} // DIAGNOSTIC: Modifier styles explicitly undefined
                     className="rounded-md border p-0 sm:p-2"
                     month={selectedCalendarDate || new Date()}
                     onMonthChange={setSelectedCalendarDate}
@@ -997,7 +996,7 @@ const HabitualPage: NextPage = () => {
                         const isScheduledOnSelectedDate_display = habit_item_for_cal_date_display.daysOfWeek.includes(dayOfWeekForSelectedDate_display);
                         let statusTextForCalDate_display = "Scheduled";
                         let StatusIconForCalDate_display = CircleIcon;
-                        let iconColorForCalDate_display = "text-orange-500";
+                        let iconColorForCalDate_display = "text-orange-500"; // Default for scheduled
 
                         if (logEntryForCalDate_display?.status === 'completed') {
                             statusTextForCalDate_display = `Completed at ${logEntryForCalDate_display.time || ''}`;
@@ -1016,10 +1015,13 @@ const HabitualPage: NextPage = () => {
                             StatusIconForCalDate_display = XCircle;
                             iconColorForCalDate_display = "text-destructive";
                         } else if (!isScheduledOnSelectedDate_display && !logEntryForCalDate_display) {
+                             // This case covers days not scheduled and without any log
                             statusTextForCalDate_display = "Not Scheduled";
-                            StatusIconForCalDate_display = CircleIcon; 
+                            StatusIconForCalDate_display = CircleIcon; // Or some other neutral icon
                             iconColorForCalDate_display = "text-muted-foreground/50";
                         }
+                        // If isScheduledOnSelectedDate_display is true, and none of the above logEntry conditions met,
+                        // it remains "Scheduled" with the orange icon.
 
                         return (
                             <li key={habit_item_for_cal_date_display.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
@@ -1112,6 +1114,7 @@ const HabitualPage: NextPage = () => {
                   className="w-full justify-start text-base py-3"
                   onClick={() => {
                     item_menu_sheet.action();
+                    // Keep sheet open for Reminders, Calendar, Achievements as they open dialogs/handle internal logic
                     if (item_menu_sheet.label !== 'Reminders' && item_menu_sheet.label !== 'Calendar' && item_menu_sheet.label !== 'Achievements') {
                         setIsSettingsSheetOpen(false);
                     }
@@ -1154,3 +1157,6 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
+
+    
