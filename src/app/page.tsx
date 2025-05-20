@@ -41,13 +41,13 @@ import {
   DialogHeader,
   DialogTitle,
   AlertDialog,
-  // AlertDialogAction, // Not used, can be removed if only confirm/cancel
-  // AlertDialogCancel, // Not used, can be removed if only confirm/cancel
-  // AlertDialogContent, // Not used, can be removed if only confirm/cancel
-  // AlertDialogDescription, // Not used, can be removed if only confirm/cancel
-  // AlertDialogHeader, // Not used, can be removed if only confirm/cancel
-  // AlertDialogTitle as AlertTitle, // Renamed for Alert Dialog Title
-  // AlertDialogTrigger, // Not used directly for delete confirmation
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription as AlertDialogDescriptionEl, // Renamed
+  AlertDialogHeader as AlertDialogHeaderEl, // Renamed
+  AlertDialogTitle as AlertDialogTitleEl, // Renamed
+  AlertDialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -133,7 +133,7 @@ const HabitualPage: NextPage = () => {
         setCommonSuggestionsFetched(false);
         setInitialFormDataForDialog(null);
         setEditingHabit(null);
-        
+
         setIsDashboardDialogOpen(false);
         setIsCalendarDialogOpen(false);
         setIsAISuggestionDialogOpen(false);
@@ -262,7 +262,7 @@ const HabitualPage: NextPage = () => {
           const migratedCompletionLog_arr = (habit_data_migration.completionLog || (habit_data_migration.completedDates
               ? habit_data_migration.completedDates.map((d_log: string) => ({ date: d_log, time: 'N/A', note: undefined, status: 'completed' }))
               : [])).map((log_item_migrated: any) => ({
-                date: typeof log_item_migrated.date === 'string' ? log_item_migrated.date : '1970-01-01', 
+                date: typeof log_item_migrated.date === 'string' ? log_item_migrated.date : '1970-01-01',
                 time: log_item_migrated.time || 'N/A',
                 note: log_item_migrated.note || undefined,
                 status: log_item_migrated.status || 'completed',
@@ -424,10 +424,10 @@ const HabitualPage: NextPage = () => {
   const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
     if (editingHabit && habitData.id) {
       setHabits(prevHabits =>
-        prevHabits.map(h =>
-          h.id === habitData.id
+        prevHabits.map(h_edit =>
+          h_edit.id === habitData.id
             ? {
-                ...h,
+                ...h_edit,
                 name: habitData.name,
                 description: habitData.description,
                 category: habitData.category || 'Other',
@@ -437,7 +437,7 @@ const HabitualPage: NextPage = () => {
                 durationMinutes: habitData.durationMinutes === null ? undefined : habitData.durationMinutes,
                 specificTime: habitData.specificTime,
               }
-            : h
+            : h_edit
         )
       );
       console.log(`Habit Updated: ${habitData.name}`);
@@ -544,11 +544,11 @@ const HabitualPage: NextPage = () => {
 
   const handleToggleReminder = (habitId: string, currentReminderState: boolean) => {
     setHabits(prevHabits =>
-      prevHabits.map(h =>
-        h.id === habitId ? { ...h, reminderEnabled: !currentReminderState } : h
+      prevHabits.map(h_reminder =>
+        h_reminder.id === habitId ? { ...h_reminder, reminderEnabled: !currentReminderState } : h_reminder
       )
     );
-    const habit_for_reminder_toggle = habits.find(h => h.id === habitId);
+    const habit_for_reminder_toggle = habits.find(h_find => h_find.id === habitId);
     console.log(`Reminder for habit "${habit_for_reminder_toggle?.name}" ${!currentReminderState ? 'enabled' : 'disabled'}`);
     if (!currentReminderState && notificationPermission !== 'granted') {
        console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
@@ -723,7 +723,6 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-  // Calendar Dialog Logic
   const habitsForSelectedCalendarDate = useMemo(() => {
     if (!selectedCalendarDate) return [];
     const dateStr_for_cal_dialog_display = format(selectedCalendarDate, 'yyyy-MM-dd');
@@ -732,85 +731,86 @@ const HabitualPage: NextPage = () => {
     return habits.filter(habit_item_for_cal_dialog => {
       const isScheduled_for_cal_dialog = habit_item_for_cal_dialog.daysOfWeek.includes(dayOfWeek_for_cal_dialog_display);
       const logEntry_for_cal_dialog = habit_item_for_cal_dialog.completionLog.find(log_cal_dialog => log_cal_dialog.date === dateStr_for_cal_dialog_display);
-      return isScheduled_for_cal_dialog || logEntry_for_cal_dialog; // Show if scheduled OR if there's any log entry (completed, skipped, makeup)
+      return isScheduled_for_cal_dialog || logEntry_for_cal_dialog;
     });
   }, [selectedCalendarDate, habits]);
 
-  const calendarDialogModifiers = React.useMemo(() => {
-    try {
-      console.log("Recalculating calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate); // MINIMAL DEBUG LOG
-      const dates_completed_arr: Date[] = [];
-      const dates_scheduled_missed_arr: Date[] = [];
-      const dates_scheduled_upcoming_arr: Date[] = [];
-      const dates_makeup_pending_arr: Date[] = [];
-      const today_date_obj = startOfDay(new Date());
+ const calendarDialogModifiers = React.useMemo(() => {
+    console.log("Recalculating calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
 
-      habits.forEach(habit_item_for_modifiers => {
-        habit_item_for_modifiers.completionLog.forEach(log_entry_for_modifiers => {
-          if (typeof log_entry_for_modifiers.date === 'string' && log_entry_for_modifiers.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            try {
-              const logDate_obj = parseISO(log_entry_for_modifiers.date);
-              if (log_entry_for_modifiers.status === 'completed') {
-                dates_completed_arr.push(logDate_obj);
-              } else if (log_entry_for_modifiers.status === 'pending_makeup') {
-                dates_makeup_pending_arr.push(logDate_obj);
-              }
-            } catch (e_parse_log) {
-              console.error("Error parsing log date for calendar modifiers:", log_entry_for_modifiers.date, e_parse_log);
+    try {
+        const dates_completed_arr: Date[] = [];
+        const dates_scheduled_missed_arr: Date[] = [];
+        const dates_scheduled_upcoming_arr: Date[] = [];
+        const dates_makeup_pending_arr: Date[] = [];
+        const today_date_obj = startOfDay(new Date());
+
+        habits.forEach(habit_item_for_modifiers_loop => {
+            habit_item_for_modifiers_loop.completionLog.forEach(log_entry_for_modifiers_loop => {
+                if (typeof log_entry_for_modifiers_loop.date === 'string' && log_entry_for_modifiers_loop.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    try {
+                        const logDate_obj_loop = parseISO(log_entry_for_modifiers_loop.date);
+                        if (log_entry_for_modifiers_loop.status === 'completed') {
+                            dates_completed_arr.push(logDate_obj_loop);
+                        } else if (log_entry_for_modifiers_loop.status === 'pending_makeup') {
+                            dates_makeup_pending_arr.push(logDate_obj_loop);
+                        }
+                    } catch (e_parse_log_loop) {
+                        console.error("Error parsing log date for calendar modifiers:", log_entry_for_modifiers_loop.date, e_parse_log_loop);
+                    }
+                } else {
+                    console.warn("Invalid or missing date in log entry for habit:", habit_item_for_modifiers_loop.name, log_entry_for_modifiers_loop);
+                }
+            });
+
+            const iteration_limit = 60;
+            for (let day_offset_loop = 0; day_offset_loop < iteration_limit; day_offset_loop++) {
+                const pastDateToConsider_obj_loop = subDays(today_date_obj, day_offset_loop);
+                const futureDateToConsider_obj_loop = dateFnsAddDays(today_date_obj, day_offset_loop);
+
+                [pastDateToConsider_obj_loop, futureDateToConsider_obj_loop].forEach(current_day_being_checked_obj_loop => {
+                    if (isSameDay(current_day_being_checked_obj_loop, today_date_obj) && day_offset_loop !== 0 && current_day_being_checked_obj_loop !== pastDateToConsider_obj_loop) return;
+
+                    const dateStrToMatch_str_loop = format(current_day_being_checked_obj_loop, 'yyyy-MM-dd');
+                    const dayOfWeekForDate_val_loop = dayIndexToWeekDayConstant[getDay(current_day_being_checked_obj_loop)];
+                    const isScheduledOnThisDay_bool_loop = habit_item_for_modifiers_loop.daysOfWeek.includes(dayOfWeekForDate_val_loop);
+                    const logEntryForThisDay_obj_loop = habit_item_for_modifiers_loop.completionLog.find(log_find_item_loop => log_find_item_loop.date === dateStrToMatch_str_loop);
+
+                    if (isScheduledOnThisDay_bool_loop && !logEntryForThisDay_obj_loop) {
+                        if (current_day_being_checked_obj_loop < today_date_obj && !isSameDay(current_day_being_checked_obj_loop, today_date_obj)) {
+                            if (!dates_scheduled_missed_arr.some(missed_day_item_loop => isSameDay(missed_day_item_loop, current_day_being_checked_obj_loop))) {
+                                dates_scheduled_missed_arr.push(current_day_being_checked_obj_loop);
+                            }
+                        } else {
+                            if (!dates_scheduled_upcoming_arr.some(upcoming_day_item_loop => isSameDay(upcoming_day_item_loop, current_day_being_checked_obj_loop)) &&
+                                !dates_completed_arr.some(completed_d_inner_check_loop => isSameDay(completed_d_inner_check_loop, current_day_being_checked_obj_loop))) {
+                                dates_scheduled_upcoming_arr.push(current_day_being_checked_obj_loop);
+                            }
+                        }
+                    }
+                });
             }
-          } else {
-            console.warn("Invalid or missing date in log entry for habit:", habit_item_for_modifiers.name, log_entry_for_modifiers);
-          }
         });
 
-        const iteration_limit = 60;
-        for (let day_offset = 0; day_offset < iteration_limit; day_offset++) {
-          const pastDateToConsider_obj = subDays(today_date_obj, day_offset);
-          const futureDateToConsider_obj = dateFnsAddDays(today_date_obj, day_offset);
+        const finalScheduledUpcoming_arr_result = dates_scheduled_upcoming_arr.filter(s_date_upcoming_filter =>
+            !dates_completed_arr.some(comp_date_filter => isSameDay(s_date_upcoming_filter, comp_date_filter)) &&
+            !dates_makeup_pending_arr.some(makeup_date_filter => isSameDay(s_date_upcoming_filter, makeup_date_filter))
+        );
+        const finalScheduledMissed_arr_result = dates_scheduled_missed_arr.filter(s_date_missed_filter =>
+            !dates_completed_arr.some(comp_date_filter_missed => isSameDay(s_date_missed_filter, comp_date_filter_missed)) &&
+            !dates_makeup_pending_arr.some(makeup_date_filter_missed => isSameDay(s_date_missed_filter, makeup_date_filter_missed))
+        );
 
-          [pastDateToConsider_obj, futureDateToConsider_obj].forEach(current_day_being_checked_obj => {
-            if (isSameDay(current_day_being_checked_obj, today_date_obj) && day_offset !== 0 && current_day_being_checked_obj !== pastDateToConsider_obj) return;
-
-            const dateStrToMatch_str = format(current_day_being_checked_obj, 'yyyy-MM-dd');
-            const dayOfWeekForDate_val = dayIndexToWeekDayConstant[getDay(current_day_being_checked_obj)];
-            const isScheduledOnThisDay_bool = habit_item_for_modifiers.daysOfWeek.includes(dayOfWeekForDate_val);
-            const logEntryForThisDay_obj = habit_item_for_modifiers.completionLog.find(log_find_item => log_find_item.date === dateStrToMatch_str);
-
-            if (isScheduledOnThisDay_bool && !logEntryForThisDay_obj) {
-              if (current_day_being_checked_obj < today_date_obj && !isSameDay(current_day_being_checked_obj, today_date_obj)) {
-                if (!dates_scheduled_missed_arr.some(missed_day_item => isSameDay(missed_day_item, current_day_being_checked_obj))) {
-                  dates_scheduled_missed_arr.push(current_day_being_checked_obj);
-                }
-              } else {
-                if (!dates_scheduled_upcoming_arr.some(upcoming_day_item => isSameDay(upcoming_day_item, current_day_being_checked_obj)) &&
-                    !dates_completed_arr.some(completed_day_item_for_check => isSameDay(completed_day_item_for_check, current_day_being_checked_obj))) {
-                  dates_scheduled_upcoming_arr.push(current_day_being_checked_obj);
-                }
-              }
-            }
-          });
-        }
-      });
-
-      const finalScheduledUpcoming_arr = dates_scheduled_upcoming_arr.filter(s_date_upcoming_for_final_filter =>
-        !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
-        !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
-      );
-      const finalScheduledMissed_arr = dates_scheduled_missed_arr.filter(s_date_missed_for_final_filter =>
-        !dates_completed_arr.some(comp_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, comp_date_for_final_filter_missed)) &&
-        !dates_makeup_pending_arr.some(makeup_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, makeup_date_for_final_filter_missed))
-      );
-
-      return {
-        completed: dates_completed_arr,
-        missed: finalScheduledMissed_arr,
-        scheduled: finalScheduledUpcoming_arr,
-        makeup: dates_makeup_pending_arr,
-        selected: selectedCalendarDate ? [selectedCalendarDate] : [],
-      };
-    } catch (error_in_calendar_modifiers) {
-        console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error_in_calendar_modifiers);
-        return { // Fallback to prevent app crash
+        return {
+            completed: dates_completed_arr,
+            missed: finalScheduledMissed_arr_result,
+            scheduled: finalScheduledUpcoming_arr_result,
+            makeup: dates_makeup_pending_arr,
+            selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+        };
+    } catch (error_in_calendar_modifiers_calc) {
+        console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error_in_calendar_modifiers_calc);
+        return {
             completed: [],
             missed: [],
             scheduled: [],
@@ -818,14 +818,14 @@ const HabitualPage: NextPage = () => {
             selected: selectedCalendarDate ? [selectedCalendarDate] : [],
         };
     }
-  }, [habits, selectedCalendarDate]);
+}, [habits, selectedCalendarDate]);
 
 
   const calendarDialogModifierStyles: DayPicker['modifiersStyles'] = {
     completed: { backgroundColor: 'hsl(var(--accent)/0.15)', color: 'hsl(var(--accent))', fontWeight: 'bold' },
     missed: { backgroundColor: 'hsl(var(--destructive)/0.1)', color: 'hsl(var(--destructive))' },
     scheduled: { backgroundColor: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))' },
-    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15', color: 'hsl(200,100%,50%)' },
+    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15)', color: 'hsl(200,100%,50%)' },
     selected: { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
   };
 
@@ -873,8 +873,6 @@ const HabitualPage: NextPage = () => {
   }
 
   if (!authUser) {
-    // This case should ideally be handled by the redirect in the authUser effect,
-    // but it's a fallback.
     return (
        <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -1070,7 +1068,7 @@ const HabitualPage: NextPage = () => {
                     mode="single"
                     selected={selectedCalendarDate}
                     onSelect={setSelectedCalendarDate}
-                    // modifiers={calendarDialogModifiers} // MINIMAL DEBUG: Commented out
+                    modifiers={calendarDialogModifiers}
                     modifiersStyles={calendarDialogModifierStyles}
                     className="rounded-md border p-0 sm:p-2"
                     month={selectedCalendarDate || new Date()}
