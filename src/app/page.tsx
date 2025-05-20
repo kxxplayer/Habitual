@@ -46,7 +46,7 @@ import {
   AlertDialogContent,
   AlertDialogDescription as AlertDialogDescriptionEl,
   AlertDialogHeader as AlertDialogHeaderEl,
-  AlertDialogTitle as AlertDialogTitleEl,
+  AlertDialogTitle as AlertTitle, // Renamed to avoid conflict
   AlertDialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -125,9 +125,8 @@ const HabitualPage: NextPage = () => {
       const currentUid = currentUser?.uid || null;
 
       if (previousUid !== currentUid) {
-        console.log(`Auth state changed. Previous UID: ${previousUid}, Current UID: ${currentUid}. Resetting app state and localStorage for previous user (if any).`);
+        console.log(`Auth state changed. Previous UID: ${previousUid}, Current UID: ${currentUid}. Resetting app state.`);
 
-        // Clear React state
         setHabits([]);
         setEarnedBadges([]);
         setTotalPoints(0);
@@ -135,16 +134,15 @@ const HabitualPage: NextPage = () => {
         setCommonSuggestionsFetched(false);
         setInitialFormDataForDialog(null);
         setEditingHabit(null);
+        setReflectionDialogData(null);
+        setRescheduleDialogData(null);
 
-        // Close any open dialogs
         setIsDashboardDialogOpen(false);
         setIsCalendarDialogOpen(false);
         setIsAISuggestionDialogOpen(false);
         setIsReflectionDialogOpen(false);
-        setRescheduleDialogData(null);
         setIsCreateHabitDialogOpen(false);
 
-        // Clear localStorage for the *previous* user IF one existed
         if (previousUid) {
             console.log(`Clearing localStorage for previous user: ${previousUid}`);
             localStorage.removeItem(`${LS_KEY_PREFIX_HABITS}${previousUid}`);
@@ -170,7 +168,7 @@ const HabitualPage: NextPage = () => {
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-        setNotificationPermission(Notification.permission); // Store 'default'
+        setNotificationPermission(Notification.permission); 
       } else {
         setNotificationPermission(Notification.permission);
       }
@@ -193,7 +191,7 @@ const HabitualPage: NextPage = () => {
       setEarnedBadges([]);
       setTotalPoints(0);
       setCommonHabitSuggestions([]);
-      setCommonSuggestionsFetched(false); // Reset this so new users get suggestions
+      setCommonSuggestionsFetched(false);
       setIsLoadingHabits(false);
 
       if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
@@ -203,7 +201,6 @@ const HabitualPage: NextPage = () => {
       return;
     }
 
-    // User is authenticated, proceed to load their data
     setIsLoadingHabits(true);
     console.log(`Loading data for user: ${authUser.uid}`);
 
@@ -215,7 +212,7 @@ const HabitualPage: NextPage = () => {
       try {
         parsedHabits = JSON.parse(storedHabits).map((habit_data_migration: any) => {
           let daysOfWeek_migrated: WeekDay[] = habit_data_migration.daysOfWeek || [];
-          if (!habit_data_migration.daysOfWeek && habit_data_migration.frequency) { // Old frequency field migration
+          if (!habit_data_migration.daysOfWeek && habit_data_migration.frequency) { 
             const freqLower_migrated = habit_data_migration.frequency.toLowerCase();
             if (freqLower_migrated === 'daily') daysOfWeek_migrated = [...weekDays];
             else {
@@ -253,22 +250,22 @@ const HabitualPage: NextPage = () => {
               const minutes_migrated = parseInt(minutesStr_migrated, 10);
               const modifier_migrated = modifierPart_migrated ? modifierPart_migrated.toLowerCase() : '';
               if (modifier_migrated === 'pm' && hours_migrated < 12) hours_migrated += 12;
-              if (modifier_migrated === 'am' && hours_migrated === 12) hours_migrated = 0; // Midnight case
+              if (modifier_migrated === 'am' && hours_migrated === 12) hours_migrated = 0; 
               migratedSpecificTime_val = `${String(hours_migrated).padStart(2, '0')}:${String(minutes_migrated).padStart(2, '0')}`;
             } catch (e_time_parse) { console.warn("Error parsing 12hr time during migration", e_time_parse) }
-          } else if (migratedSpecificTime_val && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime_val)) { // Ensure HH:mm format
+          } else if (migratedSpecificTime_val && /^\d{1,2}:\d{2}$/.test(migratedSpecificTime_val)) { 
              const [hours_num_migrated, minutes_num_migrated] = migratedSpecificTime_val.split(':').map(Number);
              migratedSpecificTime_val = `${String(hours_num_migrated).padStart(2, '0')}:${String(minutes_num_migrated).padStart(2, '0')}`;
           }
 
 
-          const migratedCompletionLog_arr = (habit_data_migration.completionLog || (habit_data_migration.completedDates // Old completedDates field migration
+          const migratedCompletionLog_arr = (habit_data_migration.completionLog || (habit_data_migration.completedDates 
               ? habit_data_migration.completedDates.map((d_log: string) => ({ date: d_log, time: 'N/A', note: undefined, status: 'completed' }))
               : [])).map((log_item_migrated: any) => ({
-                date: typeof log_item_migrated.date === 'string' ? log_item_migrated.date : '1970-01-01', // Fallback for invalid date
+                date: typeof log_item_migrated.date === 'string' && log_item_migrated.date.match(/^\d{4}-\d{2}-\d{2}$/) ? log_item_migrated.date : '1970-01-01', 
                 time: log_item_migrated.time || 'N/A',
                 note: log_item_migrated.note || undefined,
-                status: log_item_migrated.status || 'completed', // Default old entries to 'completed'
+                status: log_item_migrated.status || 'completed', 
                 originalMissedDate: log_item_migrated.originalMissedDate || undefined,
               }));
 
@@ -283,19 +280,18 @@ const HabitualPage: NextPage = () => {
             durationMinutes: migratedDurationMinutes_val,
             specificTime: migratedSpecificTime_val || undefined,
             completionLog: migratedCompletionLog_arr as HabitCompletionLogEntry[],
-            reminderEnabled: habit_data_migration.reminderEnabled === undefined ? false : habit_data_migration.reminderEnabled, // Default to false if missing
+            reminderEnabled: habit_data_migration.reminderEnabled === undefined ? false : habit_data_migration.reminderEnabled, 
           };
         });
         setHabits(parsedHabits);
       } catch (error) {
         console.error(`Failed to parse habits from localStorage key ${userHabitsKey}:`, error);
-        setHabits([]); // Reset to empty if parsing fails
+        setHabits([]); 
       }
     } else {
-        setHabits([]); // No habits found for this user
+        setHabits([]); 
     }
 
-    // Fetch common suggestions only if no habits were parsed for this user AND suggestions haven't been fetched yet
     if (authUser && parsedHabits.length === 0 && !commonSuggestionsFetched) {
       setIsLoadingCommonSuggestions(true);
       getCommonHabitSuggestions({ count: 5 })
@@ -312,9 +308,8 @@ const HabitualPage: NextPage = () => {
           setCommonSuggestionsFetched(true);
         });
     } else if (parsedHabits.length > 0) {
-        // If habits were loaded, don't show common suggestions
         setCommonHabitSuggestions([]);
-        setCommonSuggestionsFetched(true); // Mark as fetched to prevent re-fetching
+        setCommonSuggestionsFetched(true);
     }
 
 
@@ -344,10 +339,10 @@ const HabitualPage: NextPage = () => {
         setTotalPoints(0);
     }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth, commonSuggestionsFetched, router]); // commonSuggestionsFetched added
+  }, [authUser, isLoadingAuth, commonSuggestionsFetched, router]);
 
   React.useEffect(() => {
-    if (!authUser || isLoadingAuth || isLoadingHabits) return; // Don't save if no user or still loading
+    if (!authUser || isLoadingAuth || isLoadingHabits) return;
     const userHabitsKey = `${LS_KEY_PREFIX_HABITS}${authUser.uid}`;
     localStorage.setItem(userHabitsKey, JSON.stringify(habits));
 
@@ -358,7 +353,6 @@ const HabitualPage: NextPage = () => {
         if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
             updatedBadges.push(newBadge);
             console.log(`New Badge Unlocked: ${newBadge.name} - ${newBadge.description}`);
-            // Only trigger SQL tip for the specific badge
             if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) {
               try {
                 const sqlTipResult = await getSqlTip();
@@ -389,7 +383,7 @@ const HabitualPage: NextPage = () => {
     reminderTimeouts.current.forEach(clearTimeout);
     reminderTimeouts.current = [];
 
-    if (notificationPermission === 'granted' && authUser) { // Only schedule if permission granted and user logged in
+    if (notificationPermission === 'granted' && authUser) {
       console.log("Checking habits for reminders...");
       habits.forEach(habit_for_reminder => {
         if (habit_for_reminder.reminderEnabled) {
@@ -401,7 +395,7 @@ const HabitualPage: NextPage = () => {
               const [hours, minutes] = habit_for_reminder.specificTime.split(':').map(Number);
               if (isNaN(hours) || isNaN(minutes)) throw new Error("Invalid time format");
               let specificEventTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000); // 30 minutes before
+              reminderDateTime = new Date(specificEventTime.getTime() - 30 * 60 * 1000); 
             } catch (e) {
               console.error(`Error parsing specificTime "${habit_for_reminder.specificTime}" for habit "${habit_for_reminder.name}"`, e);
             }
@@ -416,14 +410,6 @@ const HabitualPage: NextPage = () => {
           if (reminderDateTime && reminderDateTime > now) {
             const delay = reminderDateTime.getTime() - now.getTime();
             console.log(`Reminder for "${habit_for_reminder.name}" would be scheduled at: ${reminderDateTime.toLocaleString()} (in ${Math.round(delay/60000)} mins)`);
-            // const timeoutId = setTimeout(() => {
-            //   new Notification("Habitual Reminder", {
-            //     body: `Time for your habit: ${habit_for_reminder.name}!`,
-            //     // icon: "/icons/icon-192x192.png"
-            //   });
-            //   console.log(`REMINDER FIRED for: ${habit_for_reminder.name}`);
-            // }, delay);
-            // reminderTimeouts.current.push(timeoutId);
           }
         }
       });
@@ -645,7 +631,7 @@ const HabitualPage: NextPage = () => {
                 date,
                 time: 'N/A',
                 note: note_to_save.trim() === "" ? undefined : note_to_save.trim(),
-                status: existingStatus || 'skipped' // Default to skipped if adding a note to an uncompleted day
+                status: existingStatus || 'skipped' 
              });
              newCompletionLog_for_note_save.sort((a_sort,b_sort) => b_sort.date.localeCompare(a_sort.date));
           }
@@ -741,40 +727,16 @@ const HabitualPage: NextPage = () => {
     return habits.filter(habit_item_for_cal_dialog => {
       const isScheduled_for_cal_dialog = habit_item_for_cal_dialog.daysOfWeek.includes(dayOfWeek_for_cal_dialog_display);
       const logEntry_for_cal_dialog = habit_item_for_cal_dialog.completionLog.find(log_cal_dialog => log_cal_dialog.date === dateStr_for_cal_dialog_display);
-      return isScheduled_for_cal_dialog || logEntry_for_cal_dialog;
+      return isScheduled_for_cal_dialog || logEntry_for_cal_dialog; 
     });
   }, [selectedCalendarDate, habits]);
-
-
-  const calendarDialogModifiers = React.useMemo(() => {
-    try {
-      console.log("Recalculating calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
-      // ABSOLUTE MINIMAL VERSION FOR DEBUGGING "cDate is not defined"
-      return {
-        completed: [],
-        missed: [],
-        scheduled: [],
-        makeup: [],
-        selected: selectedCalendarDate ? [selectedCalendarDate] : [],
-      };
-    } catch (error) {
-      console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error);
-      return { // Fallback to safe values
-          completed: [],
-          missed: [],
-          scheduled: [],
-          makeup: [],
-          selected: selectedCalendarDate ? [selectedCalendarDate] : [],
-      };
-    }
-  }, [habits, selectedCalendarDate]);
 
 
   const calendarDialogModifierStyles: DayPicker['modifiersStyles'] = {
     completed: { backgroundColor: 'hsl(var(--accent)/0.15)', color: 'hsl(var(--accent))', fontWeight: 'bold' },
     missed: { backgroundColor: 'hsl(var(--destructive)/0.1)', color: 'hsl(var(--destructive))' },
     scheduled: { backgroundColor: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))' },
-    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15)', color: 'hsl(200,100%,50%)' }, // Blue for makeup
+    makeup: { backgroundColor: 'hsl(200,100%,50%)/0.15)', color: 'hsl(200,100%,50%)' }, 
     selected: { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
   };
 
@@ -799,14 +761,14 @@ const HabitualPage: NextPage = () => {
   ];
 
   const handleCustomizeSuggestedHabit = (suggestion: SuggestedHabit) => {
-    setEditingHabit(null);
-    setInitialFormDataForDialog({
+    setEditingHabit(null); 
+    setInitialFormDataForDialog({ 
       name: suggestion.name,
       category: suggestion.category || 'Other',
-      description: '',
-      daysOfWeek: [],
+      description: '', 
+      daysOfWeek: [], 
     });
-    setIsCreateHabitDialogOpen(true);
+    setIsCreateHabitDialogOpen(true); 
   };
 
 
@@ -833,15 +795,15 @@ const HabitualPage: NextPage = () => {
       <div
         className="bg-background text-foreground shadow-xl rounded-xl flex flex-col w-full"
         style={{
-          maxWidth: 'clamp(320px, 100%, 450px)',
-          height: 'clamp(700px, 90vh, 850px)',
-          overflow: 'hidden',
+          maxWidth: 'clamp(320px, 100%, 450px)', 
+          height: 'clamp(700px, 90vh, 850px)', 
+          overflow: 'hidden', 
         }}
       >
         <AppHeader onOpenCalendar={() => setIsCalendarDialogOpen(true)} />
 
-        <ScrollArea className="flex-grow">
-          <main className="px-3 sm:px-4 py-4">
+        <ScrollArea className="flex-grow"> 
+          <main className="px-3 sm:px-4 py-4"> 
 
             {authUser && !isLoadingAuth && !isLoadingHabits && habits.length === 0 && commonHabitSuggestions.length > 0 && (
               <Card className="my-4 p-4 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
@@ -886,7 +848,7 @@ const HabitualPage: NextPage = () => {
               onOpenReflectionDialog={handleOpenReflectionDialog}
               onOpenRescheduleDialog={handleOpenRescheduleDialog}
               onToggleReminder={handleToggleReminder}
-              onOpenEditDialog={handleOpenEditDialog}
+              onOpenEditDialog={handleOpenEditDialog} 
             />
           </main>
           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
@@ -918,9 +880,9 @@ const HabitualPage: NextPage = () => {
       <Button
         className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
         onClick={() => {
-          setEditingHabit(null);
-          setInitialFormDataForDialog(null);
-          setIsCreateHabitDialogOpen(true);
+          setEditingHabit(null); 
+          setInitialFormDataForDialog(null); 
+          setIsCreateHabitDialogOpen(true); 
          }}
         aria-label="Add New Habit"
       >
@@ -931,11 +893,11 @@ const HabitualPage: NextPage = () => {
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null);
-            setEditingHabit(null);
+            setInitialFormDataForDialog(null); 
+            setEditingHabit(null); 
         }}
         onSaveHabit={handleSaveHabit}
-        initialData={initialFormDataForDialog}
+        initialData={initialFormDataForDialog} 
       />
 
       {selectedHabitForAISuggestion && aiSuggestion && (
@@ -1016,8 +978,8 @@ const HabitualPage: NextPage = () => {
                     mode="single"
                     selected={selectedCalendarDate}
                     onSelect={setSelectedCalendarDate}
-                    modifiers={calendarDialogModifiers}
-                    modifiersStyles={calendarDialogModifierStyles}
+                    modifiers={undefined} // DIAGNOSTIC: Modifiers temporarily removed
+                    modifiersStyles={undefined} // DIAGNOSTIC: Modifier styles temporarily removed
                     className="rounded-md border p-0 sm:p-2"
                     month={selectedCalendarDate || new Date()}
                     onMonthChange={setSelectedCalendarDate}
@@ -1055,7 +1017,7 @@ const HabitualPage: NextPage = () => {
                             iconColorForCalDate_display = "text-destructive";
                         } else if (!isScheduledOnSelectedDate_display && !logEntryForCalDate_display) {
                             statusTextForCalDate_display = "Not Scheduled";
-                            StatusIconForCalDate_display = CircleIcon;
+                            StatusIconForCalDate_display = CircleIcon; 
                             iconColorForCalDate_display = "text-muted-foreground/50";
                         }
 
@@ -1150,6 +1112,9 @@ const HabitualPage: NextPage = () => {
                   className="w-full justify-start text-base py-3"
                   onClick={() => {
                     item_menu_sheet.action();
+                    if (item_menu_sheet.label !== 'Reminders' && item_menu_sheet.label !== 'Calendar' && item_menu_sheet.label !== 'Achievements') {
+                        setIsSettingsSheetOpen(false);
+                    }
                   }}
                   key={item_menu_sheet.label}
                 >
@@ -1189,6 +1154,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
-
-    
