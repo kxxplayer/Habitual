@@ -711,76 +711,24 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-  const calendarDialogModifiers = React.useMemo(() => {
-    console.log("Recalculating calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
+  
+  const calendarDialogModifiers = React.useMemo(() => {// Inside the calendarDialogModifiers useMemo hook in src/app/page.tsx
+
+    // Keep this log for now
+    console.log("Recalculating calendarDialogModifiers - STEP 1: MINIMAL. Habits:", habits, "Selected Date:", selectedCalendarDate);
+    
+    // Temporarily return empty arrays for most things
     const dates_completed_arr: Date[] = [];
     const dates_scheduled_missed_arr: Date[] = [];
     const dates_scheduled_upcoming_arr: Date[] = [];
     const dates_makeup_pending_arr: Date[] = [];
-    const today_date_obj = startOfDay(new Date());
-
-    habits.forEach(habit_item_for_modifiers => {
-      habit_item_for_modifiers.completionLog.forEach(log_entry_for_modifiers => {
-        if (typeof log_entry_for_modifiers.date === 'string' && log_entry_for_modifiers.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          try {
-            const logDate_obj = parseISO(log_entry_for_modifiers.date);
-            if (log_entry_for_modifiers.status === 'completed') {
-              dates_completed_arr.push(logDate_obj);
-            } else if (log_entry_for_modifiers.status === 'pending_makeup') {
-              dates_makeup_pending_arr.push(logDate_obj);
-            }
-          } catch (e) {
-            console.error("Error parsing log date for calendar modifiers:", log_entry_for_modifiers.date, e);
-          }
-        } else {
-            console.warn("Invalid or missing date in log entry for habit:", habit_item_for_modifiers.name, log_entry_for_modifiers);
-        }
-      });
-
-      const iteration_limit = 60; 
-      for (let day_offset = 0; day_offset < iteration_limit; day_offset++) {
-        const pastDateToConsider_obj = subDays(today_date_obj, day_offset);
-        const futureDateToConsider_obj = dateFnsAddDays(today_date_obj, day_offset);
-
-        [pastDateToConsider_obj, futureDateToConsider_obj].forEach(current_day_being_checked_obj => {
-          if (isSameDay(current_day_being_checked_obj, today_date_obj) && day_offset !== 0 && current_day_being_checked_obj !== pastDateToConsider_obj) return;
-
-          const dateStrToMatch_str = format(current_day_being_checked_obj, 'yyyy-MM-dd');
-          const dayOfWeekForDate_val = dayIndexToWeekDayConstant[getDay(current_day_being_checked_obj)];
-          const isScheduledOnThisDay_bool = habit_item_for_modifiers.daysOfWeek.includes(dayOfWeekForDate_val);
-          const logEntryForThisDay_obj = habit_item_for_modifiers.completionLog.find(log_find_item => log_find_item.date === dateStrToMatch_str);
-
-          if (isScheduledOnThisDay_bool && !logEntryForThisDay_obj) {
-            if (current_day_being_checked_obj < today_date_obj && !isSameDay(current_day_being_checked_obj, today_date_obj)) {
-              if (!dates_scheduled_missed_arr.some(missed_day_item => isSameDay(missed_day_item, current_day_being_checked_obj))) {
-                dates_scheduled_missed_arr.push(current_day_being_checked_obj);
-              }
-            } else {
-              if (!dates_scheduled_upcoming_arr.some(upcoming_day_item => isSameDay(upcoming_day_item, current_day_being_checked_obj)) &&
-                  !dates_completed_arr.some(completed_day_item_for_check => isSameDay(completed_day_item_for_check, current_day_being_checked_obj))) {
-                dates_scheduled_upcoming_arr.push(current_day_being_checked_obj);
-              }
-            }
-          }
-        });
-      }
-    });
-
-    const finalScheduledUpcoming_arr = dates_scheduled_upcoming_arr.filter(s_date_upcoming_for_final_filter =>
-      !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
-      !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
-    );
-    const finalScheduledMissed_arr = dates_scheduled_missed_arr.filter(s_date_missed_for_final_filter =>
-      !dates_completed_arr.some(comp_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, comp_date_for_final_filter_missed)) &&
-      !dates_makeup_pending_arr.some(makeup_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, makeup_date_for_final_filter_missed))
-    );
-
+    
     return {
-      completed: dates_completed_arr,
-      missed: finalScheduledMissed_arr,
-      scheduled: finalScheduledUpcoming_arr,
-      makeup: dates_makeup_pending_arr,
-      selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+      completed: dates_completed_arr, // Empty
+      missed: dates_scheduled_missed_arr,    // Empty
+      scheduled: dates_scheduled_upcoming_arr, // Empty
+      makeup: dates_makeup_pending_arr,   // Empty
+      selected: selectedCalendarDate ? [selectedCalendarDate] : [], // Keep selected logic
     };
   }, [habits, selectedCalendarDate]);
 
