@@ -71,7 +71,7 @@ const LS_KEY_PREFIX_POINTS = "totalPoints_";
 
 
 const HabitualPage: NextPage = () => {
-  console.log("RENDERING HabitualPage - CALENDAR MODIFIERS AND HABIT LIST FULLY REMOVED FROM DIALOG (Version Extreme Diagnostic)");
+  console.log("RENDERING HabitualPage - Calendar Modifiers and Habit List FULLY REMOVED from Dialog (Version Extreme Diagnostic)");
 
   const router = useRouter();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
@@ -1127,5 +1127,7 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+
+    
 
     
