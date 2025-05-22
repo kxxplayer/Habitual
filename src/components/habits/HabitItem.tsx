@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Lightbulb, CalendarDays, CalendarClock, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag,
   ListChecks,
@@ -163,8 +164,8 @@ const HabitItem: FC<HabitItemProps> = ({
   const prevIsTodayCompleted = React.useRef(isTodayCompleted);
   React.useEffect(() => {
     if (isTodayCompleted && prevIsTodayCompleted.current === false) {
-      setShowSparkles(true);
-      setTimeout(() => setShowSparkles(false), 800); // Animation duration
+      // setShowSparkles(true); // This will be triggered by handleToggleTodayCompletion
+      // setTimeout(() => setShowSparkles(false), 800); 
     }
     prevIsTodayCompleted.current = isTodayCompleted;
   }, [isTodayCompleted]);
@@ -296,12 +297,28 @@ const HabitItem: FC<HabitItemProps> = ({
       setTimeout(() => setShowSparkles(false), 800);
     }
   };
+  
+  const handleDayToggle = (dateToToggle: string) => {
+    const logForDay = habit.completionLog.find(log => log.date === dateToToggle);
+    const isCurrentlyCompleted = logForDay?.status === 'completed';
+    onToggleComplete(habit.id, dateToToggle, !isCurrentlyCompleted);
+
+    if (!isCurrentlyCompleted && !isTodayCompleted && dateToToggle === todayString) { // For today's toggle specifically
+      setShowSparkles(true);
+      setTimeout(() => setShowSparkles(false), 800);
+    } else if (!isCurrentlyCompleted && dateToToggle !== todayString) { // For other days
+      setShowSparkles(true);
+      setTimeout(() => setShowSparkles(false), 800);
+    }
+  };
+
 
   return (
     <Card className={cardClasses} style={cardStyle}>
       <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-4 pr-2">
         <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
            {getHabitIcon(habit)}
+           {habit.reminderEnabled && <Bell className="ml-1 h-3 w-3 text-yellow-500" />}
         </div>
         <h2 className="text-lg sm:text-xl font-bold text-primary text-center flex-grow mx-2 truncate min-w-0 break-words">
           {habit.name}
@@ -324,7 +341,7 @@ const HabitItem: FC<HabitItemProps> = ({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="flex items-center justify-between"
-                onSelect={(e) => e.preventDefault()}
+                onSelect={(e) => e.preventDefault()} 
               >
                 <Label htmlFor={`reminder-switch-${habit.id}`} className="flex items-center cursor-pointer text-sm">
                     <Bell className="mr-2 h-4 w-4" />
@@ -404,7 +421,7 @@ const HabitItem: FC<HabitItemProps> = ({
         {scheduledDaysInWeek > 0 && <Progress value={weeklyProgressPercent} indicatorClassName="bg-accent" className="h-1.5 mb-2" />}
 
         <div className="space-y-1 mt-2">
-            {habit.category && (
+             {habit.category && (
                 <div className="flex items-center text-xs text-muted-foreground">
                     <span role="img" aria-label="Category" className="mr-1.5 text-sm">📌</span>
                     <span className="font-medium mr-1">Category:</span>
@@ -427,7 +444,7 @@ const HabitItem: FC<HabitItemProps> = ({
             )}
             {habit.description && (
                 <div className="text-xs text-muted-foreground">
-                <span className="font-medium mr-1">📝 Desc:</span>
+                <span className="font-medium mr-1.5">📝 Desc:</span>
                 <span className={cn("inline",!isDescriptionExpanded && habit.description.length > DESCRIPTION_TRUNCATE_LENGTH ? "line-clamp-2" : "")}>
                     {isDescriptionExpanded || habit.description.length <= DESCRIPTION_TRUNCATE_LENGTH
                     ? habit.description
@@ -494,16 +511,11 @@ const HabitItem: FC<HabitItemProps> = ({
                         if (isMissedAndActionable) {
                            onOpenRescheduleDialog(habit, dayInfo.dateStr);
                         } else if (canToggleDay) {
-                            const wasCompletedBeforeDay = isDayReallyCompleted;
-                            onToggleComplete(habit.id, dayInfo.dateStr, !isDayReallyCompleted);
-                            if (!wasCompletedBeforeDay && !isDayReallyCompleted === false) { // Condition simplified
-                                setShowSparkles(true);
-                                setTimeout(() => setShowSparkles(false), 800);
-                            }
+                            handleDayToggle(dayInfo.dateStr);
                         }
                     }}
                     className={cn(
-                      `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-all active:scale-95 transform`,
+                      `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-transform active:scale-95`,
                       dayBoxClasses,
                       (canToggleDay || isMissedAndActionable) ? 'cursor-pointer' : 'cursor-default',
                       dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : '',
@@ -534,7 +546,7 @@ const HabitItem: FC<HabitItemProps> = ({
               className={cn(
                 "rounded-full py-2.5 px-6 text-sm transition-all active:scale-95 flex-1",
                 !isTodayCompleted
-                    ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed",
                 isTodayCompleted && showSparkles && "animate-pulse-glow-accent" ,
                 isTodayCompleted && !showSparkles && "shadow-[0_0_8px_hsl(var(--accent))]"
@@ -567,10 +579,9 @@ const HabitItem: FC<HabitItemProps> = ({
                 <StickyNote className="mr-1 h-3 w-3" /> Note added
             </div>
         )}
-        {/* Sparkles container, positioned within the footer relative to the buttons */}
-        {showSparkles && isTodayCompleted && (
+        {showSparkles && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
-            <div className="relative w-20 h-20"> {/* Adjust size as needed */}
+            <div className="relative w-20 h-20"> 
               <div className="sparkle sparkle-1"></div>
               <div className="sparkle sparkle-2"></div>
               <div className="sparkle sparkle-3"></div>
@@ -599,4 +610,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-
