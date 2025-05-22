@@ -23,7 +23,7 @@ const AppHeader: FC<AppHeaderProps> = ({ onOpenCalendar }) => {
             Habitual
           </h1>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1">
           {onOpenCalendar && (
             <Button variant="ghost" size="icon" onClick={onOpenCalendar} aria-label="Open Calendar">
               <CalendarDays className="h-5 w-5 text-primary" />

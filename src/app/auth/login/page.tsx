@@ -1,6 +1,7 @@
 
 "use client";
 
+import * as React from 'react';
 import type { NextPage } from 'next';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,7 +13,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GoogleIcon } from '@/components/ui/icons';
-// import { useToast } from '@/hooks/use-toast'; // Commented out
 import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
@@ -20,14 +20,13 @@ import { Loader2 } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(1, { message: "Password is required" }), // Min 1 for login, actual length enforced by Firebase
+  password: z.string().min(1, { message: "Password is required" }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage: NextPage = () => {
   const router = useRouter();
-  // const { toast } = useToast(); // Commented out
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -39,19 +38,9 @@ const LoginPage: NextPage = () => {
     setIsEmailLoading(true);
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
-      // toast({ // Commented out
-      //   title: "Login Successful!",
-      //   description: "Welcome back!",
-      // });
       console.log("Login Successful!");
-      router.push('/'); // Redirect to home page
+      router.push('/');
     } catch (error: any) {
-      console.error("Error signing in with email:", error);
-      // toast({ // Commented out
-      //   title: "Login Failed",
-      //   description: error.message || "Invalid email or password.",
-      //   variant: "destructive",
-      // });
       console.error("Login Failed:", error.message || "Invalid email or password.");
     } finally {
       setIsEmailLoading(false);
@@ -63,19 +52,9 @@ const LoginPage: NextPage = () => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // toast({ // Commented out
-      //   title: "Login Successful!",
-      //   description: "Welcome!",
-      // });
       console.log("Google Login Successful!");
-      router.push('/'); // Redirect to home page
+      router.push('/');
     } catch (error: any) {
-      console.error("Error with Google sign-in:", error);
-      // toast({ // Commented out
-      //   title: "Google Sign-In Failed",
-      //   description: error.message || "Could not sign in with Google.",
-      //   variant: "destructive",
-      // });
       console.error("Google Sign-In Failed:", error.message || "Could not sign in with Google.");
     } finally {
       setIsGoogleLoading(false);
@@ -109,21 +88,13 @@ const LoginPage: NextPage = () => {
         </form>
         <CardContent className="pb-4 pt-0">
           <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
+            <div className="absolute inset-0 flex items-center"> <span className="w-full border-t" /> </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
+              <span className="bg-background px-2 text-muted-foreground"> Or continue with </span>
             </div>
           </div>
           <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
-            {isGoogleLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <GoogleIcon className="mr-2 h-4 w-4" />
-            )}
+            {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
             Login with Google
           </Button>
         </CardContent>

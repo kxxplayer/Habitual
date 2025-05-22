@@ -10,25 +10,11 @@ interface BadgeDefinition {
   id: string;
   name: string;
   description: string;
-  icon?: string; // Emoji or identifier for a Lucide icon
+  icon?: string;
   condition: (habits: Habit[], existingBadges: EarnedBadge[]) => boolean;
 }
 
 const badgeDefinitions: BadgeDefinition[] = [
-  {
-    id: SEVEN_DAY_STREAK_BADGE_ID,
-    name: "7-Day Streak! 🔥",
-    description: "Kept a habit going for 7 consecutive days.",
-    icon: "🔥",
-    condition: (habits) => habits.some(habit => calculateStreak(habit) >= 7),
-  },
-  {
-    id: THIRTY_DAY_STREAK_BADGE_ID,
-    name: "30-Day Master! 🌟",
-    description: "Maintained a habit for 30 incredible days.",
-    icon: "🌟",
-    condition: (habits) => habits.some(habit => calculateStreak(habit) >= 30),
-  },
   {
     id: FIRST_HABIT_COMPLETED_BADGE_ID,
     name: "First Step! ✅",
@@ -37,24 +23,31 @@ const badgeDefinitions: BadgeDefinition[] = [
     condition: (habits) => habits.some(habit => habit.completionLog.some(log => log.status === 'completed')),
   },
   {
+    id: SEVEN_DAY_STREAK_BADGE_ID,
+    name: "7-Day Streak! 🔥",
+    description: "Kept a habit going for 7 consecutive scheduled days.",
+    icon: "🔥",
+    condition: (habits) => habits.some(habit => calculateStreak(habit) >= 7),
+  },
+  {
+    id: THIRTY_DAY_STREAK_BADGE_ID,
+    name: "30-Day Master! 🌟",
+    description: "Maintained a habit for 30 incredible scheduled days.",
+    icon: "🌟",
+    condition: (habits) => habits.some(habit => calculateStreak(habit) >= 30),
+  },
+  {
     id: THREE_DAY_SQL_STREAK_BADGE_ID,
     name: "3-Day SQL Pro! 💻",
-    description: "Practiced SQL for 3 consecutive days.",
+    description: "Practiced SQL for 3 consecutive scheduled days.",
     icon: "💻",
-    condition: (habits) => 
-      habits.some(habit => 
+    condition: (habits) =>
+      habits.some(habit =>
         habit.name.toLowerCase().includes("sql") && calculateStreak(habit) >= 3
       ),
   },
-  // Add more badge definitions here
 ];
 
-/**
- * Checks all defined badge conditions and returns any newly earned badges.
- * @param habits The current list of habits.
- * @param existingBadges The list of already earned badges.
- * @returns An array of newly earned Badge objects, or an empty array if none.
- */
 export function checkAndAwardBadges(habits: Habit[], existingBadges: EarnedBadge[]): EarnedBadge[] {
   const newlyEarnedBadges: EarnedBadge[] = [];
   const today = format(new Date(), 'yyyy-MM-dd');

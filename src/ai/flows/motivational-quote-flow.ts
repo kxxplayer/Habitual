@@ -1,17 +1,16 @@
+
 'use server';
 /**
  * @fileOverview Generates a motivational quote for habit building.
- *
- * - getMotivationalQuote - A function that returns a motivational quote.
- * - MotivationalQuoteInput - The input type for the getMotivationalQuote function.
- * - MotivationalQuoteOutput - The return type for the getMotivationalQuote function.
+ * - getMotivationalQuote - Returns a quote.
+ * - MotivationalQuoteInput - Input type.
+ * - MotivationalQuoteOutput - Return type.
  */
-
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const MotivationalQuoteInputSchema = z.object({
-  habitName: z.string().optional().describe('The name of the habit for which to generate a quote (optional).'),
+  habitName: z.string().optional().describe('The name of the habit (optional).'),
 });
 export type MotivationalQuoteInput = z.infer<typeof MotivationalQuoteInputSchema>;
 
@@ -26,27 +25,19 @@ export async function getMotivationalQuote(input?: MotivationalQuoteInput): Prom
 
 const prompt = ai.definePrompt({
   name: 'motivationalQuotePrompt',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: MotivationalQuoteInputSchema},
   output: {schema: MotivationalQuoteOutputSchema},
-  prompt: `You are a motivational coach specializing in habit formation. 
-  Generate a short, encouraging, and actionable motivational quote.
-  {{#if habitName}}The quote should ideally be relevant to the habit: '{{habitName}}'. For example, if the habit is 'SQL Practice', you could say "Keep coding, your SQL skills are leveling up! Don't break the chain!". If the habit is 'Morning Run', "That first step out the door is the hardest. You've got this run!".{{/if}}
-  If no specific habit is provided, offer a general motivational quote about consistency or perseverance in building habits.
-  Keep the quote concise and impactful, like something that would fit well in a short reminder.
-  Avoid generic platitudes. Make it sound inspiring and slightly playful if possible.
-  Example for general: "Every small step counts. Keep building that momentum!"
-  Example for specific: "Your '{{habitName}}' streak is looking good! Keep it glowing!"
+  prompt: `You are a motivational coach. Generate a short, encouraging, actionable quote.
+  {{#if habitName}}Make it relevant to: '{{habitName}}'. E.g., for 'SQL Practice', "Keep coding, SQL skills leveling up! Don't break the chain!". For 'Morning Run', "First step out the door is hardest. You got this!".{{/if}}
+  If no habit name, offer a general quote about consistency or perseverance.
+  Concise & impactful. Inspiring & playful if possible.
+  General example: "Every small step counts. Keep building momentum!"
+  Specific example: "Your '{{habitName}}' streak looks good! Keep it glowing!"
   `,
 });
 
 const motivationalQuoteFlow = ai.defineFlow(
-  {
-    name: 'motivationalQuoteFlow',
-    inputSchema: MotivationalQuoteInputSchema,
-    outputSchema: MotivationalQuoteOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
+  { name: 'motivationalQuoteFlow', inputSchema: MotivationalQuoteInputSchema, outputSchema: MotivationalQuoteOutputSchema },
+  async input => { const {output} = await prompt(input); return output!; }
 );

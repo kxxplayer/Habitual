@@ -1,6 +1,7 @@
 
 "use client";
 
+import * as React from 'react';
 import type { NextPage } from 'next';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// import { useToast } from '@/hooks/use-toast'; // Commented out
 import { auth } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useState } from 'react';
@@ -23,14 +23,13 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
-  path: ["confirmPassword"], // path of error
+  path: ["confirmPassword"],
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const RegisterPage: NextPage = () => {
   const router = useRouter();
-  // const { toast } = useToast(); // Commented out
   const [isLoading, setIsLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormValues>({
@@ -41,19 +40,9 @@ const RegisterPage: NextPage = () => {
     setIsLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, data.email, data.password);
-      // toast({ // Commented out
-      //   title: "Account Created!",
-      //   description: "You have successfully registered.",
-      // });
       console.log("Account Created!");
-      router.push('/'); // Redirect to home page after registration
+      router.push('/');
     } catch (error: any) {
-      console.error("Error registering:", error);
-      // toast({ // Commented out
-      //   title: "Registration Failed",
-      //   description: error.message || "An unexpected error occurred.",
-      //   variant: "destructive",
-      // });
       console.error("Registration Failed:", error.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);

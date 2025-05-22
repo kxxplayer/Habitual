@@ -1,175 +1,137 @@
 
-// public/sw.js
-const CACHE_NAME = 'habitual-cache-v2'; // Increment cache version
+const CACHE_NAME = 'habitual-cache-v2'; // Incremented version
 const urlsToCache = [
   '/',
   '/manifest.json',
-  '/favicon.ico',
-  // Key CSS and JS chunks (actual names depend on your Next.js build output)
-  // You'd typically get these names from a build manifest if using a PWA library
-  // For manual setup, you might inspect network tab after first load or add common ones.
-  // '/_next/static/css/main.css', // Example, actual name will vary
-  // '/_next/static/chunks/main.js', // Example, actual name will vary
-  // '/_next/static/chunks/webpack.js', // Example
-  // '/_next/static/chunks/framework.js', // Example
-  // '/_next/static/chunks/pages/_app.js', // Example
-  // '/_next/static/chunks/pages/index.js', // Example for the main page
-  '/icons/icon-192x192.png',
+  '/icons/icon-192x192.png', // Ensure these paths match your actual icon locations
   '/icons/icon-512x512.png',
-  // Add other important static assets or page routes you want to cache
-  // e.g., '/auth/login', '/auth/register', '/profile', '/calendar'
-  // Be cautious with caching dynamic content or API routes without a proper strategy.
+  // Add paths to critical JS/CSS bundles if known and stable,
+  // but Next.js often hashes these, making manual caching tricky.
+  // Consider using a Next.js PWA plugin like @ducanh2912/next-pwa for better caching.
 ];
 
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
+  console.log('[Service Worker] Install event');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching app shell');
-        // Using addAll. If any request fails, the whole operation fails.
-        // For more resilience, you might cache individually and ignore errors for non-critical assets.
-        return cache.addAll(urlsToCache.map(url => new Request(url, { cache: 'reload' })));
+        console.log('[Service Worker] Opened cache:', CACHE_NAME);
+        return cache.addAll(urlsToCache.map(url => new Request(url, { cache: 'reload' }))) // Force reload from network for initial cache
+          .catch(error => {
+            console.error('[Service Worker] Failed to cache initial assets:', error);
+          });
       })
       .then(() => {
-        console.log('Service Worker: Install complete');
-        return self.skipWaiting(); // Force the waiting service worker to become the active service worker.
-      })
-      .catch(error => {
-        console.error('Service Worker: Failed to cache app shell during install', error);
+        console.log('[Service Worker] Skip waiting on install');
+        return self.skipWaiting(); // Activate new SW immediately
       })
   );
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
-  const cacheWhitelist = [CACHE_NAME];
+  console.log('[Service Worker] Activate event');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('Service Worker: Deleting old cache', cacheName);
+          if (cacheName !== CACHE_NAME) {
+            console.log('[Service Worker] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      console.log('Service Worker: Activate complete, now controlling client.');
-      return self.clients.claim(); // Become the controller for all clients within its scope.
+      console.log('[Service Worker] Clients claimed');
+      return self.clients.claim(); // Take control of all clients
     })
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  // We only want to cache GET requests.
-  if (event.request.method !== 'GET') {
-    return;
-  }
+  const { request } = event;
 
-  // For navigation requests, try network first, then cache (Network-first strategy for HTML)
-  // This ensures users get the latest HTML if online, but still have offline access.
-  if (event.request.mode === 'navigate') {
+  // For navigation requests (HTML pages), try network first, then cache.
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(request)
         .then((response) => {
-          // If network is available, cache the response and return it
-          if (response && response.ok) { // Ensure response is valid before caching
-            const responseToCache = response.clone();
+          // If successful, clone and cache the response for future offline use.
+          if (response.ok) {
+            const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
+              cache.put(request, responseClone);
             });
           }
           return response;
         })
         .catch(() => {
-          // If network fails, try to serve from cache
-          return caches.match(event.request)
+          // If network fails, try to serve from cache.
+          return caches.match(request)
             .then((cachedResponse) => {
-              return cachedResponse || caches.match('/'); // Fallback to root page if specific page not cached
+              return cachedResponse || caches.match('/'); // Fallback to root if specific page not cached
             });
         })
     );
     return;
   }
 
-  // For other requests (CSS, JS, images), use Cache-first strategy
+  // For other requests (CSS, JS, images), use cache-first strategy.
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
-          // Cache hit - return response
-          return response;
+    caches.match(request)
+      .then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-        // Not in cache, fetch from network
-        return fetch(event.request).then(
-          (networkResponse) => {
-            // Check if we received a valid response
-            if(!networkResponse || networkResponse.status !== 200 /*|| networkResponse.type !== 'basic'*/) {
-              // Allowing non-basic types for cross-origin resources like fonts if needed
-              return networkResponse;
-            }
-
+        return fetch(request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200 && request.method === 'GET') {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME)
               .then((cache) => {
-                cache.put(event.request, responseToCache);
+                cache.put(request, responseToCache);
               });
-            return networkResponse;
           }
-        ).catch(error => {
-          console.error('Service Worker: Fetch failed for', event.request.url, error);
-          // Optionally, return a fallback image or asset here if appropriate
+          return networkResponse;
         });
+      }).catch(error => {
+        console.error('[Service Worker] Fetch error:', error);
+        // You could return a generic fallback response here for non-critical assets
       })
   );
 });
 
-// Placeholder for Background Sync API
-// self.addEventListener('sync', (event) => {
-//   if (event.tag === 'my-background-sync-tag') {
-//     console.log('Service Worker: Background sync event received for', event.tag);
-//     // event.waitUntil(doSomeBackgroundSyncOperation());
-//   }
-// });
+// Placeholder for Background Sync
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'my-background-sync-tag') {
+    console.log('[Service Worker] Background sync event triggered for tag:', event.tag);
+    // event.waitUntil(doSomeBackgroundWork());
+  }
+});
 
-// Placeholder for Periodic Background Sync API
-// self.addEventListener('periodicsync', (event) => {
-//   if (event.tag === 'my-periodic-sync-tag') {
-//     console.log('Service Worker: Periodic sync event received for', event.tag);
-//     // event.waitUntil(doSomePeriodicSyncOperation());
-//   }
-// });
+// Placeholder for Periodic Background Sync
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'my-periodic-sync-tag') {
+    console.log('[Service Worker] Periodic background sync event triggered for tag:', event.tag);
+    // event.waitUntil(doSomePeriodicWork());
+  }
+});
 
-// Placeholder for Push API
-// self.addEventListener('push', (event) => {
-//   console.log('Service Worker: Push message received.', event.data.text());
-//   const title = 'Habitual Reminder';
-//   const options = {
-//     body: event.data.text(),
-//     icon: '/icons/icon-192x192.png',
-//     badge: '/icons/icon-96x96.png' // Or other appropriate badge
-//   };
-//   event.waitUntil(self.registration.showNotification(title, options));
-// });
+// Placeholder for Push Notifications
+self.addEventListener('push', (event) => {
+  console.log('[Service Worker] Push Received.');
+  console.log(`[Service Worker] Push had this data: "${event.data ? event.data.text() : 'no data'}"`);
+  // const title = 'Habitual Reminder';
+  // const options = {
+  //   body: event.data ? event.data.text() : 'A new notification!',
+  //   icon: '/icons/icon-192x192.png',
+  //   badge: '/icons/icon-96x96.png' // Example badge
+  // };
+  // event.waitUntil(self.registration.showNotification(title, options));
+});
 
-// Placeholder for Notification Click
-// self.addEventListener('notificationclick', (event) => {
-//   console.log('Service Worker: Notification clicked.');
-//   event.notification.close();
-//   // Example: Focus an open window or open a new one
-//   // event.waitUntil(
-//   //   clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-//   //     if (clientList.length > 0) {
-//   //       let client = clientList[0];
-//   //       for (let i = 0; i < clientList.length; i++) {
-//   //         if (clientList[i].focused) {
-//   //           client = clientList[i];
-//   //         }
-//   //       }
-//   //       return client.focus();
-//   //     }
-//   //     return clients.openWindow('/');
-//   //   })
-//   // );
-// });
+self.addEventListener('notificationclick', (event) => {
+  console.log('[Service Worker] Notification click Received.');
+  event.notification.close();
+  // event.waitUntil(
+  //   clients.openWindow('https://your-app-url.com') // Or a specific URL
+  // );
+});

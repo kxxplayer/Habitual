@@ -5,7 +5,6 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
-
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -19,15 +18,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Habitual',
   description: 'Improve your habits, one day at a time.',
-  manifest: '/manifest.json', // Link to the web app manifest
+  manifest: '/manifest.json',
   icons: {
-    apple: "/icons/icon-192x192.png", // Basic apple touch icon
+    apple: "/icons/icon-192x192.png",
   }
 };
 
-// Add viewport configuration for PWA theme colors, etc.
 export const viewport: Viewport = {
-  themeColor: '#3498db', // Matches manifest.json theme_color
+  themeColor: '#3498db', // Default theme color, can be overridden by manifest
 };
 
 export default function RootLayout({
@@ -37,15 +35,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Standard PWA meta tags. Many are covered by Next.js Metadata API now. */}
-        {/* <link rel="apple-touch-icon" href="/icons/icon-192x192.png"></link> */}
-        {/* theme-color is now handled by `viewport` export */}
-      </head>
+      <head />
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider
           defaultTheme="theme-calm-blue"
-          storageKey="habitual-theme"
+          storageKey="habitual-theme-multi"
         >
           {children}
           <Toaster />

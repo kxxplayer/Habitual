@@ -1,26 +1,17 @@
 
-// src/components/overview/HabitOverview.tsx
-'use client';
+"use client";
 
+import * as React from 'react';
 import type { FC } from 'react';
 import { useMemo } from 'react';
-import type { Habit, HabitCompletionLogEntry, WeekDay } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { Habit } from '@/types';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { format, subDays, startOfWeek, endOfWeek, isWithinInterval, subWeeks } from 'date-fns';
+import { format, subDays, startOfWeek, endOfWeek, addDays as dateFnsAddDays } from 'date-fns';
 import { getDayAbbreviationFromDate } from '@/lib/dateUtils';
 import { Target, Repeat, Award, ClipboardList, CheckCircle2, Circle, BarChart3, BookCopy, Star } from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-} from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegendContent } from "@/components/ui/chart";
-
 
 interface HabitOverviewProps {
   habits: Habit[];
@@ -28,274 +19,113 @@ interface HabitOverviewProps {
 }
 
 interface WeeklyConsistencyData {
-  name: string; // e.g., "This Week", "Last Week"
-  "Consistency (%)": number;
-  scheduled: number;
-  completed: number;
+  name: string; "Consistency (%)": number; scheduled: number; completed: number;
 }
 
 const calculateWeeklyConsistency = (habits: Habit[], weeksAgo: number, today: Date): WeeklyConsistencyData => {
   const targetDate = subWeeks(today, weeksAgo);
   const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 });
-  const weekEnd = endOfWeek(targetDate, { weekStartsOn: 0 });
-  
-  let totalScheduledInstances = 0;
-  let totalCompletedInstances = 0;
+  let totalScheduled = 0, totalCompleted = 0;
 
   habits.forEach(habit => {
     for (let i = 0; i < 7; i++) {
-      const currentDateInLoop = addDays(weekStart, i);
-      const currentDayAbbr = getDayAbbreviationFromDate(currentDateInLoop);
-
-      if (habit.daysOfWeek.includes(currentDayAbbr)) {
-        totalScheduledInstances++;
-        const logEntry = habit.completionLog.find(log => 
-          log.date === format(currentDateInLoop, 'yyyy-MM-dd') && 
-          (log.status === 'completed' || log.status === undefined)
-        );
-        if (logEntry) {
-          totalCompletedInstances++;
+      const currentDateInLoop = dateFnsAddDays(weekStart, i);
+      if (habit.daysOfWeek.includes(getDayAbbreviationFromDate(currentDateInLoop))) {
+        totalScheduled++;
+        if (habit.completionLog.some(log => log.date === format(currentDateInLoop, 'yyyy-MM-dd') && log.status === 'completed')) {
+          totalCompleted++;
         }
       }
     }
   });
-  
-  const consistencyPercentage = totalScheduledInstances > 0 ? Math.round((totalCompletedInstances / totalScheduledInstances) * 100) : 0;
-  let weekLabel = "";
-  if (weeksAgo === 0) weekLabel = "This Week";
-  else if (weeksAgo === 1) weekLabel = "Last Week";
-  else weekLabel = `${weeksAgo} Weeks Ago`;
-  
-  return { 
-    name: weekLabel,
-    "Consistency (%)": consistencyPercentage,
-    scheduled: totalScheduledInstances,
-    completed: totalCompletedInstances
-  };
+  const consistency = totalScheduled > 0 ? Math.round((totalCompleted / totalScheduled) * 100) : 0;
+  let weekLabel = weeksAgo === 0 ? "This Week" : weeksAgo === 1 ? "Last Week" : `${weeksAgo} Weeks Ago`;
+  return { name: weekLabel, "Consistency (%)": consistency, scheduled: totalScheduled, completed: totalCompleted };
 };
 
-// Helper function to add days to a date
-const addDays = (date: Date, days: number): Date => {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-};
-
+const subWeeks = (date: Date, amount: number) => dateFnsAddDays(date, -amount * 7);
 
 const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => format(today, 'yyyy-MM-dd'), [today]);
   const todayAbbr = useMemo(() => getDayAbbreviationFromDate(today), [today]);
 
-  const scheduledToday = useMemo(() => {
-    return habits.filter(habit => habit.daysOfWeek.includes(todayAbbr));
-  }, [habits, todayAbbr]);
+  const scheduledToday = useMemo(() => habits.filter(h => h.daysOfWeek.includes(todayAbbr)), [habits, todayAbbr]);
 
   const dailyProgress = useMemo(() => {
-    if (!habits || habits.length === 0) return { scheduled: 0, completed: 0, percent: 0 };
-    
     if (scheduledToday.length === 0) return { scheduled: 0, completed: 0, percent: 0 };
+    const completed = scheduledToday.filter(h => h.completionLog.some(l => l.date === todayStr && l.status === 'completed')).length;
+    return { scheduled: scheduledToday.length, completed, percent: Math.round((completed / scheduledToday.length) * 100) };
+  }, [scheduledToday, todayStr]);
 
-    const completedToday = scheduledToday.filter(habit =>
-      habit.completionLog.some(log => log.date === todayStr && (log.status === 'completed' || log.status === undefined))
-    );
-    return {
-        scheduled: scheduledToday.length,
-        completed: completedToday.length,
-        percent: Math.round((completedToday.length / scheduledToday.length) * 100)
-    };
-  }, [habits, scheduledToday, todayStr]);
-
-  const overallConsistencyScore = useMemo(() => {
-    if (!habits || habits.length === 0) return { score: 0, days: 7 };
-    const numDays = 7; // For overall 7-day consistency score
-    let totalScheduledInstances = 0;
-    let totalCompletedInstances = 0;
-
-    for (let i = 0; i < numDays; i++) {
-      const currentDate = subDays(today, i);
-      const currentDateStr = format(currentDate, 'yyyy-MM-dd');
-      const currentDayAbbr = getDayAbbreviationFromDate(currentDate);
-
-      habits.forEach(habit => {
-        if (habit.daysOfWeek.includes(currentDayAbbr)) {
-          totalScheduledInstances++;
-          if (habit.completionLog.some(log => log.date === currentDateStr && (log.status === 'completed' || log.status === undefined))) {
-            totalCompletedInstances++;
-          }
+  const overallConsistency = useMemo(() => {
+    let totalScheduled = 0, totalCompleted = 0;
+    for (let i = 0; i < 7; i++) {
+      const date = subDays(today, i); const dateStr = format(date, 'yyyy-MM-dd'); const dayAbbr = getDayAbbreviationFromDate(date);
+      habits.forEach(h => {
+        if (h.daysOfWeek.includes(dayAbbr)) {
+          totalScheduled++;
+          if (h.completionLog.some(l => l.date === dateStr && l.status === 'completed')) totalCompleted++;
         }
       });
     }
-
-    if (totalScheduledInstances === 0) return { score: 0, days: numDays };
-    return {
-        score: Math.round((totalCompletedInstances / totalScheduledInstances) * 100),
-        days: numDays
-    };
+    return { score: totalScheduled > 0 ? Math.round((totalCompleted / totalScheduled) * 100) : 0, days: 7 };
   }, [habits, today]);
 
   const totalHabitsTracked = habits.length;
-  
-  let journeyMessage = "Start your journey by adding a habit!";
-  if (totalHabitsTracked > 0) {
-    if (overallConsistencyScore.score >= 80) {
-        journeyMessage = "Excellent Consistency! You're on a roll!";
-    } else if (overallConsistencyScore.score >= 50) {
-        journeyMessage = "Great Progress! Keep it up!";
-    } else {
-        journeyMessage = "Keep building those habits!";
-    }
-  }
+  let journeyMessage = "Start by adding a habit!";
+  if (totalHabitsTracked > 0) journeyMessage = overallConsistency.score >= 80 ? "Excellent Consistency!" : overallConsistency.score >= 50 ? "Great Progress!" : "Keep building those habits!";
 
-  const weeklyConsistencyChartData = useMemo(() => {
-    const data: WeeklyConsistencyData[] = [];
-    for (let i = 3; i >= 0; i--) { // Last 4 weeks including current
-      data.push(calculateWeeklyConsistency(habits, i, today));
-    }
-    return data;
-  }, [habits, today]);
-
-  const chartConfig = {
-    "Consistency (%)": {
-      label: "Consistency (%)",
-      color: "hsl(var(--chart-1))",
-    },
-  };
-
+  const weeklyChartData = useMemo(() => [3, 2, 1, 0].map(i => calculateWeeklyConsistency(habits, i, today)), [habits, today]);
+  const chartConfig = { "Consistency (%)": { label: "Consistency (%)", color: "hsl(var(--chart-1))" } };
   const totalSqlHours = useMemo(() => {
     let totalMinutes = 0;
-    const sqlHabits = habits.filter(h => h.name.toLowerCase().includes("sql"));
-    sqlHabits.forEach(habit => {
-      habit.completionLog.forEach(log => {
-        if (log.status === 'completed' || log.status === undefined) {
-          totalMinutes += (habit.durationHours || 0) * 60;
-          totalMinutes += (habit.durationMinutes || 0);
-        }
-      });
+    habits.filter(h => h.name.toLowerCase().includes("sql")).forEach(h => {
+      h.completionLog.forEach(l => { if (l.status === 'completed') totalMinutes += (h.durationHours || 0) * 60 + (h.durationMinutes || 0); });
     });
     return (totalMinutes / 60).toFixed(2);
   }, [habits]);
 
-
   return (
     <Card className="border-0 shadow-none">
-      <CardContent className="space-y-4 px-2 sm:px-4 py-3">
+      <CardContent className="space-y-3 px-2 sm:px-3 py-3">
         {totalHabitsTracked > 0 ? (
           <>
-            <div className="flex justify-between items-center mb-1">
-                <p className="text-xs sm:text-sm font-medium text-foreground flex items-center">
-                  <Star className="mr-2 h-4 w-4 text-yellow-500" />
-                  Total Points
-                </p>
-                <span className="text-xs sm:text-sm font-semibold text-yellow-500">{totalPoints}</span>
-              </div>
-
-
+            <div className="flex justify-between items-center"><p className="text-xs font-medium flex items-center"><Star className="mr-1.5 h-4 w-4 text-yellow-500" />Total Points</p><span className="text-xs font-semibold text-yellow-500">{totalPoints}</span></div>
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <p className="text-xs sm:text-sm font-medium text-foreground flex items-center">
-                  <Target className="mr-2 h-4 w-4 text-primary/90" />
-                  Today's Goal
-                </p>
-                <span className="text-xs sm:text-sm font-semibold text-primary">
-                  {dailyProgress.scheduled > 0 ? `${dailyProgress.completed} / ${dailyProgress.scheduled} (${dailyProgress.percent}%)` : 'No habits today'}
-                </span>
-              </div>
-              <Progress value={dailyProgress.scheduled > 0 ? dailyProgress.percent : 0} className="h-2" indicatorClassName="bg-primary" />
+              <div className="flex justify-between items-center mb-0.5"><p className="text-xs font-medium flex items-center"><Target className="mr-1.5 h-4 w-4 text-primary/90" />Today's Goal</p><span className="text-xs font-semibold text-primary">{dailyProgress.scheduled > 0 ? `${dailyProgress.completed}/${dailyProgress.scheduled} (${dailyProgress.percent}%)` : 'No habits today'}</span></div>
+              <Progress value={dailyProgress.scheduled > 0 ? dailyProgress.percent : 0} className="h-1.5" indicatorClassName="bg-primary" />
             </div>
-
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <p className="text-xs sm:text-sm font-medium text-foreground flex items-center">
-                  <Repeat className="mr-2 h-4 w-4 text-accent" />
-                  {overallConsistencyScore.days}-Day Consistency
-                </p>
-                <span className="text-xs sm:text-sm font-semibold text-accent">{overallConsistencyScore.score}%</span>
-              </div>
-              <Progress value={overallConsistencyScore.score} className="h-2" indicatorClassName="bg-accent" />
+              <div className="flex justify-between items-center mb-0.5"><p className="text-xs font-medium flex items-center"><Repeat className="mr-1.5 h-4 w-4 text-accent" />{overallConsistency.days}-Day Consistency</p><span className="text-xs font-semibold text-accent">{overallConsistency.score}%</span></div>
+              <Progress value={overallConsistency.score} className="h-1.5" indicatorClassName="bg-accent" />
             </div>
-            
             {scheduledToday.length > 0 && (
-              <div className="pt-2 space-y-1.5">
-                <h4 className="text-xs sm:text-sm font-medium text-foreground flex items-center">
-                  <ClipboardList className="mr-2 h-4 w-4 text-muted-foreground" />
-                  Today's Checklist:
-                </h4>
-                <ul className="space-y-1 pl-1">
-                  {scheduledToday.map(habit => {
-                    const isCompleted = habit.completionLog.some(log => log.date === todayStr && (log.status === 'completed' || log.status === undefined));
-                    return (
-                      <li key={habit.id} className="flex items-center text-xs sm:text-sm">
-                        {isCompleted ? (
-                          <CheckCircle2 className="mr-2 h-4 w-4 text-accent flex-shrink-0" />
-                        ) : (
-                          <Circle className="mr-2 h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        )}
-                        <span className={`${isCompleted ? 'text-muted-foreground line-through' : 'text-foreground'} truncate max-w-[200px] xs:max-w-[240px] sm:max-w-none`}>
-                          {habit.name}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
+              <div className="pt-1.5 space-y-1">
+                <h4 className="text-xs font-medium flex items-center"><ClipboardList className="mr-1.5 h-4 w-4 text-muted-foreground" />Today's Checklist:</h4>
+                <ul className="space-y-0.5 pl-1">{scheduledToday.map(h => (<li key={h.id} className="flex items-center text-xs">{h.completionLog.some(l=>l.date===todayStr && l.status==='completed') ? <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-accent shrink-0" /> : <Circle className="mr-1.5 h-3.5 w-3.5 text-muted-foreground shrink-0" />}<span className={cn("truncate", h.completionLog.some(l=>l.date===todayStr && l.status==='completed') && "text-muted-foreground line-through")}>{h.name}</span></li>))}</ul>
               </div>
             )}
-
-            <div className="pt-3 mt-3 border-t border-border/60">
-                 <h4 className="text-xs sm:text-sm font-medium text-foreground flex items-center mb-2">
-                  <BarChart3 className="mr-2 h-4 w-4 text-muted-foreground" />
-                  Weekly Consistency Trend
-                </h4>
-                {habits.length > 0 && weeklyConsistencyChartData.some(d => d.scheduled > 0) ? (
-                    <ChartContainer config={chartConfig} className="h-[150px] w-full">
-                      <BarChart accessibilityLayer data={weeklyConsistencyChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                        <XAxis
-                          dataKey="name"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tickFormatter={(value) => value.slice(0, 3)}
-                          className="text-xs"
-                        />
-                        <YAxis tickLine={false} axisLine={false} tickMargin={8} className="text-xs" domain={[0, 100]}/>
-                        <Tooltip
-                          cursor={false}
-                          content={<ChartTooltipContent indicator="dot" />}
-                        />
-                        <Legend content={<ChartLegendContent />} />
-                        <Bar dataKey="Consistency (%)" fill="var(--color-Consistency (\\%))" radius={4} />
-                      </BarChart>
-                    </ChartContainer>
-                  ) : (
-                     <p className="text-xs text-muted-foreground text-center py-4">Not enough data for weekly trend yet.</p>
-                  )}
+            <div className="pt-2 mt-2 border-t border-border/60">
+              <h4 className="text-xs font-medium flex items-center mb-1"><BarChart3 className="mr-1.5 h-4 w-4 text-muted-foreground" />Weekly Consistency</h4>
+              {habits.length > 0 && weeklyChartData.some(d => d.scheduled > 0) ? (
+                <ChartContainer config={chartConfig} className="h-[120px] w-full text-xs">
+                  <BarChart accessibilityLayer data={weeklyChartData} margin={{ top: 5, right: 0, left: -30, bottom: -5 }}>
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={4} tickFormatter={val => val.slice(0,3)} />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={4} domain={[0, 100]}/>
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" className="text-xs"/>} />
+                    <Legend content={<ChartLegendContent className="text-xs" />} />
+                    <Bar dataKey="Consistency (%)" fill="var(--color-Consistency (\\%))" radius={3} />
+                  </BarChart>
+                </ChartContainer>
+              ) : (<p className="text-xs text-muted-foreground text-center py-2">Not enough data for trend.</p>)}
             </div>
-            
-            {habits.some(h => h.name.toLowerCase().includes("sql")) && (
-                <div className="pt-3 mt-3 border-t border-border/60">
-                    <p className="text-xs sm:text-sm font-medium text-foreground flex items-center">
-                        <BookCopy className="mr-2 h-4 w-4 text-blue-500" />
-                        Total SQL Practice Logged: <span className="ml-1 font-semibold text-blue-500">{totalSqlHours} hrs</span>
-                    </p>
-                </div>
-            )}
-
-
-            <div className="pt-3 text-center border-t border-border/60">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center justify-center mt-2">
-                    <Award className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
-                    {journeyMessage}
-                </p>
-            </div>
+            {habits.some(h => h.name.toLowerCase().includes("sql")) && (<div className="pt-2 mt-2 border-t border-border/60"><p className="text-xs font-medium flex items-center"><BookCopy className="mr-1.5 h-4 w-4 text-blue-500" />Total SQL Logged: <span className="ml-1 font-semibold text-blue-500">{totalSqlHours} hrs</span></p></div>)}
+            <div className="pt-2 text-center border-t border-border/60"><p className="text-xs font-medium text-muted-foreground flex items-center justify-center mt-1"><Award className="mr-1.5 h-4 w-4 text-yellow-500" />{journeyMessage}</p></div>
           </>
-        ) : (
-            <div className="text-center py-2">
-                <p className="text-muted-foreground text-xs sm:text-sm">{journeyMessage}</p>
-            </div>
-        )}
+        ) : (<div className="text-center py-2"><p className="text-muted-foreground text-xs">{journeyMessage}</p></div>)}
       </CardContent>
     </Card>
   );
 };
-
 export default HabitOverview;

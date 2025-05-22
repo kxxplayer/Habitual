@@ -4,174 +4,129 @@
 @tailwind utilities;
 
 @layer base {
-  /* Base styles, radius, etc. can remain if they are theme-agnostic */
   :root {
     --radius: 0.5rem;
-    /* Fallback/default values if absolutely necessary, but themes should define them */
   }
 
-  /* Theme: Calm Blue (Original Light) */
+  /* Default Theme: Calm Blue (Used as base for .theme-calm-blue) */
   .theme-calm-blue {
     --background: 210 40% 98%; /* Lighter blueish white */
     --foreground: 210 20% 20%; /* Dark cool gray */
-
     --card: 0 0% 100%; /* White */
     --card-foreground: 210 20% 20%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 210 20% 20%;
-
     --primary: 205 65% 55%; /* Calm Blue #3498db */
     --primary-foreground: 0 0% 100%; /* White */
-
     --secondary: 210 40% 94%; /* Light gray #ecf0f1 */
     --secondary-foreground: 210 10% 40%;
-
     --muted: 210 40% 90%;
     --muted-foreground: 210 10% 55%;
-
     --accent: 145 63% 49%; /* Green #2ecc71 */
     --accent-foreground: 0 0% 100%; /* White */
-
-    --destructive: 0 84% 60%; /* Standard Destructive Red */
-    --destructive-foreground: 0 0% 98%; /* White */
-
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
     --border: 210 20% 88%;
     --input: 210 20% 88%;
-    --ring: 205 65% 55%; /* Calm Blue for ring */
-
-    --chart-1: 205 65% 55%; /* Primary Blue */
-    --chart-2: 145 63% 49%; /* Accent Green */
-    --chart-3: 220 60% 60%; /* Another blue */
-    --chart-4: 45 70% 55%;  /* Yellow/Gold */
-    --chart-5: 280 60% 65%; /* Purple */
-    
-    --background-anim-start: 195 85% 90%; 
-    --background-anim-mid: 270 80% 92%;   
-    --background-anim-end: 205 70% 90%;    
+    --ring: 205 65% 55%;
+    --chart-1: 205 65% 55%;
+    --chart-2: 145 63% 49%;
+    --chart-3: 220 60% 60%;
+    --chart-4: 45 70% 55%;
+    --chart-5: 280 60% 65%;
+    --background-anim-start: 195 85% 90%;
+    --background-anim-mid: 270 80% 92%;
+    --background-anim-end: 205 70% 90%;
   }
 
-  /* Theme: Vibrant Purple (Original Dark) */
   .theme-vibrant-purple {
-    --background: 248 30% 12%; /* Dark Purple Blue */
-    --foreground: 220 15% 95%; /* Off-White */
-
-    --card: 248 30% 18%; /* Slightly Lighter Purple Blue */
+    --background: 248 30% 12%;
+    --foreground: 220 15% 95%;
+    --card: 248 30% 18%;
     --card-foreground: 220 15% 95%;
-
-    --popover: 248 30% 15%; /* Darker Popover */
+    --popover: 248 30% 15%;
     --popover-foreground: 220 15% 95%;
-
-    --primary: 255 70% 60%; /* Vibrant Purple */
-    --primary-foreground: 0 0% 100%; /* White */
-
-    --secondary: 248 25% 22%; /* Darker Purple Blue */
-    --secondary-foreground: 220 10% 80%; /* Lighter Gray */
-
-    --muted: 248 25% 10%; /* Very Dark Purple Blue */
-    --muted-foreground: 220 10% 60%; /* Mid Gray */
-
-    --accent: 145 58% 45%; /* Bright Green */
-    --accent-foreground: 0 0% 100%; /* White */
-
-    --destructive: 0 72% 51%; 
+    --primary: 30 90% 60%; /* Vibrant Orange/Coral for primary actions */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 248 25% 22%;
+    --secondary-foreground: 220 10% 80%;
+    --muted: 248 25% 10%;
+    --muted-foreground: 220 10% 60%;
+    --accent: 145 58% 45%; /* Bright Green for positive feedback */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-
-    --border: 248 25% 25%; /* Subtle Purple Border */
+    --border: 248 25% 25%;
     --input: 248 25% 25%;
-    --ring: 145 58% 50%; 
-    
-    --chart-1: 255 70% 60%; /* Primary Purple */
-    --chart-2: 145 58% 45%; /* Accent Green */
-    --chart-3: 210 70% 65%; /* A vibrant blue */
-    --chart-4: 50 80% 60%;  /* Gold/Yellow */
-    --chart-5: 290 70% 70%; /* Magenta */
-
-    --background-anim-start: 220 70% 25%; 
-    --background-anim-mid: 180 65% 20%;   
-    --background-anim-end: 290 60% 22%;   
+    --ring: 30 90% 60%; /* Ring color matching primary */
+    --chart-1: 30 90% 60%;
+    --chart-2: 145 58% 45%;
+    --chart-3: 210 70% 65%;
+    --chart-4: 50 80% 60%;
+    --chart-5: 290 70% 70%;
+    --background-anim-start: 240 50% 20%; /* Deep Sapphire Blue */
+    --background-anim-mid: 180 60% 25%;   /* Deep Vibrant Teal */
+    --background-anim-end: 280 50% 22%;   /* Dark Magenta/Purple */
   }
 
-  /* Theme: Forest Green */
   .theme-forest-green {
-    --background: 90 30% 96%; 
-    --foreground: 120 25% 15%; 
-
-    --card: 100 20% 98%; /* Very light, almost white green */
+    --background: 90 30% 96%;
+    --foreground: 120 25% 15%;
+    --card: 100 20% 98%;
     --card-foreground: 120 25% 15%;
-
     --popover: 100 20% 98%;
     --popover-foreground: 120 25% 15%;
-
     --primary: 130 45% 40%; /* Forest Green */
-    --primary-foreground: 90 30% 96%; 
-
-    --secondary: 110 25% 92%; /* Light desaturated green */
+    --primary-foreground: 90 30% 96%;
+    --secondary: 110 25% 92%;
     --secondary-foreground: 120 20% 30%;
-
-    --muted: 110 25% 88%; 
+    --muted: 110 25% 88%;
     --muted-foreground: 120 20% 45%;
-
     --accent: 90 55% 50%; /* Brighter, slightly yellowish green */
-    --accent-foreground: 120 25% 15%; 
-
-    --destructive: 0 72% 51%; 
+    --accent-foreground: 120 25% 15%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-
     --border: 100 20% 85%;
     --input: 100 20% 85%;
-    --ring: 130 45% 40%; /* Forest Green for ring */
-
-    --chart-1: 130 45% 40%; /* Primary Green */
-    --chart-2: 90 55% 50%;  /* Accent Green */
-    --chart-3: 150 50% 55%; /* Tealish green */
-    --chart-4: 60 60% 50%;  /* Olive */
-    --chart-5: 35 40% 50%;  /* Brownish */
-    
-    --background-anim-start: 120 50% 85%; 
-    --background-anim-mid: 140 40% 90%;   
-    --background-anim-end: 100 50% 88%;    
+    --ring: 130 45% 40%;
+    --chart-1: 130 45% 40%;
+    --chart-2: 90 55% 50%;
+    --chart-3: 150 50% 55%;
+    --chart-4: 60 60% 50%;
+    --chart-5: 35 40% 50%;
+    --background-anim-start: 120 50% 85%;
+    --background-anim-mid: 140 40% 90%;
+    --background-anim-end: 100 50% 88%;
   }
 
-  /* Theme: Sunset Orange */
   .theme-sunset-orange {
-    --background: 35 100% 97%; 
-    --foreground: 25 50% 20%; 
-
-    --card: 30 100% 98%; /* Very light peach */
+    --background: 35 100% 97%;
+    --foreground: 25 50% 20%;
+    --card: 30 100% 98%;
     --card-foreground: 25 50% 20%;
-
     --popover: 30 100% 98%;
     --popover-foreground: 25 50% 20%;
-
     --primary: 25 85% 55%; /* Sunset Orange */
-    --primary-foreground: 0 0% 100%; 
-
-    --secondary: 30 80% 92%; /* Light orange */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 80% 92%;
     --secondary-foreground: 25 40% 30%;
-
-    --muted: 30 80% 88%; 
+    --muted: 30 80% 88%;
     --muted-foreground: 25 40% 45%;
-
     --accent: 10 70% 50%; /* A deeper red-orange for accent */
-    --accent-foreground: 0 0% 100%; 
-
-    --destructive: 0 72% 51%; 
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-
     --border: 28 70% 85%;
     --input: 28 70% 85%;
-    --ring: 25 85% 55%; /* Sunset Orange for ring */
-
-    --chart-1: 25 85% 55%;  /* Primary Orange */
-    --chart-2: 10 70% 50%;  /* Accent Red-Orange */
-    --chart-3: 40 90% 60%;  /* Bright Yellow */
-    --chart-4: 0 80% 60%;   /* Coral Red */
-    --chart-5: 180 50% 55%; /* Teal for contrast */
-    
-    --background-anim-start: 40 100% 90%; 
-    --background-anim-mid: 20 100% 92%;   
-    --background-anim-end: 0 90% 90%;    
+    --ring: 25 85% 55%;
+    --chart-1: 25 85% 55%;
+    --chart-2: 10 70% 50%;
+    --chart-3: 40 90% 60%;
+    --chart-4: 0 80% 60%;
+    --chart-5: 180 50% 55%;
+    --background-anim-start: 40 100% 90%; /* Light Warm Yellow */
+    --background-anim-mid: 20 100% 92%;   /* Soft Peach */
+    --background-anim-end: 0 90% 90%;     /* Pale Coral */
   }
 
   * {
@@ -179,7 +134,6 @@
   }
   body {
     @apply text-foreground;
-    /* Animated background picks up vars from the active theme class on <html> */
     background: linear-gradient(-45deg, hsl(var(--background-anim-start)), hsl(var(--background-anim-mid)), hsl(var(--background-anim-end)), hsl(var(--background-anim-mid)));
     background-size: 400% 400%;
     animation: gradientAnimation 25s ease infinite;
@@ -187,21 +141,14 @@
 }
 
 @keyframes gradientAnimation {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-/* Sparkle Animation */
 .sparkle-container {
-  position: relative; 
-  display: inline-flex; 
+  position: relative;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
@@ -210,44 +157,25 @@
   position: absolute;
   width: 8px;
   height: 8px;
-  background-color: hsl(var(--accent)); 
+  background-color: hsl(var(--accent));
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
   animation: sparkle-effect 0.8s ease-out forwards;
 }
-
-.sparkle-1 { top: -15%; left: 15%; animation-delay: 0s; }
-.sparkle-2 { top: 0%; right: 0%; animation-delay: 0.1s; }
-.sparkle-3 { top: 60%; left: -5%; animation-delay: 0.2s; }
-.sparkle-4 { bottom: -5%; right: 20%; animation-delay: 0.3s; }
-.sparkle-5 { top: 20%; left: 50%; transform: translateX(-50%); animation-delay: 0.05s; }
-.sparkle-6 { bottom: 15%; left: 30%; animation-delay: 0.15s; }
-
+.sparkle-1 { top: -15%; left: 15%; animation-delay: 0s; --tx: -10px; --ty: -20px; }
+.sparkle-2 { top: 0%; right: 0%; animation-delay: 0.1s; --tx: 10px; --ty: -20px; }
+.sparkle-3 { top: 60%; left: -5%; animation-delay: 0.2s; --tx: -15px; --ty: 0px; }
+.sparkle-4 { bottom: -5%; right: 20%; animation-delay: 0.3s; --tx: 15px; --ty: 0px; }
+.sparkle-5 { top: 20%; left: 50%; transform: translateX(-50%); animation-delay: 0.05s; --tx: 0px; --ty: -25px; }
+.sparkle-6 { bottom: 15%; left: 30%; animation-delay: 0.15s; background-color: hsl(var(--primary)); --tx: 0px; --ty: 15px;}
 
 @keyframes sparkle-effect {
-  0% {
-    opacity: 0.5;
-    transform: scale(0.3) translate(0px, 0px);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.1) translate(var(--tx, 0px), var(--ty, -15px)); 
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.5) translate(calc(var(--tx, 0px) * 2), calc(var(--ty, -15px) * 2)); 
-  }
+  0% { opacity: 0.5; transform: scale(0.3) translate(0px, 0px); }
+  50% { opacity: 1; transform: scale(1.1) translate(var(--tx, 0px), var(--ty, -15px)); }
+  100% { opacity: 0; transform: scale(0.5) translate(calc(var(--tx, 0px) * 2), calc(var(--ty, -15px) * 2)); }
 }
 
-.sparkle-1 { --tx: -10px; --ty: -20px; }
-.sparkle-2 { --tx: 10px; --ty: -20px; }
-.sparkle-3 { --tx: -15px; --ty: 0px; }
-.sparkle-4 { --tx: 15px; --ty: 0px; }
-.sparkle-5 { --tx: 0px; --ty: -25px; } 
-.sparkle-6 { --tx: 0px; --ty: 15px; background-color: hsl(var(--primary));} 
-
-/* Weekly Goal Met Animation */
 .weekly-goal-animation-container {
   position: absolute;
   inset: 0;
@@ -256,31 +184,30 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  z-index: 50; 
-  overflow: hidden; 
+  z-index: 50;
+  overflow: hidden;
 }
 
 .weekly-goal-text {
-  font-size: 1.25rem; 
+  font-size: 1.25rem;
   font-weight: bold;
-  color: hsl(var(--accent-foreground)); 
-  background-color: hsla(var(--accent), 0.85); 
+  color: hsl(var(--accent-foreground));
+  background-color: hsla(var(--accent), 0.85);
   padding: 0.5rem 1rem;
   border-radius: var(--radius);
   box-shadow: 0 4px 15px hsla(var(--foreground), 0.1);
   opacity: 0;
   animation: weeklyGoalTextAppear 2.5s ease-out forwards;
-  margin-bottom: 0.5rem; 
+  margin-bottom: 0.5rem;
 }
 
 @keyframes weeklyGoalTextAppear {
   0% { transform: scale(0.3) translateY(20px); opacity: 0; }
-  20% { transform: scale(1.1) translateY(0); opacity: 1; } 
-  80% { transform: scale(1) translateY(0); opacity: 1; } 
+  20% { transform: scale(1.1) translateY(0); opacity: 1; }
+  80% { transform: scale(1) translateY(0); opacity: 1; }
   100% { transform: scale(0.5) translateY(-20px); opacity: 0; }
 }
 
-/* Animated Glow for Completed Button */
 @keyframes pulse-glow-accent {
   0% { box-shadow: 0 0 6px hsl(var(--accent)); }
   50% { box-shadow: 0 0 14px 3px hsl(var(--accent)); }

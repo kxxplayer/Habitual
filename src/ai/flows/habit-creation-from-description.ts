@@ -1,17 +1,14 @@
 
 'use server';
-
 /**
- * @fileOverview Creates a habit from a user-provided description by suggesting details like name, days of the week, timing, duration, specific time, and category.
- *
- * - createHabitFromDescription - A function that handles the habit creation process.
- * - HabitCreationInput - The input type for the createHabitFromDescription function.
- * - HabitCreationOutput - The return type for the createHabitFromDescription function.
+ * @fileOverview Creates a habit from a user-provided description by suggesting details.
+ * - createHabitFromDescription - Function for habit creation.
+ * - HabitCreationInput - Input type.
+ * - HabitCreationOutput - Return type.
  */
-
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { HABIT_CATEGORIES, type HabitCategory } from '@/types'; // Import categories
+import { HABIT_CATEGORIES, type HabitCategory } from '@/types';
 
 const HabitCreationInputSchema = z.object({
   description: z.string().describe('A short description of the habit to create.'),
@@ -20,12 +17,12 @@ export type HabitCreationInput = z.infer<typeof HabitCreationInputSchema>;
 
 const HabitCreationOutputSchema = z.object({
   habitName: z.string().describe('A suggested name for the habit.'),
-  daysOfWeek: z.array(z.string().length(3)).describe('Suggested days of the week (3-letter abbreviations like "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun") for the habit. For daily, suggest all seven days.'),
-  optimalTiming: z.string().describe('A suggested general optimal time of day to perform the habit (e.g., morning, afternoon, evening).'),
-  durationHours: z.number().optional().describe('Suggested duration in hours for the habit (e.g., 1 for 1 hour).'),
-  durationMinutes: z.number().optional().describe('Suggested duration in minutes for the habit (e.g., 30 for 30 minutes, range 0-59).'),
-  specificTime: z.string().optional().describe('A suggested specific time for the habit if applicable (e.g., "08:00", "17:30", "Anytime"). Use HH:mm format for specific times.'),
-  category: z.enum(HABIT_CATEGORIES).optional().describe(`Suggested category for the habit. Choose one from the following list: ${HABIT_CATEGORIES.join(', ')}. If unsure, you can omit this or suggest 'Other'.`),
+  daysOfWeek: z.array(z.string().length(3)).describe('Suggested days of the week (3-letter abbreviations like "Mon", "Tue") for the habit. For daily, suggest all seven days.'),
+  optimalTiming: z.string().describe('A suggested general optimal time of day (e.g., morning, afternoon, evening).'),
+  durationHours: z.number().optional().describe('Suggested duration in hours (e.g., 1 for 1 hour).'),
+  durationMinutes: z.number().optional().describe('Suggested duration in minutes (e.g., 30 for 30 minutes, range 0-59).'),
+  specificTime: z.string().optional().describe('A suggested specific time (HH:mm format, e.g., "08:00", "17:30"). If not applicable or flexible, suggest "Anytime" or "Flexible".'),
+  category: z.enum(HABIT_CATEGORIES).optional().describe(`Suggested category. Choose one from: ${HABIT_CATEGORIES.join(', ')}. If unsure, omit or suggest 'Other'.`),
 });
 export type HabitCreationOutput = z.infer<typeof HabitCreationOutputSchema>;
 
@@ -35,17 +32,17 @@ export async function createHabitFromDescription(input: HabitCreationInput): Pro
 
 const prompt = ai.definePrompt({
   name: 'habitCreationPrompt',
+  model: 'googleai/gemini-1.5-flash-latest', // Explicitly choose a model
   input: {schema: HabitCreationInputSchema},
   output: {schema: HabitCreationOutputSchema},
   prompt: `You are a helpful assistant that suggests habit details based on a user-provided description.
-
   Based on the following description, suggest:
   1. A habit name.
-  2. The days of the week this habit should be performed. Provide this as an array of 3-letter day abbreviations (e.g., ["Mon", "Wed", "Fri"] or ["Sat", "Sun"] for weekends, or ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] for daily habits).
-  3. An optimal general timing (e.g., morning, afternoon, evening).
-  4. A suitable duration for the activity. Provide this as durationHours (e.g., 1 for 1 hour) and durationMinutes (e.g., 30 for 30 minutes, range 0-59). If only minutes, durationHours can be omitted or 0. If only hours, durationMinutes can be omitted or 0.
-  5. A specific time of day if applicable. Use HH:mm format (e.g., "08:00", "17:30"). If not applicable or flexible, suggest "Anytime" or "Flexible".
-  6. A category for the habit. Choose one of the following valid categories: ${HABIT_CATEGORIES.join(', ')}. For example, if the habit is about exercise, 'Health & Wellness' or 'Lifestyle' might be suitable. If it's about coding, 'Work/Study' or 'Personal Growth' might be good. If very general, 'Other' is fine.
+  2. Days of the week (array of 3-letter day abbreviations like ["Mon", "Wed", "Fri"], or all seven for daily).
+  3. Optimal general timing (e.g., morning, afternoon, evening).
+  4. Duration in durationHours (e.g., 1) and durationMinutes (e.g., 30, range 0-59).
+  5. Specific time in HH:mm format (e.g., "08:00"). If flexible, suggest "Anytime".
+  6. A category from: ${HABIT_CATEGORIES.join(', ')}. Default to 'Other' if unsure.
 
   Description: {{{description}}}
   `,
@@ -59,17 +56,11 @@ const createHabitFromDescriptionFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    // Ensure daysOfWeek is an array, even if AI returns a single string by mistake (though schema should enforce array)
     if (output && output.daysOfWeek && !Array.isArray(output.daysOfWeek)) {
         // This is a fallback, schema validation should ideally catch this.
-        // If AI sends a string like "Mon,Tue,Wed", try to split. Otherwise, wrap.
-        if (typeof output.daysOfWeek === 'string' && (output.daysOfWeek as string).includes(',')) {
-           output.daysOfWeek = (output.daysOfWeek as string).split(',').map(d => d.trim());
-        } else {
-           output.daysOfWeek = [output.daysOfWeek as any];
-        }
+        const daysString = output.daysOfWeek as any as string;
+        output.daysOfWeek = daysString.includes(',') ? daysString.split(',').map(d => d.trim()) : [daysString];
     }
-    // Ensure minutes are within 0-59 if provided
     if (output?.durationMinutes && (output.durationMinutes < 0 || output.durationMinutes > 59)) {
         output.durationMinutes = Math.max(0, Math.min(59, output.durationMinutes));
     }

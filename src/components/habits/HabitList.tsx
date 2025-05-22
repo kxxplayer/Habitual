@@ -14,29 +14,22 @@ interface HabitListProps {
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
   onToggleReminder: (habitId: string, currentReminderState: boolean) => void;
   onOpenEditDialog: (habit: Habit) => void;
-  onOpenDeleteConfirm: (habitId: string, habitName: string) => void; // New prop
+  onOpenDeleteConfirm: (habitId: string, habitName: string) => void;
 }
 
 const HabitList: FC<HabitListProps> = ({
-    habits,
-    onToggleComplete,
-    onGetAISuggestion,
-    onOpenReflectionDialog,
-    onOpenRescheduleDialog,
-    onToggleReminder,
-    onOpenEditDialog,
-    onOpenDeleteConfirm, // Pass down
+  habits, onToggleComplete, onGetAISuggestion, onOpenReflectionDialog,
+  onOpenRescheduleDialog, onToggleReminder, onOpenEditDialog, onOpenDeleteConfirm,
 }) => {
   if (habits.length === 0) {
     return (
       <div className="text-center py-10">
         <ListChecks className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
         <h3 className="text-xl font-semibold text-foreground">No Habits Yet</h3>
-        <p className="text-muted-foreground">Click the "+" button to get started!</p>
+        <p className="text-muted-foreground">Tap the "+" button to add your first habit!</p>
       </div>
     );
   }
-
   return (
     <div className="space-y-4">
       {habits.map((habit) => (
@@ -49,11 +42,10 @@ const HabitList: FC<HabitListProps> = ({
           onOpenRescheduleDialog={onOpenRescheduleDialog}
           onToggleReminder={onToggleReminder}
           onOpenEditDialog={onOpenEditDialog}
-          onOpenDeleteConfirm={onOpenDeleteConfirm} // Pass down
+          onOpenDeleteConfirm={onOpenDeleteConfirm}
         />
       ))}
     </div>
   );
 };
-
 export default HabitList;

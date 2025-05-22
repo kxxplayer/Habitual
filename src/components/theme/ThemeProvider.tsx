@@ -4,12 +4,11 @@
 import type { FC, ReactNode } from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 
-// Define the theme names
 const THEME_NAMES = [
-  "theme-calm-blue", // Original light theme
+  "theme-calm-blue",
   "theme-forest-green",
   "theme-sunset-orange",
-  "theme-vibrant-purple", // Original dark theme
+  "theme-vibrant-purple",
 ] as const;
 
 export type Theme = typeof THEME_NAMES[number];
@@ -27,7 +26,7 @@ interface ThemeProviderState {
 }
 
 const initialState: ThemeProviderState = {
-  theme: THEME_NAMES[0], // Default to the first theme
+  theme: THEME_NAMES[0],
   setTheme: () => null,
   cycleTheme: () => null,
 };
@@ -37,37 +36,25 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 export const ThemeProvider: FC<ThemeProviderProps> = ({
   children,
   defaultTheme = THEME_NAMES[0],
-  storageKey = "habitual-multi-theme",
+  storageKey = "habitual-multi-theme", // Changed key for multi-theme
   ...props
 }) => {
   const [theme, setThemeInternal] = useState<Theme>(() => {
-    if (typeof window === 'undefined') {
-      return defaultTheme;
-    }
+    if (typeof window === 'undefined') return defaultTheme;
     const storedTheme = localStorage.getItem(storageKey) as Theme;
     return THEME_NAMES.includes(storedTheme) ? storedTheme : defaultTheme;
   });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
     const root = window.document.documentElement;
-    
-    // Remove all known theme classes before applying the new one
     THEME_NAMES.forEach(name => root.classList.remove(name));
-    
-    if (theme) {
-      root.classList.add(theme);
-    }
+    if (theme) root.classList.add(theme);
     localStorage.setItem(storageKey, theme);
   }, [theme, storageKey]);
 
   const handleSetTheme = (newTheme: Theme) => {
-    if (THEME_NAMES.includes(newTheme)) {
-      setThemeInternal(newTheme);
-    } else {
-      console.warn(`Attempted to set an invalid theme: ${newTheme}`);
-    }
+    if (THEME_NAMES.includes(newTheme)) setThemeInternal(newTheme);
   };
 
   const cycleTheme = () => {
@@ -78,11 +65,7 @@ export const ThemeProvider: FC<ThemeProviderProps> = ({
     });
   };
 
-  const value = {
-    theme,
-    setTheme: handleSetTheme,
-    cycleTheme,
-  };
+  const value = { theme, setTheme: handleSetTheme, cycleTheme };
 
   return (
     <ThemeProviderContext.Provider value={value} {...props}>
@@ -93,8 +76,6 @@ export const ThemeProvider: FC<ThemeProviderProps> = ({
 
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext);
-  if (context === undefined) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
+  if (context === undefined) throw new Error("useTheme must be used within a ThemeProvider");
   return context;
 };
