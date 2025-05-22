@@ -1,3 +1,4 @@
+
 /**
  * ==========================================================================
  * HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT
@@ -6,12 +7,15 @@
  * Issue: Persistent "module factory not available" for lucide-react 'Repeat' icon,
  *        which is NOT imported or used in this component.
  * Goal: Force Vercel to fully rebuild this file.
+ *
+ * UPDATE: 2025-05-21 - Adding another very prominent comment to try and break Vercel cache
+ * regarding the lucide-react/Repeat icon issue. This file explicitly does NOT import 'Repeat'.
+ * If the error persists, it's a Vercel build cache issue.
  * ==========================================================================
  */
 "use client";
 
 import * as React from 'react'; // Explicit React import
-import type { FC } from 'react'; // Explicit type import
 import { useMemo } from 'react'; // Explicit useMemo import
 
 // Date-fns imports (ordered and specific)
@@ -33,7 +37,7 @@ import {
   Zap,
   ShieldCheck,
   Sparkles as JourneyIcon,
-  LayoutDashboard // Added for CardTitle
+  LayoutDashboard
 } from 'lucide-react';
 
 // Local/UI component imports (ordered)
@@ -42,7 +46,7 @@ import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
 import type { Habit } from '@/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'; // Explicit Card parts
 import { Progress } from '@/components/ui/progress';
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltipContent, ChartTooltip } from "@/components/ui/chart";
 
 
 interface HabitOverviewProps {
@@ -112,7 +116,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
     return {
       scheduled: scheduledToday.length,
       completed: completed_daily_prog,
-      percent: Math.round((completed_daily_prog / scheduledToday.length) * 100)
+      percent: scheduledToday.length > 0 ? Math.round((completed_daily_prog / scheduledToday.length) * 100) : 0
     };
   }, [scheduledToday, todayStr]);
 
@@ -144,10 +148,10 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
 
   // Memoized level calculation
   const pointsPerLevel = 100;
-  const currentLevel = useMemo(() => Math.floor(totalPoints / pointsPerLevel) + 1, [totalPoints]);
-  const pointsInCurrentLevel = useMemo(() => totalPoints % pointsPerLevel, [totalPoints]);
-  const pointsToNextLevel = useMemo(() => pointsPerLevel - pointsInCurrentLevel, [pointsInCurrentLevel]);
-  const progressToNextLevelPercent = useMemo(() => (pointsInCurrentLevel / pointsPerLevel) * 100, [pointsInCurrentLevel]);
+  const currentLevel = useMemo(() => Math.floor(totalPoints / pointsPerLevel) + 1, [totalPoints, pointsPerLevel]);
+  const pointsInCurrentLevel = useMemo(() => totalPoints % pointsPerLevel, [totalPoints, pointsPerLevel]);
+  const pointsToNextLevel = useMemo(() => pointsPerLevel - pointsInCurrentLevel, [pointsInCurrentLevel, pointsPerLevel]);
+  const progressToNextLevelPercent = useMemo(() => (pointsInCurrentLevel / pointsPerLevel) * 100, [pointsInCurrentLevel, pointsPerLevel]);
 
   // Memoized streak calculation
   const { longestActiveStreak, activeStreaksCount } = useMemo(() => {
@@ -186,7 +190,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   // Chart configuration
   const chartConfig = {
     "Consistency (%)": { label: "Consistency (%)", color: "hsl(var(--chart-1))" }
-  };
+  } as const; // Added 'as const' for stricter typing if needed by ChartContainer
 
   // Memoized total SQL hours
   const totalSqlHours = useMemo(() => {
@@ -216,7 +220,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
 
 
   return (
-    <Card className="shadow-md">
+    <Card className="shadow-md mb-6">
       <CardHeader className="pb-2 pt-3 px-3 sm:px-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base sm:text-md font-semibold flex items-center">
@@ -330,3 +334,4 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
+
