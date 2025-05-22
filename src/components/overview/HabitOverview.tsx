@@ -1,17 +1,25 @@
 
 "use client";
 
+/**
+ * ==========================================================================
+ * HABIT OVERVIEW COMPONENT - REVISED FOR VERCEL BUILD DEBUGGING (v3)
+ * --------------------------------------------------------------------------
+ * This comment block is added to force a significant change in the file
+ * content hash, in an attempt to break any stubborn Vercel build caches
+ * that might be causing persistent "Module not found" errors for lucide-react
+ * icons that are not actually being imported in the current version of this file.
+ *
+ * The Repeat icon from lucide-react is confirmed NOT to be in the imports below.
+ * ==========================================================================
+ */
+
 import * as React from 'react';
 import type { FC } from 'react';
 import { useMemo } from 'react';
-// Attempting to force Vercel to recognize changes for lucide-react issue (v2)
-import { cn } from '@/lib/utils';
-import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
-import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'; // Removed Legend
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
-// Vercel build issue debug: Ensuring Repeat icon is NOT imported
+import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'; // Removed Legend
 import {
   Target,
   Flame,
@@ -24,10 +32,13 @@ import {
   Zap,
   ShieldCheck,
   Sparkles as JourneyIcon
-} from 'lucide-react';
+} from 'lucide-react'; // Repeat icon is NOT imported here
 
+import { cn } from '@/lib/utils';
+import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 
 interface HabitOverviewProps {
@@ -38,7 +49,7 @@ interface HabitOverviewProps {
 interface Habit {
   id: string;
   name: string;
-  daysOfWeek: string[]; // Using string[] for WeekDay for simplicity here, should match actual type
+  daysOfWeek: string[];
   completionLog: Array<{ date: string; status?: string; durationHours?: number; durationMinutes?: number }>;
   durationHours?: number;
   durationMinutes?: number;
@@ -52,14 +63,14 @@ const subWeeks = (date: Date, amount: number) => dateFnsAddDays(date, -amount * 
 
 const calculateWeeklyConsistency = (habits: Habit[], weeksAgo: number, today: Date): WeeklyConsistencyData => {
   const targetDate = subWeeks(today, weeksAgo);
-  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 }); // Assuming Sunday is start of week
+  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 });
   let totalScheduled = 0;
   let totalCompleted = 0;
 
   habits.forEach(habit => {
     for (let i = 0; i < 7; i++) {
       const currentDateInLoop = dateFnsAddDays(weekStart, i);
-      const dayAbbr = getDayAbbreviationFromDate(currentDateInLoop); // Ensure this returns format like "Mon", "Tue"
+      const dayAbbr = getDayAbbreviationFromDate(currentDateInLoop);
       if (habit.daysOfWeek.includes(dayAbbr)) {
         totalScheduled++;
         if (habit.completionLog.some(log => log.date === format(currentDateInLoop, 'yyyy-MM-dd') && log.status === 'completed')) {
@@ -94,7 +105,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   const overallConsistency = useMemo(() => {
     let totalScheduledInstances = 0;
     let totalCompletedInstances = 0;
-    const daysToConsider = 7; // last 7 days
+    const daysToConsider = 7;
     for (let i = 0; i < daysToConsider; i++) {
       const date = subDays(today, i);
       const dateStrLoop = format(date, 'yyyy-MM-dd');
