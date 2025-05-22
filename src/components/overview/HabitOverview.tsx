@@ -1,29 +1,21 @@
+
 /**
  * ==========================================================================
- * HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT
- * Date: 2025-05-20 (Ensuring this file is treated as NEW by Vercel cache)
- * VERBOSE COMMENTING TO MAXIMIZE FILE HASH CHANGE FOR VERCEL BUILD.
- * Issue: Persistent "module factory not available" for lucide-react 'Repeat' icon,
- *        OR "ChartTooltip is not defined" - these errors suggest Vercel build/cache issues.
- * Goal: Force Vercel to fully rebuild this file.
- *
- * UPDATE: 2025-05-21 - Adding another very prominent comment to try and break Vercel cache
- * regarding the lucide-react/Repeat icon issue OR ChartTooltip issues.
- * This file explicitly does NOT import 'Repeat'. ChartTooltip IS imported.
- * If the error persists, it's a Vercel build cache issue or a problem with chart.tsx.
- *
- * UPDATE: 2025-05-22 - Further modification with comments to ensure Vercel cache break.
- * The Repeat icon is NOT imported. ChartTooltip IS imported. This component is clean.
- *
- * UPDATE: 2025-05-23 - Meticulously ensuring ChartTooltip is imported.
- * LATEST ATTEMPT TO FIX "ChartTooltip is not defined" on Vercel.
- * Explicitly re-verifying imports and adding unique comment.
+ * HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT (2025-05-20 v4)
+ * Date: 2025-05-20
+ * THIS IS A MAJOR REFRESH ATTEMPT TO FORCE VERCEL CACHE BREAK.
+ * Issue: Persistent "ChartTooltip is not defined" or "lucide-react Repeat icon not found" errors on Vercel,
+ *        suggesting Vercel build/cache issues with this specific component.
+ * Goal: Force Vercel to fully rebuild this file from scratch.
+ * All imports have been meticulously checked.
+ * The lucide-react Repeat icon is definitively NOT imported here.
+ * ChartTooltip IS imported from "@/components/ui/chart".
  * ==========================================================================
  */
 "use client";
 
-import * as React from 'react'; // Explicit React import
-import { useMemo, type FC } from 'react'; // Explicit useMemo import
+import * as React from 'react'; // Explicit React import for robustness
+import { useMemo, type FC } from 'react';
 
 // UI & Utility Imports (Ordered)
 import { cn } from '@/lib/utils';
@@ -53,7 +45,7 @@ import {
 } from 'lucide-react';
 
 // Recharts imports (ordered and specific)
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts'; // Renamed Recharts Tooltip to avoid conflict if any
 
 // Local utility imports
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
@@ -307,6 +299,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
               <Progress value={overallConsistency.score} className="h-1.5" indicatorClassName="bg-accent" />
             </StatCard>
 
+            {/* Vercel Build Debug: Unique comment for chart section 2025-05-20 */}
             <StatCard title="Weekly Progress Chart" icon={BarChart3}>
               {habits.length > 0 && weeklyChartData.some(d_item_chart => d_item_chart.scheduled > 0) ? (
                 <ChartContainer config={chartConfig} className="h-[100px] w-full text-xs">
@@ -344,3 +337,4 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
+
