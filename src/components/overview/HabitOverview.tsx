@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
 import { Target, Flame, ClipboardList, CheckCircle2, Circle, BarChart3, BookCopy, Star, Zap, ShieldCheck, Sparkles as JourneyIcon } from 'lucide-react';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'; // Removed Legend
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { cn } from '@/lib/utils';
 
@@ -27,7 +27,7 @@ const subWeeks = (date: Date, amount: number) => dateFnsAddDays(date, -amount * 
 
 const calculateWeeklyConsistency = (habits: Habit[], weeksAgo: number, today: Date): WeeklyConsistencyData => {
   const targetDate = subWeeks(today, weeksAgo);
-  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 }); // Assuming Sunday is the start of the week
+  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 }); 
   let totalScheduled = 0;
   let totalCompleted = 0;
 
@@ -88,14 +88,12 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
 
   const totalHabitsTracked = habits.length;
   
-  // Gamification: Level System
-  const pointsPerLevel = 100; // Example: 100 points to level up
+  const pointsPerLevel = 100; 
   const currentLevel = Math.floor(totalPoints / pointsPerLevel) + 1;
   const pointsInCurrentLevel = totalPoints % pointsPerLevel;
   const pointsToNextLevel = pointsPerLevel - pointsInCurrentLevel;
   const progressToNextLevelPercent = (pointsInCurrentLevel / pointsPerLevel) * 100;
 
-  // Gamification: Streak Highlights
   const { longestActiveStreak, activeStreaksCount } = useMemo(() => {
     if(habits.length === 0) return { longestActiveStreak: 0, activeStreaksCount: 0 };
     let longest = 0;
@@ -114,11 +112,11 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
 
   let journeyMessage = "Embark on your habit journey! Add a habit to begin.";
   if (totalHabitsTracked > 0) {
-    if (currentLevel >= 10) journeyMessage = `Level ${currentLevel} Habit Guru! Truly inspiring! 🏆`;
-    else if (currentLevel >= 5) journeyMessage = `Level ${currentLevel} Habit Master! You're on a roll! ✨`;
-    else if (overallConsistency.score >= 80) journeyMessage = "Excellent Consistency! Keep crushing those goals! 🔥";
-    else if (overallConsistency.score >= 50) journeyMessage = "Great Progress! You're building momentum! 💪";
-    else journeyMessage = "Keep building those habits, consistency is key! 🚀";
+    if (currentLevel >= 10) journeyMessage = `Level ${currentLevel} Habit Guru! Truly inspiring!`;
+    else if (currentLevel >= 5) journeyMessage = `Level ${currentLevel} Habit Master! You're on a roll!`;
+    else if (overallConsistency.score >= 80) journeyMessage = "Excellent Consistency! Keep crushing those goals!";
+    else if (overallConsistency.score >= 50) journeyMessage = "Great Progress! You're building momentum!";
+    else journeyMessage = "Keep building those habits, consistency is key!";
   }
 
 
@@ -240,7 +238,6 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
           </>
         ) : (
           <div className="text-center py-4">
-             {/* Using JourneyIcon (Sparkles) here instead of Award for the placeholder */}
             <JourneyIcon className="mx-auto h-10 w-10 text-muted-foreground/50 mb-2" />
             <p className="text-muted-foreground text-sm">{journeyMessage}</p>
           </div>
@@ -256,3 +253,5 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
+
+    
