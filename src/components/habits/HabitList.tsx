@@ -13,7 +13,8 @@ interface HabitListProps {
   onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
   onToggleReminder: (habitId: string, currentReminderState: boolean) => void;
-  onOpenEditDialog: (habit: Habit) => void; // New prop for editing
+  onOpenEditDialog: (habit: Habit) => void;
+  onOpenDeleteConfirm: (habitId: string, habitName: string) => void; // New prop
 }
 
 const HabitList: FC<HabitListProps> = ({
@@ -23,7 +24,8 @@ const HabitList: FC<HabitListProps> = ({
     onOpenReflectionDialog,
     onOpenRescheduleDialog,
     onToggleReminder,
-    onOpenEditDialog, // Pass down
+    onOpenEditDialog,
+    onOpenDeleteConfirm, // Pass down
 }) => {
   if (habits.length === 0) {
     return (
@@ -46,7 +48,8 @@ const HabitList: FC<HabitListProps> = ({
           onOpenReflectionDialog={onOpenReflectionDialog}
           onOpenRescheduleDialog={onOpenRescheduleDialog}
           onToggleReminder={onToggleReminder}
-          onOpenEditDialog={onOpenEditDialog} // Pass down
+          onOpenEditDialog={onOpenEditDialog}
+          onOpenDeleteConfirm={onOpenDeleteConfirm} // Pass down
         />
       ))}
     </div>

@@ -27,7 +27,7 @@ import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import Link from 'next/link';
 import { cn } from "@/lib/utils";
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import type { DayPicker, DayModifiers } from 'react-day-picker';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,15 +39,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+} from '@/components/ui/dialog'; // Correct for Dialog components
+
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription as AlertDialogDescriptionEl,
+  AlertDialogFooter as AlertDialogFooterEl,
   AlertDialogHeader as AlertDialogHeaderEl,
   AlertDialogTitle as AlertTitle,
   AlertDialogTrigger,
-} from '@/components/ui/dialog';
+} from '@/components/ui/alert-dialog'; // Correct source for AlertDialog components
+
 import {
   Sheet,
   SheetContent,
@@ -71,7 +76,7 @@ const LS_KEY_PREFIX_POINTS = "totalPoints_";
 
 
 const HabitualPage: NextPage = () => {
-  console.log("RENDERING HabitualPage - Calendar Modifiers and Habit List FULLY REMOVED from Dialog (Version Extreme Diagnostic)");
+  console.log("RENDERING HabitualPage - Calendar modifiers completely removed for extreme diagnostics.");
 
   const router = useRouter();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
@@ -119,6 +124,9 @@ const HabitualPage: NextPage = () => {
   const [commonSuggestionsFetched, setCommonSuggestionsFetched] = React.useState(false);
   const [initialFormDataForDialog, setInitialFormDataForDialog] = React.useState<Partial<CreateHabitFormData> | null>(null);
 
+  const [isDeleteHabitConfirmOpen, setIsDeleteHabitConfirmOpen] = React.useState(false);
+  const [habitToDelete, setHabitToDelete] = React.useState<{ id: string; name: string } | null>(null);
+
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -147,6 +155,9 @@ const HabitualPage: NextPage = () => {
         setEditingHabit(null);
         setReflectionDialogData(null);
         setRescheduleDialogData(null);
+        setHabitToDelete(null);
+        setIsDeleteHabitConfirmOpen(false);
+
 
         setIsDashboardDialogOpen(false);
         setIsCalendarDialogOpen(false);
@@ -372,7 +383,7 @@ const HabitualPage: NextPage = () => {
     }
     setIsLoadingHabits(false);
     console.log(`Data loading complete for user ${userUid}. Habits loaded: ${parsedHabits_data_load.length}`);
-  }, [authUser, isLoadingAuth, router, commonSuggestionsFetched]);
+  }, [authUser, isLoadingAuth, router, commonSuggestionsFetched]); // commonSuggestionsFetched ensures one-time fetch
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits) return;
@@ -758,6 +769,21 @@ const HabitualPage: NextPage = () => {
     }
   };
 
+  const handleOpenDeleteHabitConfirm = (habitId: string, habitName: string) => {
+    setHabitToDelete({ id: habitId, name: habitName });
+    setIsDeleteHabitConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteSingleHabit = () => {
+    if (habitToDelete && authUser) {
+      setHabits(prevHabits => prevHabits.filter(h => h.id !== habitToDelete.id));
+      console.log(`Habit "${habitToDelete.name}" deleted for user ${authUser.uid}.`);
+      setHabitToDelete(null);
+    }
+    setIsDeleteHabitConfirmOpen(false);
+  };
+
+
   const sheetMenuItems = [
     { href: '/', label: 'Home', icon: Home, action: () => setIsSettingsSheetOpen(false) },
     { href: '/profile', label: 'Profile', icon: UserCircle, action: () => setIsSettingsSheetOpen(false) },
@@ -778,12 +804,12 @@ const HabitualPage: NextPage = () => {
   ];
 
   const handleCustomizeSuggestedHabit = (suggestion_customize: SuggestedHabit) => {
-    setEditingHabit(null);
+    setEditingHabit(null); // Ensure not in edit mode
     setInitialFormDataForDialog({
       name: suggestion_customize.name,
       category: suggestion_customize.category || 'Other',
-      description: '',
-      daysOfWeek: [],
+      description: '', // Keep description empty for suggested tiles
+      daysOfWeek: [],  // User will set these
     });
     setIsCreateHabitDialogOpen(true);
   };
@@ -866,6 +892,7 @@ const HabitualPage: NextPage = () => {
               onOpenRescheduleDialog={handleOpenRescheduleDialog}
               onToggleReminder={handleToggleReminder}
               onOpenEditDialog={handleOpenEditDialog}
+              onOpenDeleteConfirm={handleOpenDeleteHabitConfirm}
             />
           </main>
           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
@@ -897,8 +924,8 @@ const HabitualPage: NextPage = () => {
       <Button
         className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
         onClick={() => {
-          setEditingHabit(null);
-          setInitialFormDataForDialog(null);
+          setEditingHabit(null); // Ensure not in edit mode
+          setInitialFormDataForDialog(null); // Clear any pre-filled data
           setIsCreateHabitDialogOpen(true);
          }}
         aria-label="Add New Habit"
@@ -910,8 +937,8 @@ const HabitualPage: NextPage = () => {
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null);
-            setEditingHabit(null);
+            setInitialFormDataForDialog(null); // Clear pre-filled data on close
+            setEditingHabit(null); // Clear editing state
         }}
         onSaveHabit={handleSaveHabit}
         initialData={initialFormDataForDialog}
@@ -959,6 +986,26 @@ const HabitualPage: NextPage = () => {
         />
       )}
 
+       <AlertDialog open={isDeleteHabitConfirmOpen} onOpenChange={setIsDeleteHabitConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeaderEl>
+            <AlertTitle>Confirm Deletion</AlertTitle>
+            <AlertDialogDescriptionEl>
+              Are you sure you want to delete the habit "{habitToDelete?.name || ''}"? This action cannot be undone.
+            </AlertDialogDescriptionEl>
+          </AlertDialogHeaderEl>
+          <AlertDialogFooterEl>
+            <AlertDialogCancel onClick={() => setHabitToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteSingleHabit}
+              className={buttonVariants({ variant: "destructive" })}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooterEl>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={isDashboardDialogOpen} onOpenChange={setIsDashboardDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -979,6 +1026,7 @@ const HabitualPage: NextPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Calendar Dialog - Completely simplified for extreme diagnostics */}
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
         <DialogContent className="sm:max-w-[500px] w-full max-w-[calc(100%-2rem)]">
             <DialogHeader>
@@ -987,7 +1035,7 @@ const HabitualPage: NextPage = () => {
                     Habit Calendar
                 </DialogTitle>
                  <DialogDescription>
-                    View your habit activity on the calendar.
+                    View your habit activity on the calendar. (Custom styling disabled for diagnostics)
                 </DialogDescription>
             </DialogHeader>
             <div className="py-2 max-h-[65vh] overflow-y-auto pr-2 flex flex-col items-center">
@@ -995,8 +1043,8 @@ const HabitualPage: NextPage = () => {
                     mode="single"
                     selected={selectedCalendarDate}
                     onSelect={setSelectedCalendarDate}
-                    modifiers={undefined} 
-                    modifiersStyles={undefined}
+                    modifiers={undefined} // No custom modifiers
+                    modifiersStyles={undefined} // No custom styles
                     className="rounded-md border p-0 sm:p-2"
                     month={selectedCalendarDate || new Date()}
                     onMonthChange={setSelectedCalendarDate}
@@ -1006,7 +1054,7 @@ const HabitualPage: NextPage = () => {
                     <h3 className="text-md font-semibold mb-2 text-center">
                     Habits for {format(selectedCalendarDate, 'MMMM d, yyyy')}
                     </h3>
-                    {/* Temporarily removed habit list for calendar dialog to simplify and isolate error */}
+                    {/* Habit list for selected day is temporarily disabled for diagnostics */}
                     <p className="text-sm text-muted-foreground text-center py-2">Habit list for this day is temporarily unavailable.</p>
                 </div>
                 )}
@@ -1127,7 +1175,5 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
-    
 
     
