@@ -1,22 +1,26 @@
-
-"use client";
-
 /**
  * ==========================================================================
  * HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT
  * Date: 2025-05-20 (Ensuring this file is treated as NEW by Vercel cache)
+ * VERBOSE COMMENTING TO MAXIMIZE FILE HASH CHANGE FOR VERCEL BUILD.
  * Issue: Persistent "module factory not available" for lucide-react 'Repeat' icon,
- *        which is NOT imported or used in this component. This is likely a
- *        Vercel build cache or HMR artifact issue.
+ *        which is NOT imported or used in this component.
+ * Goal: Force Vercel to fully rebuild this file.
  * ==========================================================================
  */
+"use client";
 
-import * as React from 'react';
-import type { FC } from 'react';
-import { useMemo } from 'react';
+import * as React from 'react'; // Explicit React import
+import type { FC } from 'react'; // Explicit type import
+import { useMemo } from 'react'; // Explicit useMemo import
 
+// Date-fns imports (ordered and specific)
 import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'; // Removed Legend
+
+// Recharts imports (ordered and specific)
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+
+// Lucide-react icons (ordered and specific, only used ones)
 import {
   Target,
   Flame,
@@ -28,13 +32,15 @@ import {
   Star,
   Zap,
   ShieldCheck,
-  Sparkles as JourneyIcon
-} from 'lucide-react'; // Repeat icon is confirmed NOT to be in this import.
+  Sparkles as JourneyIcon,
+  LayoutDashboard // Added for CardTitle
+} from 'lucide-react';
 
+// Local/UI component imports (ordered)
 import { cn } from '@/lib/utils';
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
 import type { Habit } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'; // Explicit Card parts
 import { Progress } from '@/components/ui/progress';
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
@@ -45,126 +51,159 @@ interface HabitOverviewProps {
 }
 
 interface WeeklyConsistencyData {
-  name: string; "Consistency (%)": number; scheduled: number; completed: number;
+  name: string;
+  "Consistency (%)": number;
+  scheduled: number;
+  completed: number;
 }
 
-const subWeeks = (date: Date, amount: number) => dateFnsAddDays(date, -amount * 7);
+// Helper to get date `amount` weeks ago
+const subWeeks = (date: Date, amount: number): Date => {
+  return dateFnsAddDays(date, -amount * 7);
+};
 
-const calculateWeeklyConsistency = (habits: Habit[], weeksAgo: number, today: Date): WeeklyConsistencyData => {
-  const targetDate = subWeeks(today, weeksAgo);
-  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 });
-  let totalScheduled = 0;
-  let totalCompleted = 0;
+// Calculates consistency for a given week
+const calculateWeeklyConsistency = (habits: Habit[], weeksAgo: number, todayRef: Date): WeeklyConsistencyData => {
+  const targetDate_calc_week = subWeeks(todayRef, weeksAgo);
+  const weekStart_calc_week = startOfWeek(targetDate_calc_week, { weekStartsOn: 0 }); // Assuming week starts on Sunday
+  let totalScheduled_calc_week = 0;
+  let totalCompleted_calc_week = 0;
 
-  habits.forEach(habit => {
-    for (let i = 0; i < 7; i++) {
-      const currentDateInLoop = dateFnsAddDays(weekStart, i);
-      const dayAbbr = getDayAbbreviationFromDate(currentDateInLoop);
-      if (habit.daysOfWeek.includes(dayAbbr)) {
-        totalScheduled++;
-        if (habit.completionLog.some(log => log.date === format(currentDateInLoop, 'yyyy-MM-dd') && log.status === 'completed')) {
-          totalCompleted++;
+  habits.forEach(habit_item_calc_week => {
+    for (let i_calc_week = 0; i_calc_week < 7; i_calc_week++) {
+      const currentDateInLoop_calc_week = dateFnsAddDays(weekStart_calc_week, i_calc_week);
+      const dayAbbr_calc_week = getDayAbbreviationFromDate(currentDateInLoop_calc_week);
+      if (habit_item_calc_week.daysOfWeek.includes(dayAbbr_calc_week)) {
+        totalScheduled_calc_week++;
+        if (habit_item_calc_week.completionLog.some(log_item_calc_week => log_item_calc_week.date === format(currentDateInLoop_calc_week, 'yyyy-MM-dd') && log_item_calc_week.status === 'completed')) {
+          totalCompleted_calc_week++;
         }
       }
     }
   });
 
-  const consistency = totalScheduled > 0 ? Math.round((totalCompleted / totalScheduled) * 100) : 0;
-  let weekLabel = "This Week";
-  if (weeksAgo === 1) weekLabel = "Last Week";
-  else if (weeksAgo > 1) weekLabel = `${weeksAgo} Wks Ago`;
+  const consistency_calc_week = totalScheduled_calc_week > 0 ? Math.round((totalCompleted_calc_week / totalScheduled_calc_week) * 100) : 0;
+  let weekLabel_calc_week = "This Week";
+  if (weeksAgo === 1) weekLabel_calc_week = "Last Week";
+  else if (weeksAgo > 1) weekLabel_calc_week = `${weeksAgo} Wks Ago`;
 
-  return { name: weekLabel, "Consistency (%)": consistency, scheduled: totalScheduled, completed: totalCompleted };
+  return {
+    name: weekLabel_calc_week,
+    "Consistency (%)": consistency_calc_week,
+    scheduled: totalScheduled_calc_week,
+    completed: totalCompleted_calc_week
+  };
 };
 
-
+// Main component
 const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
+  // Memoized date values
   const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => format(today, 'yyyy-MM-dd'), [today]);
   const todayAbbr = useMemo(() => getDayAbbreviationFromDate(today), [today]);
 
-  const scheduledToday = useMemo(() => habits.filter(h => h.daysOfWeek.includes(todayAbbr)), [habits, todayAbbr]);
+  // Memoized calculation for habits scheduled today
+  const scheduledToday = useMemo(() => habits.filter(h_item_sched => h_item_sched.daysOfWeek.includes(todayAbbr)), [habits, todayAbbr]);
 
+  // Memoized calculation for daily progress
   const dailyProgress = useMemo(() => {
     if (scheduledToday.length === 0) return { scheduled: 0, completed: 0, percent: 0 };
-    const completed = scheduledToday.filter(h => h.completionLog.some(l => l.date === todayStr && l.status === 'completed')).length;
-    return { scheduled: scheduledToday.length, completed, percent: Math.round((completed / scheduledToday.length) * 100) };
+    const completed_daily_prog = scheduledToday.filter(h_item_daily_prog => h_item_daily_prog.completionLog.some(l_item_daily_prog => l_item_daily_prog.date === todayStr && l_item_daily_prog.status === 'completed')).length;
+    return {
+      scheduled: scheduledToday.length,
+      completed: completed_daily_prog,
+      percent: Math.round((completed_daily_prog / scheduledToday.length) * 100)
+    };
   }, [scheduledToday, todayStr]);
 
+  // Memoized calculation for overall consistency
   const overallConsistency = useMemo(() => {
-    let totalScheduledInstances = 0;
-    let totalCompletedInstances = 0;
-    const daysToConsider = 7;
-    for (let i = 0; i < daysToConsider; i++) {
-      const date = subDays(today, i);
-      const dateStrLoop = format(date, 'yyyy-MM-dd');
-      const dayAbbrLoop = getDayAbbreviationFromDate(date);
-      habits.forEach(h => {
-        if (h.daysOfWeek.includes(dayAbbrLoop)) {
-          totalScheduledInstances++;
-          if (h.completionLog.some(l => l.date === dateStrLoop && l.status === 'completed')) {
-            totalCompletedInstances++;
+    let totalScheduledInstances_overall_cons = 0;
+    let totalCompletedInstances_overall_cons = 0;
+    const daysToConsider_overall_cons = 7; // Consider last 7 days
+    for (let i_overall_cons = 0; i_overall_cons < daysToConsider_overall_cons; i_overall_cons++) {
+      const date_overall_cons = subDays(today, i_overall_cons);
+      const dateStrLoop_overall_cons = format(date_overall_cons, 'yyyy-MM-dd');
+      const dayAbbrLoop_overall_cons = getDayAbbreviationFromDate(date_overall_cons);
+      habits.forEach(h_item_overall_cons => {
+        if (h_item_overall_cons.daysOfWeek.includes(dayAbbrLoop_overall_cons)) {
+          totalScheduledInstances_overall_cons++;
+          if (h_item_overall_cons.completionLog.some(l_item_overall_cons => l_item_overall_cons.date === dateStrLoop_overall_cons && l_item_overall_cons.status === 'completed')) {
+            totalCompletedInstances_overall_cons++;
           }
         }
       });
     }
-    return { score: totalScheduledInstances > 0 ? Math.round((totalCompletedInstances / totalScheduledInstances) * 100) : 0, days: daysToConsider };
+    return {
+      score: totalScheduledInstances_overall_cons > 0 ? Math.round((totalCompletedInstances_overall_cons / totalScheduledInstances_overall_cons) * 100) : 0,
+      days: daysToConsider_overall_cons
+    };
   }, [habits, today]);
 
   const totalHabitsTracked = habits.length;
 
+  // Memoized level calculation
   const pointsPerLevel = 100;
-  const currentLevel = Math.floor(totalPoints / pointsPerLevel) + 1;
-  const pointsInCurrentLevel = totalPoints % pointsPerLevel;
-  const pointsToNextLevel = pointsPerLevel - pointsInCurrentLevel;
-  const progressToNextLevelPercent = (pointsInCurrentLevel / pointsPerLevel) * 100;
+  const currentLevel = useMemo(() => Math.floor(totalPoints / pointsPerLevel) + 1, [totalPoints]);
+  const pointsInCurrentLevel = useMemo(() => totalPoints % pointsPerLevel, [totalPoints]);
+  const pointsToNextLevel = useMemo(() => pointsPerLevel - pointsInCurrentLevel, [pointsInCurrentLevel]);
+  const progressToNextLevelPercent = useMemo(() => (pointsInCurrentLevel / pointsPerLevel) * 100, [pointsInCurrentLevel]);
 
+  // Memoized streak calculation
   const { longestActiveStreak, activeStreaksCount } = useMemo(() => {
-    if(habits.length === 0) return { longestActiveStreak: 0, activeStreaksCount: 0 };
-    let longest = 0;
-    let activeCount = 0;
-    habits.forEach(habit => {
-      const streak = calculateStreak(habit, today);
-      if (streak > 0) {
-        activeCount++;
-        if (streak > longest) {
-          longest = streak;
+    if (habits.length === 0) return { longestActiveStreak: 0, activeStreaksCount: 0 };
+    let longest_streak_calc = 0;
+    let activeCount_streak_calc = 0;
+    habits.forEach(habit_streak_calc => {
+      const streak_val_calc = calculateStreak(habit_streak_calc, today);
+      if (streak_val_calc > 0) {
+        activeCount_streak_calc++;
+        if (streak_val_calc > longest_streak_calc) {
+          longest_streak_calc = streak_val_calc;
         }
       }
     });
-    return { longestActiveStreak: longest, activeStreaksCount: activeCount };
+    return { longestActiveStreak: longest_streak_calc, activeStreaksCount: activeCount_streak_calc };
   }, [habits, today]);
 
-  let journeyMessage = "Embark on your habit journey! Add a habit to begin.";
-  if (totalHabitsTracked > 0) {
-    if (currentLevel >= 10) journeyMessage = `Level ${currentLevel} Habit Guru! Truly inspiring!`;
-    else if (currentLevel >= 5) journeyMessage = `Level ${currentLevel} Habit Master! You're on a roll!`;
-    else if (overallConsistency.score >= 80) journeyMessage = "Excellent Consistency! Keep crushing those goals!";
-    else if (overallConsistency.score >= 50) journeyMessage = "Great Progress! You're building momentum!";
-    else journeyMessage = "Keep building those habits, consistency is key!";
-  }
+  // Memoized journey message
+  let journeyMessage = useMemo(() => {
+    if (totalHabitsTracked === 0) return "Embark on your habit journey! Add a habit to begin.";
+    if (currentLevel >= 10) return `Level ${currentLevel} Habit Guru! Truly inspiring!`;
+    if (currentLevel >= 5) return `Level ${currentLevel} Habit Master! You're on a roll!`;
+    if (overallConsistency.score >= 80) return "Excellent Consistency! Keep crushing those goals!";
+    if (overallConsistency.score >= 50) return "Great Progress! You're building momentum!";
+    return "Keep building those habits, consistency is key!";
+  }, [totalHabitsTracked, currentLevel, overallConsistency.score]);
 
 
+  // Memoized weekly chart data
   const weeklyChartData = useMemo(() => {
-    return [3, 2, 1, 0].map(i => calculateWeeklyConsistency(habits, i, today));
+    // Calculate for last 4 weeks including current (weeksAgo: 3, 2, 1, 0)
+    return [3, 2, 1, 0].map(i_chart_data => calculateWeeklyConsistency(habits, i_chart_data, today));
   }, [habits, today]);
 
-  const chartConfig = { "Consistency (%)": { label: "Consistency (%)", color: "hsl(var(--chart-1))" } };
+  // Chart configuration
+  const chartConfig = {
+    "Consistency (%)": { label: "Consistency (%)", color: "hsl(var(--chart-1))" }
+  };
 
+  // Memoized total SQL hours
   const totalSqlHours = useMemo(() => {
-    let totalMinutes = 0;
-    habits.filter(h => h.name.toLowerCase().includes("sql")).forEach(h => {
-      h.completionLog.forEach(l => {
-        if (l.status === 'completed') {
-          const durationHours = h.durationHours || 0;
-          const durationMinutes = h.durationMinutes || 0;
-          totalMinutes += (durationHours * 60) + durationMinutes;
+    let totalMinutes_sql = 0;
+    habits.filter(h_item_sql => h_item_sql.name.toLowerCase().includes("sql")).forEach(h_item_sql_inner => {
+      h_item_sql_inner.completionLog.forEach(l_item_sql_inner => {
+        if (l_item_sql_inner.status === 'completed') {
+          const durationHours_sql = h_item_sql_inner.durationHours || 0;
+          const durationMinutes_sql = h_item_sql_inner.durationMinutes || 0;
+          totalMinutes_sql += (durationHours_sql * 60) + durationMinutes_sql;
         }
       });
     });
-    return (totalMinutes / 60).toFixed(2);
+    return (totalMinutes_sql / 60).toFixed(2); // Return as string with 2 decimal places
   }, [habits]);
 
+  // StatCard sub-component
   const StatCard: FC<{title: string; icon: React.ElementType; children: React.ReactNode; className?: string}> = ({ title, icon: IconComponent, children, className }) => (
     <div className={cn("p-3 rounded-lg bg-card/50 dark:bg-card/80 border", className)}>
       <h4 className="text-xs font-semibold flex items-center text-muted-foreground mb-1.5">
@@ -177,8 +216,19 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
 
 
   return (
-    <Card className="border-0 shadow-none bg-transparent">
-      <CardContent className="space-y-3 px-1 py-2">
+    <Card className="shadow-md">
+      <CardHeader className="pb-2 pt-3 px-3 sm:px-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base sm:text-md font-semibold flex items-center">
+            <LayoutDashboard className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            Habit Dashboard
+          </CardTitle>
+        </div>
+        <CardDescription className="text-xs mt-0.5">
+          Your progress snapshot.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2 px-3 sm:px-4 pb-3 pt-1">
         {totalHabitsTracked > 0 ? (
           <>
             <StatCard title="Your Level" icon={Star}>
@@ -220,13 +270,13 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
                 <div className="mt-2 space-y-1 border-t pt-2">
                   <h5 className="text-xs font-medium flex items-center text-muted-foreground"><ClipboardList className="mr-1.5 h-3.5 w-3.5" />Checklist:</h5>
                   <ul className="space-y-0.5 pl-1 max-h-24 overflow-y-auto">
-                    {scheduledToday.map(h_item => (
-                      <li key={h_item.id} className="flex items-center text-xs">
-                        {h_item.completionLog.some(l_item=>l_item.date===todayStr && l_item.status==='completed') ?
+                    {scheduledToday.map(h_item_checklist => (
+                      <li key={h_item_checklist.id} className="flex items-center text-xs">
+                        {h_item_checklist.completionLog.some(l_item_checklist=>l_item_checklist.date===todayStr && l_item_checklist.status==='completed') ?
                          <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-accent shrink-0" /> :
                          <Circle className="mr-1.5 h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />}
-                        <span className={cn("truncate", h_item.completionLog.some(l_item=>l_item.date===todayStr && l_item.status==='completed') && "text-muted-foreground line-through opacity-70")}>
-                          {h_item.name}
+                        <span className={cn("truncate", h_item_checklist.completionLog.some(l_item_checklist_inner=>l_item_checklist_inner.date===todayStr && l_item_checklist_inner.status==='completed') && "text-muted-foreground line-through opacity-70")}>
+                          {h_item_checklist.name}
                         </span>
                       </li>
                     ))}
@@ -244,7 +294,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
             </StatCard>
 
             <StatCard title="Weekly Progress Chart" icon={BarChart3}>
-              {habits.length > 0 && weeklyChartData.some(d_item => d_item.scheduled > 0) ? (
+              {habits.length > 0 && weeklyChartData.some(d_item_chart => d_item_chart.scheduled > 0) ? (
                 <ChartContainer config={chartConfig} className="h-[100px] w-full text-xs">
                   <BarChart accessibilityLayer data={weeklyChartData} margin={{ top: 5, right: 0, left: -30, bottom: -10 }}>
                     <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={2} fontSize={10} />
@@ -256,7 +306,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
               ) : (<p className="text-xs text-muted-foreground text-center py-2">Not enough data for trend.</p>)}
             </StatCard>
 
-            {habits.some(h_item => h_item.name.toLowerCase().includes("sql")) && (
+            {habits.some(h_item_sql_check => h_item_sql_check.name.toLowerCase().includes("sql")) && (
               <StatCard title="SQL Focus" icon={BookCopy}>
                 <p className="text-sm font-semibold text-blue-500">{totalSqlHours} hrs</p>
                 <p className="text-xs text-muted-foreground">Total SQL Logged</p>
@@ -280,5 +330,3 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
-
-    
