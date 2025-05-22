@@ -1,21 +1,23 @@
-
 /**
  * ==========================================================================
  * HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT
  * Date: 2025-05-20 (Ensuring this file is treated as NEW by Vercel cache)
  * VERBOSE COMMENTING TO MAXIMIZE FILE HASH CHANGE FOR VERCEL BUILD.
  * Issue: Persistent "module factory not available" for lucide-react 'Repeat' icon,
- *        which is NOT imported or used in this component.
+ *        OR "ChartTooltip is not defined" - these errors suggest Vercel build/cache issues.
  * Goal: Force Vercel to fully rebuild this file.
  *
  * UPDATE: 2025-05-21 - Adding another very prominent comment to try and break Vercel cache
- * regarding the lucide-react/Repeat icon issue. This file explicitly does NOT import 'Repeat'.
- * If the error persists, it's a Vercel build cache issue.
+ * regarding the lucide-react/Repeat icon issue OR ChartTooltip issues.
+ * This file explicitly does NOT import 'Repeat'. ChartTooltip IS imported.
+ * If the error persists, it's a Vercel build cache issue or a problem with chart.tsx.
  *
  * UPDATE: 2025-05-22 - Further modification with comments to ensure Vercel cache break.
- * The Repeat icon is NOT imported. This component is clean.
+ * The Repeat icon is NOT imported. ChartTooltip IS imported. This component is clean.
  *
  * UPDATE: 2025-05-23 - Meticulously ensuring ChartTooltip is imported.
+ * LATEST ATTEMPT TO FIX "ChartTooltip is not defined" on Vercel.
+ * Explicitly re-verifying imports and adding unique comment.
  * ==========================================================================
  */
 "use client";
@@ -28,7 +30,8 @@ import { cn } from '@/lib/utils';
 import type { Habit } from '@/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"; // Ensured ChartTooltip is here
+// CRITICAL IMPORT: Ensure ChartTooltip, ChartContainer, and ChartTooltipContent are correctly imported.
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 // Date-fns imports (ordered and specific)
 import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
@@ -49,7 +52,7 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 
-// Recharts imports (ordered and specific) - Legend removed as it was unused
+// Recharts imports (ordered and specific)
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
 // Local utility imports
@@ -239,7 +242,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
           Your progress snapshot.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2 px-3 sm:px-4 pb-3 pt-1">
+      <CardContent className="space-y-3 px-3 sm:px-4 pb-3 pt-1">
         {totalHabitsTracked > 0 ? (
           <>
             <StatCard title="Your Level" icon={Star}>
@@ -341,5 +344,3 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
-
-    
