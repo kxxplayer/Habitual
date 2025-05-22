@@ -299,7 +299,6 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
               <Progress value={overallConsistency.score} className="h-1.5" indicatorClassName="bg-accent" />
             </StatCard>
 
-            {/* Vercel Build Debug: Unique comment for chart section 2025-05-20 */}
             <StatCard title="Weekly Progress Chart" icon={BarChart3}>
               {habits.length > 0 && weeklyChartData.some(d_item_chart => d_item_chart.scheduled > 0) ? (
                 <ChartContainer config={chartConfig} className="h-[100px] w-full text-xs">
@@ -338,3 +337,4 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
 };
 export default HabitOverview;
 
+    
