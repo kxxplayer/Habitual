@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
 import {
   Lightbulb, CalendarDays, CalendarClock, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag,
   ListChecks,
@@ -48,7 +47,7 @@ import {
   Trash2,
   ChevronRightSquare,
 } from 'lucide-react';
-import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
+import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
@@ -88,7 +87,7 @@ const getCategoryColorVariable = (category?: HabitCategory): string => {
     "Health & Wellness": "--chart-3",
     "Creative": "--chart-4",
     "Chores": "--chart-5",
-    "Finance": "--chart-1", // Reusing chart colors
+    "Finance": "--chart-1",
     "Social": "--chart-2",
     "Personal Growth": "--chart-3",
     "Other": "--chart-5",
@@ -148,6 +147,8 @@ const HabitItem: FC<HabitItemProps> = ({
   const [showWeeklyConfetti, setShowWeeklyConfetti] = React.useState(false);
   const prevCompletedCountRef = React.useRef<number>(0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
+  const DESCRIPTION_TRUNCATE_LENGTH = 100;
+
 
   React.useEffect(() => {
     const now = new Date();
@@ -159,15 +160,14 @@ const HabitItem: FC<HabitItemProps> = ({
     return habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
   }, [habit.completionLog, todayString]);
 
-  // Effect to trigger sparkles when isTodayCompleted changes to true
+  const prevIsTodayCompleted = React.useRef(isTodayCompleted);
   React.useEffect(() => {
     if (isTodayCompleted && prevIsTodayCompleted.current === false) {
       setShowSparkles(true);
-      setTimeout(() => setShowSparkles(false), 800);
+      setTimeout(() => setShowSparkles(false), 800); // Animation duration
     }
     prevIsTodayCompleted.current = isTodayCompleted;
   }, [isTodayCompleted]);
-  const prevIsTodayCompleted = React.useRef(isTodayCompleted);
 
 
   React.useEffect(() => {
@@ -289,217 +289,26 @@ const HabitItem: FC<HabitItemProps> = ({
 
 
   const handleToggleTodayCompletion = (complete: boolean) => {
+    const wasCompletedBefore = isTodayCompleted;
     onToggleComplete(habit.id, todayString, complete);
-    // Sparkle logic is now handled by the useEffect watching isTodayCompleted
+    if (!wasCompletedBefore && complete) {
+      setShowSparkles(true);
+      setTimeout(() => setShowSparkles(false), 800);
+    }
   };
-
-  const DESCRIPTION_TRUNCATE_LENGTH = 100;
 
   return (
     <Card className={cardClasses} style={cardStyle}>
-      <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-4 pr-12">
+      <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-4 pr-2">
         <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
            {getHabitIcon(habit)}
         </div>
         <h2 className="text-lg sm:text-xl font-bold text-primary text-center flex-grow mx-2 truncate min-w-0 break-words">
           {habit.name}
         </h2>
-      </CardHeader>
-
-      <CardContent className="space-y-3 px-3 sm:px-4 pb-2 pt-1">
-         <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-800/30 dark:text-yellow-300 cursor-default">
-                            <Flame className={cn("h-3.5 w-3.5 mr-1", streak > 0 ? "text-orange-500 animate-pulse" : "text-yellow-500/70 dark:text-yellow-400/70")} />
-                            <span>{`${streak}-Day Streak`}</span>
-                        </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                         <p>
-                          {streak > 0
-                            ? `Keep it up! You're on a ${streak}-day streak!`
-                            : "Start a streak by completing this habit on its scheduled days!"}
-                        </p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full font-medium bg-rose-100 text-rose-700 dark:bg-rose-800/30 dark:text-rose-300">
-                <span className="mr-1">🎯</span>
-                <span>{`${completedCountInCurrentWeek} / ${scheduledDaysInWeek} Completed`}</span>
-            </div>
-        </div>
-        {scheduledDaysInWeek > 0 && <Progress value={weeklyProgressPercent} indicatorClassName="bg-accent" className="h-1.5 mb-2" />}
-
-        <div className="space-y-1 mt-2">
-            {habit.category && (
-                <div className="flex items-center text-xs text-muted-foreground">
-                    <span role="img" aria-label="Category" className="mr-1.5 text-sm">📌</span>
-                    <span className="font-medium mr-1">Category:</span>
-                    <span>{habit.category}</span>
-                </div>
-            )}
-            {durationDisplay && (
-                <div className="flex items-center text-xs text-muted-foreground">
-                <span role="img" aria-label="Duration" className="mr-1.5 text-sm">⏱️</span>
-                <span className="font-medium mr-1">Duration:</span>
-                <span>{durationDisplay}</span>
-                </div>
-            )}
-            {habit.specificTime && habit.specificTime.toLowerCase() !== 'anytime' && habit.specificTime.toLowerCase() !== 'flexible' && (
-                <div className="flex items-center text-xs text-muted-foreground">
-                    <span role="img" aria-label="Time" className="mr-1.5 text-sm">⏰</span>
-                    <span className="font-medium mr-1">Time:</span>
-                    <span>{formatSpecificTime(habit.specificTime)}</span>
-                </div>
-            )}
-            {habit.description && (
-                <div className="text-xs text-muted-foreground">
-                <span className="font-medium mr-1">📝 Desc:</span>
-                <span className={cn("inline",!isDescriptionExpanded && habit.description.length > DESCRIPTION_TRUNCATE_LENGTH ? "line-clamp-2" : "")}>
-                    {isDescriptionExpanded || habit.description.length <= DESCRIPTION_TRUNCATE_LENGTH
-                    ? habit.description
-                    : `${habit.description.substring(0, DESCRIPTION_TRUNCATE_LENGTH)}...`}
-                </span>
-                {habit.description.length > DESCRIPTION_TRUNCATE_LENGTH && (
-                    <button
-                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                    className="text-xs text-primary hover:underline ml-1"
-                    >
-                    {isDescriptionExpanded ? "(less)" : "(more)"}
-                    </button>
-                )}
-                </div>
-            )}
-        </div>
-
-        {weekViewDays.length > 0 && (
-          <div className="mt-2.5">
-            <div className="flex items-center text-xs text-muted-foreground mb-0.5">
-                <CalendarDays className="mr-1 h-3.5 w-3.5" />
-                <span className="font-semibold mr-0.5">Days:</span>
-            </div>
-            <div className="flex justify-around items-center space-x-0.5 sm:space-x-1 py-1">
-              {weekViewDays.map((dayInfo) => {
-                const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
-                const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
-                let isDayCompleted = dayLog?.status === 'completed';
-
-                const isSkipped = dayLog?.status === 'skipped';
-                const isPendingMakeup = dayLog?.status === 'pending_makeup';
-
-                let dayStatus: 'completed' | 'skipped' | 'pending_makeup' | 'missed' | 'pending_scheduled' | 'not_scheduled' = 'not_scheduled';
-                let IconComponent: React.ElementType = Circle;
-                let iconClasses = "text-muted-foreground/40";
-                let dayBoxClasses = "bg-input/10 text-muted-foreground/40";
-                let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
-
-                if (isDayCompleted) dayStatus = 'completed';
-                else if (isSkipped) dayStatus = 'skipped';
-                else if (isPendingMakeup) dayStatus = 'pending_makeup';
-                else if (isScheduled) {
-                  if (dayInfo.isPast && !dayInfo.isToday && !isSameDay(startOfDay(dayInfo.date), startOfDay(currentDate))) dayStatus = 'missed';
-                  else dayStatus = 'pending_scheduled';
-                }
-
-                switch(dayStatus) {
-                    case 'completed': dayBoxClasses = 'bg-accent/10'; IconComponent = CheckCircle2; iconClasses = 'text-accent'; titleText += ' (Completed)'; break;
-                    case 'skipped': dayBoxClasses = 'bg-muted/30'; IconComponent = CalendarX; iconClasses = 'text-muted-foreground'; titleText += ' (Skipped)'; break;
-                    case 'pending_makeup': dayBoxClasses = 'bg-blue-500/10'; IconComponent = CalendarClock; iconClasses = 'text-blue-500'; titleText += ' (Makeup Pending)'; break;
-                    case 'missed': dayBoxClasses = 'bg-destructive/10'; IconComponent = XCircle; iconClasses = 'text-destructive'; titleText += ' (Missed)'; break;
-                    case 'pending_scheduled': dayBoxClasses = 'ring-1 ring-orange-500 ring-offset-1 ring-offset-background bg-orange-500/5'; IconComponent = Circle; iconClasses = 'text-orange-500'; titleText += ' (Scheduled)'; break;
-                    default: dayBoxClasses = 'bg-input/40 dark:bg-input/20 text-muted-foreground/60 dark:text-muted-foreground/50 hover:bg-input/50 dark:hover:bg-input/30'; iconClasses = 'text-muted-foreground/40'; titleText += ' (Not Scheduled)'; break;
-                }
-
-                const canToggleDay = isScheduled || isPendingMakeup || isDayCompleted;
-                const isMissedAndActionable = dayStatus === 'missed';
-
-                return (
-                  <div
-                    key={dayInfo.dateStr}
-                    title={titleText}
-                    onClick={() => {
-                        if (isMissedAndActionable) {
-                           onOpenRescheduleDialog(habit, dayInfo.dateStr);
-                        } else if (canToggleDay) {
-                            const wasCompletedBeforeDay = isDayCompleted;
-                            onToggleComplete(habit.id, dayInfo.dateStr, !isDayCompleted);
-                            if (!wasCompletedBeforeDay && !isDayCompleted === false) {
-                                setShowSparkles(true);
-                                setTimeout(() => setShowSparkles(false), 800);
-                            }
-                        }
-                    }}
-                    className={cn(
-                      `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-all active:scale-95 transform`,
-                      dayBoxClasses,
-                      (canToggleDay || isMissedAndActionable) ? 'cursor-pointer' : 'cursor-default',
-                      dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : '',
-                       dayStatus === 'pending_scheduled' ? 'hover:bg-orange-500/10' :
-                       dayStatus === 'completed' ? 'hover:bg-accent/20' :
-                       dayStatus === 'missed' ? 'hover:bg-destructive/20' :
-                       dayStatus === 'skipped' ? 'hover:bg-muted/40' :
-                       dayStatus === 'pending_makeup' ? 'hover:bg-blue-500/20' :
-                       ''
-                    )}
-                    aria-label={`Status for ${habit.name} on ${dayInfo.dayAbbrFull}, ${format(dayInfo.date, 'MMM d')}: ${dayStatus}`}
-                  >
-                    <span className={cn("font-semibold text-[0.7rem] sm:text-xs", iconClasses === 'text-muted-foreground/40' ? 'text-muted-foreground/80': '')}>{dayInfo.dayAbbrShort}</span>
-                    <IconComponent className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5 mt-0.5", iconClasses)}/>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </CardContent>
-
-       <CardFooter className="flex-col items-stretch pt-6 pb-3 px-3 space-y-2">
-        <div className="relative flex justify-center space-x-2">
-           <Button
-              onClick={() => handleToggleTodayCompletion(true)}
-              disabled={isTodayCompleted}
-              className={cn(
-                "rounded-full py-2.5 px-6 text-sm transition-all active:scale-95 flex-1",
-                !isTodayCompleted
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed",
-                isTodayCompleted && showSparkles && "animate-pulse-glow-accent" ,
-                isTodayCompleted && !showSparkles && "shadow-[0_0_8px_hsl(var(--accent))]"
-              )}
-            >
-               {!isTodayCompleted ? (
-                <>
-                  <Check className="mr-2 h-5 w-5" /> Mark as Done
-                </>
-               ) : (
-                <>
-                  <CheckCircle2 className="mr-2 h-5 w-5" /> Done!
-                </>
-               )}
-            </Button>
-             <Button
-              onClick={() => handleToggleTodayCompletion(false)}
-              disabled={!isTodayCompleted}
-              variant={isTodayCompleted ? "destructive" : "outline"}
-              className={cn(
-                  "rounded-full py-2.5 px-6 text-sm transition-all active:scale-95 flex-1",
-                  !isTodayCompleted ? "border-muted text-muted-foreground cursor-not-allowed" : ""
-              )}
-            >
-              <XCircle className="mr-2 h-5 w-5" /> Not Done
-            </Button>
-        </div>
-        {isTodayCompleted && habit.completionLog.find(log => log.date === todayString && log.note) && (
-            <div className="flex items-center justify-center text-xs text-muted-foreground mt-1">
-                <StickyNote className="mr-1 h-3 w-3" /> Note added
-            </div>
-        )}
-        <div className="flex justify-end mt-1">
-            <DropdownMenu>
+        <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                 <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
                 <span className="sr-only">More options</span>
               </Button>
@@ -566,23 +375,215 @@ const HabitItem: FC<HabitItemProps> = ({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+      </CardHeader>
+
+      <CardContent className="space-y-3 px-3 sm:px-4 pb-2 pt-1">
+         <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-800/30 dark:text-yellow-300 cursor-default">
+                            <Flame className={cn("h-3.5 w-3.5 mr-1", streak > 0 ? "text-orange-500 animate-pulse" : "text-yellow-500/70 dark:text-yellow-400/70")} />
+                            <span>{`${streak}-Day Streak`}</span>
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                         <p>
+                          {streak > 0
+                            ? `Keep it up! You're on a ${streak}-day streak!`
+                            : "Start a streak by completing this habit on its scheduled days!"}
+                        </p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full font-medium bg-rose-100 text-rose-700 dark:bg-rose-800/30 dark:text-rose-300">
+                <span className="mr-1">🎯</span>
+                <span>{`${completedCountInCurrentWeek} / ${scheduledDaysInWeek} Completed`}</span>
+            </div>
+        </div>
+        {scheduledDaysInWeek > 0 && <Progress value={weeklyProgressPercent} indicatorClassName="bg-accent" className="h-1.5 mb-2" />}
+
+        <div className="space-y-1 mt-2">
+            {habit.category && (
+                <div className="flex items-center text-xs text-muted-foreground">
+                    <span role="img" aria-label="Category" className="mr-1.5 text-sm">📌</span>
+                    <span className="font-medium mr-1">Category:</span>
+                    <span>{habit.category}</span>
+                </div>
+            )}
+            {durationDisplay && (
+                <div className="flex items-center text-xs text-muted-foreground">
+                <span role="img" aria-label="Duration" className="mr-1.5 text-sm">⏱️</span>
+                <span className="font-medium mr-1">Duration:</span>
+                <span>{durationDisplay}</span>
+                </div>
+            )}
+             {habit.specificTime && habit.specificTime.toLowerCase() !== 'anytime' && habit.specificTime.toLowerCase() !== 'flexible' && (
+                <div className="flex items-center text-xs text-muted-foreground">
+                    <span role="img" aria-label="Time" className="mr-1.5 text-sm">⏰</span>
+                    <span className="font-medium mr-1">Time:</span>
+                    <span>{formatSpecificTime(habit.specificTime)}</span>
+                </div>
+            )}
+            {habit.description && (
+                <div className="text-xs text-muted-foreground">
+                <span className="font-medium mr-1">📝 Desc:</span>
+                <span className={cn("inline",!isDescriptionExpanded && habit.description.length > DESCRIPTION_TRUNCATE_LENGTH ? "line-clamp-2" : "")}>
+                    {isDescriptionExpanded || habit.description.length <= DESCRIPTION_TRUNCATE_LENGTH
+                    ? habit.description
+                    : `${habit.description.substring(0, DESCRIPTION_TRUNCATE_LENGTH)}...`}
+                </span>
+                {habit.description.length > DESCRIPTION_TRUNCATE_LENGTH && (
+                    <button
+                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                    className="text-xs text-primary hover:underline ml-1"
+                    >
+                    {isDescriptionExpanded ? "(less)" : "(more)"}
+                    </button>
+                )}
+                </div>
+            )}
         </div>
 
+        {weekViewDays.length > 0 && (
+          <div className="mt-2.5">
+            <div className="flex items-center text-xs text-muted-foreground mb-0.5">
+                <CalendarDays className="mr-1 h-3.5 w-3.5" />
+                <span className="font-semibold mr-0.5">Days:</span>
+            </div>
+            <div className="flex justify-around items-center space-x-0.5 sm:space-x-1 py-1">
+              {weekViewDays.map((dayInfo) => {
+                const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
+                const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
+                let isDayReallyCompleted = dayLog?.status === 'completed';
+
+                const isSkipped = dayLog?.status === 'skipped';
+                const isPendingMakeup = dayLog?.status === 'pending_makeup';
+
+                let dayStatus: 'completed' | 'skipped' | 'pending_makeup' | 'missed' | 'pending_scheduled' | 'not_scheduled' = 'not_scheduled';
+                let IconComponent: React.ElementType = Circle;
+                let iconClasses = "text-muted-foreground/40";
+                let dayBoxClasses = "bg-input/10 text-muted-foreground/40";
+                let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
+
+                if (isDayReallyCompleted) dayStatus = 'completed';
+                else if (isSkipped) dayStatus = 'skipped';
+                else if (isPendingMakeup) dayStatus = 'pending_makeup';
+                else if (isScheduled) {
+                  if (dayInfo.isPast && !dayInfo.isToday && !isSameDay(startOfDay(dayInfo.date), startOfDay(currentDate))) dayStatus = 'missed';
+                  else dayStatus = 'pending_scheduled';
+                }
+
+                switch(dayStatus) {
+                    case 'completed': dayBoxClasses = 'bg-accent/10'; IconComponent = CheckCircle2; iconClasses = 'text-accent'; titleText += ' (Completed)'; break;
+                    case 'skipped': dayBoxClasses = 'bg-muted/30'; IconComponent = CalendarX; iconClasses = 'text-muted-foreground'; titleText += ' (Skipped)'; break;
+                    case 'pending_makeup': dayBoxClasses = 'bg-blue-500/10'; IconComponent = CalendarClock; iconClasses = 'text-blue-500'; titleText += ' (Makeup Pending)'; break;
+                    case 'missed': dayBoxClasses = 'bg-destructive/10'; IconComponent = XCircle; iconClasses = 'text-destructive'; titleText += ' (Missed)'; break;
+                    case 'pending_scheduled': dayBoxClasses = 'ring-1 ring-orange-500 ring-offset-1 ring-offset-background bg-orange-500/5'; IconComponent = Circle; iconClasses = 'text-orange-500'; titleText += ' (Scheduled)'; break;
+                    default: dayBoxClasses = 'bg-input/40 dark:bg-input/20 text-muted-foreground/60 dark:text-muted-foreground/50 hover:bg-input/50 dark:hover:bg-input/30'; iconClasses = 'text-muted-foreground/40'; titleText += ' (Not Scheduled)'; break;
+                }
+
+                const canToggleDay = isScheduled || isPendingMakeup || isDayReallyCompleted;
+                const isMissedAndActionable = dayStatus === 'missed';
+
+                return (
+                  <div
+                    key={dayInfo.dateStr}
+                    title={titleText}
+                    onClick={() => {
+                        if (isMissedAndActionable) {
+                           onOpenRescheduleDialog(habit, dayInfo.dateStr);
+                        } else if (canToggleDay) {
+                            const wasCompletedBeforeDay = isDayReallyCompleted;
+                            onToggleComplete(habit.id, dayInfo.dateStr, !isDayReallyCompleted);
+                            if (!wasCompletedBeforeDay && !isDayReallyCompleted === false) { // Condition simplified
+                                setShowSparkles(true);
+                                setTimeout(() => setShowSparkles(false), 800);
+                            }
+                        }
+                    }}
+                    className={cn(
+                      `flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-all active:scale-95 transform`,
+                      dayBoxClasses,
+                      (canToggleDay || isMissedAndActionable) ? 'cursor-pointer' : 'cursor-default',
+                      dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : '',
+                       dayStatus === 'pending_scheduled' ? 'hover:bg-orange-500/10' :
+                       dayStatus === 'completed' ? 'hover:bg-accent/20' :
+                       dayStatus === 'missed' ? 'hover:bg-destructive/20' :
+                       dayStatus === 'skipped' ? 'hover:bg-muted/40' :
+                       dayStatus === 'pending_makeup' ? 'hover:bg-blue-500/20' :
+                       ''
+                    )}
+                    aria-label={`Status for ${habit.name} on ${dayInfo.dayAbbrFull}, ${format(dayInfo.date, 'MMM d')}: ${dayStatus}`}
+                  >
+                    <span className={cn("font-semibold text-[0.7rem] sm:text-xs", iconClasses === 'text-muted-foreground/40' ? 'text-muted-foreground/80': '')}>{dayInfo.dayAbbrShort}</span>
+                    <IconComponent className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5 mt-0.5", iconClasses)}/>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </CardContent>
+
+       <CardFooter className="flex-col items-stretch pt-6 pb-3 px-3 space-y-2">
+        <div className="relative flex justify-center space-x-2">
+           <Button
+              onClick={() => handleToggleTodayCompletion(true)}
+              disabled={isTodayCompleted}
+              className={cn(
+                "rounded-full py-2.5 px-6 text-sm transition-all active:scale-95 flex-1",
+                !isTodayCompleted
+                    ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95"
+                    : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed",
+                isTodayCompleted && showSparkles && "animate-pulse-glow-accent" ,
+                isTodayCompleted && !showSparkles && "shadow-[0_0_8px_hsl(var(--accent))]"
+              )}
+            >
+               {!isTodayCompleted ? (
+                <>
+                  <Check className="mr-2 h-5 w-5" /> Mark as Done
+                </>
+               ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-5 w-5" /> Done!
+                </>
+               )}
+            </Button>
+             <Button
+              onClick={() => handleToggleTodayCompletion(false)}
+              disabled={!isTodayCompleted}
+              variant={isTodayCompleted ? "destructive" : "outline"}
+              className={cn(
+                  "rounded-full py-2.5 px-6 text-sm transition-all active:scale-95 flex-1",
+                  !isTodayCompleted ? "border-muted text-muted-foreground cursor-not-allowed" : ""
+              )}
+            >
+              <XCircle className="mr-2 h-5 w-5" /> Not Done
+            </Button>
+        </div>
+        {isTodayCompleted && habit.completionLog.find(log => log.date === todayString && log.note) && (
+            <div className="flex items-center justify-center text-xs text-muted-foreground mt-1">
+                <StickyNote className="mr-1 h-3 w-3" /> Note added
+            </div>
+        )}
+        {/* Sparkles container, positioned within the footer relative to the buttons */}
         {showSparkles && isTodayCompleted && (
-          <>
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
+            <div className="relative w-20 h-20"> {/* Adjust size as needed */}
               <div className="sparkle sparkle-1"></div>
               <div className="sparkle sparkle-2"></div>
               <div className="sparkle sparkle-3"></div>
               <div className="sparkle sparkle-4"></div>
               <div className="sparkle sparkle-5"></div>
               <div className="sparkle sparkle-6" style={{ backgroundColor: 'hsl(var(--primary))' }}></div>
-          </>
+            </div>
+          </div>
         )}
       </CardFooter>
       {showWeeklyConfetti && (
         <div className="weekly-goal-animation-container">
             <div className="weekly-goal-text">Weekly Goal Met!</div>
-            {/* Sparkles for weekly goal */}
             <div className="sparkle sparkle-1" style={{top: '15%', left: '10%', '--tx': '-20px', '--ty': '-25px'} as React.CSSProperties}></div>
             <div className="sparkle sparkle-2" style={{top: '25%', right: '5%', '--tx': '20px', '--ty': '-30px'} as React.CSSProperties}></div>
             <div className="sparkle sparkle-3" style={{bottom: '30%', left: '20%', '--tx': '-25px', '--ty': '10px'} as React.CSSProperties}></div>
@@ -598,3 +599,4 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
+
