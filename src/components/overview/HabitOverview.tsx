@@ -14,12 +14,21 @@
  *
  * UPDATE: 2025-05-22 - Further modification with comments to ensure Vercel cache break.
  * The Repeat icon is NOT imported. This component is clean.
+ *
+ * UPDATE: 2025-05-23 - Meticulously ensuring ChartTooltip is imported.
  * ==========================================================================
  */
 "use client";
 
 import * as React from 'react'; // Explicit React import
 import { useMemo, type FC } from 'react'; // Explicit useMemo import
+
+// UI & Utility Imports (Ordered)
+import { cn } from '@/lib/utils';
+import type { Habit } from '@/types';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"; // Ensured ChartTooltip is here
 
 // Date-fns imports (ordered and specific)
 import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
@@ -40,16 +49,11 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 
-// Recharts imports (ordered and specific)
+// Recharts imports (ordered and specific) - Legend removed as it was unused
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
-// Local/UI component imports (ordered)
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { cn } from '@/lib/utils';
+// Local utility imports
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
-import type { Habit } from '@/types';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 
 
 interface HabitOverviewProps {
@@ -337,3 +341,5 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
+
+    
