@@ -1,3 +1,4 @@
+
 /**
  * ==========================================================================
  * HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT
@@ -24,7 +25,6 @@ import { useMemo, type FC } from 'react'; // Explicit useMemo import
 import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
 
 // Lucide-react icons (ordered and specific, only used ones)
-// Vercel build issue debug: Ensuring Repeat icon is NOT imported from lucide-react
 import {
   Target,
   Flame,
@@ -41,14 +41,14 @@ import {
 } from 'lucide-react';
 
 // Recharts imports (ordered and specific)
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'; // Removed Legend
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
 // Local/UI component imports (ordered)
-import { ChartContainer, ChartTooltipContent, ChartTooltip } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { cn } from '@/lib/utils';
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
 import type { Habit } from '@/types';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'; // Explicit Card parts
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
 
@@ -193,7 +193,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   // Chart configuration
   const chartConfig = {
     "Consistency (%)": { label: "Consistency (%)", color: "hsl(var(--chart-1))" }
-  } as const; // Added 'as const' for stricter typing if needed by ChartContainer
+  } as const;
 
   // Memoized total SQL hours
   const totalSqlHours = useMemo(() => {
@@ -307,7 +307,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
                     <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={2} fontSize={10} />
                     <YAxis tickLine={false} axisLine={false} tickMargin={2} domain={[0, 100]} fontSize={10}/>
                     <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" className="text-xs p-1.5"/>} />
-                    <Bar dataKey="Consistency (%)" fill="var(--color-Consistency (\\%))" radius={2} barSize={15}/>
+                    <Bar dataKey="Consistency (%)" fill="var(--color-Consistency-\(\%\))" radius={2} barSize={15}/>
                   </BarChart>
                 </ChartContainer>
               ) : (<p className="text-xs text-muted-foreground text-center py-2">Not enough data for trend.</p>)}
