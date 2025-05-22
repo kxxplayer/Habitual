@@ -1,4 +1,3 @@
-
 /**
  * ==========================================================================
  * HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT
@@ -11,20 +10,21 @@
  * UPDATE: 2025-05-21 - Adding another very prominent comment to try and break Vercel cache
  * regarding the lucide-react/Repeat icon issue. This file explicitly does NOT import 'Repeat'.
  * If the error persists, it's a Vercel build cache issue.
+ *
+ * UPDATE: 2025-05-22 - Further modification with comments to ensure Vercel cache break.
+ * The Repeat icon is NOT imported. This component is clean.
  * ==========================================================================
  */
 "use client";
 
 import * as React from 'react'; // Explicit React import
-import { useMemo } from 'react'; // Explicit useMemo import
+import { useMemo, type FC } from 'react'; // Explicit useMemo import
 
 // Date-fns imports (ordered and specific)
 import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
 
-// Recharts imports (ordered and specific)
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-
 // Lucide-react icons (ordered and specific, only used ones)
+// Vercel build issue debug: Ensuring Repeat icon is NOT imported from lucide-react
 import {
   Target,
   Flame,
@@ -40,13 +40,16 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 
+// Recharts imports (ordered and specific)
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'; // Removed Legend
+
 // Local/UI component imports (ordered)
+import { ChartContainer, ChartTooltipContent, ChartTooltip } from "@/components/ui/chart";
 import { cn } from '@/lib/utils';
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
 import type { Habit } from '@/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'; // Explicit Card parts
 import { Progress } from '@/components/ui/progress';
-import { ChartContainer, ChartTooltipContent, ChartTooltip } from "@/components/ui/chart";
 
 
 interface HabitOverviewProps {
@@ -220,7 +223,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
 
 
   return (
-    <Card className="shadow-md mb-6">
+    <Card className="shadow-md mb-4 sm:mb-6">
       <CardHeader className="pb-2 pt-3 px-3 sm:px-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base sm:text-md font-semibold flex items-center">
@@ -334,4 +337,3 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
-
