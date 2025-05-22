@@ -4,7 +4,7 @@
 
 import * as React from 'react';
 import type { FC } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -45,7 +45,7 @@ import {
   FilePenLine,
   ChevronRightSquare,
   StickyNote,
-  Trash2, // Added Trash2
+  Trash2,
 } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -63,7 +63,7 @@ interface HabitItemProps {
   onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
   onToggleReminder: (habitId: string, currentReminderState: boolean) => void;
   onOpenEditDialog: (habit: Habit) => void;
-  onOpenDeleteConfirm: (habitId: string, habitName: string) => void; // New prop
+  onOpenDeleteConfirm: (habitId: string, habitName: string) => void;
 }
 
 const formatSpecificTime = (timeStr?: string): string | undefined => {
@@ -107,6 +107,11 @@ const getHabitIcon = (habit: Habit): React.ReactNode => {
   if (nameLower.includes('walk') || nameLower.includes('run') || nameLower.includes('jog')) return <span className="text-xl">🚶</span>;
   if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-xl">📚</span>;
   if (nameLower.includes('meditate') || nameLower.includes('meditation') || nameLower.includes('mindfulness')) return <span className="text-xl">🧘</span>;
+  if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="h-5 w-5 text-blue-600" />;
+  if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="h-5 w-5 text-blue-500" />;
+  if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="h-5 w-5 text-purple-500" />;
+  if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="h-5 w-5 text-yellow-600" />;
+  if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="h-5 w-5 text-red-500" />;
 
   if (category && HABIT_CATEGORIES.includes(category)) {
     switch (category) {
@@ -120,12 +125,6 @@ const getHabitIcon = (habit: Habit): React.ReactNode => {
       case 'Lifestyle': return <LifestyleIcon className="h-5 w-5 text-teal-500" />;
       default: return <ListChecks className="h-5 w-5 text-muted-foreground" />;
     }
-  } else {
-    if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="h-5 w-5 text-blue-500" />;
-    if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="h-5 w-5 text-purple-500" />;
-    if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="h-5 w-5 text-yellow-600" />;
-    if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="h-5 w-5 text-blue-600" />;
-    if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="h-5 w-5 text-red-500" />;
   }
   return <ListChecks className="h-5 w-5 text-muted-foreground" />;
 };
@@ -139,7 +138,7 @@ const HabitItem: FC<HabitItemProps> = ({
     onOpenRescheduleDialog,
     onToggleReminder,
     onOpenEditDialog,
-    onOpenDeleteConfirm, // New prop
+    onOpenDeleteConfirm,
 }) => {
   const [todayString, setTodayString] = React.useState('');
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -163,13 +162,14 @@ const HabitItem: FC<HabitItemProps> = ({
     setWeekViewDays(getCurrentWeekDays(currentDate));
   }, [currentDate]);
 
+  // Effect to trigger sparkles when isTodayCompleted changes to true
   React.useEffect(() => {
-    if (isTodayCompleted && !showSparkles) {
-      // This effect handles if the state comes in as completed (e.g. page load)
-      // and we want to ensure sparkles don't show unless it's a new completion.
-      // The main sparkle trigger is now in handleToggleTodayCompletion
+    if (isTodayCompleted) {
+        // This check ensures sparkles only show if it's a new completion,
+        // not if the card loads with today already completed.
+        // The actual setting of showSparkles is handled by handleToggleTodayCompletion
     }
-  }, [isTodayCompleted, showSparkles]);
+  }, [isTodayCompleted]);
 
 
   const streak = React.useMemo(() => calculateStreak(habit, currentDate), [habit, currentDate]);
@@ -216,7 +216,7 @@ const HabitItem: FC<HabitItemProps> = ({
       console.log(`Added to calendar! The .ics file for "${habit.name}" has been generated.`);
     } catch (error) {
       console.error("Error generating ICS file:", error);
-      console.error("ICS Generation Error");
+      console.log("ICS Generation Error");
     }
   };
 
@@ -286,8 +286,9 @@ const HabitItem: FC<HabitItemProps> = ({
 
 
   const handleToggleTodayCompletion = (complete: boolean) => {
+    const wasCompletedBefore = isTodayCompleted;
     onToggleComplete(habit.id, todayString, complete);
-    if (complete && !isTodayCompleted) { // Only show sparkles if it wasn't already completed
+    if (complete && !wasCompletedBefore) { // Only show sparkles if it wasn't already completed
       setShowSparkles(true);
       setTimeout(() => setShowSparkles(false), 800);
     }
@@ -428,11 +429,11 @@ const HabitItem: FC<HabitItemProps> = ({
             {habit.description && (
                 <div className="text-xs text-muted-foreground">
                 <span className="font-medium mr-1">📝 Desc:</span>
-                <p className={cn("inline",!isDescriptionExpanded && habit.description.length > DESCRIPTION_TRUNCATE_LENGTH ? "line-clamp-2" : "")}>
+                <span className={cn("inline",!isDescriptionExpanded && habit.description.length > DESCRIPTION_TRUNCATE_LENGTH ? "line-clamp-2" : "")}>
                     {isDescriptionExpanded || habit.description.length <= DESCRIPTION_TRUNCATE_LENGTH
                     ? habit.description
                     : `${habit.description.substring(0, DESCRIPTION_TRUNCATE_LENGTH)}...`}
-                </p>
+                </span>
                 {habit.description.length > DESCRIPTION_TRUNCATE_LENGTH && (
                     <button
                     onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
@@ -470,7 +471,7 @@ const HabitItem: FC<HabitItemProps> = ({
                 else if (isSkipped) dayStatus = 'skipped';
                 else if (isPendingMakeup) dayStatus = 'pending_makeup';
                 else if (isScheduled) {
-                  if (dayInfo.isPast && !dayInfo.isToday && !isSameDay(startOfDay(dayInfo.date), startOfDay(currentDate))) dayStatus = 'missed'; // Ensure not to mark today as missed if past
+                  if (dayInfo.isPast && !dayInfo.isToday && !isSameDay(startOfDay(dayInfo.date), startOfDay(currentDate))) dayStatus = 'missed';
                   else dayStatus = 'pending_scheduled';
                 }
 
@@ -494,8 +495,9 @@ const HabitItem: FC<HabitItemProps> = ({
                         if (isMissedAndActionable) {
                            onOpenRescheduleDialog(habit, dayInfo.dateStr);
                         } else if (canToggleDay) {
+                            const wasCompletedBeforeDay = isDayCompleted;
                             onToggleComplete(habit.id, dayInfo.dateStr, !isDayCompleted);
-                            if (!isDayCompleted) { // Sparkle if newly completed
+                            if (!wasCompletedBeforeDay && !isDayCompleted === false) { // Sparkle if newly completed
                                 setShowSparkles(true);
                                 setTimeout(() => setShowSparkles(false), 800);
                             }
@@ -566,6 +568,9 @@ const HabitItem: FC<HabitItemProps> = ({
                 <StickyNote className="mr-1 h-3 w-3" /> Note added
             </div>
         )}
+        <div className="flex justify-end mt-1">
+            {/* Placeholder for More Options, moved here to avoid interfering with main button flex */}
+        </div>
 
         {showSparkles && isTodayCompleted && (
           <>
@@ -596,3 +601,5 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
+
+    
