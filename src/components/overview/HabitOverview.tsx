@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
+// Adding a comment here to try and force a Vercel rebuild due to persistent lucide-react 'Repeat' icon error (v1)
 import { Target, Flame, ClipboardList, CheckCircle2, Circle, BarChart3, BookCopy, Star, Zap, ShieldCheck, Sparkles as JourneyIcon } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'; // Removed Legend
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
@@ -27,7 +28,7 @@ const subWeeks = (date: Date, amount: number) => dateFnsAddDays(date, -amount * 
 
 const calculateWeeklyConsistency = (habits: Habit[], weeksAgo: number, today: Date): WeeklyConsistencyData => {
   const targetDate = subWeeks(today, weeksAgo);
-  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 }); 
+  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 });
   let totalScheduled = 0;
   let totalCompleted = 0;
 
@@ -69,15 +70,15 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   const overallConsistency = useMemo(() => {
     let totalScheduledInstances = 0;
     let totalCompletedInstances = 0;
-    const daysToConsider = 7; 
+    const daysToConsider = 7;
     for (let i = 0; i < daysToConsider; i++) {
       const date = subDays(today, i);
-      const dateStr = format(date, 'yyyy-MM-dd');
-      const dayAbbr = getDayAbbreviationFromDate(date);
+      const dateStrLoop = format(date, 'yyyy-MM-dd');
+      const dayAbbrLoop = getDayAbbreviationFromDate(date);
       habits.forEach(h => {
-        if (h.daysOfWeek.includes(dayAbbr)) {
+        if (h.daysOfWeek.includes(dayAbbrLoop)) {
           totalScheduledInstances++;
-          if (h.completionLog.some(l => l.date === dateStr && l.status === 'completed')) {
+          if (h.completionLog.some(l => l.date === dateStrLoop && l.status === 'completed')) {
             totalCompletedInstances++;
           }
         }
@@ -87,8 +88,8 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   }, [habits, today]);
 
   const totalHabitsTracked = habits.length;
-  
-  const pointsPerLevel = 100; 
+
+  const pointsPerLevel = 100;
   const currentLevel = Math.floor(totalPoints / pointsPerLevel) + 1;
   const pointsInCurrentLevel = totalPoints % pointsPerLevel;
   const pointsToNextLevel = pointsPerLevel - pointsInCurrentLevel;
@@ -125,7 +126,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   }, [habits, today]);
 
   const chartConfig = { "Consistency (%)": { label: "Consistency (%)", color: "hsl(var(--chart-1))" } };
-  
+
   const totalSqlHours = useMemo(() => {
     let totalMinutes = 0;
     habits.filter(h => h.name.toLowerCase().includes("sql")).forEach(h => {
@@ -138,10 +139,10 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
     return (totalMinutes / 60).toFixed(2);
   }, [habits]);
 
-  const StatCard: FC<{title: string; icon: React.ElementType; children: React.ReactNode; className?: string}> = ({ title, icon: Icon, children, className }) => (
+  const StatCard: FC<{title: string; icon: React.ElementType; children: React.ReactNode; className?: string}> = ({ title, icon: IconComponent, children, className }) => (
     <div className={cn("p-3 rounded-lg bg-card/50 dark:bg-card/80 border", className)}>
       <h4 className="text-xs font-semibold flex items-center text-muted-foreground mb-1.5">
-        <Icon className="mr-2 h-4 w-4 text-primary" />
+        <IconComponent className="mr-2 h-4 w-4 text-primary" />
         {title}
       </h4>
       {children}
@@ -188,15 +189,15 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
                 )}
               </div>
               {dailyProgress.scheduled > 0 && <Progress value={dailyProgress.percent} className="h-1.5" indicatorClassName="bg-primary" />}
-              
+
               {scheduledToday.length > 0 && (
                 <div className="mt-2 space-y-1 border-t pt-2">
                   <h5 className="text-xs font-medium flex items-center text-muted-foreground"><ClipboardList className="mr-1.5 h-3.5 w-3.5" />Checklist:</h5>
                   <ul className="space-y-0.5 pl-1 max-h-24 overflow-y-auto">
                     {scheduledToday.map(h_item => (
                       <li key={h_item.id} className="flex items-center text-xs">
-                        {h_item.completionLog.some(l_item=>l_item.date===todayStr && l_item.status==='completed') ? 
-                         <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-accent shrink-0" /> : 
+                        {h_item.completionLog.some(l_item=>l_item.date===todayStr && l_item.status==='completed') ?
+                         <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-accent shrink-0" /> :
                          <Circle className="mr-1.5 h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />}
                         <span className={cn("truncate", h_item.completionLog.some(l_item=>l_item.date===todayStr && l_item.status==='completed') && "text-muted-foreground line-through opacity-70")}>
                           {h_item.name}
@@ -207,7 +208,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
                 </div>
               )}
             </StatCard>
-            
+
             <StatCard title="Consistency Shield" icon={ShieldCheck}>
                <div className="flex justify-between items-center mb-0.5">
                 <p className="text-sm font-semibold text-accent">{overallConsistency.score}%</p>
