@@ -3,14 +3,11 @@
 
 /**
  * ==========================================================================
- * HABIT OVERVIEW COMPONENT - REVISED FOR VERCEL BUILD DEBUGGING (v3)
- * --------------------------------------------------------------------------
- * This comment block is added to force a significant change in the file
- * content hash, in an attempt to break any stubborn Vercel build caches
- * that might be causing persistent "Module not found" errors for lucide-react
- * icons that are not actually being imported in the current version of this file.
- *
- * The Repeat icon from lucide-react is confirmed NOT to be in the imports below.
+ * HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT
+ * Date: 2025-05-20 (Ensuring this file is treated as NEW by Vercel cache)
+ * Issue: Persistent "module factory not available" for lucide-react 'Repeat' icon,
+ *        which is NOT imported or used in this component. This is likely a
+ *        Vercel build cache or HMR artifact issue.
  * ==========================================================================
  */
 
@@ -32,10 +29,11 @@ import {
   Zap,
   ShieldCheck,
   Sparkles as JourneyIcon
-} from 'lucide-react'; // Repeat icon is NOT imported here
+} from 'lucide-react'; // Repeat icon is confirmed NOT to be in this import.
 
 import { cn } from '@/lib/utils';
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
+import type { Habit } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
@@ -44,15 +42,6 @@ import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 interface HabitOverviewProps {
   habits: Habit[];
   totalPoints: number;
-}
-
-interface Habit {
-  id: string;
-  name: string;
-  daysOfWeek: string[];
-  completionLog: Array<{ date: string; status?: string; durationHours?: number; durationMinutes?: number }>;
-  durationHours?: number;
-  durationMinutes?: number;
 }
 
 interface WeeklyConsistencyData {
@@ -291,5 +280,3 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
-
-    
