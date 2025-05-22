@@ -4,20 +4,44 @@
 import * as React from 'react';
 import type { FC } from 'react';
 import { useMemo } from 'react';
-import type { Habit } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+// Attempting to force Vercel to recognize changes for lucide-react issue (v2)
+import { cn } from '@/lib/utils';
 import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
-// Adding a comment here to try and force a Vercel rebuild due to persistent lucide-react 'Repeat' icon error (v1)
-import { Target, Flame, ClipboardList, CheckCircle2, Circle, BarChart3, BookCopy, Star, Zap, ShieldCheck, Sparkles as JourneyIcon } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'; // Removed Legend
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { cn } from '@/lib/utils';
+
+// Vercel build issue debug: Ensuring Repeat icon is NOT imported
+import {
+  Target,
+  Flame,
+  ClipboardList,
+  CheckCircle2,
+  Circle,
+  BarChart3,
+  BookCopy,
+  Star,
+  Zap,
+  ShieldCheck,
+  Sparkles as JourneyIcon
+} from 'lucide-react';
+
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+
 
 interface HabitOverviewProps {
   habits: Habit[];
   totalPoints: number;
+}
+
+interface Habit {
+  id: string;
+  name: string;
+  daysOfWeek: string[]; // Using string[] for WeekDay for simplicity here, should match actual type
+  completionLog: Array<{ date: string; status?: string; durationHours?: number; durationMinutes?: number }>;
+  durationHours?: number;
+  durationMinutes?: number;
 }
 
 interface WeeklyConsistencyData {
@@ -28,14 +52,14 @@ const subWeeks = (date: Date, amount: number) => dateFnsAddDays(date, -amount * 
 
 const calculateWeeklyConsistency = (habits: Habit[], weeksAgo: number, today: Date): WeeklyConsistencyData => {
   const targetDate = subWeeks(today, weeksAgo);
-  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 });
+  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 }); // Assuming Sunday is start of week
   let totalScheduled = 0;
   let totalCompleted = 0;
 
   habits.forEach(habit => {
     for (let i = 0; i < 7; i++) {
       const currentDateInLoop = dateFnsAddDays(weekStart, i);
-      const dayAbbr = getDayAbbreviationFromDate(currentDateInLoop);
+      const dayAbbr = getDayAbbreviationFromDate(currentDateInLoop); // Ensure this returns format like "Mon", "Tue"
       if (habit.daysOfWeek.includes(dayAbbr)) {
         totalScheduled++;
         if (habit.completionLog.some(log => log.date === format(currentDateInLoop, 'yyyy-MM-dd') && log.status === 'completed')) {
@@ -70,7 +94,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   const overallConsistency = useMemo(() => {
     let totalScheduledInstances = 0;
     let totalCompletedInstances = 0;
-    const daysToConsider = 7;
+    const daysToConsider = 7; // last 7 days
     for (let i = 0; i < daysToConsider; i++) {
       const date = subDays(today, i);
       const dateStrLoop = format(date, 'yyyy-MM-dd');
@@ -132,7 +156,9 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
     habits.filter(h => h.name.toLowerCase().includes("sql")).forEach(h => {
       h.completionLog.forEach(l => {
         if (l.status === 'completed') {
-          totalMinutes += (h.durationHours || 0) * 60 + (h.durationMinutes || 0);
+          const durationHours = h.durationHours || 0;
+          const durationMinutes = h.durationMinutes || 0;
+          totalMinutes += (durationHours * 60) + durationMinutes;
         }
       });
     });
