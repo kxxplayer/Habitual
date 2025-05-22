@@ -7,11 +7,11 @@ import { useMemo } from 'react';
 import type { Habit } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { format, subDays, startOfWeek, endOfWeek, addDays as dateFnsAddDays } from 'date-fns';
+import { format, subDays, startOfWeek, addDays as dateFnsAddDays } from 'date-fns';
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
-import { Target, Repeat, Award, ClipboardList, CheckCircle2, Circle, BarChart3, BookCopy, Star, Zap, ShieldCheck, TrendingUp, Trophy, Sparkles as JourneyIcon } from 'lucide-react';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { ChartContainer, ChartTooltipContent, ChartLegendContent } from "@/components/ui/chart";
+import { Target, Flame, ClipboardList, CheckCircle2, Circle, BarChart3, BookCopy, Star, Zap, ShieldCheck, Sparkles as JourneyIcon } from 'lucide-react';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { cn } from '@/lib/utils';
 
 interface HabitOverviewProps {
@@ -27,13 +27,15 @@ const subWeeks = (date: Date, amount: number) => dateFnsAddDays(date, -amount * 
 
 const calculateWeeklyConsistency = (habits: Habit[], weeksAgo: number, today: Date): WeeklyConsistencyData => {
   const targetDate = subWeeks(today, weeksAgo);
-  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 });
-  let totalScheduled = 0, totalCompleted = 0;
+  const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 }); // Assuming Sunday is the start of the week
+  let totalScheduled = 0;
+  let totalCompleted = 0;
 
   habits.forEach(habit => {
     for (let i = 0; i < 7; i++) {
       const currentDateInLoop = dateFnsAddDays(weekStart, i);
-      if (habit.daysOfWeek.includes(getDayAbbreviationFromDate(currentDateInLoop))) {
+      const dayAbbr = getDayAbbreviationFromDate(currentDateInLoop);
+      if (habit.daysOfWeek.includes(dayAbbr)) {
         totalScheduled++;
         if (habit.completionLog.some(log => log.date === format(currentDateInLoop, 'yyyy-MM-dd') && log.status === 'completed')) {
           totalCompleted++;
@@ -41,8 +43,12 @@ const calculateWeeklyConsistency = (habits: Habit[], weeksAgo: number, today: Da
       }
     }
   });
+
   const consistency = totalScheduled > 0 ? Math.round((totalCompleted / totalScheduled) * 100) : 0;
-  let weekLabel = weeksAgo === 0 ? "This Week" : weeksAgo === 1 ? "Last Week" : `${weeksAgo} Wks Ago`;
+  let weekLabel = "This Week";
+  if (weeksAgo === 1) weekLabel = "Last Week";
+  else if (weeksAgo > 1) weekLabel = `${weeksAgo} Wks Ago`;
+
   return { name: weekLabel, "Consistency (%)": consistency, scheduled: totalScheduled, completed: totalCompleted };
 };
 
@@ -61,24 +67,29 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   }, [scheduledToday, todayStr]);
 
   const overallConsistency = useMemo(() => {
-    let totalScheduled = 0, totalCompleted = 0;
-    const daysToConsider = 7;
+    let totalScheduledInstances = 0;
+    let totalCompletedInstances = 0;
+    const daysToConsider = 7; 
     for (let i = 0; i < daysToConsider; i++) {
-      const date = subDays(today, i); const dateStr = format(date, 'yyyy-MM-dd'); const dayAbbr = getDayAbbreviationFromDate(date);
+      const date = subDays(today, i);
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const dayAbbr = getDayAbbreviationFromDate(date);
       habits.forEach(h => {
         if (h.daysOfWeek.includes(dayAbbr)) {
-          totalScheduled++;
-          if (h.completionLog.some(l => l.date === dateStr && l.status === 'completed')) totalCompleted++;
+          totalScheduledInstances++;
+          if (h.completionLog.some(l => l.date === dateStr && l.status === 'completed')) {
+            totalCompletedInstances++;
+          }
         }
       });
     }
-    return { score: totalScheduled > 0 ? Math.round((totalCompleted / totalScheduled) * 100) : 0, days: daysToConsider };
+    return { score: totalScheduledInstances > 0 ? Math.round((totalCompletedInstances / totalScheduledInstances) * 100) : 0, days: daysToConsider };
   }, [habits, today]);
 
   const totalHabitsTracked = habits.length;
-
+  
   // Gamification: Level System
-  const pointsPerLevel = 100;
+  const pointsPerLevel = 100; // Example: 100 points to level up
   const currentLevel = Math.floor(totalPoints / pointsPerLevel) + 1;
   const pointsInCurrentLevel = totalPoints % pointsPerLevel;
   const pointsToNextLevel = pointsPerLevel - pointsInCurrentLevel;
@@ -86,7 +97,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
 
   // Gamification: Streak Highlights
   const { longestActiveStreak, activeStreaksCount } = useMemo(() => {
-    if (habits.length === 0) return { longestActiveStreak: 0, activeStreaksCount: 0 };
+    if(habits.length === 0) return { longestActiveStreak: 0, activeStreaksCount: 0 };
     let longest = 0;
     let activeCount = 0;
     habits.forEach(habit => {
@@ -111,13 +122,20 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   }
 
 
-  const weeklyChartData = useMemo(() => [3, 2, 1, 0].map(i => calculateWeeklyConsistency(habits, i, today)), [habits, today]);
-  const chartConfig = { "Consistency (%)": { label: "Consistency (%)", color: "hsl(var(--chart-1))" } };
+  const weeklyChartData = useMemo(() => {
+    return [3, 2, 1, 0].map(i => calculateWeeklyConsistency(habits, i, today));
+  }, [habits, today]);
 
+  const chartConfig = { "Consistency (%)": { label: "Consistency (%)", color: "hsl(var(--chart-1))" } };
+  
   const totalSqlHours = useMemo(() => {
     let totalMinutes = 0;
     habits.filter(h => h.name.toLowerCase().includes("sql")).forEach(h => {
-      h.completionLog.forEach(l => { if (l.status === 'completed') totalMinutes += (h.durationHours || 0) * 60 + (h.durationMinutes || 0); });
+      h.completionLog.forEach(l => {
+        if (l.status === 'completed') {
+          totalMinutes += (h.durationHours || 0) * 60 + (h.durationMinutes || 0);
+        }
+      });
     });
     return (totalMinutes / 60).toFixed(2);
   }, [habits]);
@@ -222,7 +240,8 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
           </>
         ) : (
           <div className="text-center py-4">
-            <Award className="mx-auto h-10 w-10 text-muted-foreground/50 mb-2" />
+             {/* Using JourneyIcon (Sparkles) here instead of Award for the placeholder */}
+            <JourneyIcon className="mx-auto h-10 w-10 text-muted-foreground/50 mb-2" />
             <p className="text-muted-foreground text-sm">{journeyMessage}</p>
           </div>
         )}
@@ -237,5 +256,3 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
-
-    
