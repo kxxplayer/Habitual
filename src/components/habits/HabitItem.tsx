@@ -4,8 +4,8 @@
 
 import * as React from 'react';
 import type { FC } from 'react';
-import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'; // Ensure CardFooter is imported
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
 import {
   Lightbulb, CalendarDays, CalendarClock, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag,
   ListChecks,
@@ -43,9 +44,9 @@ import {
   Check,
   Bell,
   FilePenLine,
-  ChevronRightSquare,
   StickyNote,
   Trash2,
+  ChevronRightSquare,
 } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory, HabitCompletionLogEntry, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -87,7 +88,7 @@ const getCategoryColorVariable = (category?: HabitCategory): string => {
     "Health & Wellness": "--chart-3",
     "Creative": "--chart-4",
     "Chores": "--chart-5",
-    "Finance": "--chart-1",
+    "Finance": "--chart-1", // Reusing chart colors
     "Social": "--chart-2",
     "Personal Growth": "--chart-3",
     "Other": "--chart-5",
@@ -158,18 +159,20 @@ const HabitItem: FC<HabitItemProps> = ({
     return habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
   }, [habit.completionLog, todayString]);
 
+  // Effect to trigger sparkles when isTodayCompleted changes to true
+  React.useEffect(() => {
+    if (isTodayCompleted && prevIsTodayCompleted.current === false) {
+      setShowSparkles(true);
+      setTimeout(() => setShowSparkles(false), 800);
+    }
+    prevIsTodayCompleted.current = isTodayCompleted;
+  }, [isTodayCompleted]);
+  const prevIsTodayCompleted = React.useRef(isTodayCompleted);
+
+
   React.useEffect(() => {
     setWeekViewDays(getCurrentWeekDays(currentDate));
   }, [currentDate]);
-
-  // Effect to trigger sparkles when isTodayCompleted changes to true
-  React.useEffect(() => {
-    if (isTodayCompleted) {
-        // This check ensures sparkles only show if it's a new completion,
-        // not if the card loads with today already completed.
-        // The actual setting of showSparkles is handled by handleToggleTodayCompletion
-    }
-  }, [isTodayCompleted]);
 
 
   const streak = React.useMemo(() => calculateStreak(habit, currentDate), [habit, currentDate]);
@@ -286,96 +289,21 @@ const HabitItem: FC<HabitItemProps> = ({
 
 
   const handleToggleTodayCompletion = (complete: boolean) => {
-    const wasCompletedBefore = isTodayCompleted;
     onToggleComplete(habit.id, todayString, complete);
-    if (complete && !wasCompletedBefore) { // Only show sparkles if it wasn't already completed
-      setShowSparkles(true);
-      setTimeout(() => setShowSparkles(false), 800);
-    }
+    // Sparkle logic is now handled by the useEffect watching isTodayCompleted
   };
 
   const DESCRIPTION_TRUNCATE_LENGTH = 100;
 
   return (
     <Card className={cardClasses} style={cardStyle}>
-      <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-4">
+      <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-4 pr-12">
         <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
            {getHabitIcon(habit)}
         </div>
         <h2 className="text-lg sm:text-xl font-bold text-primary text-center flex-grow mx-2 truncate min-w-0 break-words">
           {habit.name}
         </h2>
-        <div className="flex-shrink-0">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-                <span className="sr-only">More options</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onOpenEditDialog(habit)}>
-                <FilePenLine className="mr-2 h-4 w-4" />
-                <span>Edit</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}>
-                <MessageSquarePlus className="mr-2 h-4 w-4" />
-                <span>Add/Edit Note</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="flex items-center justify-between"
-                onSelect={(e) => e.preventDefault()}
-              >
-                <Label htmlFor={`reminder-switch-${habit.id}`} className="flex items-center cursor-pointer">
-                    <Bell className="mr-2 h-4 w-4" />
-                    Enable Reminder
-                </Label>
-                <Switch
-                    id={`reminder-switch-${habit.id}`}
-                    checked={!!habit.reminderEnabled}
-                    onCheckedChange={() => onToggleReminder(habit.id, !!habit.reminderEnabled)}
-                    className="ml-auto"
-                />
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
-                <Lightbulb className="mr-2 h-4 w-4" />
-                <span>AI Tip</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleAddToCalendar}>
-                <CalendarPlus className="mr-2 h-4 w-4" />
-                <span>Add to GCal</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleShareHabit}>
-                <Share2 className="mr-2 h-4 w-4" />
-                <span>Share</span>
-              </DropdownMenuItem>
-               <DropdownMenuItem onClick={() => {
-                 const firstMissed = weekViewDays.find(d =>
-                    habit.daysOfWeek.includes(d.dayAbbrFull) &&
-                    d.isPast && !d.isToday &&
-                    !habit.completionLog.some(log => log.date === d.dateStr && (log.status === 'completed' || log.status === 'skipped' || log.status === 'pending_makeup'))
-                 );
-                 if (firstMissed) {
-                    onOpenRescheduleDialog(habit, firstMissed.dateStr);
-                 } else {
-                    console.log("Reschedule: No past, scheduled, uncompleted days this week to reschedule.");
-                 }
-              }}>
-                <CalendarClock className="mr-2 h-4 w-4" />
-                <span>Reschedule Missed</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onOpenDeleteConfirm(habit.id, habit.name)}
-                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                <span>Delete Habit</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
       </CardHeader>
 
       <CardContent className="space-y-3 px-3 sm:px-4 pb-2 pt-1">
@@ -497,7 +425,7 @@ const HabitItem: FC<HabitItemProps> = ({
                         } else if (canToggleDay) {
                             const wasCompletedBeforeDay = isDayCompleted;
                             onToggleComplete(habit.id, dayInfo.dateStr, !isDayCompleted);
-                            if (!wasCompletedBeforeDay && !isDayCompleted === false) { // Sparkle if newly completed
+                            if (!wasCompletedBeforeDay && !isDayCompleted === false) {
                                 setShowSparkles(true);
                                 setTimeout(() => setShowSparkles(false), 800);
                             }
@@ -535,7 +463,7 @@ const HabitItem: FC<HabitItemProps> = ({
               className={cn(
                 "rounded-full py-2.5 px-6 text-sm transition-all active:scale-95 flex-1",
                 !isTodayCompleted
-                    ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed",
                 isTodayCompleted && showSparkles && "animate-pulse-glow-accent" ,
                 isTodayCompleted && !showSparkles && "shadow-[0_0_8px_hsl(var(--accent))]"
@@ -543,7 +471,7 @@ const HabitItem: FC<HabitItemProps> = ({
             >
                {!isTodayCompleted ? (
                 <>
-                  <Check className="mr-2 h-5 w-5" /> Mark Done
+                  <Check className="mr-2 h-5 w-5" /> Mark as Done
                 </>
                ) : (
                 <>
@@ -569,7 +497,75 @@ const HabitItem: FC<HabitItemProps> = ({
             </div>
         )}
         <div className="flex justify-end mt-1">
-            {/* Placeholder for More Options, moved here to avoid interfering with main button flex */}
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+                <span className="sr-only">More options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onOpenEditDialog(habit)}>
+                <FilePenLine className="mr-2 h-4 w-4" />
+                <span>Edit</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}>
+                <MessageSquarePlus className="mr-2 h-4 w-4" />
+                <span>Add/Edit Note</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex items-center justify-between"
+                onSelect={(e) => e.preventDefault()}
+              >
+                <Label htmlFor={`reminder-switch-${habit.id}`} className="flex items-center cursor-pointer text-sm">
+                    <Bell className="mr-2 h-4 w-4" />
+                    Enable Reminder
+                </Label>
+                <Switch
+                    id={`reminder-switch-${habit.id}`}
+                    checked={!!habit.reminderEnabled}
+                    onCheckedChange={() => onToggleReminder(habit.id, !!habit.reminderEnabled)}
+                    className="ml-auto"
+                />
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}>
+                <Lightbulb className="mr-2 h-4 w-4" />
+                <span>AI Tip</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleAddToCalendar}>
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                <span>Add to GCal</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareHabit}>
+                <Share2 className="mr-2 h-4 w-4" />
+                <span>Share</span>
+              </DropdownMenuItem>
+               <DropdownMenuItem onClick={() => {
+                 const firstMissed = weekViewDays.find(d_info =>
+                    habit.daysOfWeek.includes(d_info.dayAbbrFull) &&
+                    d_info.isPast && !d_info.isToday &&
+                    !habit.completionLog.some(log_entry => log_entry.date === d_info.dateStr && (log_entry.status === 'completed' || log_entry.status === 'skipped' || log_entry.status === 'pending_makeup'))
+                 );
+                 if (firstMissed) {
+                    onOpenRescheduleDialog(habit, firstMissed.dateStr);
+                 } else {
+                    console.log("Reschedule: No past, scheduled, uncompleted days this week to reschedule.");
+                 }
+              }}>
+                <CalendarClock className="mr-2 h-4 w-4" />
+                <span>Reschedule Missed</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onOpenDeleteConfirm(habit.id, habit.name)}
+                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Delete Habit</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {showSparkles && isTodayCompleted && (
@@ -586,6 +582,7 @@ const HabitItem: FC<HabitItemProps> = ({
       {showWeeklyConfetti && (
         <div className="weekly-goal-animation-container">
             <div className="weekly-goal-text">Weekly Goal Met!</div>
+            {/* Sparkles for weekly goal */}
             <div className="sparkle sparkle-1" style={{top: '15%', left: '10%', '--tx': '-20px', '--ty': '-25px'} as React.CSSProperties}></div>
             <div className="sparkle sparkle-2" style={{top: '25%', right: '5%', '--tx': '20px', '--ty': '-30px'} as React.CSSProperties}></div>
             <div className="sparkle sparkle-3" style={{bottom: '30%', left: '20%', '--tx': '-25px', '--ty': '10px'} as React.CSSProperties}></div>
@@ -601,5 +598,3 @@ const HabitItem: FC<HabitItemProps> = ({
 };
 
 export default HabitItem;
-
-    
