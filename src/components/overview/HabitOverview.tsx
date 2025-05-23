@@ -1,23 +1,20 @@
 
-/**
- * ==========================================================================
- * HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT (2025-05-20 v4)
- * Date: 2025-05-20
- * THIS IS A MAJOR REFRESH ATTEMPT TO FORCE VERCEL CACHE BREAK.
- * Issue: Persistent "ChartTooltip is not defined" or "lucide-react Repeat icon not found" errors on Vercel,
- *        suggesting Vercel build/cache issues with this specific component.
- * Goal: Force Vercel to fully rebuild this file from scratch.
- * All imports have been meticulously checked.
- * ==========================================================================
- */
 "use client";
+
+// ==========================================================================
+// HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT (2025-05-20 v4)
+// Date: 2025-05-20
+// THIS IS A MAJOR REFRESH ATTEMPT TO FORCE VERCEL CACHE BREAK.
+// Issue: Persistent "ChartTooltip is not defined" on Vercel,
+//        suggesting Vercel build/cache issues with this specific component.
+// Goal: Force Vercel to fully rebuild this file from scratch.
+// All imports have been meticulously checked.
+// ==========================================================================
 
 import * as React from 'react'; // Explicit React import
 import { useMemo, type FC } from 'react';
 
 // UI & Utility Imports (Ordered)
-import { cn } from '@/lib/utils';
-import type { Habit } from '@/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 // CRITICAL IMPORT: Ensure ChartTooltip, ChartContainer, and ChartTooltipContent are correctly imported.
@@ -43,9 +40,12 @@ import {
 } from 'lucide-react';
 
 // Recharts imports (ordered and specific)
+// Removed unused 'Legend' import
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 
 // Local utility imports
+import { cn } from '@/lib/utils';
+import type { Habit } from '@/types';
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
 
 
@@ -102,15 +102,15 @@ const calculateWeeklyConsistency = (habits: Habit[], weeksAgo: number, todayRef:
 // Main component
 const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   // Memoized date values
-  const today = useMemo(() => new Date(), []);
-  const todayStr = useMemo(() => format(today, 'yyyy-MM-dd'), [today]);
-  const todayAbbr = useMemo(() => getDayAbbreviationFromDate(today), [today]);
+  const today = React.useMemo(() => new Date(), []);
+  const todayStr = React.useMemo(() => format(today, 'yyyy-MM-dd'), [today]);
+  const todayAbbr = React.useMemo(() => getDayAbbreviationFromDate(today), [today]);
 
   // Memoized calculation for habits scheduled today
-  const scheduledToday = useMemo(() => habits.filter(h_item_sched => h_item_sched.daysOfWeek.includes(todayAbbr)), [habits, todayAbbr]);
+  const scheduledToday = React.useMemo(() => habits.filter(h_item_sched => h_item_sched.daysOfWeek.includes(todayAbbr)), [habits, todayAbbr]);
 
   // Memoized calculation for daily progress
-  const dailyProgress = useMemo(() => {
+  const dailyProgress = React.useMemo(() => {
     if (scheduledToday.length === 0) return { scheduled: 0, completed: 0, percent: 0 };
     const completed_daily_prog = scheduledToday.filter(h_item_daily_prog => h_item_daily_prog.completionLog.some(l_item_daily_prog => l_item_daily_prog.date === todayStr && l_item_daily_prog.status === 'completed')).length;
     return {
@@ -121,7 +121,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   }, [scheduledToday, todayStr]);
 
   // Memoized calculation for overall consistency
-  const overallConsistency = useMemo(() => {
+  const overallConsistency = React.useMemo(() => {
     let totalScheduledInstances_overall_cons = 0;
     let totalCompletedInstances_overall_cons = 0;
     const daysToConsider_overall_cons = 7; // Consider last 7 days
@@ -148,13 +148,13 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
 
   // Memoized level calculation
   const pointsPerLevel = 100;
-  const currentLevel = useMemo(() => Math.floor(totalPoints / pointsPerLevel) + 1, [totalPoints, pointsPerLevel]);
-  const pointsInCurrentLevel = useMemo(() => totalPoints % pointsPerLevel, [totalPoints, pointsPerLevel]);
-  const pointsToNextLevel = useMemo(() => pointsPerLevel - pointsInCurrentLevel, [pointsInCurrentLevel, pointsPerLevel]);
-  const progressToNextLevelPercent = useMemo(() => (pointsInCurrentLevel / pointsPerLevel) * 100, [pointsInCurrentLevel, pointsPerLevel]);
+  const currentLevel = React.useMemo(() => Math.floor(totalPoints / pointsPerLevel) + 1, [totalPoints, pointsPerLevel]);
+  const pointsInCurrentLevel = React.useMemo(() => totalPoints % pointsPerLevel, [totalPoints, pointsPerLevel]);
+  const pointsToNextLevel = React.useMemo(() => pointsPerLevel - pointsInCurrentLevel, [pointsInCurrentLevel, pointsPerLevel]);
+  const progressToNextLevelPercent = React.useMemo(() => (pointsInCurrentLevel / pointsPerLevel) * 100, [pointsInCurrentLevel, pointsPerLevel]);
 
   // Memoized streak calculation
-  const { longestActiveStreak, activeStreaksCount } = useMemo(() => {
+  const { longestActiveStreak, activeStreaksCount } = React.useMemo(() => {
     if (habits.length === 0) return { longestActiveStreak: 0, activeStreaksCount: 0 };
     let longest_streak_calc = 0;
     let activeCount_streak_calc = 0;
@@ -171,7 +171,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   }, [habits, today]);
 
   // Memoized journey message
-  let journeyMessage = useMemo(() => {
+  const journeyMessage = React.useMemo(() => {
     if (totalHabitsTracked === 0) return "Embark on your habit journey! Add a habit to begin.";
     if (currentLevel >= 10) return `Level ${currentLevel} Habit Guru! Truly inspiring!`;
     if (currentLevel >= 5) return `Level ${currentLevel} Habit Master! You're on a roll!`;
@@ -182,7 +182,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
 
 
   // Memoized weekly chart data
-  const weeklyChartData = useMemo(() => {
+  const weeklyChartData = React.useMemo(() => {
     // Calculate for last 4 weeks including current (weeksAgo: 3, 2, 1, 0)
     return [3, 2, 1, 0].map(i_chart_data => calculateWeeklyConsistency(habits, i_chart_data, today));
   }, [habits, today]);
@@ -193,7 +193,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   } as const;
 
   // Memoized total SQL hours
-  const totalSqlHours = useMemo(() => {
+  const totalSqlHours = React.useMemo(() => {
     let totalMinutes_sql = 0;
     habits.filter(h_item_sql => h_item_sql.name.toLowerCase().includes("sql")).forEach(h_item_sql_inner => {
       h_item_sql_inner.completionLog.forEach(l_item_sql_inner => {
@@ -334,5 +334,4 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
-
     
