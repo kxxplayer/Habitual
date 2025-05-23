@@ -8,13 +8,11 @@
  *        suggesting Vercel build/cache issues with this specific component.
  * Goal: Force Vercel to fully rebuild this file from scratch.
  * All imports have been meticulously checked.
- * The lucide-react Repeat icon is definitively NOT imported here.
- * ChartTooltip IS imported from "@/components/ui/chart".
  * ==========================================================================
  */
 "use client";
 
-import * as React from 'react'; // Explicit React import for robustness
+import * as React from 'react'; // Explicit React import
 import { useMemo, type FC } from 'react';
 
 // UI & Utility Imports (Ordered)
@@ -45,7 +43,7 @@ import {
 } from 'lucide-react';
 
 // Recharts imports (ordered and specific)
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts'; // Renamed Recharts Tooltip to avoid conflict if any
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 
 // Local utility imports
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
@@ -336,5 +334,3 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
   );
 };
 export default HabitOverview;
-
-    
