@@ -1,6 +1,4 @@
 
-"use client";
-
 // ==========================================================================
 // HABIT OVERVIEW COMPONENT - VERCEL BUILD DEBUG ATTEMPT (2025-05-20 v4)
 // Date: 2025-05-20
@@ -10,6 +8,8 @@
 // Goal: Force Vercel to fully rebuild this file from scratch.
 // All imports have been meticulously checked.
 // ==========================================================================
+
+"use client";
 
 import * as React from 'react'; // Explicit React import
 import { useMemo, type FC } from 'react';
