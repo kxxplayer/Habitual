@@ -70,9 +70,8 @@ import { getCommonHabitSuggestions } from '@/ai/flows/common-habit-suggestions-f
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { cn } from "@/lib/utils";
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -142,9 +141,6 @@ const HabitualPage: NextPage = () => {
   const [isDeleteHabitConfirmOpen, setIsDeleteHabitConfirmOpen] = React.useState(false);
   const [habitToDelete, setHabitToDelete] = React.useState<{ id: string; name: string } | null>(null);
 
-  const [isDailyQuestDialogOpen, setIsDailyQuestDialogOpen] = React.useState(false);
-  const [isDashboardDialogOpen, setIsDashboardDialogOpen] = React.useState(false); // Dashboard dialog state
-
 
   const [todayString, setTodayString] = React.useState('');
   const [todayAbbr, setTodayAbbr] = React.useState<WeekDay | ''>('');
@@ -163,8 +159,8 @@ const HabitualPage: NextPage = () => {
       const previousUidAuthMain = previousAuthUserUidRef.current;
       const currentUidAuthMain = currentUserAuthMain?.uid || null;
 
-      if (previousUidAuthMain !== currentUidAuthMain) {
-        console.log("User identity changed. Clearing active app state (React state). User-specific localStorage data will NOT be removed.");
+      if (previousUidAuthMain !== undefined && previousUidAuthMain !== currentUidAuthMain) {
+        console.log(`User identity changed from ${previousUidAuthMain} to ${currentUidAuthMain}. Clearing app state. UID-namespaced localStorage data will NOT be removed.`);
         setHabits([]);
         setEarnedBadges([]);
         setTotalPoints(0);
@@ -178,9 +174,6 @@ const HabitualPage: NextPage = () => {
         setIsDeleteHabitConfirmOpen(false);
         setIsAISuggestionDialogOpen(false);
         setIsCreateHabitDialogOpen(false);
-        setIsDailyQuestDialogOpen(false);
-        setIsDashboardDialogOpen(false);
-
         // DO NOT remove localStorage items here to persist data for the same user across sessions.
         // Data is namespaced by UID, so different users won't see each other's data.
       }
@@ -320,7 +313,7 @@ const HabitualPage: NextPage = () => {
           };
         });
         setHabits(parsedHabitsLoadMain);
-        console.log("Habits loaded and sanitized for user:", parsedHabitsLoadMain.length);
+        console.log("Habits loaded and sanitized for user:", userUidLoadMain, parsedHabitsLoadMain.length);
       } catch (eParseHabitsLoadMain) {
         console.error(`Error parsing habits for user ${userUidLoadMain} from localStorage:`, eParseHabitsLoadMain);
         setHabits([]);
@@ -351,7 +344,7 @@ const HabitualPage: NextPage = () => {
           const dailyQuestKeyLoadMain = `${LS_KEY_PREFIX_DAILY_QUEST}${userUidLoadMain}`;
           const hasSeenDailyQuestLoadMain = typeof window !== 'undefined' ? localStorage.getItem(dailyQuestKeyLoadMain) : null;
           if (!hasSeenDailyQuestLoadMain) {
-            setIsDailyQuestDialogOpen(true);
+            // setIsDailyQuestDialogOpen(true); // Keep commented if not desired for now
           }
         });
     } else if (parsedHabitsLoadMain.length > 0) {
@@ -372,7 +365,7 @@ const HabitualPage: NextPage = () => {
     setIsLoadingHabits(false);
     console.log("Finished loading data for user:", userUidLoadMain);
 
-  }, [authUser, isLoadingAuth]); // Removed commonSuggestionsFetched from dependency array to simplify
+  }, [authUser, isLoadingAuth]);
 
 
   // Save habits to localStorage & check for badges
@@ -446,15 +439,15 @@ const HabitualPage: NextPage = () => {
               if (specificEventTimeReminderMain > nowReminderMain) {
                 if (potentialReminderTimeReminderMain <= nowReminderMain) {
                     reminderDateTimeValMain = specificEventTimeReminderMain;
-                } else { 
+                } else {
                     reminderDateTimeValMain = potentialReminderTimeReminderMain;
                 }
               }
             } catch (eReminderTimeMain) {
               console.error(`Error parsing specificTime "${habitReminderCheckMain.specificTime}" for habit "${habitReminderCheckMain.name}"`, eReminderTimeMain);
             }
-          } else { 
-            let baseHourReminderMain = 10; 
+          } else {
+            let baseHourReminderMain = 10;
             const timingLowerReminderMain = habitReminderCheckMain.optimalTiming?.toLowerCase();
             if (timingLowerReminderMain?.includes('morning')) baseHourReminderMain = 9;
             else if (timingLowerReminderMain?.includes('afternoon')) baseHourReminderMain = 13;
@@ -469,7 +462,6 @@ const HabitualPage: NextPage = () => {
           if (reminderDateTimeValMain && reminderDateTimeValMain > nowReminderMain) {
             const delayReminderMain = reminderDateTimeValMain.getTime() - nowReminderMain.getTime();
             console.log(`REMINDER LOG (Placeholder): "${habitReminderCheckMain.name}" would be at ${reminderDateTimeValMain.toLocaleString()} (in ${Math.round(delayReminderMain/60000)} mins)`);
-            // Actual setTimeout for Notification would go here
           }
         }
       });
@@ -631,6 +623,7 @@ const HabitualPage: NextPage = () => {
     console.log(`Reminder for habit "${habitReminderToggleLogMain?.name}" ${!currentReminderStateReminderToggleMain ? 'enabled' : 'disabled'}`);
     if (!currentReminderStateReminderToggleMain && notificationPermission !== 'granted') {
        console.log('Please enable notifications in your browser settings or allow permission when prompted to receive reminders.');
+       handleRequestNotificationPermission();
     }
   };
 
@@ -739,7 +732,7 @@ const HabitualPage: NextPage = () => {
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped';
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].time = 'N/A';
             }
-        } else { 
+        } else {
             newCompletionLog_rescheduled_save.push({
                 date: originalMissedDate_rescheduled_save,
                 time: 'N/A',
@@ -825,13 +818,12 @@ const HabitualPage: NextPage = () => {
       description: '',
       daysOfWeek: [] as WeekDay[],
     };
-    setEditingHabit(null); 
+    setEditingHabit(null);
     setInitialFormDataForDialog(formDataCustomizeMain);
     setIsCreateHabitDialogOpen(true);
   };
 
   const handleCloseDailyQuestDialog = () => {
-    setIsDailyQuestDialogOpen(false);
     if (authUser && typeof window !== 'undefined') {
       const dailyQuestKeyCloseMain = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`;
       localStorage.setItem(dailyQuestKeyCloseMain, 'true');
@@ -859,40 +851,34 @@ const HabitualPage: NextPage = () => {
 
   if (isLoadingAuth) {
     return (
-      <div className={cn("min-h-screen flex items-center justify-center")}>
-        <div className="flex flex-col items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">Loading application...</p>
-        </div>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading application...</p>
       </div>
     );
   }
 
-  if (!authUser) { 
+  if (!authUser) {
     return (
-       <div className={cn("min-h-screen flex items-center justify-center")}>
-        <div className="flex flex-col items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
-        </div>
+       <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
       </div>
     );
   }
 
   if (isLoadingHabits && authUser) {
      return (
-      <div className={cn("min-h-screen flex items-center justify-center")}>
-        <div className="flex flex-col items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">Loading your habits...</p>
-        </div>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading your habits...</p>
       </div>
     );
   }
 
 
   return (
-    <div className={cn("min-h-screen flex items-center justify-center p-0 sm:p-4")}>
+    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div
         className={cn(
           "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
@@ -905,6 +891,7 @@ const HabitualPage: NextPage = () => {
 
         <ScrollArea className="flex-grow">
           <main className="px-3 sm:px-4 py-4">
+
             {/* "Mark All Today Done" button - only shown if there are habits */}
             {habits.length > 0 && (
               <div className="my-4 flex justify-center">
@@ -962,7 +949,7 @@ const HabitualPage: NextPage = () => {
               onOpenDeleteConfirm={handleOpenDeleteHabitConfirm}
             />
           </main>
-          <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
+           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
             <p>&copy; {new Date().getFullYear()} Habitual.</p>
           </footer>
         </ScrollArea>
@@ -974,8 +961,8 @@ const HabitualPage: NextPage = () => {
        <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
           onClick={() => {
-            setEditingHabit(null); 
-            setInitialFormDataForDialog(null); 
+            setEditingHabit(null);
+            setInitialFormDataForDialog(null);
             setIsCreateHabitDialogOpen(true);
           }}
           aria-label="Add New Habit"
@@ -988,7 +975,7 @@ const HabitualPage: NextPage = () => {
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null); 
+            setInitialFormDataForDialog(null);
             setEditingHabit(null);
         }}
         onSaveHabit={handleSaveHabit}
@@ -1054,29 +1041,10 @@ const HabitualPage: NextPage = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <DailyQuestDialog isOpen={isDailyQuestDialogOpen} onClose={handleCloseDailyQuestDialog} />
-
-      {/* Dashboard Dialog */}
-      <Dialog open={isDashboardDialogOpen} onOpenChange={setIsDashboardDialogOpen}>
-        <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[85vh] flex flex-col">
-            <DialogHeader>
-                <DialogTitle>Habit Dashboard</DialogTitle>
-                <DialogDescription>
-                    Track your overall progress and consistency.
-                </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="flex-grow pr-2">
-                <HabitOverview habits={habits} totalPoints={totalPoints} />
-            </ScrollArea>
-            <DialogFooter className="pt-4">
-                <DialogClose asChild>
-                    <Button type="button" variant="outline">Close</Button>
-                </DialogClose>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      <DailyQuestDialog isOpen={false} onClose={handleCloseDailyQuestDialog} />
     </div>
   );
 };
 export default HabitualPage;
+
+    
