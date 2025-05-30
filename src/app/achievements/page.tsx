@@ -4,7 +4,6 @@
 import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -12,9 +11,8 @@ import type { EarnedBadge } from '@/types';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Loader2, ArrowLeft, Trophy } from 'lucide-react';
+import { Loader2, Trophy } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 

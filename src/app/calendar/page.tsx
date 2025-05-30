@@ -11,7 +11,6 @@ import type { Habit, WeekDay } from '@/types';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import type { DayPicker } from 'react-day-picker';
 import { Loader2, CalendarDays, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon } from 'lucide-react';
@@ -216,8 +215,6 @@ const CalendarPage: NextPage = () => {
                   className="rounded-md border p-0 sm:p-2"
                   month={selectedCalendarDate || new Date()}
                   onMonthChange={(month) => {
-                     // When month changes, select the first day of that month if no date is selected
-                     // or if the selected date is not in the new month.
                      if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) {
                        setSelectedCalendarDate(startOfDay(month));
                      }
@@ -242,7 +239,7 @@ const CalendarPage: NextPage = () => {
                               statusText = `Completed ${logEntry.time || ''}`;
                               StatusIcon = CheckCircle2; iconColor = "text-accent";
                           } else if (logEntry?.status === 'pending_makeup') {
-                              statusText = `Makeup for ${logEntry.originalMissedDate}`;
+                              statusText = `Makeup for ${logEntry.originalMissedDate || 'earlier'}`;
                               StatusIcon = MakeupIcon; iconColor = "text-blue-500";
                           } else if (logEntry?.status === 'skipped') {
                               statusText = "Skipped";

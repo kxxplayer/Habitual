@@ -37,12 +37,21 @@
 // Calendar also moved to its own page.
 // Removed dashboard from direct rendering on main page.
 // Ensured localStorage data persists for the same user across logout/login.
+// Regenerated from scratch.
+// Removed popups/toasts for habit added etc.
+// Added "Not Done" button adjacent to "Mark Done".
+// Added login redirect.
+// Implemented reminder logic.
+// Removed "React.Children.only" error from SheetClose.
+// Removed dashboard from direct rendering.
+// Made BottomNavigationBar persistent across pages.
 // ==========================================================================
 
 import * as React from 'react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
@@ -57,6 +66,7 @@ import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHab
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
 import DailyQuestDialog from '@/components/popups/DailyQuestDialog';
 import HabitOverview from '@/components/overview/HabitOverview';
+import { Calendar } from "@/components/ui/calendar";
 
 
 import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit } from '@/types';
@@ -72,20 +82,30 @@ import { cn } from "@/lib/utils";
 
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/components/ui/dialog';
+
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialogDescription as AlertDialogDescriptionEl,
+  AlertDialogFooter as AlertDialogFooterEl,
+  AlertDialogHeader as AlertDialogHeaderEl,
+  AlertDialogTitle as AlertTitle,
 } from '@/components/ui/alert-dialog';
 
-
-import { Plus, Loader2, ListChecks } from 'lucide-react';
-import { format, parseISO, isSameDay, getDay, startOfDay, subDays, addDays as dateFnsAddDays } from 'date-fns';
+import { Plus, Loader2, ListChecks, LayoutDashboard, Award, Settings as SettingsIconLucide, Home, UserCircle, BellRing, CalendarDays as CalendarDaysIcon } from 'lucide-react';
+import { format, parseISO, isSameDay, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday, isPast } from 'date-fns';
 
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -160,7 +180,7 @@ const HabitualPage: NextPage = () => {
       const currentUidAuthMain = currentUserAuthMain?.uid || null;
 
       if (previousUidAuthMain !== undefined && previousUidAuthMain !== currentUidAuthMain) {
-        console.log(`User identity changed from ${previousUidAuthMain} to ${currentUidAuthMain}. Clearing app state. UID-namespaced localStorage data will NOT be removed.`);
+        console.log(`User identity changed. Old: ${previousUidAuthMain}, New: ${currentUidAuthMain}. Clearing app state.`);
         setHabits([]);
         setEarnedBadges([]);
         setTotalPoints(0);
@@ -174,8 +194,10 @@ const HabitualPage: NextPage = () => {
         setIsDeleteHabitConfirmOpen(false);
         setIsAISuggestionDialogOpen(false);
         setIsCreateHabitDialogOpen(false);
-        // DO NOT remove localStorage items here to persist data for the same user across sessions.
+        
+        // DO NOT remove user-specific localStorage items here to persist data for the same user across sessions.
         // Data is namespaced by UID, so different users won't see each other's data.
+        // Only clear general app state, not specific user's stored data on UID change.
       }
 
       setAuthUser(currentUserAuthMain);
@@ -342,9 +364,11 @@ const HabitualPage: NextPage = () => {
           setIsLoadingCommonSuggestions(false);
           setCommonSuggestionsFetched(true);
           const dailyQuestKeyLoadMain = `${LS_KEY_PREFIX_DAILY_QUEST}${userUidLoadMain}`;
-          const hasSeenDailyQuestLoadMain = typeof window !== 'undefined' ? localStorage.getItem(dailyQuestKeyLoadMain) : null;
-          if (!hasSeenDailyQuestLoadMain) {
-            // setIsDailyQuestDialogOpen(true); // Keep commented if not desired for now
+          if (typeof window !== 'undefined') {
+            const hasSeenDailyQuestLoadMain = localStorage.getItem(dailyQuestKeyLoadMain);
+            if (!hasSeenDailyQuestLoadMain) {
+              setIsDailyQuestDialogOpen(true); 
+            }
           }
         });
     } else if (parsedHabitsLoadMain.length > 0) {
@@ -365,7 +389,7 @@ const HabitualPage: NextPage = () => {
     setIsLoadingHabits(false);
     console.log("Finished loading data for user:", userUidLoadMain);
 
-  }, [authUser, isLoadingAuth]);
+  }, [authUser, isLoadingAuth]); // Removed habits, earnedBadges, totalPoints from deps
 
 
   // Save habits to localStorage & check for badges
@@ -382,7 +406,7 @@ const HabitualPage: NextPage = () => {
         if (!earnedBadges.some(ebFindSaveMain => ebFindSaveMain.id === newBadgeItemSaveMain.id)) {
             updatedBadgesSaveMain.push(newBadgeItemSaveMain);
             newBadgeAwardedSaveMain = true;
-            console.log(`New Badge Unlocked: ${newBadgeItemSaveMain.name} - ${newBadgeItemSaveMain.description}`);
+            console.log(`New Badge Unlocked: ${newBadgeItemSaveMain.name}`);
             if (newBadgeItemSaveMain.id === THREE_DAY_SQL_STREAK_BADGE_ID) {
               try {
                 const sqlTipResultSaveMain = await getSqlTip();
@@ -397,7 +421,7 @@ const HabitualPage: NextPage = () => {
         setEarnedBadges(updatedBadgesSaveMain);
       }
     }
-  }, [habits, authUser, isLoadingAuth, isLoadingHabits, earnedBadges]);
+  }, [habits, authUser, isLoadingAuth, isLoadingHabits, earnedBadges]); // Keep earnedBadges here for the check
 
   // Save badges to localStorage
   React.useEffect(() => {
@@ -438,20 +462,20 @@ const HabitualPage: NextPage = () => {
 
               if (specificEventTimeReminderMain > nowReminderMain) {
                 if (potentialReminderTimeReminderMain <= nowReminderMain) {
-                    reminderDateTimeValMain = specificEventTimeReminderMain;
+                    reminderDateTimeValMain = specificEventTimeReminderMain; // Remind at event time if pre-reminder time has passed
                 } else {
-                    reminderDateTimeValMain = potentialReminderTimeReminderMain;
+                    reminderDateTimeValMain = potentialReminderTimeReminderMain; // Remind 30 mins before
                 }
               }
             } catch (eReminderTimeMain) {
               console.error(`Error parsing specificTime "${habitReminderCheckMain.specificTime}" for habit "${habitReminderCheckMain.name}"`, eReminderTimeMain);
             }
-          } else {
-            let baseHourReminderMain = 10;
+          } else { // If no specific time, but reminder enabled, remind based on optimal timing
+            let baseHourReminderMain = 10; // Default if no optimal timing
             const timingLowerReminderMain = habitReminderCheckMain.optimalTiming?.toLowerCase();
-            if (timingLowerReminderMain?.includes('morning')) baseHourReminderMain = 9;
-            else if (timingLowerReminderMain?.includes('afternoon')) baseHourReminderMain = 13;
-            else if (timingLowerReminderMain?.includes('evening')) baseHourReminderMain = 18;
+            if (timingLowerReminderMain?.includes('morning')) baseHourReminderMain = 9; // e.g., 9 AM for "morning"
+            else if (timingLowerReminderMain?.includes('afternoon')) baseHourReminderMain = 13; // e.g., 1 PM for "afternoon"
+            else if (timingLowerReminderMain?.includes('evening')) baseHourReminderMain = 18; // e.g., 6 PM for "evening"
 
             const potentialReminderTimeOptMain = new Date(nowReminderMain.getFullYear(), nowReminderMain.getMonth(), nowReminderMain.getDate(), baseHourReminderMain, 0, 0, 0);
             if (potentialReminderTimeOptMain > nowReminderMain) {
@@ -461,7 +485,11 @@ const HabitualPage: NextPage = () => {
 
           if (reminderDateTimeValMain && reminderDateTimeValMain > nowReminderMain) {
             const delayReminderMain = reminderDateTimeValMain.getTime() - nowReminderMain.getTime();
-            console.log(`REMINDER LOG (Placeholder): "${habitReminderCheckMain.name}" would be at ${reminderDateTimeValMain.toLocaleString()} (in ${Math.round(delayReminderMain/60000)} mins)`);
+            console.log(`REMINDER LOG (Placeholder for actual notification): Task "${habitReminderCheckMain.name}" at ${reminderDateTimeValMain.toLocaleString()} (in ${Math.round(delayReminderMain/60000)} mins)`);
+            // const timeoutId = setTimeout(() => {
+            //   new Notification('Habit Reminder', { body: `Time for your habit: ${habit.name}!` });
+            // }, delay);
+            // reminderTimeouts.current.push(timeoutId);
           }
         }
       });
@@ -576,15 +604,18 @@ const HabitualPage: NextPage = () => {
               justCompletedANewTaskToggleCompMain = true;
               newCompletionLogToggleCompMain.push({ date: dateToggleCompMain, time: currentTimeToggleCompMain, status: 'completed', note: undefined });
             }
-          } else {
+          } else { // Un-marking
             if (existingLogIndexToggleCompMain > -1) {
               const logEntryToggleCompMain = newCompletionLogToggleCompMain[existingLogIndexToggleCompMain];
               if (logEntryToggleCompMain.status === 'completed') {
                  pointsChangeToggleCompMain = -POINTS_PER_COMPLETION;
               }
+              // If it was a completed makeup task, revert to pending_makeup.
+              // Otherwise, if it has a note, mark as skipped.
+              // Else, remove the log entry.
               if (logEntryToggleCompMain.status === 'completed' && logEntryToggleCompMain.originalMissedDate) {
                 newCompletionLogToggleCompMain[existingLogIndexToggleCompMain] = { ...logEntryToggleCompMain, status: 'pending_makeup', time: 'N/A' };
-              } else if (logEntryToggleCompMain.note) {
+              } else if (logEntryToggleCompMain.note && logEntryToggleCompMain.note.trim() !== "") {
                 newCompletionLogToggleCompMain[existingLogIndexToggleCompMain] = { ...logEntryToggleCompMain, status: 'skipped', time: 'N/A' };
               }
               else {
@@ -681,27 +712,25 @@ const HabitualPage: NextPage = () => {
     setIsReflectionDialogOpen(true);
   };
 
-  const handleSaveReflectionNote = (noteToSaveReflectionMain: string) => {
-    if (!reflectionDialogData || !authUser) return;
-    const { habitId: habitIdReflectionSaveMain, date: date_reflection_save_note } = reflectionDialogData;
-
+  const handleSaveReflectionNote = (habitId_reflection_save: string, date_reflection_save: string, note_to_save_reflection: string) => {
+    if (!authUser) return;
     setHabits(prevHabitsReflectionSaveMain =>
       prevHabitsReflectionSaveMain.map(h_for_note_save_reflection => {
-        if (h_for_note_save_reflection.id === habitIdReflectionSaveMain) {
+        if (h_for_note_save_reflection.id === habitId_reflection_save) {
           let logEntryExists_for_note_save_reflection = false;
           const newCompletionLog_for_note_save_reflection = h_for_note_save_reflection.completionLog.map(log_item_for_note_save_reflection => {
-            if (log_item_for_note_save_reflection.date === date_reflection_save_note) {
+            if (log_item_for_note_save_reflection.date === date_reflection_save) {
               logEntryExists_for_note_save_reflection = true;
-              return { ...log_item_for_note_save_reflection, note: noteToSaveReflectionMain.trim() === "" ? undefined : noteToSaveReflectionMain.trim() };
+              return { ...log_item_for_note_save_reflection, note: note_to_save_reflection.trim() === "" ? undefined : note_to_save_reflection.trim() };
             }
             return log_item_for_note_save_reflection;
           });
           if (!logEntryExists_for_note_save_reflection) {
-             const existingStatus_reflection_save = h_for_note_save_reflection.completionLog.find(l_note_reflection => l_note_reflection.date === date_reflection_save_note)?.status;
+             const existingStatus_reflection_save = h_for_note_save_reflection.completionLog.find(l_note_reflection => l_note_reflection.date === date_reflection_save)?.status;
              newCompletionLog_for_note_save_reflection.push({
-                date: date_reflection_save_note,
+                date: date_reflection_save,
                 time: 'N/A',
-                note: noteToSaveReflectionMain.trim() === "" ? undefined : noteToSaveReflectionMain.trim(),
+                note: note_to_save_reflection.trim() === "" ? undefined : note_to_save_reflection.trim(),
                 status: existingStatus_reflection_save || 'skipped'
              });
              newCompletionLog_for_note_save_reflection.sort((a_sort_reflection,b_sort_reflection) => b_sort_reflection.date.localeCompare(a_sort_reflection.date));
@@ -711,7 +740,7 @@ const HabitualPage: NextPage = () => {
         return h_for_note_save_reflection;
       })
     );
-    console.log(`Reflection Saved for ${reflectionDialogData.habitName} on ${reflectionDialogData.date}`);
+    console.log(`Reflection Saved for habit ID ${habitId_reflection_save} on ${date_reflection_save}`);
     setReflectionDialogData(null);
     setIsReflectionDialogOpen(false);
   };
@@ -727,12 +756,12 @@ const HabitualPage: NextPage = () => {
         let newCompletionLog_rescheduled_save = [...h_rescheduled_save.completionLog];
         const existingMissedLogIndex_rescheduled_save = newCompletionLog_rescheduled_save.findIndex(log_reschedule_find_save => log_reschedule_find_save.date === originalMissedDate_rescheduled_save);
 
-        if(existingMissedLogIndex_rescheduled_save > -1) {
-            if (newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status !== 'completed') {
-                newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped';
+        if(existingMissedLogIndex_rescheduled_save > -1) { // If log for original missed date exists
+            if (newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status !== 'completed') { // And it wasn't actually completed
+                newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped'; // Mark original as skipped
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].time = 'N/A';
             }
-        } else {
+        } else { // If no log entry exists for the original missed date, add a skipped one
             newCompletionLog_rescheduled_save.push({
                 date: originalMissedDate_rescheduled_save,
                 time: 'N/A',
@@ -740,7 +769,7 @@ const HabitualPage: NextPage = () => {
             });
         }
 
-        newCompletionLog_rescheduled_save.push({
+        newCompletionLog_rescheduled_save.push({ // Add the new pending makeup entry
           date: newDate_rescheduled_save,
           time: 'N/A',
           status: 'pending_makeup',
@@ -824,11 +853,14 @@ const HabitualPage: NextPage = () => {
   };
 
   const handleCloseDailyQuestDialog = () => {
+    setIsDailyQuestDialogOpen(false);
     if (authUser && typeof window !== 'undefined') {
       const dailyQuestKeyCloseMain = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`;
       localStorage.setItem(dailyQuestKeyCloseMain, 'true');
     }
   };
+  const [isDailyQuestDialogOpen, setIsDailyQuestDialogOpen] = React.useState(false);
+
 
   const handleMarkAllTodayDone = () => {
     if (!todayString || !todayAbbr || isLoadingHabits || !authUser) return;
@@ -882,9 +914,10 @@ const HabitualPage: NextPage = () => {
       <div
         className={cn(
           "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
-          "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]",
-          "md:max-w-lg md:max-h-[85vh]",
-          "lg:max-w-2xl lg:max-h-[80vh]"
+          // Responsive sizing
+          "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]", // Mobile default
+          "md:max-w-lg md:max-h-[85vh]", // Tablet
+          "lg:max-w-2xl lg:max-h-[80vh]" // Desktop
         )}
       >
         <AppHeader />
@@ -894,7 +927,7 @@ const HabitualPage: NextPage = () => {
 
             {/* "Mark All Today Done" button - only shown if there are habits */}
             {habits.length > 0 && (
-              <div className="my-4 flex justify-center">
+              <div className="mb-4 flex justify-center">
                 <Button
                   onClick={handleMarkAllTodayDone}
                   disabled={allTodayTasksDone}
@@ -1000,7 +1033,7 @@ const HabitualPage: NextPage = () => {
             setIsReflectionDialogOpen(false);
             setReflectionDialogData(null);
           }}
-          onSaveNote={handleSaveReflectionNote}
+          onSaveNote={(note) => handleSaveReflectionNote(reflectionDialogData.habitId, reflectionDialogData.date, note)}
           initialNote={reflectionDialogData.initialNote}
           habitName={reflectionDialogData.habitName}
           completionDate={reflectionDialogData.date}
@@ -1026,25 +1059,23 @@ const HabitualPage: NextPage = () => {
 
        <AlertDialog open={isDeleteHabitConfirmOpen} onOpenChange={setIsDeleteHabitConfirmOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
+          <AlertDialogHeaderEl>
+            <AlertTitle>Confirm Deletion</AlertTitle>
+            <AlertDialogDescriptionEl>
               Are you sure you want to delete the habit "{habitToDelete?.name || ''}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
+            </AlertDialogDescriptionEl>
+          </AlertDialogHeaderEl>
+          <AlertDialogFooterEl>
             <AlertDialogCancel onClick={() => setHabitToDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeleteSingleHabit} className={buttonVariants({ variant: "destructive" })}>
               Delete
             </AlertDialogAction>
-          </AlertDialogFooter>
+          </AlertDialogFooterEl>
         </AlertDialogContent>
       </AlertDialog>
 
-      <DailyQuestDialog isOpen={false} onClose={handleCloseDailyQuestDialog} />
+      <DailyQuestDialog isOpen={isDailyQuestDialogOpen} onClose={handleCloseDailyQuestDialog} />
     </div>
   );
 };
 export default HabitualPage;
-
-    

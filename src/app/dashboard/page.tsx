@@ -4,7 +4,6 @@
 import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -14,7 +13,7 @@ import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Loader2, ArrowLeft, LayoutDashboard } from 'lucide-react';
+import { Loader2, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const LS_KEY_PREFIX_HABITS = "habits_";
