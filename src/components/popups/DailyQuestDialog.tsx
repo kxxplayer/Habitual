@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Lightbulb, PlayCircle } from 'lucide-react'; // Changed Sparkles to Lightbulb
+import { BookOpenText, ChevronRight } from 'lucide-react'; // Changed icon
 
 interface DailyQuestDialogProps {
   isOpen: boolean;
@@ -28,20 +28,21 @@ const DailyQuestDialog: React.FC<DailyQuestDialogProps> = ({ isOpen, onClose }) 
       <DialogContent className="sm:max-w-[425px] bg-card rounded-lg shadow-xl">
         <DialogHeader className="text-center space-y-2 pt-4">
           <div className="flex justify-center">
-            <Lightbulb className="h-12 w-12 text-primary animate-pulse" />
+            {/* Using BookOpenText for "New Chapter" theme */}
+            <BookOpenText className="h-12 w-12 text-primary animate-pulse" />
           </div>
           <DialogTitle className="text-2xl font-bold text-primary">
-            Unlock Today's Inner Strength!
+            Today's a Fresh Page!
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground px-4">
-            A new day, a new discovery! Ready to find a new tool for your peace of mind?
-            Your journey to a more balanced you starts now. Let's uncover your first gem!
+            Every big journey begins with a single step. Shall we start yours with a moment of calm?
+            Let's take the first simple step together.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="pt-4 pb-6">
           <Button onClick={onClose} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground py-3 text-base">
-            <PlayCircle className="mr-2 h-5 w-5" />
-            Begin Discovery!
+            <ChevronRight className="mr-2 h-5 w-5" />
+            Take First Step
           </Button>
         </DialogFooter>
       </DialogContent>
