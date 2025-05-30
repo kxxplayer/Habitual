@@ -171,9 +171,6 @@ const HabitualPage: NextPage = () => {
         } else if (!previousUid && currentUid && typeof window !== 'undefined') {
            // This means a user just logged in for the first time in this session,
            // and there was no "previous user" (anonymous session).
-           // We might not want to clear general localStorage here, or we might
-           // if we decide anonymous data shouldn't carry over.
-           // For now, the behavior is to clear only if previousUid existed.
         }
 
 
@@ -757,13 +754,11 @@ const HabitualPage: NextPage = () => {
         const existingMissedLogIndex_rescheduled = newCompletionLog_rescheduled.findIndex(log_reschedule_find => log_reschedule_find.date === originalMissedDate_rescheduled);
 
         if(existingMissedLogIndex_rescheduled > -1) {
-            // If the original missed day had a log (e.g. from a previous reschedule attempt or it was skipped), update it.
-            // Don't remove it if it was completed, but it shouldn't be for a "missed" date.
             if (newCompletionLog_rescheduled[existingMissedLogIndex_rescheduled].status !== 'completed') {
-                newCompletionLog_rescheduled[existingMissedLogIndex_rescheduled].status = 'skipped'; // Mark original as skipped
+                newCompletionLog_rescheduled[existingMissedLogIndex_rescheduled].status = 'skipped'; 
                 newCompletionLog_rescheduled[existingMissedLogIndex_rescheduled].time = 'N/A';
             }
-        } else { // If no log entry exists for the original missed date, add a skipped one
+        } else { 
             newCompletionLog_rescheduled.push({
                 date: originalMissedDate_rescheduled,
                 time: 'N/A',
@@ -792,11 +787,10 @@ const HabitualPage: NextPage = () => {
         let newCompletionLog_skipped_save = [...h_skipped_save.completionLog];
         const existingLogIndex_skipped_save = newCompletionLog_skipped_save.findIndex(log_skipped_find => log_skipped_find.date === missedDate_skipped_save);
         if (existingLogIndex_skipped_save > -1) {
-          // If a log exists and it's not already completed, mark as skipped
           if (newCompletionLog_skipped_save[existingLogIndex_skipped_save].status !== 'completed') {
             newCompletionLog_skipped_save[existingLogIndex_skipped_save] = { ...newCompletionLog_skipped_save[existingLogIndex_skipped_save], status: 'skipped', time: 'N/A' };
           }
-        } else { // No log exists, add a new skipped entry
+        } else { 
           newCompletionLog_skipped_save.push({ date: missedDate_skipped_save, time: 'N/A', status: 'skipped' });
         }
         newCompletionLog_skipped_save.sort((a_sort_skipped,b_sort_skipped) => b_sort_skipped.date.localeCompare(a_sort_skipped.date));
@@ -840,8 +834,8 @@ const HabitualPage: NextPage = () => {
     setInitialFormDataForDialog({
       name: suggestion_customize.name,
       category: suggestion_customize.category || 'Other',
-      description: '', // No description from simple suggestions
-      daysOfWeek: [], // User needs to set this
+      description: '', 
+      daysOfWeek: [], 
     });
     setIsCreateHabitDialogOpen(true);
   };
@@ -871,14 +865,7 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-
-  // Calendar Dialog Logic
   const calendarDialogModifiers = React.useMemo(() => {
-    // console.log("Recalculating calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
-    // This is an ultra-minimal version for Vercel debugging.
-    // It will only style the selected day.
-    // All other custom styling (completed, missed, scheduled) is temporarily removed
-    // to ensure this hook isn't the source of the "cDate is not defined" error.
     try {
         const completed_days_arr_minimal: Date[] = [];
         const missed_days_arr_minimal: Date[] = [];
@@ -896,17 +883,16 @@ const HabitualPage: NextPage = () => {
                             makeup_days_arr_minimal.push(logDate_obj_minimal);
                         }
                     } catch (e) {
-                        // console.error("Error parsing log date in calendar modifiers (minimal):", log_entry_for_modifiers_loop.date, e);
+                        console.error("Error parsing log date in calendar modifiers (minimal):", log_entry_for_modifiers_loop.date, e);
                     }
                 } else {
-                     // console.warn("Invalid or missing date in log entry for calendar modifiers (minimal):", habit_item_for_modifiers_loop.name, log_entry_for_modifiers_loop);
+                     console.warn("Invalid or missing date in log entry for calendar modifiers (minimal):", habit_item_for_modifiers_loop.name, log_entry_for_modifiers_loop);
                 }
             });
         });
-         // For missed and scheduled, we need to iterate through days and check against logs
         const today_date_obj_minimal = startOfDay(new Date());
         habits.forEach(habit_item_for_modifiers_loop => {
-            const iteration_limit_minimal = 35; // Check about 5 weeks back/forward
+            const iteration_limit_minimal = 35; 
             for (let day_offset_minimal = 0; day_offset_minimal < iteration_limit_minimal; day_offset_minimal++) {
                 const pastDateToConsider_obj_minimal = subDays(today_date_obj_minimal, day_offset_minimal);
                 const futureDateToConsider_obj_minimal = dateFnsAddDays(today_date_obj_minimal, day_offset_minimal);
@@ -921,7 +907,6 @@ const HabitualPage: NextPage = () => {
                     const logEntryForThisDay_obj_minimal = habit_item_for_modifiers_loop.completionLog.find(log_find_item_minimal => log_find_item_minimal.date === dateStrToMatch_str_minimal);
                     const isCompletedOnThisDay_bool_minimal = completed_days_arr_minimal.some(cd_minimal => isSameDay(cd_minimal, current_day_being_checked_obj_minimal));
                     const isMakeupOnThisDay_bool_minimal = makeup_days_arr_minimal.some(md_minimal => isSameDay(md_minimal, current_day_being_checked_obj_minimal));
-
 
                     if (isScheduledOnThisDay_bool_minimal && !isCompletedOnThisDay_bool_minimal && !isMakeupOnThisDay_bool_minimal && (!logEntryForThisDay_obj_minimal || logEntryForThisDay_obj_minimal.status !== 'skipped')) {
                         if (current_day_being_checked_obj_minimal < today_date_obj_minimal && !isSameDay(current_day_being_checked_obj_minimal, today_date_obj_minimal)) {
@@ -938,7 +923,6 @@ const HabitualPage: NextPage = () => {
             }
         });
 
-
         return {
             completed: completed_days_arr_minimal,
             missed: missed_days_arr_minimal,
@@ -948,7 +932,7 @@ const HabitualPage: NextPage = () => {
         };
     } catch (error_in_calendar_modifiers) {
         console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error_in_calendar_modifiers);
-        return { // Safe fallback
+        return { 
             completed: [], missed: [], scheduled: [], makeup: [],
             selected: selectedCalendarDate ? [selectedCalendarDate] : [],
         };
@@ -967,7 +951,6 @@ const HabitualPage: NextPage = () => {
   }, []);
 
   const habitsForSelectedCalendarDate = React.useMemo(() => {
-    // console.log("Recalculating habitsForSelectedCalendarDate. Selected Date:", selectedCalendarDate);
     if (!selectedCalendarDate) return [];
     try {
       const dateStr_for_list_cal = format(selectedCalendarDate, 'yyyy-MM-dd');
@@ -1372,5 +1355,6 @@ const HabitualPage: NextPage = () => {
   );
 };
 export default HabitualPage;
+    
 
     
