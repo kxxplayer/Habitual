@@ -1,6 +1,11 @@
 
 "use client";
 
+// ==========================================================================
+// DAILY QUEST DIALOG - VERCEL BUILD DEBUG ATTEMPT (Force Rebuild)
+// Date: 2025-05-21 (Ensuring PlayCircle is NOT imported)
+// ==========================================================================
+
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { BookOpenText, ChevronRight } from 'lucide-react'; // Changed icon
+import { BookOpenText, ChevronRight } from 'lucide-react'; // Corrected: No PlayCircle
 
 interface DailyQuestDialogProps {
   isOpen: boolean;
@@ -28,7 +33,6 @@ const DailyQuestDialog: React.FC<DailyQuestDialogProps> = ({ isOpen, onClose }) 
       <DialogContent className="sm:max-w-[425px] bg-card rounded-lg shadow-xl">
         <DialogHeader className="text-center space-y-2 pt-4">
           <div className="flex justify-center">
-            {/* Using BookOpenText for "New Chapter" theme */}
             <BookOpenText className="h-12 w-12 text-primary animate-pulse" />
           </div>
           <DialogTitle className="text-2xl font-bold text-primary">
