@@ -4,7 +4,7 @@
 import type { FC } from 'react';
 import Link from 'next/link';
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,10 +22,12 @@ const AppHeader: FC = () => {
           </h1>
         </div>
         <div className="flex items-center space-x-1">
-          <Link href="/calendar" passHref legacyBehavior>
-            <a className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-10 w-10")} aria-label="Open Calendar">
-              <CalendarDays className="h-5 w-5 text-primary" />
-            </a>
+          <Link
+            href="/calendar"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-10 w-10")}
+            aria-label="Open Calendar"
+          >
+            <CalendarDays className="h-5 w-5 text-primary" />
           </Link>
           <ThemeToggleButton />
         </div>
