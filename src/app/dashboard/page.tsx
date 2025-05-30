@@ -92,7 +92,7 @@ const DashboardPage: NextPage = () => {
   }
 
   return (
-    <div className={cn("min-h-screen flex items-center justify-center p-0 sm:p-4")}>
+    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
         "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]",
@@ -125,3 +125,5 @@ const DashboardPage: NextPage = () => {
 };
 
 export default DashboardPage;
+
+    

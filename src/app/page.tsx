@@ -65,10 +65,6 @@ import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
 import DailyQuestDialog from '@/components/popups/DailyQuestDialog';
-import HabitOverview from '@/components/overview/HabitOverview';
-import { Calendar } from "@/components/ui/calendar";
-
-
 import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit } from '@/types';
 import { HABIT_CATEGORIES, SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID, THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 
@@ -84,16 +80,6 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from '@/components/ui/dialog';
-
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -104,8 +90,8 @@ import {
   AlertDialogTitle as AlertTitle,
 } from '@/components/ui/alert-dialog';
 
-import { Plus, Loader2, ListChecks, LayoutDashboard, Award, Settings as SettingsIconLucide, Home, UserCircle, BellRing, CalendarDays as CalendarDaysIcon } from 'lucide-react';
-import { format, parseISO, isSameDay, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday, isPast } from 'date-fns';
+import { Plus, Loader2, ListChecks } from 'lucide-react';
+import { format, parseISO, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday, isPast } from 'date-fns';
 
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -180,7 +166,7 @@ const HabitualPage: NextPage = () => {
       const currentUidAuthMain = currentUserAuthMain?.uid || null;
 
       if (previousUidAuthMain !== undefined && previousUidAuthMain !== currentUidAuthMain) {
-        console.log(`User identity changed. Old: ${previousUidAuthMain}, New: ${currentUidAuthMain}. Clearing app state.`);
+        console.log(`User identity changed from ${previousUidAuthMain || 'anonymous'} to ${currentUidAuthMain || 'anonymous'}. Resetting app state.`);
         setHabits([]);
         setEarnedBadges([]);
         setTotalPoints(0);
@@ -194,10 +180,6 @@ const HabitualPage: NextPage = () => {
         setIsDeleteHabitConfirmOpen(false);
         setIsAISuggestionDialogOpen(false);
         setIsCreateHabitDialogOpen(false);
-        
-        // DO NOT remove user-specific localStorage items here to persist data for the same user across sessions.
-        // Data is namespaced by UID, so different users won't see each other's data.
-        // Only clear general app state, not specific user's stored data on UID change.
       }
 
       setAuthUser(currentUserAuthMain);
@@ -205,6 +187,7 @@ const HabitualPage: NextPage = () => {
       previousAuthUserUidRef.current = currentUidAuthMain;
 
       if (!currentUserAuthMain && typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
+        console.log("No current user, redirecting to login.");
         router.push('/auth/login');
       }
     });
@@ -367,7 +350,7 @@ const HabitualPage: NextPage = () => {
           if (typeof window !== 'undefined') {
             const hasSeenDailyQuestLoadMain = localStorage.getItem(dailyQuestKeyLoadMain);
             if (!hasSeenDailyQuestLoadMain) {
-              setIsDailyQuestDialogOpen(true); 
+              setIsDailyQuestDialogOpen(true);
             }
           }
         });
@@ -389,12 +372,13 @@ const HabitualPage: NextPage = () => {
     setIsLoadingHabits(false);
     console.log("Finished loading data for user:", userUidLoadMain);
 
-  }, [authUser, isLoadingAuth]); // Removed habits, earnedBadges, totalPoints from deps
+  }, [authUser, isLoadingAuth]); // Keep habits, earnedBadges, totalPoints removed from deps to avoid loops
 
 
   // Save habits to localStorage & check for badges
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined') return;
+    console.log(`Saving habits for user ${authUser.uid} to localStorage.`);
     const userHabitsKeySaveMain = `${LS_KEY_PREFIX_HABITS}${authUser.uid}`;
     localStorage.setItem(userHabitsKeySaveMain, JSON.stringify(habits));
 
@@ -426,6 +410,7 @@ const HabitualPage: NextPage = () => {
   // Save badges to localStorage
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined') return;
+    console.log(`Saving badges for user ${authUser.uid} to localStorage.`);
     const userBadgesKeySaveMain = `${LS_KEY_PREFIX_BADGES}${authUser.uid}`;
     localStorage.setItem(userBadgesKeySaveMain, JSON.stringify(earnedBadges));
   }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
@@ -433,6 +418,7 @@ const HabitualPage: NextPage = () => {
   // Save points to localStorage
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined') return;
+    console.log(`Saving points for user ${authUser.uid} to localStorage.`);
     const userPointsKeySaveMain = `${LS_KEY_PREFIX_POINTS}${authUser.uid}`;
     localStorage.setItem(userPointsKeySaveMain, totalPoints.toString());
   }, [totalPoints, authUser, isLoadingAuth, isLoadingHabits]);
@@ -610,9 +596,6 @@ const HabitualPage: NextPage = () => {
               if (logEntryToggleCompMain.status === 'completed') {
                  pointsChangeToggleCompMain = -POINTS_PER_COMPLETION;
               }
-              // If it was a completed makeup task, revert to pending_makeup.
-              // Otherwise, if it has a note, mark as skipped.
-              // Else, remove the log entry.
               if (logEntryToggleCompMain.status === 'completed' && logEntryToggleCompMain.originalMissedDate) {
                 newCompletionLogToggleCompMain[existingLogIndexToggleCompMain] = { ...logEntryToggleCompMain, status: 'pending_makeup', time: 'N/A' };
               } else if (logEntryToggleCompMain.note && logEntryToggleCompMain.note.trim() !== "") {
@@ -712,23 +695,23 @@ const HabitualPage: NextPage = () => {
     setIsReflectionDialogOpen(true);
   };
 
-  const handleSaveReflectionNote = (habitId_reflection_save: string, date_reflection_save: string, note_to_save_reflection: string) => {
+  const handleSaveReflectionNote = (habitId_reflection_save: string, date_reflection_save_note: string, note_to_save_reflection: string) => {
     if (!authUser) return;
     setHabits(prevHabitsReflectionSaveMain =>
       prevHabitsReflectionSaveMain.map(h_for_note_save_reflection => {
         if (h_for_note_save_reflection.id === habitId_reflection_save) {
           let logEntryExists_for_note_save_reflection = false;
           const newCompletionLog_for_note_save_reflection = h_for_note_save_reflection.completionLog.map(log_item_for_note_save_reflection => {
-            if (log_item_for_note_save_reflection.date === date_reflection_save) {
+            if (log_item_for_note_save_reflection.date === date_reflection_save_note) {
               logEntryExists_for_note_save_reflection = true;
               return { ...log_item_for_note_save_reflection, note: note_to_save_reflection.trim() === "" ? undefined : note_to_save_reflection.trim() };
             }
             return log_item_for_note_save_reflection;
           });
           if (!logEntryExists_for_note_save_reflection) {
-             const existingStatus_reflection_save = h_for_note_save_reflection.completionLog.find(l_note_reflection => l_note_reflection.date === date_reflection_save)?.status;
+             const existingStatus_reflection_save = h_for_note_save_reflection.completionLog.find(l_note_reflection => l_note_reflection.date === date_reflection_save_note)?.status;
              newCompletionLog_for_note_save_reflection.push({
-                date: date_reflection_save,
+                date: date_reflection_save_note,
                 time: 'N/A',
                 note: note_to_save_reflection.trim() === "" ? undefined : note_to_save_reflection.trim(),
                 status: existingStatus_reflection_save || 'skipped'
@@ -740,7 +723,7 @@ const HabitualPage: NextPage = () => {
         return h_for_note_save_reflection;
       })
     );
-    console.log(`Reflection Saved for habit ID ${habitId_reflection_save} on ${date_reflection_save}`);
+    console.log(`Reflection Saved for habit ID ${habitId_reflection_save} on ${date_reflection_save_note}`);
     setReflectionDialogData(null);
     setIsReflectionDialogOpen(false);
   };
@@ -756,12 +739,12 @@ const HabitualPage: NextPage = () => {
         let newCompletionLog_rescheduled_save = [...h_rescheduled_save.completionLog];
         const existingMissedLogIndex_rescheduled_save = newCompletionLog_rescheduled_save.findIndex(log_reschedule_find_save => log_reschedule_find_save.date === originalMissedDate_rescheduled_save);
 
-        if(existingMissedLogIndex_rescheduled_save > -1) { // If log for original missed date exists
-            if (newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status !== 'completed') { // And it wasn't actually completed
-                newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped'; // Mark original as skipped
+        if(existingMissedLogIndex_rescheduled_save > -1) {
+            if (newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status !== 'completed') {
+                newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped';
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].time = 'N/A';
             }
-        } else { // If no log entry exists for the original missed date, add a skipped one
+        } else {
             newCompletionLog_rescheduled_save.push({
                 date: originalMissedDate_rescheduled_save,
                 time: 'N/A',
@@ -769,7 +752,7 @@ const HabitualPage: NextPage = () => {
             });
         }
 
-        newCompletionLog_rescheduled_save.push({ // Add the new pending makeup entry
+        newCompletionLog_rescheduled_save.push({
           date: newDate_rescheduled_save,
           time: 'N/A',
           status: 'pending_makeup',
@@ -883,7 +866,7 @@ const HabitualPage: NextPage = () => {
 
   if (isLoadingAuth) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading application...</p>
       </div>
@@ -892,7 +875,7 @@ const HabitualPage: NextPage = () => {
 
   if (!authUser) {
     return (
-       <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
+       <div className="flex min-h-screen flex-col items-center justify-center p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
       </div>
@@ -901,7 +884,7 @@ const HabitualPage: NextPage = () => {
 
   if (isLoadingHabits && authUser) {
      return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading your habits...</p>
       </div>
@@ -914,10 +897,9 @@ const HabitualPage: NextPage = () => {
       <div
         className={cn(
           "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
-          // Responsive sizing
-          "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]", // Mobile default
-          "md:max-w-lg md:max-h-[85vh]", // Tablet
-          "lg:max-w-2xl lg:max-h-[80vh]" // Desktop
+          "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]",
+          "md:max-w-lg md:max-h-[85vh]",
+          "lg:max-w-2xl lg:max-h-[80vh]"
         )}
       >
         <AppHeader />
@@ -925,7 +907,6 @@ const HabitualPage: NextPage = () => {
         <ScrollArea className="flex-grow">
           <main className="px-3 sm:px-4 py-4">
 
-            {/* "Mark All Today Done" button - only shown if there are habits */}
             {habits.length > 0 && (
               <div className="mb-4 flex justify-center">
                 <Button
@@ -940,7 +921,6 @@ const HabitualPage: NextPage = () => {
               </div>
             )}
 
-            {/* Common Habit Suggestions for New Users */}
             {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && (
               <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
                 <div className="px-2 pt-0">
@@ -990,7 +970,6 @@ const HabitualPage: NextPage = () => {
         <BottomNavigationBar />
       </div>
 
-      {/* Floating Action Button for Adding Habits */}
        <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
           onClick={() => {
@@ -1003,7 +982,6 @@ const HabitualPage: NextPage = () => {
           <Plus className="h-7 w-7" />
       </Button>
 
-      {/* Dialogs */}
       <CreateHabitDialog
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
@@ -1079,3 +1057,5 @@ const HabitualPage: NextPage = () => {
   );
 };
 export default HabitualPage;
+
+    
