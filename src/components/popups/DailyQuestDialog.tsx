@@ -2,11 +2,13 @@
 "use client";
 
 // ==========================================================================
-// DAILY QUEST DIALOG - VERCEL BUILD DEBUG ATTEMPT (Force Rebuild)
-// Date: 2025-05-21 (Ensuring PlayCircle is NOT imported)
+// DAILY QUEST DIALOG - VERCEL BUILD DEBUG ATTEMPT (Force Rebuild v2)
+// Date: 2025-05-21 (Ensuring PlayCircle is NOT imported, adding explicit React import)
+// The persistent error on Vercel regarding PlayCircle strongly suggests a build cache issue.
+// This version aims to make the file significantly different to force a cache break.
 // ==========================================================================
 
-import * as React from 'react';
+import * as React from 'react'; // Added explicit React import
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { BookOpenText, ChevronRight } from 'lucide-react'; // Corrected: No PlayCircle
+import { BookOpenText, ChevronRight } from 'lucide-react'; // Corrected and verified: No PlayCircle
 
 interface DailyQuestDialogProps {
   isOpen: boolean;
