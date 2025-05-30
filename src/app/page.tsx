@@ -45,6 +45,7 @@
 // Removed "React.Children.only" error from SheetClose.
 // Removed dashboard from direct rendering.
 // Made BottomNavigationBar persistent across pages.
+// Removed h-full from app shell for scrolling fix.
 // ==========================================================================
 
 import * as React from 'react';
@@ -180,6 +181,7 @@ const HabitualPage: NextPage = () => {
         setIsDeleteHabitConfirmOpen(false);
         setIsAISuggestionDialogOpen(false);
         setIsCreateHabitDialogOpen(false);
+        // Explicitly DO NOT remove localStorage items here to allow persistence for the same user
       }
 
       setAuthUser(currentUserAuthMain);
@@ -827,12 +829,12 @@ const HabitualPage: NextPage = () => {
     const formDataCustomizeMain: Partial<CreateHabitFormData> = {
       name: suggestionCustomizeMain.name,
       category: suggestionCustomizeMain.category || 'Other',
-      description: '',
-      daysOfWeek: [] as WeekDay[],
+      description: '', // No description for tile-like suggestions
+      daysOfWeek: [] as WeekDay[], // User will set this
     };
-    setEditingHabit(null);
+    setEditingHabit(null); // Ensure not in edit mode
     setInitialFormDataForDialog(formDataCustomizeMain);
-    setIsCreateHabitDialogOpen(true);
+    setIsCreateHabitDialogOpen(true); // Open the main create dialog
   };
 
   const handleCloseDailyQuestDialog = () => {
@@ -897,9 +899,9 @@ const HabitualPage: NextPage = () => {
       <div
         className={cn(
           "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
-          "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]",
-          "md:max-w-lg md:max-h-[85vh]",
-          "lg:max-w-2xl lg:max-h-[80vh]"
+          "w-full max-w-md max-h-[90vh] sm:max-h-[850px]", // Mobile default
+          "md:max-w-lg md:max-h-[85vh]",                         // Tablet
+          "lg:max-w-2xl lg:max-h-[80vh]"                          // Desktop
         )}
       >
         <AppHeader />
@@ -973,8 +975,8 @@ const HabitualPage: NextPage = () => {
        <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
           onClick={() => {
-            setEditingHabit(null);
-            setInitialFormDataForDialog(null);
+            setEditingHabit(null); // Ensure not in edit mode
+            setInitialFormDataForDialog(null); // Clear any previous initial data
             setIsCreateHabitDialogOpen(true);
           }}
           aria-label="Add New Habit"
@@ -986,11 +988,11 @@ const HabitualPage: NextPage = () => {
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null);
-            setEditingHabit(null);
+            setInitialFormDataForDialog(null); // Clear initial data on close
+            setEditingHabit(null); // Clear editing state on close
         }}
         onSaveHabit={handleSaveHabit}
-        initialData={initialFormDataForDialog}
+        initialData={initialFormDataForDialog} // Pass initial data for new or editing
       />
 
       {selectedHabitForAISuggestion && aiSuggestion && (
