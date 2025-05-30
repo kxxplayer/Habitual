@@ -47,11 +47,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
+  DialogDescription as DialogCardDescription, // Renamed to avoid conflict
   DialogFooter,
   DialogHeader,
-  DialogTitle as DialogCardTitle, // Renamed to avoid conflict
-  DialogDescription as DialogCardDescription // Renamed to avoid conflict
+  DialogTitle as DialogCardTitle // Renamed to avoid conflict
 } from '@/components/ui/dialog';
 
 import {
@@ -172,7 +171,6 @@ const HabitualPage: NextPage = () => {
            // This means a user just logged in for the first time in this session,
            // and there was no "previous user" (anonymous session).
         }
-
 
         setHabits([]);
         setEarnedBadges([]);
@@ -755,10 +753,10 @@ const HabitualPage: NextPage = () => {
 
         if(existingMissedLogIndex_rescheduled > -1) {
             if (newCompletionLog_rescheduled[existingMissedLogIndex_rescheduled].status !== 'completed') {
-                newCompletionLog_rescheduled[existingMissedLogIndex_rescheduled].status = 'skipped'; 
+                newCompletionLog_rescheduled[existingMissedLogIndex_rescheduled].status = 'skipped';
                 newCompletionLog_rescheduled[existingMissedLogIndex_rescheduled].time = 'N/A';
             }
-        } else { 
+        } else {
             newCompletionLog_rescheduled.push({
                 date: originalMissedDate_rescheduled,
                 time: 'N/A',
@@ -790,7 +788,7 @@ const HabitualPage: NextPage = () => {
           if (newCompletionLog_skipped_save[existingLogIndex_skipped_save].status !== 'completed') {
             newCompletionLog_skipped_save[existingLogIndex_skipped_save] = { ...newCompletionLog_skipped_save[existingLogIndex_skipped_save], status: 'skipped', time: 'N/A' };
           }
-        } else { 
+        } else {
           newCompletionLog_skipped_save.push({ date: missedDate_skipped_save, time: 'N/A', status: 'skipped' });
         }
         newCompletionLog_skipped_save.sort((a_sort_skipped,b_sort_skipped) => b_sort_skipped.date.localeCompare(a_sort_skipped.date));
@@ -834,8 +832,8 @@ const HabitualPage: NextPage = () => {
     setInitialFormDataForDialog({
       name: suggestion_customize.name,
       category: suggestion_customize.category || 'Other',
-      description: '', 
-      daysOfWeek: [], 
+      description: '',
+      daysOfWeek: [],
     });
     setIsCreateHabitDialogOpen(true);
   };
@@ -867,10 +865,10 @@ const HabitualPage: NextPage = () => {
 
   const calendarDialogModifiers = React.useMemo(() => {
     try {
-        const completed_days_arr_minimal: Date[] = [];
-        const missed_days_arr_minimal: Date[] = [];
-        const scheduled_days_arr_minimal: Date[] = [];
-        const makeup_days_arr_minimal: Date[] = [];
+        const dates_completed_arr: Date[] = [];
+        const dates_scheduled_missed_arr_initial: Date[] = [];
+        const dates_scheduled_upcoming_arr_initial: Date[] = [];
+        const dates_makeup_pending_arr: Date[] = [];
 
         habits.forEach(habit_item_for_modifiers_loop => {
             habit_item_for_modifiers_loop.completionLog.forEach(log_entry_for_modifiers_loop => {
@@ -878,12 +876,12 @@ const HabitualPage: NextPage = () => {
                     try {
                         const logDate_obj_minimal = parseISO(log_entry_for_modifiers_loop.date);
                         if (log_entry_for_modifiers_loop.status === 'completed') {
-                            completed_days_arr_minimal.push(logDate_obj_minimal);
+                            dates_completed_arr.push(logDate_obj_minimal);
                         } else if (log_entry_for_modifiers_loop.status === 'pending_makeup') {
-                            makeup_days_arr_minimal.push(logDate_obj_minimal);
+                            dates_makeup_pending_arr.push(logDate_obj_minimal);
                         }
-                    } catch (e) {
-                        console.error("Error parsing log date in calendar modifiers (minimal):", log_entry_for_modifiers_loop.date, e);
+                    } catch (e_parse_log_date) {
+                        console.error("Error parsing log date in calendar modifiers (minimal):", log_entry_for_modifiers_loop.date, e_parse_log_date);
                     }
                 } else {
                      console.warn("Invalid or missing date in log entry for calendar modifiers (minimal):", habit_item_for_modifiers_loop.name, log_entry_for_modifiers_loop);
@@ -892,7 +890,7 @@ const HabitualPage: NextPage = () => {
         });
         const today_date_obj_minimal = startOfDay(new Date());
         habits.forEach(habit_item_for_modifiers_loop => {
-            const iteration_limit_minimal = 35; 
+            const iteration_limit_minimal = 60; // Look back/ahead 60 days
             for (let day_offset_minimal = 0; day_offset_minimal < iteration_limit_minimal; day_offset_minimal++) {
                 const pastDateToConsider_obj_minimal = subDays(today_date_obj_minimal, day_offset_minimal);
                 const futureDateToConsider_obj_minimal = dateFnsAddDays(today_date_obj_minimal, day_offset_minimal);
@@ -903,19 +901,17 @@ const HabitualPage: NextPage = () => {
                     const dateStrToMatch_str_minimal = format(current_day_being_checked_obj_minimal, 'yyyy-MM-dd');
                     const dayOfWeekForDate_val_minimal = dayIndexToWeekDayConstant[getDay(current_day_being_checked_obj_minimal)];
                     const isScheduledOnThisDay_bool_minimal = habit_item_for_modifiers_loop.daysOfWeek.includes(dayOfWeekForDate_val_minimal);
-                    
-                    const logEntryForThisDay_obj_minimal = habit_item_for_modifiers_loop.completionLog.find(log_find_item_minimal => log_find_item_minimal.date === dateStrToMatch_str_minimal);
-                    const isCompletedOnThisDay_bool_minimal = completed_days_arr_minimal.some(cd_minimal => isSameDay(cd_minimal, current_day_being_checked_obj_minimal));
-                    const isMakeupOnThisDay_bool_minimal = makeup_days_arr_minimal.some(md_minimal => isSameDay(md_minimal, current_day_being_checked_obj_minimal));
 
-                    if (isScheduledOnThisDay_bool_minimal && !isCompletedOnThisDay_bool_minimal && !isMakeupOnThisDay_bool_minimal && (!logEntryForThisDay_obj_minimal || logEntryForThisDay_obj_minimal.status !== 'skipped')) {
+                    const logEntryForThisDay_obj_minimal = habit_item_for_modifiers_loop.completionLog.find(log_find_item_minimal => log_find_item_minimal.date === dateStrToMatch_str_minimal);
+
+                    if (isScheduledOnThisDay_bool_minimal && (!logEntryForThisDay_obj_minimal || (logEntryForThisDay_obj_minimal.status !== 'completed' && logEntryForThisDay_obj_minimal.status !== 'skipped' && logEntryForThisDay_obj_minimal.status !== 'pending_makeup'))) {
                         if (current_day_being_checked_obj_minimal < today_date_obj_minimal && !isSameDay(current_day_being_checked_obj_minimal, today_date_obj_minimal)) {
-                             if (!missed_days_arr_minimal.some(missed_day_item_minimal => isSameDay(missed_day_item_minimal, current_day_being_checked_obj_minimal))) {
-                                missed_days_arr_minimal.push(current_day_being_checked_obj_minimal);
+                             if (!dates_scheduled_missed_arr_initial.some(missed_day_item_minimal => isSameDay(missed_day_item_minimal, current_day_being_checked_obj_minimal))) {
+                                dates_scheduled_missed_arr_initial.push(current_day_being_checked_obj_minimal);
                             }
-                        } else {
-                            if (!scheduled_days_arr_minimal.some(upcoming_day_item_minimal => isSameDay(upcoming_day_item_minimal, current_day_being_checked_obj_minimal))) {
-                                scheduled_days_arr_minimal.push(current_day_being_checked_obj_minimal);
+                        } else { // Today or future scheduled day, not yet completed/skipped/makeup
+                            if (!dates_scheduled_upcoming_arr_initial.some(upcoming_day_item_minimal => isSameDay(upcoming_day_item_minimal, current_day_being_checked_obj_minimal))) {
+                                dates_scheduled_upcoming_arr_initial.push(current_day_being_checked_obj_minimal);
                             }
                         }
                     }
@@ -923,16 +919,26 @@ const HabitualPage: NextPage = () => {
             }
         });
 
+        // Filter out days that are already marked as completed or pending makeup from the initial scheduled/missed lists
+        const finalScheduledUpcoming_arr = dates_scheduled_upcoming_arr_initial.filter(s_date_upcoming_for_final_filter =>
+            !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
+            !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
+        );
+        const finalScheduledMissed_arr = dates_scheduled_missed_arr_initial.filter(s_date_missed_for_final_filter =>
+            !dates_completed_arr.some(comp_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, comp_date_for_final_filter_missed)) &&
+            !dates_makeup_pending_arr.some(makeup_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, makeup_date_for_final_filter_missed))
+        );
+
         return {
-            completed: completed_days_arr_minimal,
-            missed: missed_days_arr_minimal,
-            scheduled: scheduled_days_arr_minimal,
-            makeup: makeup_days_arr_minimal,
+            completed: dates_completed_arr,
+            missed: finalScheduledMissed_arr,
+            scheduled: finalScheduledUpcoming_arr,
+            makeup: dates_makeup_pending_arr,
             selected: selectedCalendarDate ? [selectedCalendarDate] : [],
         };
     } catch (error_in_calendar_modifiers) {
         console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error_in_calendar_modifiers);
-        return { 
+        return { // Return safe defaults
             completed: [], missed: [], scheduled: [], makeup: [],
             selected: selectedCalendarDate ? [selectedCalendarDate] : [],
         };
@@ -1020,7 +1026,6 @@ const HabitualPage: NextPage = () => {
 
         <ScrollArea className="flex-grow">
           <main className="px-3 sm:px-4 py-4">
-            <HabitOverview habits={habits} totalPoints={totalPoints} />
 
             {habits.length > 0 && (
               <div className="my-4 flex justify-center">
