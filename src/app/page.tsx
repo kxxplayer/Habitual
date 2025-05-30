@@ -1,3 +1,4 @@
+
 "use client";
 
 // ==========================================================================
@@ -69,7 +70,25 @@ import {
 } from "@/components/ui/sheet";
 
 
-import { Plus, Loader2, ListChecks, LayoutDashboard, Award, Settings, CalendarDays, UserCircle, BellRing, BookOpenText, Bell, Home, Trash2 } from 'lucide-react';
+import {
+  Plus,
+  Loader2,
+  ListChecks,
+  LayoutDashboard,
+  Award,
+  Settings,
+  CalendarDays,
+  UserCircle,
+  BellRing,
+  BookOpenText,
+  Bell,
+  Home,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  Circle, // Added Circle
+  CalendarClock as MakeupIcon,
+ } from 'lucide-react';
 import { format, parseISO, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday as dateFnsIsToday, isPast as dateFnsIsPast, isSameDay } from 'date-fns';
 
 
@@ -134,8 +153,6 @@ const HabitualPage: NextPage = () => {
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
 
-  // For Dashboard Dialog
-  const [isDashboardDialogOpen, setIsDashboardDialogOpen] = React.useState(false);
 
   // For Settings Sheet (Menu)
   const [isSettingsSheetOpen, setIsSettingsSheetOpen] = React.useState(false);
@@ -169,11 +186,12 @@ const HabitualPage: NextPage = () => {
         setIsAISuggestionDialogOpen(false);
         setIsCreateHabitDialogOpen(false);
         setIsDailyQuestDialogOpen(false);
-        setIsDashboardDialogOpen(false);
+        // setIsDashboardDialogOpen(false); // Dashboard is now a separate page
         setIsCalendarDialogOpen(false);
         setIsSettingsSheetOpen(false);
-        // localStorage items for the *previous* user are NOT deleted here to allow data persistence for the same user across sessions.
-        // Namespacing by UID handles data separation.
+        
+        // User-specific data is NOT removed from localStorage on logout/switch, allowing re-login to access it.
+        // It is namespaced by UID.
       }
 
       setAuthUser(currentUserAuthMain);
@@ -358,7 +376,7 @@ const HabitualPage: NextPage = () => {
     setIsLoadingHabits(false);
     console.log("Finished loading data for user:", userUidLoadMain);
 
-  }, [authUser, isLoadingAuth]); // CommonSuggestionsFetched removed to allow re-fetch if habits are deleted
+  }, [authUser, isLoadingAuth]);
 
 
   // Save habits to localStorage & check for badges
@@ -685,14 +703,14 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-  const handleOpenReflectionDialog = (habitIdReflectionOpenMain: string, dateReflectionOpenMain: string, habitNameReflectionOpenMain: string) => {
-    const habitForReflectionOpenMain = habits.find(hFindReflMain => hFindReflMain.id === habitIdReflectionOpenMain);
-    const logEntryForReflectionOpenMain = habitForReflectionOpenMain?.completionLog.find(logFindReflEntryMain => logFindReflEntryMain.date === dateReflectionOpenMain);
+  const handleOpenReflectionDialog = (habitId_reflection_open: string, date_reflection_open: string, habitName_reflection_open: string) => {
+    const habitForReflectionOpenMain = habits.find(hFindReflMain => hFindReflMain.id === habitId_reflection_open);
+    const logEntryForReflectionOpenMain = habitForReflectionOpenMain?.completionLog.find(logFindReflEntryMain => logFindReflEntryMain.date === date_reflection_open);
     setReflectionDialogData({
-      habitId: habitIdReflectionOpenMain,
-      date: dateReflectionOpenMain,
+      habitId: habitId_reflection_open,
+      date: date_reflection_open,
       initialNote: logEntryForReflectionOpenMain?.note || '',
-      habitName: habitNameReflectionOpenMain,
+      habitName: habitName_reflection_open,
     });
     setIsReflectionDialogOpen(true);
   };
@@ -736,7 +754,7 @@ const HabitualPage: NextPage = () => {
 
   const handleSaveRescheduledHabit = (habitId_rescheduled_save: string, originalMissedDate_rescheduled_save: string, newDate_rescheduled_save: string) => {
     if(!authUser) return;
-    setHabits(prevHabits_rescheduled_save => prevHabits_rescheduled_save.map(h_rescheduled_save => {
+     setHabits(prevHabits_rescheduled_save => prevHabits_rescheduled_save.map(h_rescheduled_save => {
       if (h_rescheduled_save.id === habitId_rescheduled_save) {
         let newCompletionLog_rescheduled_save = [...h_rescheduled_save.completionLog];
         const existingMissedLogIndex_rescheduled_save = newCompletionLog_rescheduled_save.findIndex(log_reschedule_find_save => log_reschedule_find_save.date === originalMissedDate_rescheduled_save);
@@ -849,18 +867,90 @@ const HabitualPage: NextPage = () => {
 
   // --- Calendar Dialog Logic Start ---
   // Ultra-minimal calendar modifiers for debugging "cDate" error.
-  // This is the Step 1 from the debugging strategy.
   const calendarDialogModifiers = React.useMemo(() => {
-    // console.log("DEBUG: Minimal calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
-    // if (habits.length > 0) { /* Do nothing, just access */ }
-    return {
-      completed: [], // Intentionally empty for debugging
-      missed: [],    // Intentionally empty for debugging
-      scheduled: [], // Intentionally empty for debugging
-      makeup: [],    // Intentionally empty for debugging
-      selected: selectedCalendarDate ? [startOfDay(selectedCalendarDate)] : [],
-    };
-  }, [selectedCalendarDate]); // Intentionally removed `habits` dependency for debugging this specific error
+    try {
+      // console.log("DEBUG: Minimal calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
+      const dates_completed_arr: Date[] = [];
+      const dates_scheduled_missed_arr: Date[] = [];
+      const dates_scheduled_upcoming_arr: Date[] = [];
+      const dates_makeup_pending_arr: Date[] = [];
+      const today_date_obj = startOfDay(new Date());
+
+      if (authUser && habits.length > 0) {
+        habits.forEach(habit_item_for_modifiers_loop => {
+          habit_item_for_modifiers_loop.completionLog.forEach(log_entry_for_modifiers_loop => {
+            if (typeof log_entry_for_modifiers_loop.date === 'string' && log_entry_for_modifiers_loop.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              try {
+                const logDate_obj = parseISO(log_entry_for_modifiers_loop.date);
+                if (log_entry_for_modifiers_loop.status === 'completed') {
+                  dates_completed_arr.push(logDate_obj);
+                } else if (log_entry_for_modifiers_loop.status === 'pending_makeup') {
+                  dates_makeup_pending_arr.push(logDate_obj);
+                }
+              } catch (e) {
+                 console.error("Error parsing log date in calendarDialogModifiers (completion/makeup):", log_entry_for_modifiers_loop.date, e);
+              }
+            } else {
+              console.warn("Invalid or missing date in log entry for calendar (completion/makeup):", habit_item_for_modifiers_loop.name, log_entry_for_modifiers_loop);
+            }
+          });
+
+          const iteration_limit = 60; // Check 60 days past and future
+          for (let day_offset = 0; day_offset < iteration_limit; day_offset++) {
+            const pastDateToConsider_obj = subDays(today_date_obj, day_offset);
+            const futureDateToConsider_obj = dateFnsAddDays(today_date_obj, day_offset);
+
+            [pastDateToConsider_obj, futureDateToConsider_obj].forEach(current_day_being_checked_obj => {
+              // Avoid double-processing today if it's both past and future (day_offset === 0)
+              if (isSameDay(current_day_being_checked_obj, today_date_obj) && day_offset !== 0 && current_day_being_checked_obj !== pastDateToConsider_obj) return;
+
+              const dateStrToMatch_str = format(current_day_being_checked_obj, 'yyyy-MM-dd');
+              const dayOfWeekForDate_val = dayIndexToWeekDayConstant[getDay(current_day_being_checked_obj)];
+              const isScheduledOnThisDay_bool = habit_item_for_modifiers_loop.daysOfWeek.includes(dayOfWeekForDate_val);
+              const logEntryForThisDay_obj = habit_item_for_modifiers_loop.completionLog.find(log_find_item => log_find_item.date === dateStrToMatch_str);
+
+              if (isScheduledOnThisDay_bool && !logEntryForThisDay_obj) { // Scheduled but no log entry
+                if (current_day_being_checked_obj < today_date_obj && !isSameDay(current_day_being_checked_obj, today_date_obj)) { // Past day
+                  if (!dates_scheduled_missed_arr.some(missed_day_item => isSameDay(missed_day_item, current_day_being_checked_obj))) {
+                    dates_scheduled_missed_arr.push(current_day_being_checked_obj);
+                  }
+                } else { // Today or future day
+                  if (!dates_scheduled_upcoming_arr.some(upcoming_day_item => isSameDay(upcoming_day_item, current_day_being_checked_obj)) &&
+                      !dates_completed_arr.some(completed_day_item_for_check => isSameDay(completed_day_item_for_check, current_day_being_checked_obj))) {
+                    dates_scheduled_upcoming_arr.push(current_day_being_checked_obj);
+                  }
+                }
+              }
+            });
+          }
+        });
+      }
+      
+      // Filter out days that are marked completed or pending makeup from scheduled/missed lists
+      const finalScheduledUpcoming_arr_filtered = dates_scheduled_upcoming_arr.filter(s_date_upcoming_for_final_filter =>
+        !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
+        !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
+      );
+      const finalScheduledMissed_arr_filtered = dates_scheduled_missed_arr.filter(s_date_missed_for_final_filter =>
+        !dates_completed_arr.some(comp_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, comp_date_for_final_filter_missed)) &&
+        !dates_makeup_pending_arr.some(makeup_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, makeup_date_for_final_filter_missed))
+      );
+      
+      return {
+        completed: dates_completed_arr,
+        missed: finalScheduledMissed_arr_filtered,
+        scheduled: finalScheduledUpcoming_arr_filtered,
+        makeup: dates_makeup_pending_arr,
+        selected: selectedCalendarDate ? [startOfDay(selectedCalendarDate)] : [],
+      };
+    } catch (error_in_calendar_modifiers) {
+      console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error_in_calendar_modifiers);
+      return { // Return safe defaults
+        completed: [], missed: [], scheduled: [], makeup: [],
+        selected: selectedCalendarDate ? [startOfDay(selectedCalendarDate)] : [],
+      };
+    }
+  }, [habits, selectedCalendarDate, authUser]);
 
 
   const calendarDialogModifierStyles: Record<string, React.CSSProperties> = {
@@ -895,9 +985,9 @@ const HabitualPage: NextPage = () => {
   const sheetMenuItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/profile', label: 'Profile', icon: UserCircle },
-    { action: 'reminders', label: 'Reminders', icon: BellRing }, // Special action key
+    { action: 'reminders', label: 'Reminders', icon: BellRing },
     { href: '/achievements', label: 'Achievements', icon: Award },
-    { action: 'calendar', label: 'Calendar', icon: CalendarDays }, // Special action key
+    { action: 'calendar', label: 'Calendar', icon: CalendarDays },
     { href: '/settings', label: 'App Settings', icon: Settings },
   ];
   // --- Settings Sheet (Menu) Logic End ---
@@ -912,7 +1002,7 @@ const HabitualPage: NextPage = () => {
     );
   }
 
-  if (!authUser && !isLoadingAuth) {
+  if (!authUser && !isLoadingAuth) { // This case should ideally be caught by the redirect in onAuthStateChanged
     return (
        <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -921,17 +1011,9 @@ const HabitualPage: NextPage = () => {
     );
   }
 
-  if (!authUser) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
-        <p className="text-muted-foreground">Please log in to continue.</p>
-      </div>
-    );
-  }
-
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-0 sm:p-4"> {/* Outer centering div, transparent to body's animated gradient */}
+    <div className="flex min-h-screen items-center justify-center p-0 sm:p-4">
       <div
         className={cn(
           "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
@@ -942,9 +1024,8 @@ const HabitualPage: NextPage = () => {
       >
         <AppHeader />
 
-        <ScrollArea className="flex-grow min-h-0"> {/* Added min-h-0 */}
+        <ScrollArea className="flex-grow min-h-0">
           <main className="px-3 sm:px-4 py-4">
-            {/* Mark All Today Done Button */}
             {habits.length > 0 && !allTodayTasksDone && (
               <div className="mb-4 flex justify-center">
                 <Button
@@ -967,7 +1048,6 @@ const HabitualPage: NextPage = () => {
               </div>
             )}
 
-            {/* Common Habit Suggestions for new users */}
             {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && (
               <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
                 <div className="px-2 pt-0">
@@ -998,7 +1078,6 @@ const HabitualPage: NextPage = () => {
                 </div>
             )}
 
-            {/* Habit List */}
             <HabitList
               habits={habits}
               onToggleComplete={handleToggleComplete}
@@ -1014,14 +1093,9 @@ const HabitualPage: NextPage = () => {
             <p>&copy; {new Date().getFullYear()} Habitual.</p>
           </footer>
         </ScrollArea>
-
-        <BottomNavigationBar
-           onOpenDashboard={() => setIsDashboardDialogOpen(true)}
-           onOpenSettings={() => setIsSettingsSheetOpen(true)}
-        />
+         <BottomNavigationBar />
       </div>
 
-      {/* Floating Action Button to Add New Habit */}
        <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
           onClick={() => {
@@ -1034,7 +1108,6 @@ const HabitualPage: NextPage = () => {
           <Plus className="h-7 w-7" />
       </Button>
 
-      {/* Create/Edit Habit Dialog */}
       <CreateHabitDialog
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
@@ -1046,7 +1119,6 @@ const HabitualPage: NextPage = () => {
         initialData={initialFormDataForDialog}
       />
 
-      {/* AI Suggestion Dialog */}
       {selectedHabitForAISuggestion && aiSuggestion && (
         <AISuggestionDialog
           isOpen={isAISuggestionDialogOpen}
@@ -1058,7 +1130,6 @@ const HabitualPage: NextPage = () => {
         />
       )}
 
-      {/* Reflection Note Dialog */}
       {reflectionDialogData && (
         <AddReflectionNoteDialog
           isOpen={isReflectionDialogOpen}
@@ -1073,7 +1144,6 @@ const HabitualPage: NextPage = () => {
         />
       )}
 
-      {/* Reschedule Missed Habit Dialog */}
       {rescheduleDialogData && (
         <RescheduleMissedHabitDialog
           isOpen={!!rescheduleDialogData}
@@ -1091,7 +1161,6 @@ const HabitualPage: NextPage = () => {
         />
       )}
 
-      {/* Delete Habit Confirmation Dialog */}
        <AlertDialog open={isDeleteHabitConfirmOpen} onOpenChange={setIsDeleteHabitConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeaderEl>
@@ -1109,10 +1178,8 @@ const HabitualPage: NextPage = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Daily Quest Dialog for new users */}
       <DailyQuestDialog isOpen={isDailyQuestDialogOpen} onClose={handleCloseDailyQuestDialog} />
 
-      {/* Calendar Dialog */}
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
         <DialogContent className="sm:max-w-lg bg-card">
           <DialogHeader>
@@ -1129,9 +1196,8 @@ const HabitualPage: NextPage = () => {
                     setSelectedCalendarDate(startOfDay(month));
                 }
             }}
-            // Modifiers temporarily removed for debugging "cDate is not defined" error
-            // modifiers={calendarDialogModifiers}
-            // modifiersStyles={calendarDialogModifierStyles}
+            modifiers={calendarDialogModifiers}
+            modifiersStyles={calendarDialogModifierStyles}
             className="rounded-md border p-0 sm:p-2"
           />
           {selectedCalendarDate && (
@@ -1147,7 +1213,7 @@ const HabitualPage: NextPage = () => {
                     const dayOfWeekForSelected_cal_list = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
                     const isScheduledToday_cal_list = habit_cal_list_item.daysOfWeek.includes(dayOfWeekForSelected_cal_list);
                     let statusText_cal_list = "Scheduled";
-                    let StatusIcon_cal_list = Circle;
+                    let StatusIcon_cal_list = Circle; // Default icon
                     let iconColor_cal_list = "text-orange-500";
 
                     if (logEntry_cal_list?.status === 'completed') {
@@ -1155,12 +1221,12 @@ const HabitualPage: NextPage = () => {
                         StatusIcon_cal_list = CheckCircle2; iconColor_cal_list = "text-accent";
                     } else if (logEntry_cal_list?.status === 'pending_makeup') {
                         statusText_cal_list = `Makeup for ${logEntry_cal_list.originalMissedDate || 'earlier'}`;
-                        StatusIcon_cal_list = CalendarDays; iconColor_cal_list = "text-blue-500"; // Using CalendarDays as a makeup icon
+                        StatusIcon_cal_list = MakeupIcon; iconColor_cal_list = "text-blue-500";
                     } else if (logEntry_cal_list?.status === 'skipped') {
                         statusText_cal_list = "Skipped";
-                        StatusIcon_cal_list = ListChecks; iconColor_cal_list = "text-muted-foreground"; // Using ListChecks as a skipped icon
+                        StatusIcon_cal_list = XCircle; iconColor_cal_list = "text-muted-foreground";
                     } else if (isScheduledToday_cal_list && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry_cal_list) {
-                        statusText_cal_list = "Missed"; StatusIcon_cal_list = ListChecks; iconColor_cal_list = "text-destructive"; // Using ListChecks as a missed icon
+                        statusText_cal_list = "Missed"; StatusIcon_cal_list = XCircle; iconColor_cal_list = "text-destructive";
                     } else if (!isScheduledToday_cal_list && !logEntry_cal_list) {
                         statusText_cal_list = "Not Scheduled"; StatusIcon_cal_list = Circle; iconColor_cal_list = "text-muted-foreground/50";
                     }
@@ -1188,23 +1254,6 @@ const HabitualPage: NextPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dashboard Dialog */}
-      <Dialog open={isDashboardDialogOpen} onOpenChange={setIsDashboardDialogOpen}>
-        <DialogContent className="sm:max-w-lg bg-card">
-          <DialogHeader>
-             <DialogTitle className="flex items-center"><LayoutDashboard className="mr-2 h-5 w-5 text-primary"/>Your Habit Dashboard</DialogTitle>
-             <DialogDescription>An overview of your progress and stats.</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[60vh] sm:max-h-[70vh] pr-3">
-            <HabitOverview habits={habits} totalPoints={totalPoints} />
-          </ScrollArea>
-          <DialogFooter className="mt-2">
-            <DialogClose asChild><Button type="button" variant="outline">Close</Button></DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Settings Sheet (Menu) */}
       <Sheet open={isSettingsSheetOpen} onOpenChange={setIsSettingsSheetOpen}>
         <SheetContent side="bottom" className="rounded-t-xl max-h-[70vh] p-4">
           <SheetHeader className="mb-3">
@@ -1213,41 +1262,37 @@ const HabitualPage: NextPage = () => {
           <ScrollArea className="pr-2">
           <div className="grid grid-cols-1 gap-2">
             {sheetMenuItems.map((item) => {
-              if (item.action) {
+                if (item.href) {
+                    return (
+                        <SheetClose asChild key={item.label}>
+                        <Link href={item.href} passHref legacyBehavior={false}>
+                            <Button variant="ghost" className="w-full justify-start text-base py-3 h-auto" onClick={() => setIsSettingsSheetOpen(false)}>
+                            <item.icon className="mr-3 h-5 w-5 text-primary" /> {item.label}
+                            </Button>
+                        </Link>
+                        </SheetClose>
+                    );
+                }
+                // Handle actions
                 return (
-                  <SheetClose asChild key={item.label}>
+                    <SheetClose asChild key={item.label}>
                     <Button
-                      variant="ghost"
-                      className="w-full justify-start text-base py-3 h-auto"
-                      onClick={() => {
+                        variant="ghost"
+                        className="w-full justify-start text-base py-3 h-auto"
+                        onClick={() => {
                         if (item.action === 'calendar') setIsCalendarDialogOpen(true);
-                        else if (item.action === 'reminders') console.log("Reminders action placeholder");
-                        else if (item.action === 'profile') router.push('/profile');
-                        else if (item.action === 'achievements') router.push('/achievements');
-                        else if (item.action === 'settings') router.push('/settings');
+                        else if (item.action === 'reminders') console.log("Reminders action placeholder triggered");
                         setIsSettingsSheetOpen(false); // Close sheet after action
-                      }}
+                        }}
                     >
-                      <item.icon className="mr-3 h-5 w-5 text-primary" /> {item.label}
+                        <item.icon className="mr-3 h-5 w-5 text-primary" /> {item.label}
                     </Button>
-                  </SheetClose>
+                    </SheetClose>
                 );
-              }
-              return (
-                 <SheetClose asChild key={item.label}>
-                    <Link href={item.href || '#'} passHref legacyBehavior={false}>
-                       <Button variant="ghost" className="w-full justify-start text-base py-3 h-auto" onClick={() => setIsSettingsSheetOpen(false)}>
-                          <item.icon className="mr-3 h-5 w-5 text-primary" /> {item.label}
-                       </Button>
-                    </Link>
-                 </SheetClose>
-              );
             })}
              <div className="mt-4 pt-4 border-t">
               <div className="flex items-center justify-between px-1">
-                <div className="flex items-center text-sm">
-                  <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span>Notification Status:</span>
+                <div className="flex items-center text-sm"> <Bell className="mr-2 h-4 w-4 text-muted-foreground" /> <span>Notification Status:</span>
                   <span className={cn("ml-1 font-semibold", notificationPermission === 'granted' ? 'text-green-600' : notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600')}>
                     {notificationPermission ? notificationPermission.charAt(0).toUpperCase() + notificationPermission.slice(1) : 'Checking...'}
                   </span>
@@ -1267,3 +1312,5 @@ const HabitualPage: NextPage = () => {
   );
 };
 export default HabitualPage;
+
+    
