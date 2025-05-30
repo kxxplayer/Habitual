@@ -16,7 +16,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Loader2, UserCircle, CalendarDays, BellRing, Palette, Bell, Settings as SettingsIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
-import { Label } from '@/components/ui/label'; 
+import { Label } from '@/components/ui/label';
 
 const SettingsPage: NextPage = () => {
   const router = useRouter();
@@ -87,7 +87,7 @@ const SettingsPage: NextPage = () => {
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
         <AppHeader />
-        <ScrollArea className="flex-grow">
+        <ScrollArea className="flex-grow min-h-0"> {/* Added min-h-0 */}
           <main className="px-3 sm:px-4 py-4">
             <Card>
               <CardHeader className="pb-3">
@@ -111,14 +111,14 @@ const SettingsPage: NextPage = () => {
                   <ThemeToggleButton />
                   <p className="text-xs text-muted-foreground">Cycle through available app themes.</p>
                 </div>
-                
+
                 <div className="p-3 border rounded-md space-y-2">
                   <Label className="text-base font-medium flex items-center"><BellRing className="mr-3 h-5 w-5" />Reminders</Label>
                    <div className="flex items-center justify-between">
                       <div className="flex items-center text-sm">
                           <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
                           <span>Notification Status:</span>
-                          <span className={cn("ml-1 font-semibold", 
+                          <span className={cn("ml-1 font-semibold",
                               notificationPermission === 'granted' ? 'text-green-600' :
                               notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
                           )}>
@@ -149,5 +149,3 @@ const SettingsPage: NextPage = () => {
 };
 
 export default SettingsPage;
-
-    

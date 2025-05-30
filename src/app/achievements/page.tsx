@@ -84,7 +84,7 @@ const AchievementsPage: NextPage = () => {
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
         <AppHeader />
-        <ScrollArea className="flex-grow">
+        <ScrollArea className="flex-grow min-h-0"> {/* Added min-h-0 */}
           <main className="px-3 sm:px-4 py-4">
             <Card>
               <CardHeader className="pb-3">
@@ -122,5 +122,3 @@ const AchievementsPage: NextPage = () => {
 };
 
 export default AchievementsPage;
-
-    

@@ -62,7 +62,7 @@ const CalendarPage: NextPage = () => {
     }
     setIsLoadingData(false);
   }, [authUser, isLoadingAuth]);
-  
+
   const calendarDialogModifiers = React.useMemo(() => {
     if (!authUser) return { selected: selectedCalendarDate ? [selectedCalendarDate] : [] };
     try {
@@ -90,7 +90,7 @@ const CalendarPage: NextPage = () => {
           }
         });
 
-        const iteration_limit = 60; 
+        const iteration_limit = 60;
         for (let day_offset = 0; day_offset < iteration_limit; day_offset++) {
           const pastDateToConsider_obj = subDays(today_date_obj, day_offset);
           const futureDateToConsider_obj = dateFnsAddDays(today_date_obj, day_offset);
@@ -118,7 +118,7 @@ const CalendarPage: NextPage = () => {
           });
         }
       });
-      
+
       const finalScheduledUpcoming_arr = dates_scheduled_upcoming_arr.filter(s_date_upcoming_for_final_filter =>
         !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
         !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
@@ -137,7 +137,7 @@ const CalendarPage: NextPage = () => {
       };
     } catch (error) {
       console.error("CRITICAL ERROR in calendarDialogModifiers calculation on Calendar Page:", error);
-      return { 
+      return {
         completed: [], missed: [], scheduled: [], makeup: [],
         selected: selectedCalendarDate ? [selectedCalendarDate] : [],
       };
@@ -178,7 +178,7 @@ const CalendarPage: NextPage = () => {
       </div>
     );
   }
-  
+
   if (!authUser) {
      return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
@@ -196,7 +196,7 @@ const CalendarPage: NextPage = () => {
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
         <AppHeader />
-        <ScrollArea className="flex-grow">
+        <ScrollArea className="flex-grow min-h-0"> {/* Added min-h-0 */}
           <main className="px-3 sm:px-4 py-4">
             <Card>
               <CardHeader className="pb-3">
@@ -218,7 +218,7 @@ const CalendarPage: NextPage = () => {
                      if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) {
                        setSelectedCalendarDate(startOfDay(month));
                      }
-                   }}   
+                   }}
                 />
                 {selectedCalendarDate && (
                   <div className="mt-4 w-full">
@@ -249,7 +249,7 @@ const CalendarPage: NextPage = () => {
                           } else if (!isScheduledToday && !logEntry) {
                               statusText = "Not Scheduled"; StatusIcon = CircleIcon; iconColor = "text-muted-foreground/50";
                           }
-                          
+
                           return (
                             <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
                               <span className="font-medium truncate pr-2">{habit.name}</span>
@@ -280,5 +280,3 @@ const CalendarPage: NextPage = () => {
 };
 
 export default CalendarPage;
-
-    

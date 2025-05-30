@@ -29,7 +29,7 @@ const ProfilePage: NextPage = () => {
         setUser(currentUser);
       } else {
         setUser(null);
-        router.push('/auth/login'); 
+        router.push('/auth/login');
       }
       setIsLoading(false);
     });
@@ -57,7 +57,7 @@ const ProfilePage: NextPage = () => {
     );
   }
 
-  if (!user) { 
+  if (!user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4 text-center">
          <p className="text-muted-foreground">Redirecting to login...</p>
@@ -74,7 +74,7 @@ const ProfilePage: NextPage = () => {
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
         <AppHeader />
-        <ScrollArea className="flex-grow">
+        <ScrollArea className="flex-grow min-h-0"> {/* Added min-h-0 */}
           <main className="px-3 sm:px-4 py-4">
             <Card className="w-full">
               <CardHeader className="space-y-1 text-center">
@@ -114,5 +114,3 @@ const ProfilePage: NextPage = () => {
 };
 
 export default ProfilePage;
-
-    
