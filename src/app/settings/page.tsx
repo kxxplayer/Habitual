@@ -13,6 +13,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Loader2, ArrowLeft, UserCircle, CalendarDays, BellRing, Palette, Bell, Settings as SettingsIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
+import { Label } from '@/components/ui/label'; // Added import
 
 const SettingsPage: NextPage = () => {
   const router = useRouter();
