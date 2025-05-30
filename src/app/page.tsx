@@ -21,6 +21,21 @@
 // Namespace localStorage by UID. Stop clearing localStorage on logout to persist user data.
 // Make "Add New Habit" a FAB, add bottom nav with "Dashboard" triggering dialog.
 // Removed direct rendering of HabitOverview from main page again.
+// Made localStorage UID-namespacing more robust.
+// Cleared "cDate" error in calendar modifiers by simplifying modifier logic.
+// Removed calendar custom styling due to persistent "cDate" error.
+// Attempted to fix "cDate" error by robustly sanitizing habit data on load.
+// Further attempt to fix "cDate" by simplifying calendarDialogModifiers.
+// Attempt to fix "cDate" by removing `habits` from calendarDialogModifiers dep array.
+// Attempt to fix "cDate" by completely removing calendarDialogModifiers and its styles props.
+// Reverted calendarDialogModifiers to full logic with try-catch.
+// Removed multi-select and associated toolbar.
+// Reverted dashboard to dialog.
+// Moved Calendar to dialog on main page.
+// Removed Calendar from AppHeader, added to top action bar (then removed top action bar).
+// Added "Mark All Today Done" button.
+// Bottom navigation bar to use page navigation instead of dialogs.
+// Calendar also moved to its own page.
 // ==========================================================================
 
 import * as React from 'react';
@@ -40,8 +55,6 @@ import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
 import DailyQuestDialog from '@/components/popups/DailyQuestDialog';
-import HabitOverview from '@/components/overview/HabitOverview';
-
 
 import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit } from '@/types';
 import { THREE_DAY_SQL_STREAK_BADGE_ID, HABIT_CATEGORIES, SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID } from '@/types';
@@ -55,18 +68,7 @@ import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { cn } from "@/lib/utils";
 
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import type { DayPicker, DayModifiers } from 'react-day-picker';
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 
 import {
   AlertDialog,
@@ -80,16 +82,8 @@ import {
 } from '@/components/ui/alert-dialog';
 
 
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetClose,
-} from "@/components/ui/sheet";
-import { Plus, LayoutDashboard, Home, Settings, StickyNote, CalendarDays, Award, Trophy, BookOpenText, UserCircle, BellRing, Loader2, Bell, Trash2, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon, MoreHorizontal, PlusCircle, Lightbulb, FilePenLine, Sparkles as SparklesIcon, ListChecks } from 'lucide-react';
-import { format, parseISO, isSameDay, getDay, subDays, addDays as dateFnsAddDays, startOfWeek, endOfWeek, isWithinInterval, isPast as dateFnsIsPast, isToday as dateFnsIsToday, startOfDay } from 'date-fns';
+import { Plus, LayoutDashboard, Home, Settings, Award, Loader2, ListChecks, Bell } from 'lucide-react';
+import { format, parseISO, isSameDay, getDay, startOfDay } from 'date-fns';
 
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -119,12 +113,6 @@ const HabitualPage: NextPage = () => {
   const [editingHabit, setEditingHabit] = React.useState<Habit | null>(null);
   const [initialFormDataForDialog, setInitialFormDataForDialog] = React.useState<Partial<CreateHabitFormData> | null>(null);
 
-  const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false);
-  const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
-  const [isDashboardDialogOpen, setIsDashboardDialogOpen] = React.useState(false);
-
-  const [isAchievementsDialogOpen, setIsAchievementsDialogOpen] = React.useState(false);
-  const [isSettingsSheetOpen, setIsSettingsSheetOpen] = React.useState(false);
   const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
   const [totalPoints, setTotalPoints] = React.useState<number>(0);
 
@@ -184,12 +172,9 @@ const HabitualPage: NextPage = () => {
         setHabitToDelete(null);
         setIsDeleteHabitConfirmOpen(false);
         setIsAISuggestionDialogOpen(false);
-        setIsCalendarDialogOpen(false);
         setIsCreateHabitDialogOpen(false);
         setIsDailyQuestDialogOpen(false);
-        setIsDashboardDialogOpen(false);
-        // localStorage data for the PREVIOUS user is NOT removed here.
-        // It remains namespaced by their UID.
+        // localStorage data for the PREVIOUS user is NOT removed here to allow re-login.
       }
 
       setAuthUser(currentUserAuthMain);
@@ -207,11 +192,7 @@ const HabitualPage: NextPage = () => {
   // Effect for Notification Permission
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
         setNotificationPermission(Notification.permission);
-      } else {
-        setNotificationPermission(Notification.permission);
-      }
     } else {
       console.log('Notifications not supported by this browser.');
       setNotificationPermission('denied');
@@ -221,8 +202,12 @@ const HabitualPage: NextPage = () => {
 
   // Load data from localStorage when authUser changes and auth is not loading
   React.useEffect(() => {
-    if (isLoadingAuth) return;
+    if (isLoadingAuth) {
+      console.log("Auth is loading, skipping data load from localStorage.");
+      return;
+    }
     if (!authUser) {
+      console.log("No authenticated user, ensuring app state is clear and skipping data load.");
       if (habits.length > 0 || earnedBadges.length > 0 || totalPoints > 0) {
         setHabits([]);
         setEarnedBadges([]);
@@ -232,12 +217,14 @@ const HabitualPage: NextPage = () => {
       return;
     }
 
+    console.log("Authenticated user found. Loading data from localStorage for UID:", authUser.uid);
     setIsLoadingHabits(true);
     const userUidLoadMain = authUser.uid;
 
     const userHabitsKeyLoadMain = `${LS_KEY_PREFIX_HABITS}${userUidLoadMain}`;
     const storedHabitsLoadMain = typeof window !== 'undefined' ? localStorage.getItem(userHabitsKeyLoadMain) : null;
     let parsedHabitsLoadMain: Habit[] = [];
+
     if (storedHabitsLoadMain) {
       try {
         const rawHabitsLoadMain: any[] = JSON.parse(storedHabitsLoadMain);
@@ -322,15 +309,18 @@ const HabitualPage: NextPage = () => {
           };
         });
         setHabits(parsedHabitsLoadMain);
+        console.log("Habits loaded and sanitized for user:", parsedHabitsLoadMain.length);
       } catch (eParseHabitsLoadMain) {
         console.error(`Error parsing habits for user ${userUidLoadMain} from localStorage:`, eParseHabitsLoadMain);
         setHabits([]);
       }
     } else {
+      console.log("No stored habits found for user:", userUidLoadMain);
       setHabits([]);
     }
 
     if (authUser && parsedHabitsLoadMain.length === 0 && !commonSuggestionsFetched) {
+      console.log("User has no habits, fetching common suggestions.");
       setIsLoadingCommonSuggestions(true);
       getCommonHabitSuggestions({ count: 5 })
         .then(responseCommonSuggMain => {
@@ -354,7 +344,7 @@ const HabitualPage: NextPage = () => {
           }
         });
     } else if (parsedHabitsLoadMain.length > 0) {
-      setCommonSuggestionsFetched(true);
+      setCommonSuggestionsFetched(true); // Mark as fetched if habits exist
     }
 
 
@@ -369,8 +359,9 @@ const HabitualPage: NextPage = () => {
     else { setTotalPoints(0); }
 
     setIsLoadingHabits(false);
+    console.log("Finished loading data for user:", userUidLoadMain);
 
-  }, [authUser, isLoadingAuth]);
+  }, [authUser, isLoadingAuth, commonSuggestionsFetched, router]); // Added commonSuggestionsFetched to dependency array
 
 
   // Save habits to localStorage & check for badges
@@ -430,7 +421,7 @@ const HabitualPage: NextPage = () => {
 
           const todayDayAbbrReminderMain = dayIndexToWeekDayConstant[getDay(nowReminderMain)];
           if (!habitReminderCheckMain.daysOfWeek.includes(todayDayAbbrReminderMain)) {
-            return;
+            return; // Not scheduled for today
           }
 
           if (habitReminderCheckMain.specificTime && habitReminderCheckMain.specificTime.toLowerCase() !== 'anytime' && habitReminderCheckMain.specificTime.toLowerCase() !== 'flexible') {
@@ -439,18 +430,22 @@ const HabitualPage: NextPage = () => {
               if (isNaN(hoursReminderTimeMain) || isNaN(minutesReminderTimeMain)) throw new Error("Invalid time format for reminder");
 
               let specificEventTimeReminderMain = new Date(nowReminderMain.getFullYear(), nowReminderMain.getMonth(), nowReminderMain.getDate(), hoursReminderTimeMain, minutesReminderTimeMain, 0, 0);
-              let potentialReminderTimeReminderMain = new Date(specificEventTimeReminderMain.getTime() - 30 * 60 * 1000);
+              let potentialReminderTimeReminderMain = new Date(specificEventTimeReminderMain.getTime() - 30 * 60 * 1000); // 30 minutes before
 
-              if (potentialReminderTimeReminderMain <= nowReminderMain && specificEventTimeReminderMain > nowReminderMain) {
-                reminderDateTimeValMain = specificEventTimeReminderMain;
-              } else if (potentialReminderTimeReminderMain > nowReminderMain) {
-                reminderDateTimeValMain = potentialReminderTimeReminderMain;
+              // Check if the event time itself is in the future (relevant if reminder time already passed)
+              if (specificEventTimeReminderMain > nowReminderMain) {
+                // If reminder time (30 min before) has passed but event time is still future, remind at event time
+                if (potentialReminderTimeReminderMain <= nowReminderMain) {
+                    reminderDateTimeValMain = specificEventTimeReminderMain;
+                } else { // Otherwise, remind 30 mins before
+                    reminderDateTimeValMain = potentialReminderTimeReminderMain;
+                }
               }
             } catch (eReminderTimeMain) {
               console.error(`Error parsing specificTime "${habitReminderCheckMain.specificTime}" for habit "${habitReminderCheckMain.name}"`, eReminderTimeMain);
             }
-          } else {
-            let baseHourReminderMain = 10;
+          } else { // No specific time, use optimal timing
+            let baseHourReminderMain = 10; // Default if no optimal timing
             const timingLowerReminderMain = habitReminderCheckMain.optimalTiming?.toLowerCase();
             if (timingLowerReminderMain?.includes('morning')) baseHourReminderMain = 9;
             else if (timingLowerReminderMain?.includes('afternoon')) baseHourReminderMain = 13;
@@ -465,6 +460,14 @@ const HabitualPage: NextPage = () => {
           if (reminderDateTimeValMain && reminderDateTimeValMain > nowReminderMain) {
             const delayReminderMain = reminderDateTimeValMain.getTime() - nowReminderMain.getTime();
             console.log(`REMINDER LOG (Placeholder): "${habitReminderCheckMain.name}" would be at ${reminderDateTimeValMain.toLocaleString()} (in ${Math.round(delayReminderMain/60000)} mins)`);
+            // Actual setTimeout for Notification would go here, example:
+            // const timeoutId = setTimeout(() => {
+            //   new Notification("Habitual Reminder", {
+            //     body: `Time for your habit: ${habit.name}!`,
+            //     icon: "/icons/icon-192x192.png" // Optional
+            //   });
+            // }, delay);
+            // reminderTimeouts.current.push(timeoutId);
           }
         }
       });
@@ -685,32 +688,32 @@ const HabitualPage: NextPage = () => {
 
   const handleSaveReflectionNote = (noteToSaveReflectionMain: string) => {
     if (!reflectionDialogData || !authUser) return;
-    const { habitId: habitIdReflectionSaveMain, date: dateReflectionSaveNoteMain } = reflectionDialogData;
+    const { habitId: habitIdReflectionSaveMain, date: date_reflection_save_note } = reflectionDialogData;
 
     setHabits(prevHabitsReflectionSaveMain =>
-      prevHabitsReflectionSaveMain.map(hForNoteSaveReflectionMain => {
-        if (hForNoteSaveReflectionMain.id === habitIdReflectionSaveMain) {
-          let logEntryExistsForNoteSaveReflectionMain = false;
-          const newCompletionLogForNoteSaveReflectionMain = hForNoteSaveReflectionMain.completionLog.map(logItemForNoteSaveReflectionMain => {
-            if (logItemForNoteSaveReflectionMain.date === dateReflectionSaveNoteMain) {
-              logEntryExistsForNoteSaveReflectionMain = true;
-              return { ...logItemForNoteSaveReflectionMain, note: noteToSaveReflectionMain.trim() === "" ? undefined : noteToSaveReflectionMain.trim() };
+      prevHabitsReflectionSaveMain.map(h_for_note_save_reflection => {
+        if (h_for_note_save_reflection.id === habitIdReflectionSaveMain) {
+          let logEntryExists_for_note_save_reflection = false;
+          const newCompletionLog_for_note_save_reflection = h_for_note_save_reflection.completionLog.map(log_item_for_note_save_reflection => {
+            if (log_item_for_note_save_reflection.date === date_reflection_save_note) {
+              logEntryExists_for_note_save_reflection = true;
+              return { ...log_item_for_note_save_reflection, note: noteToSaveReflectionMain.trim() === "" ? undefined : noteToSaveReflectionMain.trim() };
             }
-            return logItemForNoteSaveReflectionMain;
+            return log_item_for_note_save_reflection;
           });
-          if (!logEntryExistsForNoteSaveReflectionMain) {
-             const existingStatusReflectionSaveMain = hForNoteSaveReflectionMain.completionLog.find(lNoteReflectionMain => lNoteReflectionMain.date === dateReflectionSaveNoteMain)?.status;
-             newCompletionLogForNoteSaveReflectionMain.push({
-                date: dateReflectionSaveNoteMain,
+          if (!logEntryExists_for_note_save_reflection) {
+             const existingStatus_reflection_save = h_for_note_save_reflection.completionLog.find(l_note_reflection => l_note_reflection.date === date_reflection_save_note)?.status;
+             newCompletionLog_for_note_save_reflection.push({
+                date: date_reflection_save_note,
                 time: 'N/A',
                 note: noteToSaveReflectionMain.trim() === "" ? undefined : noteToSaveReflectionMain.trim(),
-                status: existingStatusReflectionSaveMain || 'skipped'
+                status: existingStatus_reflection_save || 'skipped'
              });
-             newCompletionLogForNoteSaveReflectionMain.sort((aSortReflectionMain,bSortReflectionMain) => bSortReflectionMain.date.localeCompare(aSortReflectionMain.date));
+             newCompletionLog_for_note_save_reflection.sort((a_sort_reflection,b_sort_reflection) => b_sort_reflection.date.localeCompare(a_sort_reflection.date));
           }
-          return { ...hForNoteSaveReflectionMain, completionLog: newCompletionLogForNoteSaveReflectionMain };
+          return { ...h_for_note_save_reflection, completionLog: newCompletionLog_for_note_save_reflection };
         }
-        return hForNoteSaveReflectionMain;
+        return h_for_note_save_reflection;
       })
     );
     console.log(`Reflection Saved for ${reflectionDialogData.habitName} on ${reflectionDialogData.date}`);
@@ -722,62 +725,62 @@ const HabitualPage: NextPage = () => {
     setRescheduleDialogData({ habit: habitParamRescheduleOpenMain, missedDate: missedDateParamRescheduleOpenMain });
   };
 
-  const handleSaveRescheduledHabit = (habitIdRescheduledSaveMain: string, originalMissedDateRescheduledSaveMain: string, newDateRescheduledSaveMain: string) => {
+  const handleSaveRescheduledHabit = (habitId_rescheduled_save: string, originalMissedDate_rescheduled_save: string, newDate_rescheduled_save: string) => {
     if(!authUser) return;
-    setHabits(prevHabitsRescheduledSaveMain => prevHabitsRescheduledSaveMain.map(hRescheduledSaveMain => {
-      if (hRescheduledSaveMain.id === habitIdRescheduledSaveMain) {
-        let newCompletionLogRescheduledSave = [...hRescheduledSaveMain.completionLog];
-        const existingMissedLogIndexRescheduledSave = newCompletionLogRescheduledSave.findIndex(logRescheduleFindSave => logRescheduleFindSave.date === originalMissedDateRescheduledSaveMain);
+    setHabits(prevHabits_rescheduled_save => prevHabits_rescheduled_save.map(h_rescheduled_save => {
+      if (h_rescheduled_save.id === habitId_rescheduled_save) {
+        let newCompletionLog_rescheduled_save = [...h_rescheduled_save.completionLog];
+        const existingMissedLogIndex_rescheduled_save = newCompletionLog_rescheduled_save.findIndex(log_reschedule_find_save => log_reschedule_find_save.date === originalMissedDate_rescheduled_save);
 
-        if(existingMissedLogIndexRescheduledSave > -1) {
-            if (newCompletionLogRescheduledSave[existingMissedLogIndexRescheduledSave].status !== 'completed') {
-                newCompletionLogRescheduledSave[existingMissedLogIndexRescheduledSave].status = 'skipped';
-                newCompletionLogRescheduledSave[existingMissedLogIndexRescheduledSave].time = 'N/A';
+        if(existingMissedLogIndex_rescheduled_save > -1) {
+            if (newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status !== 'completed') {
+                newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped';
+                newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].time = 'N/A';
             }
-        } else {
-            newCompletionLogRescheduledSave.push({
-                date: originalMissedDateRescheduledSaveMain,
+        } else { // If no log entry exists for the original missed date, add a skipped one
+            newCompletionLog_rescheduled_save.push({
+                date: originalMissedDate_rescheduled_save,
                 time: 'N/A',
                 status: 'skipped'
             });
         }
 
-        newCompletionLogRescheduledSave.push({
-          date: newDateRescheduledSaveMain,
+        newCompletionLog_rescheduled_save.push({
+          date: newDate_rescheduled_save,
           time: 'N/A',
           status: 'pending_makeup',
-          originalMissedDate: originalMissedDateRescheduledSaveMain,
+          originalMissedDate: originalMissedDate_rescheduled_save,
         });
-        newCompletionLogRescheduledSave.sort((aSortRescheduleMain,bSortRescheduleMain) => bSortRescheduleMain.date.localeCompare(aSortRescheduleMain.date));
-        return { ...hRescheduledSaveMain, completionLog: newCompletionLogRescheduledSave };
+        newCompletionLog_rescheduled_save.sort((a_sort_reschedule,b_sort_reschedule) => b_sort_reschedule.date.localeCompare(a_sort_reschedule.date));
+        return { ...h_rescheduled_save, completionLog: newCompletionLog_rescheduled_save };
       }
-      return hRescheduledSaveMain;
+      return h_rescheduled_save;
     }));
-    const habitNameRescheduledMain = habits.find(hFindRescheduledNameMain => hFindRescheduledNameMain.id === habitIdRescheduledSaveMain)?.name || "Habit";
-    console.log(`Habit Rescheduled: ${habitNameRescheduledMain} from ${originalMissedDateRescheduledSaveMain} to ${newDateRescheduledSaveMain}`);
+    const habitName_rescheduled_save = habits.find(h_find_rescheduled_name => h_find_rescheduled_name.id === habitId_rescheduled_save)?.name || "Habit";
+    console.log(`Habit Rescheduled: ${habitName_rescheduled_save} from ${originalMissedDate_rescheduled_save} to ${newDate_rescheduled_save}`);
     setRescheduleDialogData(null);
   };
 
-  const handleSaveMarkAsSkipped = (habitIdSkippedSaveMain: string, missedDateSkippedSaveMain: string) => {
+  const handleSaveMarkAsSkipped = (habitId_skipped_save: string, missedDate_skipped_save: string) => {
     if(!authUser) return;
-     setHabits(prevHabitsSkippedSaveMain => prevHabitsSkippedSaveMain.map(hSkippedSaveMain => {
-      if (hSkippedSaveMain.id === habitIdSkippedSaveMain) {
-        let newCompletionLogSkippedSaveMain = [...hSkippedSaveMain.completionLog];
-        const existingLogIndexSkippedSaveMain = newCompletionLogSkippedSaveMain.findIndex(logSkippedFindMain => logSkippedFindMain.date === missedDateSkippedSaveMain);
-        if (existingLogIndexSkippedSaveMain > -1) {
-          if (newCompletionLogSkippedSaveMain[existingLogIndexSkippedSaveMain].status !== 'completed') {
-            newCompletionLogSkippedSaveMain[existingLogIndexSkippedSaveMain] = { ...newCompletionLogSkippedSaveMain[existingLogIndexSkippedSaveMain], status: 'skipped', time: 'N/A' };
+     setHabits(prevHabits_skipped_save => prevHabits_skipped_save.map(h_skipped_save => {
+      if (h_skipped_save.id === habitId_skipped_save) {
+        let newCompletionLog_skipped_save = [...h_skipped_save.completionLog];
+        const existingLogIndex_skipped_save = newCompletionLog_skipped_save.findIndex(log_skipped_find => log_skipped_find.date === missedDate_skipped_save);
+        if (existingLogIndex_skipped_save > -1) {
+          if (newCompletionLog_skipped_save[existingLogIndex_skipped_save].status !== 'completed') {
+            newCompletionLog_skipped_save[existingLogIndex_skipped_save] = { ...newCompletionLog_skipped_save[existingLogIndex_skipped_save], status: 'skipped', time: 'N/A' };
           }
         } else {
-          newCompletionLogSkippedSaveMain.push({ date: missedDateSkippedSaveMain, time: 'N/A', status: 'skipped' });
+          newCompletionLog_skipped_save.push({ date: missedDate_skipped_save, time: 'N/A', status: 'skipped' });
         }
-        newCompletionLogSkippedSaveMain.sort((aSortSkippedMain,bSortSkippedMain) => bSortSkippedMain.date.localeCompare(aSortSkippedMain.date));
-        return { ...hSkippedSaveMain, completionLog: newCompletionLogSkippedSaveMain };
+        newCompletionLog_skipped_save.sort((a_sort_skipped,b_sort_skipped) => b_sort_skipped.date.localeCompare(a_sort_skipped.date));
+        return { ...h_skipped_save, completionLog: newCompletionLog_skipped_save };
       }
-      return hSkippedSaveMain;
+      return h_skipped_save;
     }));
-    const habitNameSkippedMain = habits.find(hFindSkippedNameMain => hFindSkippedNameMain.id === habitIdSkippedSaveMain)?.name || "Habit";
-    console.log(`Habit Skipped: ${habitNameSkippedMain} on ${missedDateSkippedSaveMain}`);
+    const habitName_skipped_save = habits.find(h_find_skipped_name => h_find_skipped_name.id === habitId_skipped_save)?.name || "Habit";
+    console.log(`Habit Skipped: ${habitName_skipped_save} on ${missedDate_skipped_save}`);
     setRescheduleDialogData(null);
   };
 
@@ -817,10 +820,10 @@ const HabitualPage: NextPage = () => {
     const formDataCustomizeMain: Partial<CreateHabitFormData> = {
       name: suggestionCustomizeMain.name,
       category: suggestionCustomizeMain.category || 'Other',
-      description: '',
-      daysOfWeek: [] as WeekDay[],
+      description: '', // Common suggestions don't have descriptions
+      daysOfWeek: [] as WeekDay[], // Let user define this
     };
-    setEditingHabit(null);
+    setEditingHabit(null); // Ensure we're not in edit mode
     setInitialFormDataForDialog(formDataCustomizeMain);
     setIsCreateHabitDialogOpen(true);
   };
@@ -851,58 +854,10 @@ const HabitualPage: NextPage = () => {
     }
   };
 
-  // Completely removed calendarDialogModifiers and calendarDialogModifierStyles
-  // The calendar will use its default appearance.
-
-  const habitsForSelectedCalendarDate = React.useMemo(() => {
-    if (!selectedCalendarDate || !authUser) return [];
-    try {
-      const dateStrForListCalMain = format(selectedCalendarDate, 'yyyy-MM-dd');
-      const dayOfWeekForListCalMain = dayIndexToWeekDayConstant[getDay(selectedCalendarDate)];
-
-      return habits.filter(habitForListCalMain => {
-        const isScheduledForListCalMain = habitForListCalMain.daysOfWeek.includes(dayOfWeekForListCalMain);
-        const logEntryForListCalMain = habitForListCalMain.completionLog.find(logForListCalMain => logForListCalMain.date === dateStrForListCalMain);
-        return isScheduledForListCalMain || logEntryForListCalMain;
-      });
-    } catch (eHabitsForDateMain) {
-      console.error("Error in habitsForSelectedCalendarDate calculation:", eHabitsForDateMain);
-      return [];
-    }
-  }, [selectedCalendarDate, habits, authUser]);
-
-
-  const sheetMenuItems = [
-    { href: '/', label: 'Home', icon: Home, action: () => setIsSettingsSheetOpen(false) },
-    { href: '/profile', label: 'Profile', icon: UserCircle, action: () => setIsSettingsSheetOpen(false) },
-    {
-      label: 'Reminders',
-      icon: BellRing,
-      action: () => {
-        console.log('Reminder Settings: Current Notification Permission -', notificationPermission);
-      }
-    },
-    {
-      label: 'Achievements',
-      icon: Award,
-      action: () => {
-        setIsSettingsSheetOpen(false);
-        setIsAchievementsDialogOpen(true);
-      }
-    },
-    {
-      label: 'Calendar',
-      icon: CalendarDays,
-      action: () => {
-        setIsSettingsSheetOpen(false);
-        setIsCalendarDialogOpen(true);
-      }
-    },
-  ];
 
   if (isLoadingAuth) {
     return (
-      <div className="min-h-screen p-2 sm:p-4 flex items-center justify-center">
+      <div className={cn("min-h-screen p-2 sm:p-4 flex items-center justify-center")}>
         <div className="flex flex-col items-center justify-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-muted-foreground">Loading application...</p>
@@ -911,9 +866,9 @@ const HabitualPage: NextPage = () => {
     );
   }
 
-  if (!authUser) {
+  if (!authUser) { // This check ensures that if auth is done loading and no user, we show login redirect message
     return (
-       <div className="min-h-screen p-2 sm:p-4 flex items-center justify-center">
+       <div className={cn("min-h-screen p-2 sm:p-4 flex items-center justify-center")}>
         <div className="flex flex-col items-center justify-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
@@ -922,9 +877,10 @@ const HabitualPage: NextPage = () => {
     );
   }
 
+  // This loading state is for when authUser is present, but habits are still being loaded/parsed
   if (isLoadingHabits && authUser) {
      return (
-      <div className="min-h-screen p-2 sm:p-4 flex items-center justify-center">
+      <div className={cn("min-h-screen p-2 sm:p-4 flex items-center justify-center")}>
         <div className="flex flex-col items-center justify-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-muted-foreground">Loading your habits...</p>
@@ -935,21 +891,24 @@ const HabitualPage: NextPage = () => {
 
 
   return (
-    <div className="min-h-screen p-2 sm:p-4 flex items-center justify-center">
+    <div className={cn("min-h-screen p-2 sm:p-4 flex items-center justify-center")}>
       <div
         className={cn(
-          "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden",
+          "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
+          // Default (Mobile-like portrait)
           "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]",
+          // Tablet (wider)
           "md:max-w-lg md:max-h-[85vh]",
+          // Desktop (wider still)
           "lg:max-w-2xl lg:max-h-[80vh]"
         )}
       >
-        <AppHeader onOpenCalendar={() => setIsCalendarDialogOpen(true)} />
+        <AppHeader />
 
         <ScrollArea className="flex-grow">
           <main className="px-3 sm:px-4 py-4">
-             {/* HabitOverview is removed from direct rendering here */}
 
+            {/* "Mark All Today Done" button - only shown if there are habits */}
             {habits.length > 0 && (
               <div className="my-4 flex justify-center">
                 <Button
@@ -964,11 +923,12 @@ const HabitualPage: NextPage = () => {
               </div>
             )}
 
+            {/* Common Habit Suggestions for New Users */}
             {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && (
               <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
                 <div className="px-2 pt-0">
                   <h3 className="text-md font-semibold flex items-center text-primary mb-1">
-                     <Lightbulb className="mr-2 h-5 w-5"/> Welcome to Habitual!
+                     Welcome to Habitual!
                   </h3>
                   <p className="text-xs text-muted-foreground mb-1.5">Start by picking a common habit or add your own:</p>
                 </div>
@@ -1010,31 +970,33 @@ const HabitualPage: NextPage = () => {
           </footer>
         </ScrollArea>
 
+        {/* Bottom Navigation Bar */}
         <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16 sticky bottom-0 z-30">
-          <Button variant="ghost" className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
+          <Link href="/" className={cn(buttonVariants({ variant: "ghost" }), "flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4")}>
             <Home className="h-5 w-5" />
             <span className="text-xs mt-0.5">Home</span>
-          </Button>
-          <Button variant="ghost" onClick={() => setIsDashboardDialogOpen(true)} className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
+          </Link>
+          <Link href="/dashboard" className={cn(buttonVariants({ variant: "ghost" }), "flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4")}>
             <LayoutDashboard className="h-5 w-5" />
             <span className="text-xs mt-0.5">Dashboard</span>
-          </Button>
-          <Button variant="ghost" onClick={() => setIsAchievementsDialogOpen(true)} className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
+          </Link>
+          <Link href="/achievements" className={cn(buttonVariants({ variant: "ghost" }), "flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4")}>
             <Award className="h-5 w-5" />
             <span className="text-xs mt-0.5">Badges</span>
-          </Button>
-          <Button variant="ghost" onClick={() => setIsSettingsSheetOpen(true)} className="flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4">
+          </Link>
+          <Link href="/settings" className={cn(buttonVariants({ variant: "ghost" }), "flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4")}>
             <Settings className="h-5 w-5" />
             <span className="text-xs mt-0.5">Settings</span>
-          </Button>
+          </Link>
         </div>
       </div>
 
+      {/* Floating Action Button for Adding Habits */}
        <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
           onClick={() => {
-            setEditingHabit(null);
-            setInitialFormDataForDialog(null);
+            setEditingHabit(null); // Ensure not in edit mode
+            setInitialFormDataForDialog(null); // Clear any initial data
             setIsCreateHabitDialogOpen(true);
           }}
           aria-label="Add New Habit"
@@ -1042,11 +1004,12 @@ const HabitualPage: NextPage = () => {
           <Plus className="h-7 w-7" />
       </Button>
 
+      {/* Dialogs */}
       <CreateHabitDialog
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null);
+            setInitialFormDataForDialog(null); // Clear initial data on close
             setEditingHabit(null);
         }}
         onSaveHabit={handleSaveHabit}
@@ -1114,192 +1077,6 @@ const HabitualPage: NextPage = () => {
 
       <DailyQuestDialog isOpen={isDailyQuestDialogOpen} onClose={handleCloseDailyQuestDialog} />
 
-      <Dialog open={isDashboardDialogOpen} onOpenChange={setIsDashboardDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center text-xl">
-              <LayoutDashboard className="mr-2 h-5 w-5 text-primary" />
-              Your Habit Dashboard
-            </DialogTitle>
-            <DialogDescription>
-              A snapshot of your progress and today's checklist.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-2 max-h-[65vh] overflow-y-auto pr-2">
-            <HabitOverview habits={habits} totalPoints={totalPoints} />
-          </div>
-          <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => setIsDashboardDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] w-full max-w-[calc(100%-2rem)]">
-            <DialogHeader>
-                <DialogTitle className="flex items-center text-xl">
-                    <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-                    Habit Calendar
-                </DialogTitle>
-                 <DialogDescription>
-                    View your habit activity. Select a day to see details.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="py-2 max-h-[65vh] overflow-y-auto pr-2 flex flex-col items-center">
-                 <Calendar
-                    mode="single"
-                    selected={selectedCalendarDate}
-                    onSelect={setSelectedCalendarDate}
-                    modifiers={undefined}
-                    modifiersStyles={undefined}
-                    className="rounded-md border p-0 sm:p-2"
-                    month={selectedCalendarDate || new Date()}
-                    onMonthChange={setSelectedCalendarDate}
-                 />
-                {selectedCalendarDate && (
-                <div className="mt-4 w-full">
-                    <h3 className="text-md font-semibold mb-2 text-center">
-                    Habits for {format(selectedCalendarDate, 'MMMM d, yyyy')}
-                    </h3>
-                    {habitsForSelectedCalendarDate.length > 0 ? (
-                       <ul className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
-                        {habitsForSelectedCalendarDate.map(hItemCalListMapItemMain => {
-                        const logItemCalListMapItemMain = hItemCalListMapItemMain.completionLog.find(lCalListMapItemMain => lCalListMapItemMain.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
-                        const dayOfWeekForSelectedListMapItemMain = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
-                        const isScheduledTodayListMapItemMain = hItemCalListMapItemMain.daysOfWeek.includes(dayOfWeekForSelectedListMapItemMain);
-
-                        let statusTextListMapItemMain = "Scheduled";
-                        let StatusIconListMapItemMain = CircleIcon;
-                        let iconColorListMapItemMain = "text-orange-500";
-
-                        if (logItemCalListMapItemMain?.status === 'completed') {
-                           statusTextListMapItemMain = `Completed ${logItemCalListMapItemMain.time || ''}`;
-                           StatusIconListMapItemMain = CheckCircle2; iconColorListMapItemMain = "text-accent";
-                        } else if (logItemCalListMapItemMain?.status === 'pending_makeup') {
-                           statusTextListMapItemMain = `Makeup for ${logItemCalListMapItemMain.originalMissedDate}`;
-                           StatusIconListMapItemMain = MakeupIcon; iconColorListMapItemMain = "text-blue-500";
-                        } else if (logItemCalListMapItemMain?.status === 'skipped') {
-                           statusTextListMapItemMain = "Skipped";
-                           StatusIconListMapItemMain = XCircle; iconColorListMapItemMain = "text-muted-foreground";
-                        } else if (isScheduledTodayListMapItemMain && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logItemCalListMapItemMain) {
-                            statusTextListMapItemMain = "Missed"; StatusIconListMapItemMain = XCircle; iconColorListMapItemMain = "text-destructive";
-                        } else if (!isScheduledTodayListMapItemMain && !logItemCalListMapItemMain) {
-                            statusTextListMapItemMain = "Not Scheduled"; StatusIconListMapItemMain = CircleIcon; iconColorListMapItemMain = "text-muted-foreground/50";
-                        }
-                        
-                        return (
-                            <li key={hItemCalListMapItemMain.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
-                            <span className="font-medium truncate pr-2">{hItemCalListMapItemMain.name}</span>
-                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                                <StatusIconListMapItemMain className={cn("h-3.5 w-3.5", iconColorListMapItemMain)} />
-                                <span>{statusTextListMapItemMain}</span>
-                            </div>
-                            </li>
-                        );
-                        })}
-                    </ul>
-                    ) : (
-                    <p className="text-sm text-muted-foreground text-center py-2">No habits scheduled or logged for this day.</p>
-                    )}
-                </div>
-                )}
-            </div>
-            <DialogFooter className="pt-2">
-                <Button variant="outline" onClick={() => setIsCalendarDialogOpen(false)}>Close</Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-      <Dialog open={isAchievementsDialogOpen} onOpenChange={setIsAchievementsDialogOpen}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center text-xl">
-              <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
-              Your Achievements
-            </DialogTitle>
-            <DialogDescription>
-              All the badges you've unlocked so far!
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 max-h-[60vh] overflow-y-auto pr-2 space-y-3">
-            {earnedBadges.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">No badges earned yet. Keep up the great work!</p>
-            ) : (
-              earnedBadges.map((bItemMainAchMapMain) => (
-                <div key={bItemMainAchMapMain.id} className="p-3 border rounded-md bg-card shadow-sm">
-                  <div className="flex items-center mb-1">
-                    <span className="text-2xl mr-2">{bItemMainAchMapMain.icon || "🏆"}</span>
-                    <h4 className="font-semibold text-primary">{bItemMainAchMapMain.name}</h4>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1">{bItemMainAchMapMain.description}</p>
-                  <p className="text-xs text-muted-foreground">Achieved: {format(new Date(bItemMainAchMapMain.dateAchieved), "MMMM d, yyyy")}</p>
-                </div>
-              ))
-            )}
-          </div>
-          <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => setIsAchievementsDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Sheet open={isSettingsSheetOpen} onOpenChange={setIsSettingsSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-lg">
-          <SheetHeader className="mb-4">
-            <SheetTitle>Menu</SheetTitle>
-            <SheetDescription>
-              Navigate to different sections of the app.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="grid gap-2">
-            {sheetMenuItems.map((itemMenuSheetMapMain) => (
-              itemMenuSheetMapMain.href && itemMenuSheetMapMain.href === "/profile" ? (
-                 <SheetClose asChild key={itemMenuSheetMapMain.label}>
-                    <Link href={itemMenuSheetMapMain.href}>
-                        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={itemMenuSheetMapMain.action} >
-                            <itemMenuSheetMapMain.icon className="mr-3 h-5 w-5" />
-                            {itemMenuSheetMapMain.label}
-                        </Button>
-                    </Link>
-                 </SheetClose>
-              ) : itemMenuSheetMapMain.href && itemMenuSheetMapMain.href !== "/profile" ? ( 
-                <SheetClose asChild key={itemMenuSheetMapMain.label}>
-                    <Link href={itemMenuSheetMapMain.href}>
-                        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={itemMenuSheetMapMain.action}>
-                        <itemMenuSheetMapMain.icon className="mr-3 h-5 w-5" />
-                        {itemMenuSheetMapMain.label}
-                        </Button>
-                    </Link>
-                </SheetClose>
-              ) : ( 
-                <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => { itemMenuSheetMapMain.action(); if (itemMenuSheetMapMain.label !== 'Reminders') setIsSettingsSheetOpen(false); }} key={itemMenuSheetMapMain.label} >
-                  <itemMenuSheetMapMain.icon className="mr-3 h-5 w-5" />
-                  {itemMenuSheetMapMain.label}
-                </Button>
-              )
-            ))}
-          </div>
-           <div className="mt-4 pt-4 border-t">
-                <div className="flex items-center justify-between px-1">
-                    <div className="flex items-center text-sm">
-                        <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <span>Notification Status:</span>
-                        <span className={cn("ml-1 font-semibold",
-                            notificationPermission === 'granted' ? 'text-green-600' :
-                            notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
-                        )}>
-                            {notificationPermission ? notificationPermission.charAt(0).toUpperCase() + notificationPermission.slice(1) : 'Checking...'}
-                        </span>
-                    </div>
-                    {(notificationPermission === 'default' || notificationPermission === 'denied' || notificationPermission === null) && (
-                         <SheetClose asChild><Button size="sm" variant="outline" onClick={handleRequestNotificationPermission}>Enable Notifications</Button></SheetClose>
-                    )}
-                </div>
-                {notificationPermission === 'denied' && <p className="text-xs text-muted-foreground px-1 mt-1">Notifications are blocked. Please enable them in your browser settings for Habitual to send reminders.</p>}
-            </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 };

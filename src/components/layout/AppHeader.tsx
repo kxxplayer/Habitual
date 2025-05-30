@@ -2,15 +2,13 @@
 "use client";
 
 import type { FC } from 'react';
+import Link from 'next/link';
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { CalendarDays } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface AppHeaderProps {
-  onOpenCalendar?: () => void;
-}
-
-const AppHeader: FC<AppHeaderProps> = ({ onOpenCalendar }) => {
+const AppHeader: FC = () => {
   return (
     <header className="bg-card shadow-md sticky top-0 z-40 shrink-0">
       <div className="px-4 py-4 flex justify-between items-center w-full">
@@ -24,11 +22,11 @@ const AppHeader: FC<AppHeaderProps> = ({ onOpenCalendar }) => {
           </h1>
         </div>
         <div className="flex items-center space-x-1">
-          {onOpenCalendar && (
-            <Button variant="ghost" size="icon" onClick={onOpenCalendar} aria-label="Open Calendar">
+          <Link href="/calendar" passHref legacyBehavior>
+            <a className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-10 w-10")} aria-label="Open Calendar">
               <CalendarDays className="h-5 w-5 text-primary" />
-            </Button>
-          )}
+            </a>
+          </Link>
           <ThemeToggleButton />
         </div>
       </div>
