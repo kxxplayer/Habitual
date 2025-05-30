@@ -3,15 +3,19 @@
 
 import * as React from 'react';
 import type { NextPage } from 'next';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import AppHeader from '@/components/layout/AppHeader';
+import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { auth } from '@/lib/firebase';
 import { signOut, onAuthStateChanged, type User } from 'firebase/auth';
-import { Loader2, LogOut, ArrowLeft } from 'lucide-react';
+import { Loader2, LogOut, UserCircle2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 
 const ProfilePage: NextPage = () => {
   const router = useRouter();
@@ -25,7 +29,7 @@ const ProfilePage: NextPage = () => {
         setUser(currentUser);
       } else {
         setUser(null);
-        router.push('/auth/login'); // Redirect if not logged in
+        router.push('/auth/login'); 
       }
       setIsLoading(false);
     });
@@ -46,58 +50,65 @@ const ProfilePage: NextPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading profile...</p>
       </div>
     );
   }
 
-  if (!user) { // Should be caught by redirect in useEffect, but as a fallback
+  if (!user) { 
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 text-center">
-        <Card className="w-full max-w-md shadow-xl">
-          <CardHeader> <CardTitle>Profile Access Denied</CardTitle> </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">You need to be logged in to view your profile.</p>
-            <Button asChild className="w-full"> <Link href="/auth/login">Go to Login</Link> </Button>
-          </CardContent>
-        </Card>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4 text-center">
+         <p className="text-muted-foreground">Redirecting to login...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Your Profile</CardTitle>
-          <CardDescription>Manage your account details and session.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium">User Email (ID)</Label>
-            <div id="email" className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-              {user.email}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Password</Label>
-            <div className="rounded-md border border-dashed border-input bg-input/30 p-3 text-xs text-muted-foreground">
-              For security reasons, your password cannot be displayed.
-            </div>
-          </div>
-          <Button onClick={handleSignOut} className="w-full" disabled={isSigningOut}>
-            {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-            Sign Out
-          </Button>
-        </CardContent>
-        <CardFooter className="flex flex-col items-center space-y-2 pt-4 text-sm">
-          <Button variant="outline" asChild className="w-full">
-            <Link href="/" className="flex items-center"> <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home </Link>
-          </Button>
-        </CardFooter>
-      </Card>
+    <div className={cn("min-h-screen flex items-center justify-center p-0 sm:p-4")}>
+       <div className={cn(
+        "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
+        "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]",
+        "md:max-w-lg md:max-h-[85vh]",
+        "lg:max-w-2xl lg:max-h-[80vh]"
+      )}>
+        <AppHeader />
+        <ScrollArea className="flex-grow">
+          <main className="px-3 sm:px-4 py-4">
+            <Card className="w-full">
+              <CardHeader className="space-y-1 text-center">
+                <CardTitle className="text-2xl font-bold flex items-center justify-center">
+                  <UserCircle2 className="mr-2 h-7 w-7 text-primary" /> Your Profile
+                </CardTitle>
+                <CardDescription>Manage your account details and session.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium">User Email (ID)</Label>
+                  <div id="email" className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                    {user.email}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Password</Label>
+                  <div className="rounded-md border border-dashed border-input bg-input/30 p-3 text-xs text-muted-foreground">
+                    For security reasons, your password cannot be displayed.
+                  </div>
+                </div>
+                <Button onClick={handleSignOut} className="w-full" disabled={isSigningOut}>
+                  {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+                  Sign Out
+                </Button>
+              </CardContent>
+            </Card>
+          </main>
+           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
+            <p>&copy; {new Date().getFullYear()} Habitual.</p>
+          </footer>
+        </ScrollArea>
+        <BottomNavigationBar />
+      </div>
     </div>
   );
 };

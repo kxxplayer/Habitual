@@ -9,6 +9,9 @@ import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { EarnedBadge } from '@/types';
+import AppHeader from '@/components/layout/AppHeader';
+import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Loader2, ArrowLeft, Trophy } from 'lucide-react';
@@ -59,7 +62,7 @@ const AchievementsPage: NextPage = () => {
 
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading achievements...</p>
       </div>
@@ -68,53 +71,53 @@ const AchievementsPage: NextPage = () => {
 
   if (!authUser) {
      return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
         <p className="text-muted-foreground">Redirecting to login...</p>
       </div>
     );
   }
 
   return (
-     <div className={cn(
-        "min-h-screen p-2 sm:p-4 flex items-center justify-center",
-      )}>
+    <div className={cn("min-h-screen flex items-center justify-center p-0 sm:p-4")}>
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
         "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]",
         "md:max-w-lg md:max-h-[85vh]",
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
-        <header className="p-4 border-b">
-           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-primary flex items-center">
-              <Trophy className="mr-2 h-5 w-5 text-yellow-500" /> Achievements
-            </h1>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/">
-                <ArrowLeft className="mr-1 h-4 w-4" /> Home
-              </Link>
-            </Button>
-          </div>
-        </header>
-        <div className="flex-grow overflow-y-auto p-4 space-y-3">
-          {earnedBadges.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No badges earned yet. Keep up the great work!</p>
-          ) : (
-            earnedBadges.map((badge) => (
-              <div key={badge.id} className="p-3 border rounded-md bg-card shadow-sm">
-                <div className="flex items-center mb-1">
-                  <span className="text-2xl mr-2">{badge.icon || "🏆"}</span>
-                  <h4 className="font-semibold text-primary">{badge.name}</h4>
-                </div>
-                <p className="text-xs text-muted-foreground mb-1">{badge.description}</p>
-                <p className="text-xs text-muted-foreground">Achieved: {format(new Date(badge.dateAchieved), "MMMM d, yyyy")}</p>
-              </div>
-            ))
-          )}
-        </div>
-         <footer className="py-3 text-center text-xs text-muted-foreground border-t">
+        <AppHeader />
+        <ScrollArea className="flex-grow">
+          <main className="px-3 sm:px-4 py-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl font-bold text-primary flex items-center">
+                  <Trophy className="mr-2 h-5 w-5 text-yellow-500" /> Achievements
+                </CardTitle>
+                 <CardDescription>Your collection of earned badges.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2 space-y-3">
+                {earnedBadges.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">No badges earned yet. Keep up the great work!</p>
+                ) : (
+                  earnedBadges.map((badge) => (
+                    <div key={badge.id} className="p-3 border rounded-md bg-card shadow-sm">
+                      <div className="flex items-center mb-1">
+                        <span className="text-2xl mr-2">{badge.icon || "🏆"}</span>
+                        <h4 className="font-semibold text-primary">{badge.name}</h4>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-1">{badge.description}</p>
+                      <p className="text-xs text-muted-foreground">Achieved: {format(new Date(badge.dateAchieved), "MMMM d, yyyy")}</p>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </main>
+           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
             <p>&copy; {new Date().getFullYear()} Habitual.</p>
-        </footer>
+          </footer>
+        </ScrollArea>
+        <BottomNavigationBar />
       </div>
     </div>
   );

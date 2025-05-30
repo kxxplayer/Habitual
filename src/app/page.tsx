@@ -11,7 +11,6 @@
 // Removed localStorage.removeItem on user switch to persist data.
 // Implemented PWA features.
 // Added "Mark All Today Done"
-// Added Dashboard to bottom nav.
 // Removed direct HabitOverview rendering from main page.
 // Made data persistence work correctly for Google accounts too.
 // Implemented responsive aspect ratio styling.
@@ -36,28 +35,32 @@
 // Added "Mark All Today Done" button.
 // Bottom navigation bar to use page navigation instead of dialogs.
 // Calendar also moved to its own page.
+// Removed dashboard from direct rendering on main page.
+// Ensured localStorage data persists for the same user across logout/login.
 // ==========================================================================
 
 import * as React from 'react';
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 
 import AppHeader from '@/components/layout/AppHeader';
+import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import HabitList from '@/components/habits/HabitList';
 import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
 import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog';
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
 import DailyQuestDialog from '@/components/popups/DailyQuestDialog';
+import HabitOverview from '@/components/overview/HabitOverview';
+
 
 import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit } from '@/types';
-import { THREE_DAY_SQL_STREAK_BADGE_ID, HABIT_CATEGORIES, SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID } from '@/types';
+import { HABIT_CATEGORIES, SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID, THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { getSqlTip } from '@/ai/flows/sql-tip-flow';
@@ -67,23 +70,23 @@ import { getCommonHabitSuggestions } from '@/ai/flows/common-habit-suggestions-f
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { cn } from "@/lib/utils";
 
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription as AlertDialogDescriptionUI,
-  AlertDialogFooter as AlertDialogFooterUI,
-  AlertDialogHeader as AlertDialogHeaderUI,
-  AlertDialogTitle as AlertTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 
-import { Plus, LayoutDashboard, Home, Settings, Award, Loader2, ListChecks, Bell } from 'lucide-react';
-import { format, parseISO, isSameDay, getDay, startOfDay } from 'date-fns';
+import { Plus, Loader2, ListChecks } from 'lucide-react';
+import { format, parseISO, isSameDay, getDay, startOfDay, subDays, addDays as dateFnsAddDays } from 'date-fns';
 
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -140,6 +143,8 @@ const HabitualPage: NextPage = () => {
   const [habitToDelete, setHabitToDelete] = React.useState<{ id: string; name: string } | null>(null);
 
   const [isDailyQuestDialogOpen, setIsDailyQuestDialogOpen] = React.useState(false);
+  const [isDashboardDialogOpen, setIsDashboardDialogOpen] = React.useState(false); // Dashboard dialog state
+
 
   const [todayString, setTodayString] = React.useState('');
   const [todayAbbr, setTodayAbbr] = React.useState<WeekDay | ''>('');
@@ -159,7 +164,7 @@ const HabitualPage: NextPage = () => {
       const currentUidAuthMain = currentUserAuthMain?.uid || null;
 
       if (previousUidAuthMain !== currentUidAuthMain) {
-        console.log("User identity changed. Clearing active app state (React state).");
+        console.log("User identity changed. Clearing active app state (React state). User-specific localStorage data will NOT be removed.");
         setHabits([]);
         setEarnedBadges([]);
         setTotalPoints(0);
@@ -174,7 +179,10 @@ const HabitualPage: NextPage = () => {
         setIsAISuggestionDialogOpen(false);
         setIsCreateHabitDialogOpen(false);
         setIsDailyQuestDialogOpen(false);
-        // localStorage data for the PREVIOUS user is NOT removed here to allow re-login.
+        setIsDashboardDialogOpen(false);
+
+        // DO NOT remove localStorage items here to persist data for the same user across sessions.
+        // Data is namespaced by UID, so different users won't see each other's data.
       }
 
       setAuthUser(currentUserAuthMain);
@@ -241,10 +249,13 @@ const HabitualPage: NextPage = () => {
             if (freqLowerValLoadMain === 'daily') daysOfWeekValLoadMain = [...weekDays];
             else {
               const dayMapValLoadMain: { [keyValLoadMain: string]: WeekDay } = {
-                'sun': 'Sun', 'sunday': 'Sun', 'mon': 'Mon', 'monday': 'Mon',
-                'tue': 'Tue', 'tuesday': 'Tue', 'wed': 'Wed', 'wednesday': 'Wed',
-                'thu': 'Thu', 'thursday': 'Thu', 'fri': 'Fri', 'friday': 'Fri',
-                'sat': 'Sat', 'saturday': 'Sat',
+                'sun': 'Sun', 'sunday': 'Sun', 'sundays': 'Sun',
+                'mon': 'Mon', 'monday': 'Mon', 'mondays': 'Mon',
+                'tue': 'Tue', 'tuesday': 'Tue', 'tuesdays': 'Tue',
+                'wed': 'Wed', 'wednesday': 'Wed', 'wednesdays': 'Wed',
+                'thu': 'Thu', 'thursday': 'Thu', 'thursdays': 'Thu',
+                'fri': 'Fri', 'friday': 'Fri', 'fridays': 'Fri',
+                'sat': 'Sat', 'saturday': 'Sat', 'saturdays': 'Sat',
               };
               daysOfWeekValLoadMain = freqLowerValLoadMain.split(/[\s,]+/).map((dStrLoadMain: string) => dayMapValLoadMain[dStrLoadMain.trim().toLowerCase() as keyof typeof dayMapValLoadMain]).filter(Boolean) as WeekDay[];
             }
@@ -361,7 +372,7 @@ const HabitualPage: NextPage = () => {
     setIsLoadingHabits(false);
     console.log("Finished loading data for user:", userUidLoadMain);
 
-  }, [authUser, isLoadingAuth, commonSuggestionsFetched, router]); // Added commonSuggestionsFetched to dependency array
+  }, [authUser, isLoadingAuth]); // Removed commonSuggestionsFetched from dependency array to simplify
 
 
   // Save habits to localStorage & check for badges
@@ -432,20 +443,18 @@ const HabitualPage: NextPage = () => {
               let specificEventTimeReminderMain = new Date(nowReminderMain.getFullYear(), nowReminderMain.getMonth(), nowReminderMain.getDate(), hoursReminderTimeMain, minutesReminderTimeMain, 0, 0);
               let potentialReminderTimeReminderMain = new Date(specificEventTimeReminderMain.getTime() - 30 * 60 * 1000); // 30 minutes before
 
-              // Check if the event time itself is in the future (relevant if reminder time already passed)
               if (specificEventTimeReminderMain > nowReminderMain) {
-                // If reminder time (30 min before) has passed but event time is still future, remind at event time
                 if (potentialReminderTimeReminderMain <= nowReminderMain) {
                     reminderDateTimeValMain = specificEventTimeReminderMain;
-                } else { // Otherwise, remind 30 mins before
+                } else { 
                     reminderDateTimeValMain = potentialReminderTimeReminderMain;
                 }
               }
             } catch (eReminderTimeMain) {
               console.error(`Error parsing specificTime "${habitReminderCheckMain.specificTime}" for habit "${habitReminderCheckMain.name}"`, eReminderTimeMain);
             }
-          } else { // No specific time, use optimal timing
-            let baseHourReminderMain = 10; // Default if no optimal timing
+          } else { 
+            let baseHourReminderMain = 10; 
             const timingLowerReminderMain = habitReminderCheckMain.optimalTiming?.toLowerCase();
             if (timingLowerReminderMain?.includes('morning')) baseHourReminderMain = 9;
             else if (timingLowerReminderMain?.includes('afternoon')) baseHourReminderMain = 13;
@@ -460,14 +469,7 @@ const HabitualPage: NextPage = () => {
           if (reminderDateTimeValMain && reminderDateTimeValMain > nowReminderMain) {
             const delayReminderMain = reminderDateTimeValMain.getTime() - nowReminderMain.getTime();
             console.log(`REMINDER LOG (Placeholder): "${habitReminderCheckMain.name}" would be at ${reminderDateTimeValMain.toLocaleString()} (in ${Math.round(delayReminderMain/60000)} mins)`);
-            // Actual setTimeout for Notification would go here, example:
-            // const timeoutId = setTimeout(() => {
-            //   new Notification("Habitual Reminder", {
-            //     body: `Time for your habit: ${habit.name}!`,
-            //     icon: "/icons/icon-192x192.png" // Optional
-            //   });
-            // }, delay);
-            // reminderTimeouts.current.push(timeoutId);
+            // Actual setTimeout for Notification would go here
           }
         }
       });
@@ -737,7 +739,7 @@ const HabitualPage: NextPage = () => {
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].status = 'skipped';
                 newCompletionLog_rescheduled_save[existingMissedLogIndex_rescheduled_save].time = 'N/A';
             }
-        } else { // If no log entry exists for the original missed date, add a skipped one
+        } else { 
             newCompletionLog_rescheduled_save.push({
                 date: originalMissedDate_rescheduled_save,
                 time: 'N/A',
@@ -820,10 +822,10 @@ const HabitualPage: NextPage = () => {
     const formDataCustomizeMain: Partial<CreateHabitFormData> = {
       name: suggestionCustomizeMain.name,
       category: suggestionCustomizeMain.category || 'Other',
-      description: '', // Common suggestions don't have descriptions
-      daysOfWeek: [] as WeekDay[], // Let user define this
+      description: '',
+      daysOfWeek: [] as WeekDay[],
     };
-    setEditingHabit(null); // Ensure we're not in edit mode
+    setEditingHabit(null); 
     setInitialFormDataForDialog(formDataCustomizeMain);
     setIsCreateHabitDialogOpen(true);
   };
@@ -857,7 +859,7 @@ const HabitualPage: NextPage = () => {
 
   if (isLoadingAuth) {
     return (
-      <div className={cn("min-h-screen p-2 sm:p-4 flex items-center justify-center")}>
+      <div className={cn("min-h-screen flex items-center justify-center")}>
         <div className="flex flex-col items-center justify-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-muted-foreground">Loading application...</p>
@@ -866,9 +868,9 @@ const HabitualPage: NextPage = () => {
     );
   }
 
-  if (!authUser) { // This check ensures that if auth is done loading and no user, we show login redirect message
+  if (!authUser) { 
     return (
-       <div className={cn("min-h-screen p-2 sm:p-4 flex items-center justify-center")}>
+       <div className={cn("min-h-screen flex items-center justify-center")}>
         <div className="flex flex-col items-center justify-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
@@ -877,10 +879,9 @@ const HabitualPage: NextPage = () => {
     );
   }
 
-  // This loading state is for when authUser is present, but habits are still being loaded/parsed
   if (isLoadingHabits && authUser) {
      return (
-      <div className={cn("min-h-screen p-2 sm:p-4 flex items-center justify-center")}>
+      <div className={cn("min-h-screen flex items-center justify-center")}>
         <div className="flex flex-col items-center justify-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-muted-foreground">Loading your habits...</p>
@@ -891,15 +892,12 @@ const HabitualPage: NextPage = () => {
 
 
   return (
-    <div className={cn("min-h-screen p-2 sm:p-4 flex items-center justify-center")}>
+    <div className={cn("min-h-screen flex items-center justify-center p-0 sm:p-4")}>
       <div
         className={cn(
           "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
-          // Default (Mobile-like portrait)
           "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]",
-          // Tablet (wider)
           "md:max-w-lg md:max-h-[85vh]",
-          // Desktop (wider still)
           "lg:max-w-2xl lg:max-h-[80vh]"
         )}
       >
@@ -907,7 +905,6 @@ const HabitualPage: NextPage = () => {
 
         <ScrollArea className="flex-grow">
           <main className="px-3 sm:px-4 py-4">
-
             {/* "Mark All Today Done" button - only shown if there are habits */}
             {habits.length > 0 && (
               <div className="my-4 flex justify-center">
@@ -970,33 +967,15 @@ const HabitualPage: NextPage = () => {
           </footer>
         </ScrollArea>
 
-        {/* Bottom Navigation Bar */}
-        <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16 sticky bottom-0 z-30">
-          <Link href="/" className={cn(buttonVariants({ variant: "ghost" }), "flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4")}>
-            <Home className="h-5 w-5" />
-            <span className="text-xs mt-0.5">Home</span>
-          </Link>
-          <Link href="/dashboard" className={cn(buttonVariants({ variant: "ghost" }), "flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4")}>
-            <LayoutDashboard className="h-5 w-5" />
-            <span className="text-xs mt-0.5">Dashboard</span>
-          </Link>
-          <Link href="/achievements" className={cn(buttonVariants({ variant: "ghost" }), "flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4")}>
-            <Award className="h-5 w-5" />
-            <span className="text-xs mt-0.5">Badges</span>
-          </Link>
-          <Link href="/settings" className={cn(buttonVariants({ variant: "ghost" }), "flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4")}>
-            <Settings className="h-5 w-5" />
-            <span className="text-xs mt-0.5">Settings</span>
-          </Link>
-        </div>
+        <BottomNavigationBar />
       </div>
 
       {/* Floating Action Button for Adding Habits */}
        <Button
           className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center"
           onClick={() => {
-            setEditingHabit(null); // Ensure not in edit mode
-            setInitialFormDataForDialog(null); // Clear any initial data
+            setEditingHabit(null); 
+            setInitialFormDataForDialog(null); 
             setIsCreateHabitDialogOpen(true);
           }}
           aria-label="Add New Habit"
@@ -1009,7 +988,7 @@ const HabitualPage: NextPage = () => {
         isOpen={isCreateHabitDialogOpen}
         onClose={() => {
             setIsCreateHabitDialogOpen(false);
-            setInitialFormDataForDialog(null); // Clear initial data on close
+            setInitialFormDataForDialog(null); 
             setEditingHabit(null);
         }}
         onSaveHabit={handleSaveHabit}
@@ -1060,22 +1039,42 @@ const HabitualPage: NextPage = () => {
 
        <AlertDialog open={isDeleteHabitConfirmOpen} onOpenChange={setIsDeleteHabitConfirmOpen}>
         <AlertDialogContent>
-          <AlertDialogHeaderUI>
-            <AlertTitle>Confirm Deletion</AlertTitle>
-            <AlertDialogDescriptionUI>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete the habit "{habitToDelete?.name || ''}"? This action cannot be undone.
-            </AlertDialogDescriptionUI>
-          </AlertDialogHeaderUI>
-          <AlertDialogFooterUI>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setHabitToDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeleteSingleHabit} className={buttonVariants({ variant: "destructive" })}>
               Delete
             </AlertDialogAction>
-          </AlertDialogFooterUI>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <DailyQuestDialog isOpen={isDailyQuestDialogOpen} onClose={handleCloseDailyQuestDialog} />
+
+      {/* Dashboard Dialog */}
+      <Dialog open={isDashboardDialogOpen} onOpenChange={setIsDashboardDialogOpen}>
+        <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[85vh] flex flex-col">
+            <DialogHeader>
+                <DialogTitle>Habit Dashboard</DialogTitle>
+                <DialogDescription>
+                    Track your overall progress and consistency.
+                </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="flex-grow pr-2">
+                <HabitOverview habits={habits} totalPoints={totalPoints} />
+            </ScrollArea>
+            <DialogFooter className="pt-4">
+                <DialogClose asChild>
+                    <Button type="button" variant="outline">Close</Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

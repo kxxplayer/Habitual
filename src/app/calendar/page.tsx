@@ -4,17 +4,21 @@
 import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
-import type { Habit, HabitCompletionLogEntry, WeekDay } from '@/types';
+import type { Habit, WeekDay } from '@/types';
+import AppHeader from '@/components/layout/AppHeader';
+import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import type { DayPicker, DayModifiers } from 'react-day-picker';
-import { Loader2, ArrowLeft, CalendarDays, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon } from 'lucide-react';
-import { format, parseISO, isSameDay, getDay, startOfDay } from 'date-fns';
+import type { DayPicker } from 'react-day-picker';
+import { Loader2, CalendarDays, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon } from 'lucide-react';
+import { format, parseISO, isSameDay, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday as dateFnsIsToday, isPast as dateFnsIsPast } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+
 
 const LS_KEY_PREFIX_HABITS = "habits_";
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -60,7 +64,6 @@ const CalendarPage: NextPage = () => {
     setIsLoadingData(false);
   }, [authUser, isLoadingAuth]);
   
-  // Calendar Dialog Logic (Moved from page.tsx)
   const calendarDialogModifiers = React.useMemo(() => {
     if (!authUser) return { selected: selectedCalendarDate ? [selectedCalendarDate] : [] };
     try {
@@ -88,13 +91,12 @@ const CalendarPage: NextPage = () => {
           }
         });
 
-        const iteration_limit = 60; // Look 60 days in past and future
+        const iteration_limit = 60; 
         for (let day_offset = 0; day_offset < iteration_limit; day_offset++) {
           const pastDateToConsider_obj = subDays(today_date_obj, day_offset);
           const futureDateToConsider_obj = dateFnsAddDays(today_date_obj, day_offset);
 
           [pastDateToConsider_obj, futureDateToConsider_obj].forEach(current_day_being_checked_obj => {
-            // Avoid double processing today if day_offset is 0 and it's futureDate part
             if (isSameDay(current_day_being_checked_obj, today_date_obj) && day_offset !== 0 && current_day_being_checked_obj !== pastDateToConsider_obj) return;
 
             const dateStrToMatch_str = format(current_day_being_checked_obj, 'yyyy-MM-dd');
@@ -136,7 +138,7 @@ const CalendarPage: NextPage = () => {
       };
     } catch (error) {
       console.error("CRITICAL ERROR in calendarDialogModifiers calculation on Calendar Page:", error);
-      return { // Return a safe default in case of critical error
+      return { 
         completed: [], missed: [], scheduled: [], makeup: [],
         selected: selectedCalendarDate ? [selectedCalendarDate] : [],
       };
@@ -171,7 +173,7 @@ const CalendarPage: NextPage = () => {
 
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading calendar...</p>
       </div>
@@ -180,95 +182,101 @@ const CalendarPage: NextPage = () => {
   
   if (!authUser) {
      return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
         <p className="text-muted-foreground">Redirecting to login...</p>
       </div>
     );
   }
 
   return (
-     <div className={cn(
-        "min-h-screen p-2 sm:p-4 flex items-center justify-center",
-      )}>
+    <div className={cn("min-h-screen flex items-center justify-center p-0 sm:p-4")}>
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
         "w-full max-w-md h-full max-h-[90vh] sm:max-h-[850px]",
         "md:max-w-lg md:max-h-[85vh]",
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
-        <header className="p-4 border-b">
-           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-primary flex items-center">
-              <CalendarDays className="mr-2 h-5 w-5" /> Habit Calendar
-            </h1>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/">
-                <ArrowLeft className="mr-1 h-4 w-4" /> Home
-              </Link>
-            </Button>
-          </div>
-        </header>
-        <div className="flex-grow overflow-y-auto p-4 flex flex-col items-center">
-          <Calendar
-            mode="single"
-            selected={selectedCalendarDate}
-            onSelect={setSelectedCalendarDate}
-            modifiers={calendarDialogModifiers}
-            modifiersStyles={calendarDialogModifierStyles}
-            className="rounded-md border p-0 sm:p-2"
-            month={selectedCalendarDate || new Date()}
-            onMonthChange={setSelectedCalendarDate}   
-          />
-          {selectedCalendarDate && (
-            <div className="mt-4 w-full">
-              <h3 className="text-md font-semibold mb-2 text-center">
-                Habits for {format(selectedCalendarDate, 'MMMM d, yyyy')}
-              </h3>
-              {habitsForSelectedCalendarDate.length > 0 ? (
-                <ul className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
-                  {habitsForSelectedCalendarDate.map(habit => {
-                    const logEntry = habit.completionLog.find(log => log.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
-                    const dayOfWeekForSelected = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
-                    const isScheduledToday = habit.daysOfWeek.includes(dayOfWeekForSelected);
-                    let statusText = "Scheduled";
-                    let StatusIcon = CircleIcon;
-                    let iconColor = "text-orange-500";
+        <AppHeader />
+        <ScrollArea className="flex-grow">
+          <main className="px-3 sm:px-4 py-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl font-bold text-primary flex items-center">
+                  <CalendarDays className="mr-2 h-5 w-5" /> Habit Calendar
+                </CardTitle>
+                <CardDescription>View your habit activity across dates.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2 flex flex-col items-center">
+                <Calendar
+                  mode="single"
+                  selected={selectedCalendarDate}
+                  onSelect={setSelectedCalendarDate}
+                  modifiers={calendarDialogModifiers}
+                  modifiersStyles={calendarDialogModifierStyles}
+                  className="rounded-md border p-0 sm:p-2"
+                  month={selectedCalendarDate || new Date()}
+                  onMonthChange={(month) => {
+                     // When month changes, select the first day of that month if no date is selected
+                     // or if the selected date is not in the new month.
+                     if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) {
+                       setSelectedCalendarDate(startOfDay(month));
+                     }
+                   }}   
+                />
+                {selectedCalendarDate && (
+                  <div className="mt-4 w-full">
+                    <h3 className="text-md font-semibold mb-2 text-center">
+                      Habits for {format(selectedCalendarDate, 'MMMM d, yyyy')}
+                    </h3>
+                    {habitsForSelectedCalendarDate.length > 0 ? (
+                      <ul className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
+                        {habitsForSelectedCalendarDate.map(habit => {
+                          const logEntry = habit.completionLog.find(log => log.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
+                          const dayOfWeekForSelected = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
+                          const isScheduledToday = habit.daysOfWeek.includes(dayOfWeekForSelected);
+                          let statusText = "Scheduled";
+                          let StatusIcon = CircleIcon;
+                          let iconColor = "text-orange-500";
 
-                    if (logEntry?.status === 'completed') {
-                        statusText = `Completed ${logEntry.time || ''}`;
-                        StatusIcon = CheckCircle2; iconColor = "text-accent";
-                    } else if (logEntry?.status === 'pending_makeup') {
-                        statusText = `Makeup for ${logEntry.originalMissedDate}`;
-                        StatusIcon = MakeupIcon; iconColor = "text-blue-500";
-                    } else if (logEntry?.status === 'skipped') {
-                        statusText = "Skipped";
-                        StatusIcon = XCircle; iconColor = "text-muted-foreground";
-                    } else if (isScheduledToday && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry) {
-                        statusText = "Missed"; StatusIcon = XCircle; iconColor = "text-destructive";
-                    } else if (!isScheduledToday && !logEntry) {
-                        statusText = "Not Scheduled"; StatusIcon = CircleIcon; iconColor = "text-muted-foreground/50";
-                    }
-                    
-                    return (
-                      <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
-                        <span className="font-medium truncate pr-2">{habit.name}</span>
-                        <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                            <StatusIcon className={cn("h-3.5 w-3.5", iconColor)} />
-                            <span>{statusText}</span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-2">No habits scheduled or logged for this day.</p>
-              )}
-            </div>
-          )}
-        </div>
-         <footer className="py-3 text-center text-xs text-muted-foreground border-t">
+                          if (logEntry?.status === 'completed') {
+                              statusText = `Completed ${logEntry.time || ''}`;
+                              StatusIcon = CheckCircle2; iconColor = "text-accent";
+                          } else if (logEntry?.status === 'pending_makeup') {
+                              statusText = `Makeup for ${logEntry.originalMissedDate}`;
+                              StatusIcon = MakeupIcon; iconColor = "text-blue-500";
+                          } else if (logEntry?.status === 'skipped') {
+                              statusText = "Skipped";
+                              StatusIcon = XCircle; iconColor = "text-muted-foreground";
+                          } else if (isScheduledToday && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry) {
+                              statusText = "Missed"; StatusIcon = XCircle; iconColor = "text-destructive";
+                          } else if (!isScheduledToday && !logEntry) {
+                              statusText = "Not Scheduled"; StatusIcon = CircleIcon; iconColor = "text-muted-foreground/50";
+                          }
+                          
+                          return (
+                            <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
+                              <span className="font-medium truncate pr-2">{habit.name}</span>
+                              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                                  <StatusIcon className={cn("h-3.5 w-3.5", iconColor)} />
+                                  <span>{statusText}</span>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-2">No habits scheduled or logged for this day.</p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </main>
+           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
             <p>&copy; {new Date().getFullYear()} Habitual.</p>
-        </footer>
+          </footer>
+        </ScrollArea>
+        <BottomNavigationBar />
       </div>
     </div>
   );
