@@ -74,38 +74,40 @@ const ProfilePage: NextPage = () => {
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
         <AppHeader />
-        <ScrollArea className="flex-grow min-h-0"> {/* Added min-h-0 */}
-          <main className="px-3 sm:px-4 py-4">
-            <Card className="w-full">
-              <CardHeader className="space-y-1 text-center">
-                <CardTitle className="text-2xl font-bold flex items-center justify-center">
-                  <UserCircle2 className="mr-2 h-7 w-7 text-primary" /> Your Profile
-                </CardTitle>
-                <CardDescription>Manage your account details and session.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">User Email (ID)</Label>
-                  <div id="email" className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                    {user.email}
+        <ScrollArea className="flex-grow min-h-0">
+          <div className="flex flex-col h-full">
+            <main className="flex-grow px-3 sm:px-4 py-4">
+              <Card className="w-full">
+                <CardHeader className="space-y-1 text-center">
+                  <CardTitle className="text-2xl font-bold flex items-center justify-center">
+                    <UserCircle2 className="mr-2 h-7 w-7 text-primary" /> Your Profile
+                  </CardTitle>
+                  <CardDescription>Manage your account details and session.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium">User Email (ID)</Label>
+                    <div id="email" className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                      {user.email}
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Password</Label>
-                  <div className="rounded-md border border-dashed border-input bg-input/30 p-3 text-xs text-muted-foreground">
-                    For security reasons, your password cannot be displayed.
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Password</Label>
+                    <div className="rounded-md border border-dashed border-input bg-input/30 p-3 text-xs text-muted-foreground">
+                      For security reasons, your password cannot be displayed.
+                    </div>
                   </div>
-                </div>
-                <Button onClick={handleSignOut} className="w-full" disabled={isSigningOut}>
-                  {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-                  Sign Out
-                </Button>
-              </CardContent>
-            </Card>
-          </main>
-           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
-            <p>&copy; {new Date().getFullYear()} Habitual.</p>
-          </footer>
+                  <Button onClick={handleSignOut} className="w-full" disabled={isSigningOut}>
+                    {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+                    Sign Out
+                  </Button>
+                </CardContent>
+              </Card>
+            </main>
+            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0">
+              <p>&copy; {new Date().getFullYear()} Habitual.</p>
+            </footer>
+          </div>
         </ScrollArea>
         <BottomNavigationBar />
       </div>

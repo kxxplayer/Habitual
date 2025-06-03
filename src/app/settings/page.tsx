@@ -87,60 +87,62 @@ const SettingsPage: NextPage = () => {
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
         <AppHeader />
-        <ScrollArea className="flex-grow min-h-0"> {/* Added min-h-0 */}
-          <main className="px-3 sm:px-4 py-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-xl font-bold text-primary flex items-center">
-                  <SettingsIcon className="mr-2 h-5 w-5" /> Settings
-                </CardTitle>
-                <CardDescription>Manage your application preferences.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-2">
-                {settingsItems.map((item) => (
-                  <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
-                    <Button variant="outline" className="w-full justify-start text-base py-3 h-auto">
-                      <item.icon className="mr-3 h-5 w-5" />
-                      {item.label}
-                    </Button>
-                  </Link>
-                ))}
-
-                <div className="p-3 border rounded-md space-y-2">
-                  <Label className="text-base font-medium flex items-center"><Palette className="mr-3 h-5 w-5" />Change Theme</Label>
-                  <ThemeToggleButton />
-                  <p className="text-xs text-muted-foreground">Cycle through available app themes.</p>
-                </div>
-
-                <div className="p-3 border rounded-md space-y-2">
-                  <Label className="text-base font-medium flex items-center"><BellRing className="mr-3 h-5 w-5" />Reminders</Label>
-                   <div className="flex items-center justify-between">
-                      <div className="flex items-center text-sm">
-                          <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <span>Notification Status:</span>
-                          <span className={cn("ml-1 font-semibold",
-                              notificationPermission === 'granted' ? 'text-green-600' :
-                              notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
-                          )}>
-                              {notificationPermission ? notificationPermission.charAt(0).toUpperCase() + notificationPermission.slice(1) : 'Checking...'}
-                          </span>
-                      </div>
-                  </div>
-                  {(notificationPermission === 'default' || notificationPermission === 'denied') && (
-                      <Button size="sm" variant="outline" onClick={handleRequestNotificationPermission} className="w-full">
-                          Enable Notifications
+        <ScrollArea className="flex-grow min-h-0">
+          <div className="flex flex-col h-full">
+            <main className="flex-grow px-3 sm:px-4 py-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl font-bold text-primary flex items-center">
+                    <SettingsIcon className="mr-2 h-5 w-5" /> Settings
+                  </CardTitle>
+                  <CardDescription>Manage your application preferences.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-2">
+                  {settingsItems.map((item) => (
+                    <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
+                      <Button variant="outline" className="w-full justify-start text-base py-3 h-auto">
+                        <item.icon className="mr-3 h-5 w-5" />
+                        {item.label}
                       </Button>
-                  )}
-                  {notificationPermission === 'denied' && <p className="text-xs text-muted-foreground mt-1">Notifications are blocked. Please enable them in your browser settings for Habitual to send reminders.</p>}
-                   {notificationPermission === 'granted' && <p className="text-xs text-muted-foreground mt-1">Reminders can be set per habit from the habit's menu.</p>}
-                </div>
+                    </Link>
+                  ))}
 
-              </CardContent>
-            </Card>
-          </main>
-           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
-            <p>&copy; {new Date().getFullYear()} Habitual.</p>
-          </footer>
+                  <div className="p-3 border rounded-md space-y-2">
+                    <Label className="text-base font-medium flex items-center"><Palette className="mr-3 h-5 w-5" />Change Theme</Label>
+                    <ThemeToggleButton />
+                    <p className="text-xs text-muted-foreground">Cycle through available app themes.</p>
+                  </div>
+
+                  <div className="p-3 border rounded-md space-y-2">
+                    <Label className="text-base font-medium flex items-center"><BellRing className="mr-3 h-5 w-5" />Reminders</Label>
+                     <div className="flex items-center justify-between">
+                        <div className="flex items-center text-sm">
+                            <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <span>Notification Status:</span>
+                            <span className={cn("ml-1 font-semibold",
+                                notificationPermission === 'granted' ? 'text-green-600' :
+                                notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
+                            )}>
+                                {notificationPermission ? notificationPermission.charAt(0).toUpperCase() + notificationPermission.slice(1) : 'Checking...'}
+                            </span>
+                        </div>
+                    </div>
+                    {(notificationPermission === 'default' || notificationPermission === 'denied') && (
+                        <Button size="sm" variant="outline" onClick={handleRequestNotificationPermission} className="w-full">
+                            Enable Notifications
+                        </Button>
+                    )}
+                    {notificationPermission === 'denied' && <p className="text-xs text-muted-foreground mt-1">Notifications are blocked. Please enable them in your browser settings for Habitual to send reminders.</p>}
+                     {notificationPermission === 'granted' && <p className="text-xs text-muted-foreground mt-1">Reminders can be set per habit from the habit's menu.</p>}
+                  </div>
+
+                </CardContent>
+              </Card>
+            </main>
+            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0">
+              <p>&copy; {new Date().getFullYear()} Habitual.</p>
+            </footer>
+          </div>
         </ScrollArea>
         <BottomNavigationBar />
       </div>

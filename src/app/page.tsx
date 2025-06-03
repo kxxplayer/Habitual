@@ -91,7 +91,7 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
-  Circle, // Added Circle
+  Circle,
   CalendarClock as MakeupIcon,
   WandSparkles, // For new program button
  } from 'lucide-react';
@@ -1064,93 +1064,95 @@ const HabitualPage: NextPage = () => {
         <AppHeader />
 
         <ScrollArea className="flex-grow min-h-0">
-          <main className="px-3 sm:px-4 py-4">
-            {habits.length > 0 && !allTodayTasksDone && (
-              <div className="mb-4 flex justify-center">
-                <Button
-                  onClick={handleMarkAllTodayDone}
-                  disabled={allTodayTasksDone}
-                  variant={"default"}
-                  className="w-full max-w-xs"
-                >
-                  <ListChecks className="mr-2 h-4 w-4" />
-                  Mark All Today Done
-                </Button>
-              </div>
-            )}
-             {habits.length > 0 && allTodayTasksDone && (
-              <div className="mb-4 flex justify-center">
-                 <Button disabled variant="outline" className="w-full max-w-xs">
-                    <ListChecks className="mr-2 h-4 w-4" />
-                    All Done for Today!
-                </Button>
-              </div>
-            )}
-
-            {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && (
-              <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
-                <div className="px-2 pt-0">
-                  <h3 className="text-md font-semibold flex items-center text-primary mb-1">
-                     Welcome to Habitual!
-                  </h3>
-                  <p className="text-xs text-muted-foreground mb-1.5">Start by picking a common habit, add your own, or create a program from a goal:</p>
-                </div>
-                <div className="p-1">
-                  <div className="flex flex-wrap gap-2 justify-center mb-2">
-                    {commonHabitSuggestions.map((suggItemMapMain, idxSuggMapMain) => (
-                      <Button key={idxSuggMapMain} variant="outline"
-                        className="p-2.5 h-auto flex flex-col items-center justify-center space-y-0.5 min-w-[90px] text-center shadow-sm hover:shadow-md transition-shadow text-xs"
-                        onClick={() => handleCustomizeSuggestedHabit(suggItemMapMain)}
-                      >
-                        <span className="font-medium">{suggItemMapMain.name}</span>
-                        {suggItemMapMain.category && <span className="text-primary/80 opacity-80">{suggItemMapMain.category}</span>}
-                      </Button>
-                    ))}
-                  </div>
-                   <Button
-                    onClick={handleOpenGoalInputProgramDialog}
-                    variant="default"
-                    className="w-full text-sm py-2.5 mt-2"
+          <div className="flex flex-col h-full">
+            <main className="flex-grow px-3 sm:px-4 py-4">
+              {habits.length > 0 && !allTodayTasksDone && (
+                <div className="mb-4 flex justify-center">
+                  <Button
+                    onClick={handleMarkAllTodayDone}
+                    disabled={allTodayTasksDone}
+                    variant={"default"}
+                    className="w-full max-w-xs"
                   >
-                    <WandSparkles className="mr-2 h-4 w-4" /> Create Program from Goal
+                    <ListChecks className="mr-2 h-4 w-4" />
+                    Mark All Today Done
                   </Button>
                 </div>
-              </div>
-            )}
-             {isLoadingCommonSuggestions && habits.length === 0 && (
-                <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <p className="ml-2 text-muted-foreground">Loading suggestions...</p>
+              )}
+               {habits.length > 0 && allTodayTasksDone && (
+                <div className="mb-4 flex justify-center">
+                   <Button disabled variant="outline" className="w-full max-w-xs">
+                      <ListChecks className="mr-2 h-4 w-4" />
+                      All Done for Today!
+                  </Button>
                 </div>
-            )}
-             {/* Show "Create Program from Goal" button even if there are habits */}
-             {habits.length > 0 && (
-                <div className="my-4 flex justify-center">
-                    <Button
-                        onClick={handleOpenGoalInputProgramDialog}
-                        variant="outline"
-                        className="w-full max-w-xs"
+              )}
+
+              {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && (
+                <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
+                  <div className="px-2 pt-0">
+                    <h3 className="text-md font-semibold flex items-center text-primary mb-1">
+                       Welcome to Habitual!
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-1.5">Start by picking a common habit, add your own, or create a program from a goal:</p>
+                  </div>
+                  <div className="p-1">
+                    <div className="flex flex-wrap gap-2 justify-center mb-2">
+                      {commonHabitSuggestions.map((suggItemMapMain, idxSuggMapMain) => (
+                        <Button key={idxSuggMapMain} variant="outline"
+                          className="p-2.5 h-auto flex flex-col items-center justify-center space-y-0.5 min-w-[90px] text-center shadow-sm hover:shadow-md transition-shadow text-xs"
+                          onClick={() => handleCustomizeSuggestedHabit(suggItemMapMain)}
+                        >
+                          <span className="font-medium">{suggItemMapMain.name}</span>
+                          {suggItemMapMain.category && <span className="text-primary/80 opacity-80">{suggItemMapMain.category}</span>}
+                        </Button>
+                      ))}
+                    </div>
+                     <Button
+                      onClick={handleOpenGoalInputProgramDialog}
+                      variant="default"
+                      className="w-full text-sm py-2.5 mt-2"
                     >
-                        <WandSparkles className="mr-2 h-4 w-4" /> Create Program from Goal
+                      <WandSparkles className="mr-2 h-4 w-4" /> Create Program from Goal
                     </Button>
+                  </div>
                 </div>
-            )}
+              )}
+               {isLoadingCommonSuggestions && habits.length === 0 && (
+                  <div className="flex items-center justify-center py-6">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <p className="ml-2 text-muted-foreground">Loading suggestions...</p>
+                  </div>
+              )}
+               {/* Show "Create Program from Goal" button even if there are habits */}
+               {habits.length > 0 && (
+                  <div className="my-4 flex justify-center">
+                      <Button
+                          onClick={handleOpenGoalInputProgramDialog}
+                          variant="outline"
+                          className="w-full max-w-xs"
+                      >
+                          <WandSparkles className="mr-2 h-4 w-4" /> Create Program from Goal
+                      </Button>
+                  </div>
+              )}
 
 
-            <HabitList
-              habits={habits}
-              onToggleComplete={handleToggleComplete}
-              onGetAISuggestion={handleOpenAISuggestionDialog}
-              onOpenReflectionDialog={handleOpenReflectionDialog}
-              onOpenRescheduleDialog={handleOpenRescheduleDialog}
-              onToggleReminder={handleToggleReminder}
-              onOpenEditDialog={handleOpenEditDialog}
-              onOpenDeleteConfirm={handleOpenDeleteHabitConfirm}
-            />
-          </main>
-           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
-            <p>&copy; {new Date().getFullYear()} Habitual.</p>
-          </footer>
+              <HabitList
+                habits={habits}
+                onToggleComplete={handleToggleComplete}
+                onGetAISuggestion={handleOpenAISuggestionDialog}
+                onOpenReflectionDialog={handleOpenReflectionDialog}
+                onOpenRescheduleDialog={handleOpenRescheduleDialog}
+                onToggleReminder={handleToggleReminder}
+                onOpenEditDialog={handleOpenEditDialog}
+                onOpenDeleteConfirm={handleOpenDeleteHabitConfirm}
+              />
+            </main>
+            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0">
+              <p>&copy; {new Date().getFullYear()} Habitual.</p>
+            </footer>
+          </div>
         </ScrollArea>
          <BottomNavigationBar />
       </div>
@@ -1336,5 +1338,3 @@ const HabitualPage: NextPage = () => {
   );
 };
 export default HabitualPage;
-
-    

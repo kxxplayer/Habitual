@@ -100,23 +100,25 @@ const DashboardPage: NextPage = () => {
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
         <AppHeader />
-        <ScrollArea className="flex-grow min-h-0"> {/* Added min-h-0 */}
-          <main className="px-3 sm:px-4 py-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xl font-bold text-primary flex items-center">
-                  <LayoutDashboard className="mr-2 h-5 w-5" /> Dashboard
-                </CardTitle>
-                <CardDescription>Your habit progress and statistics.</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <HabitOverview habits={habits} totalPoints={totalPoints} />
-              </CardContent>
-            </Card>
-          </main>
-           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
-            <p>&copy; {new Date().getFullYear()} Habitual.</p>
-          </footer>
+        <ScrollArea className="flex-grow min-h-0">
+          <div className="flex flex-col h-full">
+            <main className="flex-grow px-3 sm:px-4 py-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl font-bold text-primary flex items-center">
+                    <LayoutDashboard className="mr-2 h-5 w-5" /> Dashboard
+                  </CardTitle>
+                  <CardDescription>Your habit progress and statistics.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-2">
+                  <HabitOverview habits={habits} totalPoints={totalPoints} />
+                </CardContent>
+              </Card>
+            </main>
+            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0">
+              <p>&copy; {new Date().getFullYear()} Habitual.</p>
+            </footer>
+          </div>
         </ScrollArea>
         <BottomNavigationBar />
       </div>

@@ -196,82 +196,84 @@ const CalendarPage: NextPage = () => {
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
         <AppHeader />
-        <ScrollArea className="flex-grow min-h-0"> {/* Added min-h-0 */}
-          <main className="px-3 sm:px-4 py-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-xl font-bold text-primary flex items-center">
-                  <CalendarDays className="mr-2 h-5 w-5" /> Habit Calendar
-                </CardTitle>
-                <CardDescription>View your habit activity across dates.</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-2 flex flex-col items-center">
-                <Calendar
-                  mode="single"
-                  selected={selectedCalendarDate}
-                  onSelect={setSelectedCalendarDate}
-                  modifiers={calendarDialogModifiers}
-                  modifiersStyles={calendarDialogModifierStyles}
-                  className="rounded-md border p-0 sm:p-2"
-                  month={selectedCalendarDate || new Date()}
-                  onMonthChange={(month) => {
-                     if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) {
-                       setSelectedCalendarDate(startOfDay(month));
-                     }
-                   }}
-                />
-                {selectedCalendarDate && (
-                  <div className="mt-4 w-full">
-                    <h3 className="text-md font-semibold mb-2 text-center">
-                      Habits for {format(selectedCalendarDate, 'MMMM d, yyyy')}
-                    </h3>
-                    {habitsForSelectedCalendarDate.length > 0 ? (
-                      <ul className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
-                        {habitsForSelectedCalendarDate.map(habit => {
-                          const logEntry = habit.completionLog.find(log => log.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
-                          const dayOfWeekForSelected = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
-                          const isScheduledToday = habit.daysOfWeek.includes(dayOfWeekForSelected);
-                          let statusText = "Scheduled";
-                          let StatusIcon = CircleIcon;
-                          let iconColor = "text-orange-500";
+        <ScrollArea className="flex-grow min-h-0">
+          <div className="flex flex-col h-full">
+            <main className="flex-grow px-3 sm:px-4 py-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl font-bold text-primary flex items-center">
+                    <CalendarDays className="mr-2 h-5 w-5" /> Habit Calendar
+                  </CardTitle>
+                  <CardDescription>View your habit activity across dates.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-2 flex flex-col items-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedCalendarDate}
+                    onSelect={setSelectedCalendarDate}
+                    modifiers={calendarDialogModifiers}
+                    modifiersStyles={calendarDialogModifierStyles}
+                    className="rounded-md border p-0 sm:p-2"
+                    month={selectedCalendarDate || new Date()}
+                    onMonthChange={(month) => {
+                       if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) {
+                         setSelectedCalendarDate(startOfDay(month));
+                       }
+                     }}
+                  />
+                  {selectedCalendarDate && (
+                    <div className="mt-4 w-full">
+                      <h3 className="text-md font-semibold mb-2 text-center">
+                        Habits for {format(selectedCalendarDate, 'MMMM d, yyyy')}
+                      </h3>
+                      {habitsForSelectedCalendarDate.length > 0 ? (
+                        <ul className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
+                          {habitsForSelectedCalendarDate.map(habit => {
+                            const logEntry = habit.completionLog.find(log => log.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
+                            const dayOfWeekForSelected = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
+                            const isScheduledToday = habit.daysOfWeek.includes(dayOfWeekForSelected);
+                            let statusText = "Scheduled";
+                            let StatusIcon = CircleIcon;
+                            let iconColor = "text-orange-500";
 
-                          if (logEntry?.status === 'completed') {
-                              statusText = `Completed ${logEntry.time || ''}`;
-                              StatusIcon = CheckCircle2; iconColor = "text-accent";
-                          } else if (logEntry?.status === 'pending_makeup') {
-                              statusText = `Makeup for ${logEntry.originalMissedDate || 'earlier'}`;
-                              StatusIcon = MakeupIcon; iconColor = "text-blue-500";
-                          } else if (logEntry?.status === 'skipped') {
-                              statusText = "Skipped";
-                              StatusIcon = XCircle; iconColor = "text-muted-foreground";
-                          } else if (isScheduledToday && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry) {
-                              statusText = "Missed"; StatusIcon = XCircle; iconColor = "text-destructive";
-                          } else if (!isScheduledToday && !logEntry) {
-                              statusText = "Not Scheduled"; StatusIcon = CircleIcon; iconColor = "text-muted-foreground/50";
-                          }
+                            if (logEntry?.status === 'completed') {
+                                statusText = `Completed ${logEntry.time || ''}`;
+                                StatusIcon = CheckCircle2; iconColor = "text-accent";
+                            } else if (logEntry?.status === 'pending_makeup') {
+                                statusText = `Makeup for ${logEntry.originalMissedDate || 'earlier'}`;
+                                StatusIcon = MakeupIcon; iconColor = "text-blue-500";
+                            } else if (logEntry?.status === 'skipped') {
+                                statusText = "Skipped";
+                                StatusIcon = XCircle; iconColor = "text-muted-foreground";
+                            } else if (isScheduledToday && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry) {
+                                statusText = "Missed"; StatusIcon = XCircle; iconColor = "text-destructive";
+                            } else if (!isScheduledToday && !logEntry) {
+                                statusText = "Not Scheduled"; StatusIcon = CircleIcon; iconColor = "text-muted-foreground/50";
+                            }
 
-                          return (
-                            <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
-                              <span className="font-medium truncate pr-2">{habit.name}</span>
-                              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                                  <StatusIcon className={cn("h-3.5 w-3.5", iconColor)} />
-                                  <span>{statusText}</span>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-2">No habits scheduled or logged for this day.</p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </main>
-           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
-            <p>&copy; {new Date().getFullYear()} Habitual.</p>
-          </footer>
+                            return (
+                              <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
+                                <span className="font-medium truncate pr-2">{habit.name}</span>
+                                <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                                    <StatusIcon className={cn("h-3.5 w-3.5", iconColor)} />
+                                    <span>{statusText}</span>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-2">No habits scheduled or logged for this day.</p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </main>
+            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0">
+              <p>&copy; {new Date().getFullYear()} Habitual.</p>
+            </footer>
+          </div>
         </ScrollArea>
         <BottomNavigationBar />
       </div>

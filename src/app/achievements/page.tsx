@@ -84,36 +84,38 @@ const AchievementsPage: NextPage = () => {
         "lg:max-w-2xl lg:max-h-[80vh]"
       )}>
         <AppHeader />
-        <ScrollArea className="flex-grow min-h-0"> {/* Added min-h-0 */}
-          <main className="px-3 sm:px-4 py-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-xl font-bold text-primary flex items-center">
-                  <Trophy className="mr-2 h-5 w-5 text-yellow-500" /> Achievements
-                </CardTitle>
-                 <CardDescription>Your collection of earned badges.</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-2 space-y-3">
-                {earnedBadges.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">No badges earned yet. Keep up the great work!</p>
-                ) : (
-                  earnedBadges.map((badge) => (
-                    <div key={badge.id} className="p-3 border rounded-md bg-card shadow-sm">
-                      <div className="flex items-center mb-1">
-                        <span className="text-2xl mr-2">{badge.icon || "🏆"}</span>
-                        <h4 className="font-semibold text-primary">{badge.name}</h4>
+        <ScrollArea className="flex-grow min-h-0">
+          <div className="flex flex-col h-full">
+            <main className="flex-grow px-3 sm:px-4 py-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl font-bold text-primary flex items-center">
+                    <Trophy className="mr-2 h-5 w-5 text-yellow-500" /> Achievements
+                  </CardTitle>
+                   <CardDescription>Your collection of earned badges.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-2 space-y-3">
+                  {earnedBadges.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">No badges earned yet. Keep up the great work!</p>
+                  ) : (
+                    earnedBadges.map((badge) => (
+                      <div key={badge.id} className="p-3 border rounded-md bg-card shadow-sm">
+                        <div className="flex items-center mb-1">
+                          <span className="text-2xl mr-2">{badge.icon || "🏆"}</span>
+                          <h4 className="font-semibold text-primary">{badge.name}</h4>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-1">{badge.description}</p>
+                        <p className="text-xs text-muted-foreground">Achieved: {format(new Date(badge.dateAchieved), "MMMM d, yyyy")}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-1">{badge.description}</p>
-                      <p className="text-xs text-muted-foreground">Achieved: {format(new Date(badge.dateAchieved), "MMMM d, yyyy")}</p>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </main>
-           <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto">
-            <p>&copy; {new Date().getFullYear()} Habitual.</p>
-          </footer>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </main>
+            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0">
+              <p>&copy; {new Date().getFullYear()} Habitual.</p>
+            </footer>
+          </div>
         </ScrollArea>
         <BottomNavigationBar />
       </div>
