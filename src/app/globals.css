@@ -8,35 +8,35 @@
     --radius: 0.5rem;
   }
 
-  /* Default Theme: Calm Blue (Used as base for .theme-calm-blue) */
+  /* Default Theme: Calm Blue (Modified for softer palette) */
   .theme-calm-blue {
-    --background: 210 40% 98%; /* Lighter blueish white */
-    --foreground: 210 20% 20%; /* Dark cool gray */
-    --card: 0 0% 100%; /* White */
+    --background: 210 40% 98%; /* Lighter blueish white - unchanged */
+    --foreground: 210 20% 20%; /* Dark cool gray - unchanged */
+    --card: 0 0% 100%; /* White - unchanged */
     --card-foreground: 210 20% 20%;
     --popover: 0 0% 100%;
     --popover-foreground: 210 20% 20%;
-    --primary: 205 65% 55%; /* Calm Blue #3498db */
+    --primary: 180 45% 55%; /* Muted Teal */
     --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 210 40% 94%; /* Light gray #ecf0f1 */
+    --secondary: 210 40% 94%; /* Light gray #ecf0f1 - unchanged */
     --secondary-foreground: 210 10% 40%;
     --muted: 210 40% 90%;
     --muted-foreground: 210 10% 55%;
-    --accent: 145 63% 49%; /* Green #2ecc71 */
-    --accent-foreground: 0 0% 100%; /* White */
+    --accent: 145 55% 60%; /* Softer Green */
+    --accent-foreground: 0 0% 10%; /* Darker text for lighter accent */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 210 20% 88%;
     --input: 210 20% 88%;
-    --ring: 205 65% 55%;
-    --chart-1: 205 65% 55%;
-    --chart-2: 145 63% 49%;
-    --chart-3: 220 60% 60%;
-    --chart-4: 45 70% 55%;
-    --chart-5: 280 60% 65%;
-    --background-anim-start: 180 70% 75%; /* Vibrant Teal */
-    --background-anim-mid: 280 70% 80%;   /* Bright Lavender/Pink */
-    --background-anim-end: 30 90% 78%;    /* Warm Peach/Orange */
+    --ring: 180 45% 55%; /* Muted Teal for ring */
+    --chart-1: 180 45% 55%; /* Muted Teal */
+    --chart-2: 145 55% 60%; /* Softer Green */
+    --chart-3: 220 50% 70%; /* Softer Blue */
+    --chart-4: 45 60% 75%;  /* Soft Yellow */
+    --chart-5: 280 50% 75%; /* Soft Purple */
+    --background-anim-start: 185 50% 88%; /* Soft Aqua */
+    --background-anim-mid: 220 45% 90%;   /* Soft Lavender Blue */
+    --background-anim-end: 200 55% 92%;    /* Very Light Sky Blue */
   }
 
   .theme-vibrant-purple {
