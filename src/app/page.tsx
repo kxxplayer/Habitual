@@ -123,7 +123,7 @@ const HabitualPage: NextPage = () => {
   const [allTodayTasksDone, setAllTodayTasksDone] = React.useState(false);
 
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false);
-  const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
+  const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(undefined);
 
   // State for HabitDetailViewDialog
   const [selectedHabitForDetailView, setSelectedHabitForDetailView] = React.useState<Habit | null>(null);
@@ -139,6 +139,7 @@ const HabitualPage: NextPage = () => {
     const nowEffectToday = new Date();
     setTodayString(format(nowEffectToday, 'yyyy-MM-dd'));
     setTodayAbbr(dayIndexToWeekDayConstant[getDay(nowEffectToday)]);
+    setSelectedCalendarDate(nowEffectToday);
   }, []);
 
   React.useEffect(() => {
@@ -233,7 +234,7 @@ const HabitualPage: NextPage = () => {
     const storedPointsLoadMain = typeof window !== 'undefined' ? localStorage.getItem(userPointsKeyLoadMain) : null;
     if (storedPointsLoadMain) { try { setTotalPoints(parseInt(storedPointsLoadMain, 10) || 0); } catch (e) { setTotalPoints(0); } } else { setTotalPoints(0); }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth]);
+  }, [authUser, isLoadingAuth, commonSuggestionsFetched]); // Added commonSuggestionsFetched
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined') return;
@@ -330,7 +331,7 @@ const HabitualPage: NextPage = () => {
   const handleRequestNotificationPermission = () => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted') {
       Notification.requestPermission().then(p => setNotificationPermission(p));
-    } else if (Notification.permission === 'granted') setNotificationPermission('granted');
+    } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') setNotificationPermission('granted');
   };
 
   const handleOpenAISuggestionDialog = async (habitParamAiSuggOpenMain: Habit) => {
@@ -469,7 +470,7 @@ const HabitualPage: NextPage = () => {
     try {
       const suggestion = await generateHabitProgramFromGoal({ goal, focusDuration: duration });
       setProgramSuggestion(suggestion); setIsProgramSuggestionDialogOpen(true);
-    } catch (error) { console.error("Error generating habit program:", error); }
+    } catch (e: any) { console.error("Error generating habit program:", e?.message || e); }
     finally { setIsProgramSuggestionLoading(false); }
   };
   const handleAddProgramHabits = (suggestedProgramHabits: SuggestedProgramHabit[]) => {
@@ -578,7 +579,7 @@ const HabitualPage: NextPage = () => {
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
         <DialogContentOriginal className="sm:max-w-lg bg-card">
           <DialogHeaderOriginal><DialogTitleOriginal className="flex items-center"><CalendarDays className="mr-2 h-5 w-5 text-primary"/>Habit Calendar</DialogTitleOriginal><DialogDescriptionOriginal>View your habit activity.</DialogDescriptionOriginal></DialogHeaderOriginal>
-          <Calendar mode="single" selected={selectedCalendarDate} onSelect={setSelectedCalendarDate} month={selectedCalendarDate || new Date()} onMonthChange={(month) => { if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) setSelectedCalendarDate(startOfDay(month)); }} modifiers={calendarDialogModifiers} modifiersStyles={calendarDialogModifierStyles} className="rounded-md border p-0 sm:p-2" />
+          <Calendar mode="single" selected={selectedCalendarDate} onSelect={setSelectedCalendarDate} month={selectedCalendarDate || undefined} onMonthChange={(month) => { if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) setSelectedCalendarDate(startOfDay(month)); }} modifiers={calendarDialogModifiers} modifiersStyles={calendarDialogModifierStyles} className="rounded-md border p-0 sm:p-2" />
           {selectedCalendarDate && ( <div className="mt-3 w-full"><h3 className="text-md font-semibold mb-1.5 text-center text-primary">Status for {format(selectedCalendarDate, 'MMMM d, yyyy')}</h3>{habitsForSelectedCalendarDate.length > 0 ? (<ScrollArea className="max-h-40"><ul className="space-y-1.5 text-sm pr-2">{habitsForSelectedCalendarDate.map(h => { const log = h.completionLog.find(l => l.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd')); const isSch = h.daysOfWeek.includes(dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)]); let statTxt="Scheduled"; let StatIcon=Circle; let iCol="text-orange-500"; if(log?.status==='completed'){statTxt=`Completed ${log.time||''}`; StatIcon=CheckCircle2;iCol="text-accent";}else if(log?.status==='pending_makeup'){statTxt=`Makeup for ${log.originalMissedDate||'earlier'}`; StatIcon=MakeupIcon;iCol="text-blue-500";}else if(log?.status==='skipped'){statTxt="Skipped";StatIcon=XCircle;iCol="text-muted-foreground";}else if(isSch && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !log){statTxt="Missed";StatIcon=XCircle;iCol="text-destructive";}else if(!isSch && !log){statTxt="Not Scheduled";StatIcon=Circle;iCol="text-muted-foreground/50";} return(<li key={h.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md text-xs"><span className="font-medium truncate pr-2">{h.name}</span><div className="flex items-center space-x-1"><StatIcon className={cn("h-3.5 w-3.5",iCol)}/><span>{statTxt}</span></div></li>);})}</ul></ScrollArea>) : (<p className="text-xs text-muted-foreground text-center py-2">No habits for this day.</p>)}</div>)}
           <DialogFooterOriginal className="mt-2"><DialogCloseOriginal asChild><Button type="button" variant="outline">Close</Button></DialogCloseOriginal></DialogFooterOriginal>
         </DialogContentOriginal>
