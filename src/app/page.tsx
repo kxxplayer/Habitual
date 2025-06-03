@@ -501,15 +501,15 @@ const HabitualPage: NextPage = () => {
   };
 
 
-  if (isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-md max-h-[90vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Loading application...</p></div></div></div>;
-  if (!authUser && !isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-md max-h-[90vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Redirecting to login...</p></div></div></div>;
+  if (isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-md max-h-[95vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Loading application...</p></div></div></div>;
+  if (!authUser && !isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-md max-h-[95vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Redirecting to login...</p></div></div></div>;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
         "w-full max-w-md",                
-        "max-h-[90vh]",                   
+        "max-h-[95vh]",                   
         "md:max-w-lg",                   
         "lg:max-w-2xl"                     
       )}>
@@ -608,6 +608,4 @@ const HabitualPage: NextPage = () => {
   );
 };
 export default HabitualPage;
-    
-
     

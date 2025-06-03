@@ -79,13 +79,13 @@ const AchievementsPage: NextPage = () => {
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-md max-h-[90vh]",
+        "w-full max-w-md max-h-[95vh]",
         "md:max-w-lg",                   
         "lg:max-w-2xl"                     
       )}>
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
-          <div className="flex flex-col"> {/* Removed h-full from here */}
+          <div className="flex flex-col">
             <main className="flex-grow min-h-0 px-3 sm:px-4 py-4">
               <Card>
                 <CardHeader className="pb-3">
