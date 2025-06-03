@@ -5,7 +5,7 @@
 // HABITUAL MAIN PAGE - Refactor for Tile View + Detail Dialog
 // ==========================================================================
 import * as React from 'react';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'; // Added useCallback
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -201,13 +201,13 @@ const HabitualPage: NextPage = () => {
           durationMinutes: typeof hItemMapLoadMain.durationMinutes === 'number' ? hItemMapLoadMain.durationMinutes : undefined,
           specificTime: typeof hItemMapLoadMain.specificTime === 'string' ? hItemMapLoadMain.specificTime : undefined,
           completionLog: (Array.isArray(hItemMapLoadMain.completionLog) ? hItemMapLoadMain.completionLog : []).map((logMapItemLoadMain: any): HabitCompletionLogEntry | null => {
-            if (typeof logMapItemLoadMain.date !== 'string' || !logMapItemLoadMain.date.match(/^\\d{4}-\\d{2}-\\d{2}$/)) return null;
+            if (typeof logMapItemLoadMain.date !== 'string' || !logMapItemLoadMain.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
             return {
               date: logMapItemLoadMain.date,
               time: typeof logMapItemLoadMain.time === 'string' && logMapItemLoadMain.time.length > 0 ? logMapItemLoadMain.time : 'N/A',
               note: typeof logMapItemLoadMain.note === 'string' ? logMapItemLoadMain.note : undefined,
               status: ['completed', 'pending_makeup', 'skipped'].includes(logMapItemLoadMain.status) ? logMapItemLoadMain.status : 'completed',
-              originalMissedDate: typeof logMapItemLoadMain.originalMissedDate === 'string' && logMapItemLoadMain.originalMissedDate.match(/^\\d{4}-\\d{2}-\\d{2}$/) ? logMapItemLoadMain.originalMissedDate : undefined,
+              originalMissedDate: typeof logMapItemLoadMain.originalMissedDate === 'string' && logMapItemLoadMain.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? logMapItemLoadMain.originalMissedDate : undefined,
             };
           }).filter((logItemFilterLoadMain): logItemFilterLoadMain is HabitCompletionLogEntry => logItemFilterLoadMain !== null).sort((aLogSortLoadMain,bLogSortLoadMain) => bLogSortLoadMain.date.localeCompare(aLogSortLoadMain.date)),
           reminderEnabled: typeof hItemMapLoadMain.reminderEnabled === 'boolean' ? hItemMapLoadMain.reminderEnabled : false,
@@ -433,11 +433,31 @@ const HabitualPage: NextPage = () => {
     setSelectedHabitForDetailView(habit);
     setIsDetailViewDialogOpen(true);
   };
-  const handleCloseDetailView = () => {
+
+  const handleCloseDetailView = useCallback(() => {
     setIsDetailViewDialogOpen(false);
     setSelectedHabitForDetailView(null);
-  };
+  }, []);
   // --- End HabitDetailViewDialog ---
+
+  // Effect to keep selectedHabitForDetailView in sync with the main habits list
+  React.useEffect(() => {
+    if (selectedHabitForDetailView && authUser && isDetailViewDialogOpen) {
+      const latestHabitInstance = habits.find(h => h.id === selectedHabitForDetailView.id);
+      
+      if (latestHabitInstance) {
+        // Only update if the habit instance reference actually differs.
+        // This prevents unnecessary re-renders if the habit object itself hasn't changed.
+        if (selectedHabitForDetailView !== latestHabitInstance) {
+          setSelectedHabitForDetailView(latestHabitInstance);
+        }
+      } else {
+        // Habit might have been deleted from the main list, close the dialog
+        handleCloseDetailView();
+      }
+    }
+  }, [habits, selectedHabitForDetailView, authUser, isDetailViewDialogOpen, handleCloseDetailView]);
+
 
   const calendarDialogModifiers = React.useMemo(() => { /* Omitted for brevity - unchanged */ return {}; }, [habits, selectedCalendarDate, authUser]);
   const calendarDialogModifierStyles: Record<string, React.CSSProperties> = { /* Omitted for brevity - unchanged */ };
@@ -463,12 +483,18 @@ const HabitualPage: NextPage = () => {
   };
 
 
-  if (isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-md max-h-[90vh] sm:max-h-[850px] md:max-w-lg md:max-h-[85vh] lg:max-w-2xl lg:max-h-[80vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Loading application...</p></div></div></div>;
-  if (!authUser && !isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-md max-h-[90vh] sm:max-h-[850px] md:max-w-lg md:max-h-[85vh] lg:max-w-2xl lg:max-h-[80vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Redirecting to login...</p></div></div></div>;
+  if (isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-md max-h-[90vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Loading application...</p></div></div></div>;
+  if (!authUser && !isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-md max-h-[90vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Redirecting to login...</p></div></div></div>;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
-      <div className={cn("bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto", "w-full max-w-md max-h-[90vh] sm:max-h-[850px]", "md:max-w-lg md:max-h-[85vh]", "lg:max-w-2xl lg:max-h-[80vh]")}>
+      <div className={cn(
+        "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
+        "w-full max-w-md",                
+        "max-h-[90vh]",                   
+        "md:max-w-lg",                   
+        "lg:max-w-2xl"                     
+      )}>
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col">
