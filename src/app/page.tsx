@@ -125,6 +125,7 @@ const HabitualPage: NextPage = () => {
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(undefined);
 
+
   // State for HabitDetailViewDialog
   const [selectedHabitForDetailView, setSelectedHabitForDetailView] = React.useState<Habit | null>(null);
   const [isDetailViewDialogOpen, setIsDetailViewDialogOpen] = React.useState(false);
@@ -139,8 +140,9 @@ const HabitualPage: NextPage = () => {
     const nowEffectToday = new Date();
     setTodayString(format(nowEffectToday, 'yyyy-MM-dd'));
     setTodayAbbr(dayIndexToWeekDayConstant[getDay(nowEffectToday)]);
-    setSelectedCalendarDate(nowEffectToday);
+    setSelectedCalendarDate(nowEffectToday); // Initialize here as it depends on `new Date()`
   }, []);
+
 
   React.useEffect(() => {
     const unsubscribeAuthMain = onAuthStateChanged(auth, (currentUserAuthMain) => {
@@ -609,3 +611,4 @@ const HabitualPage: NextPage = () => {
 };
 export default HabitualPage;
     
+

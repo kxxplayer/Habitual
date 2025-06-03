@@ -275,11 +275,11 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
             <div className="pt-3 flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
               <Button onClick={() => handleToggleTodayCompletion(true)} disabled={isTodayCompleted}
                   className={cn("rounded-lg py-2.5 px-5 text-sm transition-all active:scale-95 flex-1", !isTodayCompleted ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95" : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed", isTodayCompleted && showSparkles && "animate-pulse-glow-accent", isTodayCompleted && !showSparkles && "shadow-[0_0_8px_hsl(var(--accent))]")} >
-                  {!isTodayCompleted ? <><Check className="mr-2 h-5 w-5" /> Mark Today Done</> : <><CheckCircle2 className="mr-2 h-5 w-5" /> Done for Today!</>}
+                  {!isTodayCompleted ? <><Check className="mr-2 h-4 w-4" /> Mark Today Done</> : <><CheckCircle2 className="mr-2 h-4 w-4" /> Done for Today!</>}
               </Button>
               <Button onClick={() => handleToggleTodayCompletion(false)} disabled={!isTodayCompleted} variant={isTodayCompleted ? "destructive" : "outline"}
                   className={cn("rounded-lg py-2.5 px-5 text-sm transition-all active:scale-95 flex-1", !isTodayCompleted ? "border-muted text-muted-foreground cursor-not-allowed" : "")} >
-                  <XCircle className="mr-2 h-5 w-5" /> Not Done Today
+                  <XCircle className="mr-2 h-4 w-4" /> Not Done Today
               </Button>
             </div>
              {showSparkles && isTodayCompleted && (

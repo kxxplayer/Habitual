@@ -80,7 +80,7 @@ const ProfilePage: NextPage = () => {
               <Card className="w-full">
                 <CardHeader className="space-y-1 text-center">
                   <CardTitle className="text-2xl font-bold flex items-center justify-center">
-                    <UserCircle2 className="mr-2 h-7 w-7 text-primary" /> Your Profile
+                    <UserCircle2 className="mr-2 h-6 w-6 text-primary" /> Your Profile
                   </CardTitle>
                   <CardDescription>Manage your account details and session.</CardDescription>
                 </CardHeader>
@@ -116,3 +116,4 @@ const ProfilePage: NextPage = () => {
 };
 
 export default ProfilePage;
+

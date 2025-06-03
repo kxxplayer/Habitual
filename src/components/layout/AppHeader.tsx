@@ -27,7 +27,7 @@ const AppHeader: FC = () => {
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-10 w-10")}
             aria-label="Open Calendar"
           >
-            <CalendarDays className="h-5 w-5 text-primary" />
+            <CalendarDays className="h-4 w-4 text-primary" />
           </Link>
           <ThemeToggleButton />
         </div>
@@ -37,3 +37,4 @@ const AppHeader: FC = () => {
 };
 
 export default AppHeader;
+

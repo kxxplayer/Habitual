@@ -157,7 +157,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onSave
       <DialogContent className="sm:max-w-[600px] bg-card rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold flex items-center">
-            {isEditing ? <Edit3 className="mr-3 h-7 w-7 text-primary" /> : <PlusCircle className="mr-3 h-7 w-7 text-primary" />}
+            {isEditing ? <Edit3 className="mr-2 h-6 w-6 text-primary" /> : <PlusCircle className="mr-2 h-6 w-6 text-primary" />}
             {isEditing ? "Edit Habit" : "Create New Habit"}
           </DialogTitle>
           <DialogDescription>
@@ -169,7 +169,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onSave
             <Label htmlFor="dialog-ai-description" className="text-sm font-medium">Describe your habit (for AI suggestion)</Label>
             <Controller name="description" control={control} render={({ field }) => <Textarea id="dialog-ai-description" placeholder="e.g., Go to the gym 3 times a week in the evenings for 1 hour" {...field} className="bg-input/50 text-sm" rows={2}/>} />
             <Button type="button" onClick={handleAISuggestDetails} disabled={isAISuggesting || !habitDescriptionForAI?.trim()} variant="outline" size="sm" className="w-full mt-1 text-xs">
-              {isAISuggesting ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Wand2 className="mr-2 h-3 w-3" />} Suggest Details with AI
+              <Wand2 className="mr-2 h-4 w-4" /> Suggest Details with AI
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

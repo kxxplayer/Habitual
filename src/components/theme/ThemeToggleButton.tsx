@@ -20,16 +20,17 @@ const ThemeToggleButton: FC = () => {
   }
 
   const CurrentIcon = () => {
-    if (theme === "theme-vibrant-purple") return <Moon className="h-5 w-5" />;
-    if (theme === "theme-calm-blue") return <Sun className="h-5 w-5" />;
-    return <Palette className="h-5 w-5" />; // Default for other themes
+    if (theme === "theme-vibrant-purple") return <Moon className="h-4 w-4" />;
+    if (theme === "theme-calm-blue") return <Sun className="h-4 w-4" />;
+    return <Palette className="h-4 w-4" />; // Default for other themes
   };
   
   return (
-    <Button variant="ghost" size="icon" onClick={cycleTheme} aria-label="Change theme">
+    <Button variant="ghost" size="icon" onClick={cycleTheme} aria-label="Change theme" className="h-10 w-10">
       <CurrentIcon />
     </Button>
   );
 };
 
 export default ThemeToggleButton;
+

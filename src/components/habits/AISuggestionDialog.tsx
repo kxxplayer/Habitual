@@ -38,3 +38,4 @@ const AISuggestionDialog: FC<AISuggestionDialogProps> = ({ isOpen, onClose, habi
   );
 };
 export default AISuggestionDialog;
+

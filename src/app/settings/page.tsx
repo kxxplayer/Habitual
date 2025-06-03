@@ -101,20 +101,20 @@ const SettingsPage: NextPage = () => {
                   {settingsItems.map((item) => (
                     <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
                       <Button variant="outline" className="w-full justify-start text-base py-3 h-auto">
-                        <item.icon className="mr-3 h-5 w-5" />
+                        <item.icon className="mr-2 h-4 w-4" />
                         {item.label}
                       </Button>
                     </Link>
                   ))}
 
                   <div className="p-3 border rounded-md space-y-2">
-                    <Label className="text-base font-medium flex items-center"><Palette className="mr-3 h-5 w-5" />Change Theme</Label>
+                    <Label className="text-base font-medium flex items-center"><Palette className="mr-2 h-4 w-4" />Change Theme</Label>
                     <ThemeToggleButton />
                     <p className="text-xs text-muted-foreground">Cycle through available app themes.</p>
                   </div>
 
                   <div className="p-3 border rounded-md space-y-2">
-                    <Label className="text-base font-medium flex items-center"><BellRing className="mr-3 h-5 w-5" />Reminders</Label>
+                    <Label className="text-base font-medium flex items-center"><BellRing className="mr-2 h-4 w-4" />Reminders</Label>
                      <div className="flex items-center justify-between">
                         <div className="flex items-center text-sm">
                             <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -151,3 +151,4 @@ const SettingsPage: NextPage = () => {
 };
 
 export default SettingsPage;
+

@@ -46,7 +46,7 @@ const DailyQuestDialog: React.FC<DailyQuestDialogProps> = ({ isOpen, onClose }) 
         </DialogHeader>
         <DialogFooter className="pt-4 pb-6">
           <Button onClick={onClose} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground py-3 text-base">
-            <ChevronRight className="mr-2 h-5 w-5" />
+            <ChevronRight className="mr-2 h-4 w-4" />
             Begin Discovery!
           </Button>
         </DialogFooter>
@@ -56,3 +56,4 @@ const DailyQuestDialog: React.FC<DailyQuestDialogProps> = ({ isOpen, onClose }) 
 };
 
 export default DailyQuestDialog;
+
