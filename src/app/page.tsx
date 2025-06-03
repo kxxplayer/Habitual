@@ -298,26 +298,45 @@ const HabitualPage: NextPage = () => {
     let habitNameForQuoteToggleCompMain: string | undefined = undefined;
     let pointsChangeToggleCompMain = 0;
     let justCompletedANewTaskToggleCompMain = false;
-    setHabits(prev => prev.map(h => {
-      if (h.id === habitIdToggleCompMain) {
-        habitNameForQuoteToggleCompMain = h.name;
-        let newLog = [...h.completionLog];
-        const idx = newLog.findIndex(l => l.date === dateToggleCompMain);
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-        if (completedToggleCompMain) {
-          if (idx > -1) { if (newLog[idx].status !== 'completed') { pointsChangeToggleCompMain = POINTS_PER_COMPLETION; justCompletedANewTaskToggleCompMain = true; } newLog[idx] = { ...newLog[idx], status: 'completed', time }; }
-          else { pointsChangeToggleCompMain = POINTS_PER_COMPLETION; justCompletedANewTaskToggleCompMain = true; newLog.push({ date: dateToggleCompMain, time, status: 'completed', note: undefined }); }
-        } else {
-          if (idx > -1) {
-            const logEntry = newLog[idx]; if (logEntry.status === 'completed') pointsChangeToggleCompMain = -POINTS_PER_COMPLETION;
-            if (logEntry.status === 'completed' && logEntry.originalMissedDate) newLog[idx] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-            else if (logEntry.note?.trim()) newLog[idx] = { ...logEntry, status: 'skipped', time: 'N/A' };
-            else newLog.splice(idx, 1);
-          }
-        }
-        return { ...h, completionLog: newLog.sort((a, b) => b.date.localeCompare(a.date)) };
-      } return h;
-    }));
+    setHabits(prevHabits => {
+        const newHabits = prevHabits.map(h => {
+            if (h.id === habitIdToggleCompMain) {
+                habitNameForQuoteToggleCompMain = h.name;
+                let newLog = [...h.completionLog];
+                const idx = newLog.findIndex(l => l.date === dateToggleCompMain);
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                if (completedToggleCompMain) {
+                    if (idx > -1) {
+                        if (newLog[idx].status !== 'completed') {
+                            pointsChangeToggleCompMain = POINTS_PER_COMPLETION;
+                            justCompletedANewTaskToggleCompMain = true;
+                        }
+                        newLog[idx] = { ...newLog[idx], status: 'completed', time };
+                    } else {
+                        pointsChangeToggleCompMain = POINTS_PER_COMPLETION;
+                        justCompletedANewTaskToggleCompMain = true;
+                        newLog.push({ date: dateToggleCompMain, time, status: 'completed', note: undefined });
+                    }
+                } else {
+                    if (idx > -1) {
+                        const logEntry = newLog[idx];
+                        if (logEntry.status === 'completed') pointsChangeToggleCompMain = -POINTS_PER_COMPLETION;
+                        if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
+                            newLog[idx] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
+                        } else if (logEntry.note?.trim()) {
+                            newLog[idx] = { ...logEntry, status: 'skipped', time: 'N/A' };
+                        } else {
+                            newLog.splice(idx, 1);
+                        }
+                    }
+                }
+                const updatedHabit = { ...h, completionLog: newLog.sort((a, b) => b.date.localeCompare(a.date)) };
+                return updatedHabit;
+            }
+            return h;
+        });
+        return newHabits;
+    });
     if (justCompletedANewTaskToggleCompMain && habitNameForQuoteToggleCompMain && authUser) { try { await getMotivationalQuote({ habitName: habitNameForQuoteToggleCompMain }); } catch (e) {} }
     if (pointsChangeToggleCompMain !== 0) setTotalPoints(prev => Math.max(0, prev + pointsChangeToggleCompMain));
   };
@@ -443,21 +462,19 @@ const HabitualPage: NextPage = () => {
 
   // Effect to keep selectedHabitForDetailView in sync with the main habits list
   React.useEffect(() => {
-    if (selectedHabitForDetailView && authUser && isDetailViewDialogOpen) {
+    if (selectedHabitForDetailView?.id && authUser && isDetailViewDialogOpen) {
       const latestHabitInstance = habits.find(h => h.id === selectedHabitForDetailView.id);
-      
       if (latestHabitInstance) {
-        // Only update if the habit instance reference actually differs.
-        // This prevents unnecessary re-renders if the habit object itself hasn't changed.
-        if (selectedHabitForDetailView !== latestHabitInstance) {
+        // Compare completionLog to prevent unnecessary updates if only other habits changed
+        if (JSON.stringify(selectedHabitForDetailView.completionLog) !== JSON.stringify(latestHabitInstance.completionLog)) {
           setSelectedHabitForDetailView(latestHabitInstance);
         }
       } else {
-        // Habit might have been deleted from the main list, close the dialog
+        // Habit might have been deleted
         handleCloseDetailView();
       }
     }
-  }, [habits, selectedHabitForDetailView, authUser, isDetailViewDialogOpen, handleCloseDetailView]);
+  }, [habits, selectedHabitForDetailView, isDetailViewDialogOpen, authUser, handleCloseDetailView]);
 
 
   const calendarDialogModifiers = React.useMemo(() => { /* Omitted for brevity - unchanged */ return {}; }, [habits, selectedCalendarDate, authUser]);
@@ -593,3 +610,4 @@ const HabitualPage: NextPage = () => {
 export default HabitualPage;
     
 
+    
