@@ -103,19 +103,22 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
 
   React.useEffect(() => { setWeekViewDays(getCurrentWeekDays(currentDate)); }, [currentDate]);
 
-  const isTodayCompleted = React.useMemo(() =>
-    habit ? habit.completionLog.some(log => log.date === todayString && log.status === 'completed') : false,
-  [habit, todayString]);
+  if (!isOpen || !habit) return null;
 
-  const streak = React.useMemo(() => habit ? calculateStreak(habit, currentDate) : 0, [habit, currentDate]);
+  const safeHabitDaysOfWeek = React.useMemo(() => habit.daysOfWeek || [], [habit.daysOfWeek]);
+
+  const isTodayCompleted = React.useMemo(() =>
+    habit.completionLog.some(log => log.date === todayString && log.status === 'completed'),
+  [habit.completionLog, todayString]);
+
+  const streak = React.useMemo(() => calculateStreak(habit, currentDate), [habit, currentDate]);
 
   const { completedCountInCurrentWeek, scheduledDaysInWeek } = React.useMemo(() => {
-    if (!habit) return { completedCountInCurrentWeek: 0, scheduledDaysInWeek: 0 };
     let completed = 0, scheduled = 0;
-    if (habit.daysOfWeek.length > 0 && weekViewDays.length > 0) {
+    if (safeHabitDaysOfWeek.length > 0 && weekViewDays.length > 0) {
       const completedOnScheduled = new Set<string>();
       weekViewDays.forEach(dayInfo => {
-        if (habit.daysOfWeek.includes(dayInfo.dayAbbrFull)) {
+        if (safeHabitDaysOfWeek.includes(dayInfo.dayAbbrFull)) {
           scheduled++;
           if (habit.completionLog.some(l => l.date === dayInfo.dateStr && l.status === 'completed')) {
             completedOnScheduled.add(dayInfo.dateStr);
@@ -125,7 +128,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
       completed = completedOnScheduled.size;
     }
     return { completedCountInCurrentWeek: completed, scheduledDaysInWeek: scheduled };
-  }, [habit, weekViewDays]);
+  }, [safeHabitDaysOfWeek, weekViewDays, habit.completionLog]);
 
   const weeklyProgressPercent = scheduledDaysInWeek > 0 ? Math.round((completedCountInCurrentWeek / scheduledDaysInWeek) * 100) : 0;
 
@@ -158,7 +161,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
     if (!habit) return;
     try {
       const icsContent = generateICS(habit);
-      downloadICS(`${habit.name.replace(/[^a-zA-Z0-9\\s]/g, '').replace(/\\s+/g, '_')}.ics`, icsContent);
+      downloadICS(`${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}.ics`, icsContent);
     } catch (error) { console.error("ICS Generation Error:", error); }
   };
 
@@ -172,7 +175,6 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
     } catch (err) { console.error("Share/Copy failed:", err); }
   };
 
-  if (!isOpen || !habit) return null;
 
   let durationDisplay = '';
   if (habit.durationHours) durationDisplay += `${habit.durationHours} hr${habit.durationHours > 1 ? 's' : ''} `;
@@ -235,7 +237,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                 <div className="flex justify-around items-center space-x-1 py-1.5 bg-input/30 rounded-md">
                   {weekViewDays.map(dayInfo => {
                     const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
-                    const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
+                    const isScheduled = safeHabitDaysOfWeek.includes(dayInfo.dayAbbrFull);
                     let IconC = Circle; let iconClasses = "text-muted-foreground/40"; let dayBoxClasses = "bg-background/30 dark:bg-input/40 text-muted-foreground/60 hover:bg-input/50"; let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
 
                     if (dayLog?.status === 'completed') { dayBoxClasses = 'bg-accent/20 hover:bg-accent/30'; IconC = CheckCircle2; iconClasses = 'text-accent'; titleText += ' (Completed)'; }
@@ -311,7 +313,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                 <DropdownMenuItem onClick={handleAddToCalendar}><CalendarPlus className="mr-2 h-4 w-4" /><span>Add to GCal</span></DropdownMenuItem>
                 <DropdownMenuItem onClick={handleShareHabit}><Share2 className="mr-2 h-4 w-4" /><span>Share</span></DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
-                  const firstMissed = weekViewDays.find(d => habit.daysOfWeek.includes(d.dayAbbrFull) && d.isPast && !d.isToday && !habit.completionLog.some(l => l.date === d.dateStr && (l.status === 'completed' || l.status === 'skipped' || l.status === 'pending_makeup')));
+                  const firstMissed = weekViewDays.find(d => safeHabitDaysOfWeek.includes(d.dayAbbrFull) && d.isPast && !d.isToday && !habit.completionLog.some(l => l.date === d.dateStr && (l.status === 'completed' || l.status === 'skipped' || l.status === 'pending_makeup')));
                   if (firstMissed) { onOpenRescheduleDialog(habit, firstMissed.dateStr); /* Keep dialog open or manage RescheduleDialog separately */ }
                   else console.log("Reschedule: No past, uncompleted days.");
                 }}><CalendarClock className="mr-2 h-4 w-4" /><span>Reschedule Missed</span></DropdownMenuItem>
@@ -327,6 +329,8 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
 };
 
 export default HabitDetailViewDialog;
+    
+
     
 
     
