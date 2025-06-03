@@ -8,19 +8,11 @@ import { ListChecks } from 'lucide-react';
 
 interface HabitListProps {
   habits: Habit[];
-  onToggleComplete: (habitId: string, date: string, completed: boolean) => void;
-  onGetAISuggestion: (habit: Habit) => void;
-  onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
-  onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  onToggleReminder: (habitId: string, currentReminderState: boolean) => void;
-  onOpenEditDialog: (habit: Habit) => void;
-  onOpenDeleteConfirm: (habitId: string, habitName: string) => void;
+  onOpenDetailView: (habit: Habit) => void;
+  todayString: string;
 }
 
-const HabitList: FC<HabitListProps> = ({
-  habits, onToggleComplete, onGetAISuggestion, onOpenReflectionDialog,
-  onOpenRescheduleDialog, onToggleReminder, onOpenEditDialog, onOpenDeleteConfirm,
-}) => {
+const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString }) => {
   if (habits.length === 0) {
     return (
       <div className="text-center py-10">
@@ -31,21 +23,17 @@ const HabitList: FC<HabitListProps> = ({
     );
   }
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
       {habits.map((habit) => (
         <HabitItem
           key={habit.id}
           habit={habit}
-          onToggleComplete={onToggleComplete}
-          onGetAISuggestion={onGetAISuggestion}
-          onOpenReflectionDialog={onOpenReflectionDialog}
-          onOpenRescheduleDialog={onOpenRescheduleDialog}
-          onToggleReminder={onToggleReminder}
-          onOpenEditDialog={onOpenEditDialog}
-          onOpenDeleteConfirm={onOpenDeleteConfirm}
+          onOpenDetailView={onOpenDetailView}
+          todayString={todayString}
         />
       ))}
     </div>
   );
 };
 export default HabitList;
+    

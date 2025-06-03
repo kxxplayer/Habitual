@@ -3,302 +3,88 @@
 
 import * as React from 'react';
 import type { FC } from 'react';
-import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Lightbulb, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIcon, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CalendarX, CheckCircle2, Circle, XCircle, Check, Bell, FilePenLine, StickyNote, Trash2, ChevronRightSquare, CalendarClock, CalendarDays } from 'lucide-react';
-import type { Habit, WeekDay, HabitCategory } from '@/types';
+import { Card } from '@/components/ui/card';
+import { CheckCircle2, Circle, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon } from 'lucide-react';
+import type { Habit, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
-import { generateICS, downloadICS } from '@/lib/calendarUtils';
-import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
-import { getCurrentWeekDays, WeekDayInfo, calculateStreak, getDayAbbreviationFromDate } from '@/lib/dateUtils';
+import { format, isSameDay, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface HabitItemProps {
   habit: Habit;
-  onToggleComplete: (habitId: string, date: string, completed: boolean) => void;
-  onGetAISuggestion: (habit: Habit) => void;
-  onOpenReflectionDialog: (habitId: string, date: string, habitName: string) => void;
-  onOpenRescheduleDialog: (habit: Habit, missedDate: string) => void;
-  onToggleReminder: (habitId: string, currentReminderState: boolean) => void;
-  onOpenEditDialog: (habit: Habit) => void;
-  onOpenDeleteConfirm: (habitId: string, habitName: string) => void;
+  onOpenDetailView: (habit: Habit) => void;
+  todayString: string; // YYYY-MM-DD
 }
 
-const formatSpecificTime = (timeStr?: string): string | undefined => {
-  if (!timeStr || timeStr.toLowerCase() === "anytime" || timeStr.toLowerCase() === "flexible") return undefined;
-  try {
-    if (/^\d{2}:\d{2}$/.test(timeStr)) {
-      const [hours, minutes] = timeStr.split(':');
-      const date = new Date();
-      date.setHours(parseInt(hours, 10)); date.setMinutes(parseInt(minutes, 10));
-      return format(date, 'h:mm a');
-    }
-  } catch (e) { /* Fallback */ }
-  return timeStr;
-};
-
-const getCategoryColorVariable = (category?: HabitCategory): string => {
-  const categoryColorMap: Record<HabitCategory, string> = {
-    "Lifestyle": "--chart-1", "Work/Study": "--chart-2", "Health & Wellness": "--chart-3",
-    "Creative": "--chart-4", "Chores": "--chart-5", "Finance": "--chart-1",
-    "Social": "--chart-2", "Personal Growth": "--chart-3", "Other": "--chart-5",
-  };
-  return (category && HABIT_CATEGORIES.includes(category) && categoryColorMap[category]) ? categoryColorMap[category] : categoryColorMap["Other"];
-};
-
-const getHabitIcon = (habit: Habit): React.ReactNode => {
+const getHabitTileIcon = (habit: Habit): React.ReactNode => {
   const nameLower = habit.name.toLowerCase();
-  if (nameLower.includes('gym') || nameLower.includes('workout')) return <span className="text-xl">🏋️</span>;
-  if (nameLower.includes('sql') || nameLower.includes('code')) return <span className="text-xl">💻</span>;
-  if (nameLower.includes('walk') || nameLower.includes('run')) return <span className="text-xl">🚶</span>;
-  if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-xl">📚</span>;
-  if (nameLower.includes('meditate') || nameLower.includes('mindfulness')) return <span className="text-xl">🧘</span>;
-  if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="h-5 w-5 text-blue-600" />;
-  if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="h-5 w-5 text-blue-500" />;
-  if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="h-5 w-5 text-purple-500" />;
-  if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="h-5 w-5 text-yellow-600" />;
-  if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="h-5 w-5 text-red-500" />;
+  // Simplified icon logic for tiles, can be expanded
+  if (nameLower.includes('gym') || nameLower.includes('workout')) return <span className="text-lg">🏋️</span>;
+  if (nameLower.includes('sql') || nameLower.includes('code')) return <span className="text-lg">💻</span>;
+  if (nameLower.includes('walk') || nameLower.includes('run')) return <span className="text-lg">🚶</span>;
+  if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-lg">📚</span>;
+  if (nameLower.includes('meditate') || nameLower.includes('mindfulness')) return <span className="text-lg">🧘</span>;
+  if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="h-5 w-5" />;
+  if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="h-5 w-5" />;
+  if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="h-5 w-5" />;
 
   if (habit.category) {
     switch (habit.category) {
-      case 'Health & Wellness': return <HeartPulse className="h-5 w-5 text-red-500" />;
-      case 'Work/Study': return <Briefcase className="h-5 w-5 text-blue-600" />;
-      case 'Creative': return <Paintbrush className="h-5 w-5 text-orange-500" />;
-      case 'Chores': return <HomeIcon className="h-5 w-5 text-green-600" />;
-      case 'Finance': return <Landmark className="h-5 w-5 text-indigo-500" />;
-      case 'Social': return <Users className="h-5 w-5 text-pink-500" />;
-      case 'Personal Growth': return <SparklesIcon className="h-5 w-5 text-yellow-500" />;
-      case 'Lifestyle': return <LifestyleIcon className="h-5 w-5 text-teal-500" />;
+      case 'Health & Wellness': return <HeartPulse className="h-5 w-5" />;
+      case 'Work/Study': return <Briefcase className="h-5 w-5" />;
+      case 'Creative': return <Paintbrush className="h-5 w-5" />;
+      case 'Chores': return <HomeIconLucide className="h-5 w-5" />;
+      case 'Finance': return <Landmark className="h-5 w-5" />;
+      case 'Social': return <Users className="h-5 w-5" />;
+      case 'Personal Growth': return <SparklesIcon className="h-5 w-5" />;
+      case 'Lifestyle': return <LifestyleIcon className="h-5 w-5" />;
+      default: return <ListChecks className="h-5 w-5 text-muted-foreground" />;
     }
   }
   return <ListChecks className="h-5 w-5 text-muted-foreground" />;
 };
 
-const HabitItem: FC<HabitItemProps> = ({
-  habit, onToggleComplete, onGetAISuggestion, onOpenReflectionDialog, onOpenRescheduleDialog, onToggleReminder, onOpenEditDialog, onOpenDeleteConfirm,
-}) => {
-  const [todayString, setTodayString] = React.useState('');
-  const [currentDate, setCurrentDate] = React.useState(new Date());
-  const [weekViewDays, setWeekViewDays] = React.useState<WeekDayInfo[]>([]);
-  const [showSparkles, setShowSparkles] = React.useState(false);
-  const [showWeeklyConfetti, setShowWeeklyConfetti] = React.useState(false);
-  const prevCompletedCountRef = React.useRef<number>(0);
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
-  const DESCRIPTION_TRUNCATE_LENGTH = 100;
-
-  React.useEffect(() => {
-    const now = new Date(); setCurrentDate(now); setTodayString(format(now, 'yyyy-MM-dd'));
-  }, []);
-
-  React.useEffect(() => { setWeekViewDays(getCurrentWeekDays(currentDate)); }, [currentDate]);
-
-  const isTodayCompleted = React.useMemo(() => 
-    habit.completionLog.some(log => log.date === todayString && log.status === 'completed'), 
-  [habit.completionLog, todayString]);
-
-  const streak = React.useMemo(() => calculateStreak(habit, currentDate), [habit, currentDate]);
-
-  const { completedCountInCurrentWeek, scheduledDaysInWeek } = React.useMemo(() => {
-    let completed = 0, scheduled = 0;
-    if (habit.daysOfWeek.length > 0 && weekViewDays.length > 0) {
-      const completedOnScheduled = new Set<string>();
-      weekViewDays.forEach(dayInfo => {
-        if (habit.daysOfWeek.includes(dayInfo.dayAbbrFull)) {
-          scheduled++;
-          if (habit.completionLog.some(l => l.date === dayInfo.dateStr && l.status === 'completed')) {
-            completedOnScheduled.add(dayInfo.dateStr);
-          }
-        }
-      });
-      completed = completedOnScheduled.size;
-    }
-    return { completedCountInCurrentWeek: completed, scheduledDaysInWeek: scheduled };
-  }, [habit.completionLog, habit.daysOfWeek, weekViewDays]);
-
-  const weeklyProgressPercent = scheduledDaysInWeek > 0 ? Math.round((completedCountInCurrentWeek / scheduledDaysInWeek) * 100) : 0;
-
-  React.useEffect(() => {
-    if (scheduledDaysInWeek > 0 && completedCountInCurrentWeek >= scheduledDaysInWeek && prevCompletedCountRef.current < scheduledDaysInWeek) {
-      setShowWeeklyConfetti(true);
-      setTimeout(() => setShowWeeklyConfetti(false), 2500);
-    }
-    prevCompletedCountRef.current = completedCountInCurrentWeek;
-  }, [completedCountInCurrentWeek, scheduledDaysInWeek]);
-
-  const handleToggleTodayCompletion = (complete: boolean) => {
-    const wasCompletedBefore = isTodayCompleted;
-    onToggleComplete(habit.id, todayString, complete);
-    if (!wasCompletedBefore && complete) {
-      setShowSparkles(true); setTimeout(() => setShowSparkles(false), 800);
-    }
+const getCategoryTileColor = (category?: HabitCategory): string => {
+  const categoryColorMap: Record<HabitCategory, string> = {
+    "Lifestyle": "border-sky-500", "Work/Study": "border-blue-500", "Health & Wellness": "border-red-500",
+    "Creative": "border-orange-500", "Chores": "border-green-500", "Finance": "border-indigo-500",
+    "Social": "border-pink-500", "Personal Growth": "border-yellow-500", "Other": "border-gray-400",
   };
+  return (category && HABIT_CATEGORIES.includes(category) && categoryColorMap[category]) ? categoryColorMap[category] : categoryColorMap["Other"];
+}
 
-  const handleDayToggle = (dateToToggle: string) => {
-    const logForDay = habit.completionLog.find(log => log.date === dateToToggle);
-    const isCurrentlyCompleted = logForDay?.status === 'completed';
-    onToggleComplete(habit.id, dateToToggle, !isCurrentlyCompleted);
-    if (!isCurrentlyCompleted) { setShowSparkles(true); setTimeout(() => setShowSparkles(false), 800); }
-  };
+const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString }) => {
+  const isCompletedToday = habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
 
-  const handleAddToCalendar = () => {
-    try {
-      const icsContent = generateICS(habit);
-      downloadICS(`${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}.ics`, icsContent);
-      console.log("Added to calendar!");
-    } catch (error) { console.error("ICS Generation Error:", error); }
-  };
-
-  const handleShareHabit = async () => {
-    let shareText = streak > 0 ? `I've kept up my habit '${habit.name}' for ${streak} day${streak > 1 ? 's' : ''} straight with Habitual! 💪 #HabitStreak #HabitualApp`
-      : `Check out this habit I'm tracking: ${habit.name}! Join me on Habitual.`;
-    try {
-      if (navigator.share) await navigator.share({ title: `Habit: ${habit.name}`, text: shareText });
-      else { await navigator.clipboard.writeText(shareText); console.log("Copied to clipboard."); }
-    } catch (err) { console.error("Share/Copy failed:", err); }
-  };
-
-  let durationDisplay = '';
-  if (habit.durationHours) durationDisplay += `${habit.durationHours} hr${habit.durationHours > 1 ? 's' : ''} `;
-  if (habit.durationMinutes) durationDisplay += `${habit.durationMinutes} min`;
-  durationDisplay = durationDisplay.trim();
-
-  let cardClasses = `relative transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl rounded-[1.25rem]`;
-  const cardStyle: React.CSSProperties = {};
-  if (isTodayCompleted) {
-    cardClasses = cn(cardClasses, 'bg-green-50 dark:bg-green-900/30');
-    cardStyle.borderColor = `hsl(var(--accent))`; cardStyle.borderWidth = '1px';
-  } else {
-    const categoryColorVar = getCategoryColorVariable(habit.category);
-    cardStyle.borderLeftColor = `hsl(var(${categoryColorVar}))`;
-    cardClasses = cn(cardClasses, 'border-l-4 bg-gradient-to-br from-primary/10 dark:from-primary/20 via-card/10 to-card');
-  }
-  cardClasses = cn(cardClasses, 'bg-card');
+  const categoryBorderColor = getCategoryTileColor(habit.category);
 
   return (
-    <Card className={cardClasses} style={cardStyle}>
-      <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-4 pr-2">
-        <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
-           {getHabitIcon(habit)}
-           {habit.reminderEnabled && <Bell className="ml-1 h-3 w-3 text-yellow-500" />}
-        </div>
-        <h2 className="text-lg sm:text-xl font-bold text-primary text-center flex-grow mx-2 truncate min-w-0 break-words">
-          {habit.name}
-        </h2>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-5 w-5 text-muted-foreground" /><span className="sr-only">More options</span></Button></DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onOpenEditDialog(habit)}><FilePenLine className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}><MessageSquarePlus className="mr-2 h-4 w-4" /><span>Add/Edit Note</span></DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center justify-between" onSelect={e => e.preventDefault()}>
-              <Label htmlFor={`reminder-switch-${habit.id}`} className="flex items-center cursor-pointer text-sm"><Bell className="mr-2 h-4 w-4" />Enable Reminder</Label>
-              <Switch id={`reminder-switch-${habit.id}`} checked={!!habit.reminderEnabled} onCheckedChange={() => onToggleReminder(habit.id, !!habit.reminderEnabled)} className="ml-auto" />
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}><Lightbulb className="mr-2 h-4 w-4" /><span>AI Tip</span></DropdownMenuItem>
-            <DropdownMenuItem onClick={handleAddToCalendar}><CalendarPlus className="mr-2 h-4 w-4" /><span>Add to GCal</span></DropdownMenuItem>
-            <DropdownMenuItem onClick={handleShareHabit}><Share2 className="mr-2 h-4 w-4" /><span>Share</span></DropdownMenuItem>
-            <DropdownMenuItem onClick={() => {
-              const firstMissed = weekViewDays.find(d => habit.daysOfWeek.includes(d.dayAbbrFull) && d.isPast && !d.isToday && !habit.completionLog.some(l => l.date === d.dateStr && (l.status === 'completed' || l.status === 'skipped' || l.status === 'pending_makeup')));
-              if (firstMissed) onOpenRescheduleDialog(habit, firstMissed.dateStr);
-              else console.log("Reschedule: No past, uncompleted days.");
-            }}><CalendarClock className="mr-2 h-4 w-4" /><span>Reschedule Missed</span></DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onOpenDeleteConfirm(habit.id, habit.name)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Delete Habit</span></DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </CardHeader>
-      <CardContent className="space-y-3 px-3 sm:px-4 pb-2 pt-1">
-        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
-          <TooltipProvider>
-            <Tooltip><TooltipTrigger asChild>
-              <div className="inline-flex items-center px-2.5 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-800/30 dark:text-yellow-300 cursor-default">
-                <Flame className={cn("h-3.5 w-3.5 mr-1", streak > 0 ? "text-orange-500 animate-pulse" : "text-yellow-500/70 dark:text-yellow-400/70")} /><span>{`${streak}-Day Streak`}</span>
-              </div></TooltipTrigger><TooltipContent><p>{streak > 0 ? `Keep it up! You're on a ${streak}-day streak!` : "Start a streak!"}</p></TooltipContent></Tooltip>
-          </TooltipProvider>
-          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full font-medium bg-rose-100 text-rose-700 dark:bg-rose-800/30 dark:text-rose-300">
-            <span className="mr-1">🎯</span><span>{`${completedCountInCurrentWeek} / ${scheduledDaysInWeek} Completed`}</span>
-          </div>
-        </div>
-        {scheduledDaysInWeek > 0 && <Progress value={weeklyProgressPercent} indicatorClassName="bg-accent" className="h-1.5 mb-2" />}
-
-        <div className="space-y-1 mt-2">
-          {habit.category && (<div className="flex items-center text-xs text-muted-foreground"><span role="img" aria-label="Category" className="mr-1.5 text-sm">📌</span><span className="font-medium mr-1">Category:</span><span>{habit.category}</span></div>)}
-          {durationDisplay && (<div className="flex items-center text-xs text-muted-foreground"><span role="img" aria-label="Duration" className="mr-1.5 text-sm">⏱️</span><span className="font-medium mr-1">Duration:</span><span>{durationDisplay}</span></div>)}
-          {habit.specificTime && habit.specificTime.toLowerCase() !== 'anytime' && habit.specificTime.toLowerCase() !== 'flexible' && (<div className="flex items-center text-xs text-muted-foreground"><span role="img" aria-label="Time" className="mr-1.5 text-sm">⏰</span><span className="font-medium mr-1">Time:</span><span>{formatSpecificTime(habit.specificTime)}</span></div>)}
-          {habit.description && (
-            <div className="text-xs text-muted-foreground">
-              <span className="font-medium mr-1.5">📝 Desc:</span>
-              <span className={cn(!isDescriptionExpanded && habit.description.length > DESCRIPTION_TRUNCATE_LENGTH ? "line-clamp-2" : "")}>{isDescriptionExpanded || habit.description.length <= DESCRIPTION_TRUNCATE_LENGTH ? habit.description : `${habit.description.substring(0, DESCRIPTION_TRUNCATE_LENGTH)}...`}</span>
-              {habit.description.length > DESCRIPTION_TRUNCATE_LENGTH && <button onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)} className="text-xs text-primary hover:underline ml-1">{isDescriptionExpanded ? "(less)" : "(more)"}</button>}
-            </div>
-          )}
-        </div>
-
-        {weekViewDays.length > 0 && (
-          <div className="mt-2.5">
-            <div className="flex items-center text-xs text-muted-foreground mb-0.5"><CalendarDays className="mr-1 h-3.5 w-3.5" /><span className="font-semibold mr-0.5">Days:</span></div>
-            <div className="flex justify-around items-center space-x-0.5 sm:space-x-1 py-1">
-              {weekViewDays.map(dayInfo => {
-                const dayLog = habit.completionLog.find(log => log.date === dayInfo.dateStr);
-                const isScheduled = habit.daysOfWeek.includes(dayInfo.dayAbbrFull);
-                let IconC = Circle; let iconClasses = "text-muted-foreground/40"; let dayBoxClasses = "bg-input/40 dark:bg-input/20 text-muted-foreground/60 hover:bg-input/50"; let titleText = `${dayInfo.dayAbbrFull} - ${format(dayInfo.date, 'MMM d')}`;
-
-                if (dayLog?.status === 'completed') { dayBoxClasses = 'bg-accent/10 hover:bg-accent/20'; IconC = CheckCircle2; iconClasses = 'text-accent'; titleText += ' (Completed)'; }
-                else if (dayLog?.status === 'skipped') { dayBoxClasses = 'bg-muted/30 hover:bg-muted/40'; IconC = CalendarX; iconClasses = 'text-muted-foreground'; titleText += ' (Skipped)'; }
-                else if (dayLog?.status === 'pending_makeup') { dayBoxClasses = 'bg-blue-500/10 hover:bg-blue-500/20'; IconC = CalendarClock; iconClasses = 'text-blue-500'; titleText += ' (Makeup Pending)'; }
-                else if (isScheduled) {
-                  if (dayInfo.isPast && !dayInfo.isToday) { dayBoxClasses = 'bg-destructive/10 hover:bg-destructive/20'; IconC = XCircle; iconClasses = 'text-destructive'; titleText += ' (Missed)'; }
-                  else { dayBoxClasses = 'ring-1 ring-orange-500 ring-offset-1 ring-offset-background bg-orange-500/5 hover:bg-orange-500/10'; IconC = Circle; iconClasses = 'text-orange-500'; titleText += ' (Scheduled)'; }
-                } else { titleText += ' (Not Scheduled)'; }
-                
-                const canToggleDay = isScheduled || dayLog?.status === 'pending_makeup' || dayLog?.status === 'completed';
-                const isMissedAndActionable = isScheduled && dayInfo.isPast && !dayInfo.isToday && !dayLog;
-
-                return (
-                  <div key={dayInfo.dateStr} title={titleText}
-                    onClick={() => { if (isMissedAndActionable) onOpenRescheduleDialog(habit, dayInfo.dateStr); else if (canToggleDay) handleDayToggle(dayInfo.dateStr); }}
-                    className={cn(`flex flex-col items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-md text-[0.6rem] sm:text-xs font-medium transition-transform active:scale-95`, dayBoxClasses, (canToggleDay || isMissedAndActionable) ? 'cursor-pointer' : 'cursor-default', dayInfo.isToday ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : '')}
-                    aria-label={`Status for ${habit.name} on ${dayInfo.dayAbbrFull}, ${format(dayInfo.date, 'MMM d')}`}>
-                    <span className={cn("font-semibold text-[0.7rem] sm:text-xs", iconClasses === 'text-muted-foreground/40' ? 'text-muted-foreground/80': '')}>{dayInfo.dayAbbrShort}</span>
-                    <IconC className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5 mt-0.5", iconClasses)}/>
-                  </div>);
-              })}
-            </div>
-          </div>
-        )}
-      </CardContent>
-       <CardFooter className="flex-col items-stretch pt-6 pb-3 px-3 space-y-2">
-        <div className="relative flex justify-center space-x-2">
-           <Button onClick={() => handleToggleTodayCompletion(true)} disabled={isTodayCompleted}
-              className={cn("rounded-full py-2.5 px-6 text-sm transition-all active:scale-95 flex-1", !isTodayCompleted ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95" : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed", isTodayCompleted && showSparkles && "animate-pulse-glow-accent", isTodayCompleted && !showSparkles && "shadow-[0_0_8px_hsl(var(--accent))]")} >
-              {!isTodayCompleted ? <><Check className="mr-2 h-5 w-5" /> Mark as Done</> : <><CheckCircle2 className="mr-2 h-5 w-5" /> Done!</>}
-           </Button>
-           <Button onClick={() => handleToggleTodayCompletion(false)} disabled={!isTodayCompleted} variant={isTodayCompleted ? "destructive" : "outline"}
-              className={cn("rounded-full py-2.5 px-6 text-sm transition-all active:scale-95 flex-1", !isTodayCompleted ? "border-muted text-muted-foreground cursor-not-allowed" : "")} >
-              <XCircle className="mr-2 h-5 w-5" /> Not Done
-           </Button>
-        </div>
-        {showSparkles && isTodayCompleted && (
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden"> {/* Sparkle container adjusted */}
-            <div className="relative w-20 h-20"> 
-              <div className="sparkle sparkle-1"></div> <div className="sparkle sparkle-2"></div> <div className="sparkle sparkle-3"></div>
-              <div className="sparkle sparkle-4"></div> <div className="sparkle sparkle-5"></div> <div className="sparkle sparkle-6"></div>
-            </div>
-          </div>
-        )}
-      </CardFooter>
-      {showWeeklyConfetti && (
-        <div className="weekly-goal-animation-container">
-          <div className="weekly-goal-text">Weekly Goal Met!</div>
-          {/* Additional sparkles for weekly goal */}
-        </div>
+    <Card
+      onClick={() => onOpenDetailView(habit)}
+      className={cn(
+        "cursor-pointer p-3 transition-all duration-200 ease-in-out hover:shadow-lg hover:scale-[1.03] active:scale-95 rounded-xl flex flex-col justify-between min-h-[80px] sm:min-h-[90px]",
+        isCompletedToday ? "bg-accent/10 border-l-4 border-accent shadow-md" : `bg-card border-l-4 ${categoryBorderColor}`,
+        "shadow-md"
       )}
+    >
+      <div className="flex items-center space-x-2 mb-1">
+        <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-primary">
+          {getHabitTileIcon(habit)}
+        </div>
+        <h3 className="text-sm font-semibold text-foreground truncate flex-grow min-w-0 pr-1">
+          {habit.name}
+        </h3>
+      </div>
+      <div className="flex items-center justify-end mt-auto">
+        {isCompletedToday ? (
+          <CheckCircle2 className="h-4 w-4 text-accent" />
+        ) : (
+          <Circle className="h-4 w-4 text-muted-foreground/60" />
+        )}
+      </div>
     </Card>
   );
 };
+
 export default HabitItem;
+    
