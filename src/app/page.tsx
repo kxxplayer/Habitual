@@ -28,7 +28,7 @@ import DailyQuestDialog from '@/components/popups/DailyQuestDialog';
 // HabitOverview is now only in a dialog, not directly on the page
 // import HabitOverview from '@/components/overview/HabitOverview'; // No longer directly on page
 import { Calendar } from '@/components/ui/calendar';
-import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit as CommonSuggestedHabitType } from '@/types';
+import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabitForCommonList as CommonSuggestedHabitType } from '@/types';
 import { HABIT_CATEGORIES, SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID, THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
@@ -1055,7 +1055,7 @@ const HabitualPage: NextPage = () => {
     <div className="flex min-h-screen items-center justify-center p-0 sm:p-4">
       <div
         className={cn(
-          "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
+          "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
           "w-full max-w-md max-h-[90vh] sm:max-h-[850px]", 
           "md:max-w-lg md:max-h-[85vh]",                       
           "lg:max-w-2xl lg:max-h-[80vh]"                         
@@ -1338,3 +1338,5 @@ const HabitualPage: NextPage = () => {
   );
 };
 export default HabitualPage;
+
+    
