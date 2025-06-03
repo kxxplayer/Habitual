@@ -199,7 +199,7 @@ const CalendarPage: NextPage = () => {
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col h-full">
-            <main className="flex-grow px-3 sm:px-4 py-4">
+            <main className="flex-grow min-h-0 px-3 sm:px-4 py-4">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-xl font-bold text-primary flex items-center">
@@ -283,5 +283,3 @@ const CalendarPage: NextPage = () => {
 };
 
 export default CalendarPage;
-
-    

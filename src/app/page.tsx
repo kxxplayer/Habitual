@@ -1066,7 +1066,7 @@ const HabitualPage: NextPage = () => {
 
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col h-full">
-            <main className="flex-grow px-3 sm:px-4 py-4">
+            <main className="flex-grow min-h-0 px-3 sm:px-4 py-4">
               {habits.length > 0 && !allTodayTasksDone && (
                 <div className="mb-4 flex justify-center">
                   <Button
@@ -1339,5 +1339,3 @@ const HabitualPage: NextPage = () => {
   );
 };
 export default HabitualPage;
-
-    
