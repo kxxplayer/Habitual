@@ -62,7 +62,31 @@ export interface EarnedBadge {
   icon?: string;
 }
 
-export interface SuggestedHabit { // Used for AI common habit suggestions
+// Renamed this to avoid conflict with the one from generate-habit-program-flow.ts
+export interface SuggestedHabitForCommonList { 
   name: string;
   category?: HabitCategory;
 }
+
+// Types for Habit Program Generation (can be refined further)
+// These are now primarily defined within the generate-habit-program-flow.ts
+// but if shared across more UI components, they could live here.
+// For now, direct import from the flow file is used in the dialogs.
+
+// Example:
+// export interface SuggestedProgramHabit {
+//   name: string;
+//   description?: string;
+//   category?: HabitCategory;
+//   daysOfWeek: WeekDay[];
+//   optimalTiming?: string;
+//   durationHours?: number;
+//   durationMinutes?: number;
+//   specificTime?: string;
+// }
+
+// export interface HabitProgram {
+//   programName: string;
+//   suggestedHabits: SuggestedProgramHabit[];
+// }
+

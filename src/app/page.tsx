@@ -26,15 +26,19 @@ import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHab
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
 import DailyQuestDialog from '@/components/popups/DailyQuestDialog';
 // HabitOverview is now only in a dialog, not directly on the page
-import HabitOverview from '@/components/overview/HabitOverview';
+// import HabitOverview from '@/components/overview/HabitOverview'; // No longer directly on page
 import { Calendar } from '@/components/ui/calendar';
-import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit } from '@/types';
+import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabit as CommonSuggestedHabitType } from '@/types';
 import { HABIT_CATEGORIES, SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID, THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
 import { getCommonHabitSuggestions } from '@/ai/flows/common-habit-suggestions-flow';
+import { generateHabitProgramFromGoal, type GenerateHabitProgramOutput, type SuggestedProgramHabit } from '@/ai/flows/generate-habit-program-flow';
+import GoalInputProgramDialog from '@/components/programs/GoalInputProgramDialog';
+import ProgramSuggestionDialog from '@/components/programs/ProgramSuggestionDialog';
+
 
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { cn } from "@/lib/utils";
@@ -60,34 +64,36 @@ import {
   AlertDialogHeader as AlertDialogHeaderEl,
   AlertDialogTitle as AlertTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle as SheetTitleOriginal,
-  SheetClose,
-  SheetDescription as SheetDescriptionOriginal,
-} from "@/components/ui/sheet";
+// Sheet imports removed as settings/calendar are pages
+// import {
+//   Sheet,
+//   SheetContent,
+//   SheetHeader,
+//   SheetTitle as SheetTitleOriginal,
+//   SheetClose,
+//   SheetDescription as SheetDescriptionOriginal,
+// } from "@/components/ui/sheet";
 
 
 import {
   Plus,
   Loader2,
   ListChecks,
-  LayoutDashboard,
-  Award,
-  Settings,
+  // LayoutDashboard, // Icon for nav, not direct page use
+  // Award, // Icon for nav
+  // Settings, // Icon for nav
   CalendarDays,
-  UserCircle,
+  // UserCircle, // Icon for nav
   BellRing,
-  BookOpenText,
+  // BookOpenText,
   Bell,
-  Home,
+  Home, // For bottom nav
   Trash2,
   CheckCircle2,
   XCircle,
   Circle, // Added Circle
   CalendarClock as MakeupIcon,
+  WandSparkles, // For new program button
  } from 'lucide-react';
 import { format, parseISO, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday as dateFnsIsToday, isPast as dateFnsIsPast, isSameDay } from 'date-fns';
 
@@ -138,7 +144,7 @@ const HabitualPage: NextPage = () => {
     missedDate: string;
   } | null>(null);
 
-  const [commonHabitSuggestions, setCommonHabitSuggestions] = React.useState<SuggestedHabit[]>([]);
+  const [commonHabitSuggestions, setCommonHabitSuggestions] = React.useState<CommonSuggestedHabitType[]>([]);
   const [isLoadingCommonSuggestions, setIsLoadingCommonSuggestions] = React.useState(false);
   const [commonSuggestionsFetched, setCommonSuggestionsFetched] = React.useState(false);
 
@@ -149,13 +155,15 @@ const HabitualPage: NextPage = () => {
   const [todayAbbr, setTodayAbbr] = React.useState<WeekDay | ''>('');
   const [allTodayTasksDone, setAllTodayTasksDone] = React.useState(false);
 
-  // For Calendar Dialog
+  // For Calendar Dialog (kept for potential direct access if needed, though primary nav is page)
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
 
-
-  // For Settings Sheet (Menu)
-  const [isSettingsSheetOpen, setIsSettingsSheetOpen] = React.useState(false);
+  // For Habit Program Generation
+  const [isGoalInputProgramDialogOpen, setIsGoalInputProgramDialogOpen] = React.useState(false);
+  const [isProgramSuggestionLoading, setIsProgramSuggestionLoading] = React.useState(false);
+  const [programSuggestion, setProgramSuggestion] = React.useState<GenerateHabitProgramOutput | null>(null);
+  const [isProgramSuggestionDialogOpen, setIsProgramSuggestionDialogOpen] = React.useState(false);
 
 
   React.useEffect(() => {
@@ -186,12 +194,11 @@ const HabitualPage: NextPage = () => {
         setIsAISuggestionDialogOpen(false);
         setIsCreateHabitDialogOpen(false);
         setIsDailyQuestDialogOpen(false);
-        // setIsDashboardDialogOpen(false); // Dashboard is now a separate page
-        setIsCalendarDialogOpen(false);
-        setIsSettingsSheetOpen(false);
+        setIsCalendarDialogOpen(false); // Calendar is now a page
+        setIsGoalInputProgramDialogOpen(false);
+        setIsProgramSuggestionDialogOpen(false);
+        setProgramSuggestion(null);
         
-        // User-specific data is NOT removed from localStorage on logout/switch, allowing re-login to access it.
-        // It is namespaced by UID.
       }
 
       setAuthUser(currentUserAuthMain);
@@ -825,7 +832,7 @@ const HabitualPage: NextPage = () => {
     setIsDeleteHabitConfirmOpen(false);
   };
 
-  const handleCustomizeSuggestedHabit = (suggestionCustomizeMain: SuggestedHabit) => {
+  const handleCustomizeSuggestedHabit = (suggestionCustomizeMain: CommonSuggestedHabitType) => {
     const formDataCustomizeMain: Partial<CreateHabitFormData> = {
       name: suggestionCustomizeMain.name,
       category: suggestionCustomizeMain.category || 'Other',
@@ -866,10 +873,8 @@ const HabitualPage: NextPage = () => {
   };
 
   // --- Calendar Dialog Logic Start ---
-  // Ultra-minimal calendar modifiers for debugging "cDate" error.
   const calendarDialogModifiers = React.useMemo(() => {
     try {
-      // console.log("DEBUG: Minimal calendarDialogModifiers. Habits:", habits, "Selected Date:", selectedCalendarDate);
       const dates_completed_arr: Date[] = [];
       const dates_scheduled_missed_arr: Date[] = [];
       const dates_scheduled_upcoming_arr: Date[] = [];
@@ -895,13 +900,12 @@ const HabitualPage: NextPage = () => {
             }
           });
 
-          const iteration_limit = 60; // Check 60 days past and future
+          const iteration_limit = 60; 
           for (let day_offset = 0; day_offset < iteration_limit; day_offset++) {
             const pastDateToConsider_obj = subDays(today_date_obj, day_offset);
             const futureDateToConsider_obj = dateFnsAddDays(today_date_obj, day_offset);
 
             [pastDateToConsider_obj, futureDateToConsider_obj].forEach(current_day_being_checked_obj => {
-              // Avoid double-processing today if it's both past and future (day_offset === 0)
               if (isSameDay(current_day_being_checked_obj, today_date_obj) && day_offset !== 0 && current_day_being_checked_obj !== pastDateToConsider_obj) return;
 
               const dateStrToMatch_str = format(current_day_being_checked_obj, 'yyyy-MM-dd');
@@ -909,12 +913,12 @@ const HabitualPage: NextPage = () => {
               const isScheduledOnThisDay_bool = habit_item_for_modifiers_loop.daysOfWeek.includes(dayOfWeekForDate_val);
               const logEntryForThisDay_obj = habit_item_for_modifiers_loop.completionLog.find(log_find_item => log_find_item.date === dateStrToMatch_str);
 
-              if (isScheduledOnThisDay_bool && !logEntryForThisDay_obj) { // Scheduled but no log entry
-                if (current_day_being_checked_obj < today_date_obj && !isSameDay(current_day_being_checked_obj, today_date_obj)) { // Past day
+              if (isScheduledOnThisDay_bool && !logEntryForThisDay_obj) { 
+                if (current_day_being_checked_obj < today_date_obj && !isSameDay(current_day_being_checked_obj, today_date_obj)) { 
                   if (!dates_scheduled_missed_arr.some(missed_day_item => isSameDay(missed_day_item, current_day_being_checked_obj))) {
                     dates_scheduled_missed_arr.push(current_day_being_checked_obj);
                   }
-                } else { // Today or future day
+                } else { 
                   if (!dates_scheduled_upcoming_arr.some(upcoming_day_item => isSameDay(upcoming_day_item, current_day_being_checked_obj)) &&
                       !dates_completed_arr.some(completed_day_item_for_check => isSameDay(completed_day_item_for_check, current_day_being_checked_obj))) {
                     dates_scheduled_upcoming_arr.push(current_day_being_checked_obj);
@@ -926,7 +930,6 @@ const HabitualPage: NextPage = () => {
         });
       }
       
-      // Filter out days that are marked completed or pending makeup from scheduled/missed lists
       const finalScheduledUpcoming_arr_filtered = dates_scheduled_upcoming_arr.filter(s_date_upcoming_for_final_filter =>
         !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
         !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
@@ -945,7 +948,7 @@ const HabitualPage: NextPage = () => {
       };
     } catch (error_in_calendar_modifiers) {
       console.error("CRITICAL ERROR in calendarDialogModifiers calculation:", error_in_calendar_modifiers);
-      return { // Return safe defaults
+      return { 
         completed: [], missed: [], scheduled: [], makeup: [],
         selected: selectedCalendarDate ? [startOfDay(selectedCalendarDate)] : [],
       };
@@ -961,7 +964,6 @@ const HabitualPage: NextPage = () => {
     selected: { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
   };
 
-  // Habits to list below the calendar dialog
   const habitsForSelectedCalendarDate = React.useMemo(() => {
     if (!selectedCalendarDate || !authUser) return [];
     try {
@@ -980,17 +982,54 @@ const HabitualPage: NextPage = () => {
   }, [selectedCalendarDate, habits, authUser]);
   // --- Calendar Dialog Logic End ---
 
+  // --- Habit Program Generation Logic Start ---
+  const handleOpenGoalInputProgramDialog = () => {
+    setIsGoalInputProgramDialogOpen(true);
+  };
 
-  // --- Settings Sheet (Menu) Logic Start ---
-  const sheetMenuItems = [
-    { href: '/', label: 'Home', icon: Home },
-    { href: '/profile', label: 'Profile', icon: UserCircle },
-    { action: 'reminders', label: 'Reminders', icon: BellRing },
-    { href: '/achievements', label: 'Achievements', icon: Award },
-    { action: 'calendar', label: 'Calendar', icon: CalendarDays },
-    { href: '/settings', label: 'App Settings', icon: Settings },
-  ];
-  // --- Settings Sheet (Menu) Logic End ---
+  const handleSubmitGoalForProgram = async (goal: string, duration: string) => {
+    setIsProgramSuggestionLoading(true);
+    setIsGoalInputProgramDialogOpen(false); // Close input dialog
+    try {
+      const suggestion = await generateHabitProgramFromGoal({ goal, focusDuration: duration });
+      setProgramSuggestion(suggestion);
+      setIsProgramSuggestionDialogOpen(true);
+    } catch (error) {
+      console.error("Error generating habit program:", error);
+      // TODO: Show toast error to user
+    } finally {
+      setIsProgramSuggestionLoading(false);
+    }
+  };
+
+  const handleAddProgramHabits = (suggestedProgramHabits: SuggestedProgramHabit[]) => {
+    if (!authUser) return;
+    const newHabitsFromProgram: Habit[] = suggestedProgramHabits.map(sph => ({
+      id: String(Date.now() + Math.random().toString(36).substring(2,9)), // Ensure unique ID
+      name: sph.name,
+      description: sph.description,
+      category: sph.category || 'Other',
+      daysOfWeek: sph.daysOfWeek as WeekDay[], // Already validated in flow
+      optimalTiming: sph.optimalTiming,
+      durationHours: sph.durationHours,
+      durationMinutes: sph.durationMinutes,
+      specificTime: sph.specificTime,
+      completionLog: [],
+      reminderEnabled: false, // Default reminder to off
+    }));
+
+    setHabits(prevHabits => [...prevHabits, ...newHabitsFromProgram]);
+    console.log(`Added ${newHabitsFromProgram.length} habits from program: ${programSuggestion?.programName}`);
+    
+    // Clear suggestions if user had no habits before and now has some
+    if (habits.length === 0 && commonHabitSuggestions.length > 0 && newHabitsFromProgram.length > 0) {
+      setCommonHabitSuggestions([]);
+    }
+    
+    setIsProgramSuggestionDialogOpen(false);
+    setProgramSuggestion(null);
+  };
+  // --- Habit Program Generation Logic End ---
 
 
   if (isLoadingAuth) {
@@ -1002,7 +1041,7 @@ const HabitualPage: NextPage = () => {
     );
   }
 
-  if (!authUser && !isLoadingAuth) { // This case should ideally be caught by the redirect in onAuthStateChanged
+  if (!authUser && !isLoadingAuth) { 
     return (
        <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -1017,9 +1056,9 @@ const HabitualPage: NextPage = () => {
       <div
         className={cn(
           "bg-card text-foreground shadow-xl rounded-xl flex flex-col overflow-hidden mx-auto",
-          "w-full max-w-md max-h-[90vh] sm:max-h-[850px]",
-          "md:max-w-lg md:max-h-[85vh]",
-          "lg:max-w-2xl lg:max-h-[80vh]"
+          "w-full max-w-md max-h-[90vh] sm:max-h-[850px]", 
+          "md:max-w-lg md:max-h-[85vh]",                       
+          "lg:max-w-2xl lg:max-h-[80vh]"                         
         )}
       >
         <AppHeader />
@@ -1054,10 +1093,10 @@ const HabitualPage: NextPage = () => {
                   <h3 className="text-md font-semibold flex items-center text-primary mb-1">
                      Welcome to Habitual!
                   </h3>
-                  <p className="text-xs text-muted-foreground mb-1.5">Start by picking a common habit or add your own:</p>
+                  <p className="text-xs text-muted-foreground mb-1.5">Start by picking a common habit, add your own, or create a program from a goal:</p>
                 </div>
                 <div className="p-1">
-                  <div className="flex flex-wrap gap-2 justify-center">
+                  <div className="flex flex-wrap gap-2 justify-center mb-2">
                     {commonHabitSuggestions.map((suggItemMapMain, idxSuggMapMain) => (
                       <Button key={idxSuggMapMain} variant="outline"
                         className="p-2.5 h-auto flex flex-col items-center justify-center space-y-0.5 min-w-[90px] text-center shadow-sm hover:shadow-md transition-shadow text-xs"
@@ -1068,6 +1107,13 @@ const HabitualPage: NextPage = () => {
                       </Button>
                     ))}
                   </div>
+                   <Button
+                    onClick={handleOpenGoalInputProgramDialog}
+                    variant="default"
+                    className="w-full text-sm py-2.5 mt-2"
+                  >
+                    <WandSparkles className="mr-2 h-4 w-4" /> Create Program from Goal
+                  </Button>
                 </div>
               </div>
             )}
@@ -1077,6 +1123,19 @@ const HabitualPage: NextPage = () => {
                     <p className="ml-2 text-muted-foreground">Loading suggestions...</p>
                 </div>
             )}
+             {/* Show "Create Program from Goal" button even if there are habits */}
+             {habits.length > 0 && (
+                <div className="my-4 flex justify-center">
+                    <Button
+                        onClick={handleOpenGoalInputProgramDialog}
+                        variant="outline"
+                        className="w-full max-w-xs"
+                    >
+                        <WandSparkles className="mr-2 h-4 w-4" /> Create Program from Goal
+                    </Button>
+                </div>
+            )}
+
 
             <HabitList
               habits={habits}
@@ -1180,6 +1239,7 @@ const HabitualPage: NextPage = () => {
 
       <DailyQuestDialog isOpen={isDailyQuestDialogOpen} onClose={handleCloseDailyQuestDialog} />
 
+       {/* Calendar Dialog (kept for quick access if linked elsewhere, primary view is /calendar page) */}
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
         <DialogContent className="sm:max-w-lg bg-card">
           <DialogHeader>
@@ -1213,7 +1273,7 @@ const HabitualPage: NextPage = () => {
                     const dayOfWeekForSelected_cal_list = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
                     const isScheduledToday_cal_list = habit_cal_list_item.daysOfWeek.includes(dayOfWeekForSelected_cal_list);
                     let statusText_cal_list = "Scheduled";
-                    let StatusIcon_cal_list = Circle; // Default icon
+                    let StatusIcon_cal_list = Circle; 
                     let iconColor_cal_list = "text-orange-500";
 
                     if (logEntry_cal_list?.status === 'completed') {
@@ -1254,59 +1314,23 @@ const HabitualPage: NextPage = () => {
         </DialogContent>
       </Dialog>
 
-      <Sheet open={isSettingsSheetOpen} onOpenChange={setIsSettingsSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-xl max-h-[70vh] p-4">
-          <SheetHeader className="mb-3">
-            <SheetTitleOriginal className="text-center text-lg font-semibold">Menu</SheetTitleOriginal>
-          </SheetHeader>
-          <ScrollArea className="pr-2">
-          <div className="grid grid-cols-1 gap-2">
-            {sheetMenuItems.map((item) => {
-                if (item.href) {
-                    return (
-                        <SheetClose asChild key={item.label}>
-                        <Link href={item.href} passHref legacyBehavior={false}>
-                            <Button variant="ghost" className="w-full justify-start text-base py-3 h-auto" onClick={() => setIsSettingsSheetOpen(false)}>
-                            <item.icon className="mr-3 h-5 w-5 text-primary" /> {item.label}
-                            </Button>
-                        </Link>
-                        </SheetClose>
-                    );
-                }
-                // Handle actions
-                return (
-                    <SheetClose asChild key={item.label}>
-                    <Button
-                        variant="ghost"
-                        className="w-full justify-start text-base py-3 h-auto"
-                        onClick={() => {
-                        if (item.action === 'calendar') setIsCalendarDialogOpen(true);
-                        else if (item.action === 'reminders') console.log("Reminders action placeholder triggered");
-                        setIsSettingsSheetOpen(false); // Close sheet after action
-                        }}
-                    >
-                        <item.icon className="mr-3 h-5 w-5 text-primary" /> {item.label}
-                    </Button>
-                    </SheetClose>
-                );
-            })}
-             <div className="mt-4 pt-4 border-t">
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center text-sm"> <Bell className="mr-2 h-4 w-4 text-muted-foreground" /> <span>Notification Status:</span>
-                  <span className={cn("ml-1 font-semibold", notificationPermission === 'granted' ? 'text-green-600' : notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600')}>
-                    {notificationPermission ? notificationPermission.charAt(0).toUpperCase() + notificationPermission.slice(1) : 'Checking...'}
-                  </span>
-                </div>
-              </div>
-              {(notificationPermission === 'default' || notificationPermission === 'denied') && (
-                <SheetClose asChild><Button size="sm" variant="outline" onClick={handleRequestNotificationPermission} className="mt-2 w-full">Enable Notifications</Button></SheetClose>
-              )}
-            </div>
-            {notificationPermission === 'denied' && <p className="text-xs text-muted-foreground px-1 mt-1">Notifications blocked. Please enable in browser settings.</p>}
-          </div>
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
+      {/* Dialogs for Program Generation */}
+      <GoalInputProgramDialog
+        isOpen={isGoalInputProgramDialogOpen}
+        onClose={() => setIsGoalInputProgramDialogOpen(false)}
+        onSubmit={handleSubmitGoalForProgram}
+        isLoading={isProgramSuggestionLoading}
+      />
+      <ProgramSuggestionDialog
+        isOpen={isProgramSuggestionDialogOpen}
+        onClose={() => {
+          setIsProgramSuggestionDialogOpen(false);
+          setProgramSuggestion(null);
+        }}
+        programSuggestion={programSuggestion}
+        onAddProgramHabits={handleAddProgramHabits}
+        isLoading={isProgramSuggestionLoading}
+      />
 
     </div>
   );
