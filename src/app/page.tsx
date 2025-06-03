@@ -1056,9 +1056,10 @@ const HabitualPage: NextPage = () => {
       <div
         className={cn(
           "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-          "w-full max-w-md max-h-[90vh] sm:max-h-[850px]", 
-          "md:max-w-lg md:max-h-[85vh]",                       
-          "lg:max-w-2xl lg:max-h-[80vh]"                         
+          "w-full max-w-md",                // Mobile: full width up to md
+          "max-h-[90vh]",                   // General max height for all sizes
+          "md:max-w-lg",                    // Tablet: wider
+          "lg:max-w-2xl"                     // Desktop: even wider
         )}
       >
         <AppHeader />
