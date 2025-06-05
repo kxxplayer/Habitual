@@ -54,7 +54,8 @@ const getCategoryColorVariable = (category?: HabitCategory): string => {
   return (category && HABIT_CATEGORIES.includes(category) && categoryColorMap[category]) ? categoryColorMap[category] : categoryColorMap["Other"];
 };
 
-const getHabitDisplayIcon = (habit: Habit): React.ReactNode => {
+const getHabitDisplayIcon = (habit: Habit | null): React.ReactNode => {
+  if (!habit) return <ListChecks className="h-5 w-5 text-muted-foreground" />;
   const nameLower = habit.name.toLowerCase();
   if (nameLower.includes('gym') || nameLower.includes('workout')) return <span className="text-xl">🏋️</span>;
   if (nameLower.includes('sql') || nameLower.includes('code')) return <span className="text-xl">💻</span>;
@@ -89,7 +90,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   onOpenRescheduleDialog, onToggleReminder, onOpenEditDialog, onOpenDeleteConfirm,
 }) => {
   const [todayString, setTodayString] = React.useState('');
-  const [currentDate, setCurrentDate] = React.useState(new Date());
+  const [currentDate, setCurrentDate] = React.useState<Date | null>(null);
   const [weekViewDays, setWeekViewDays] = React.useState<WeekDayInfo[]>([]);
   const [showSparkles, setShowSparkles] = React.useState(false);
   const [showWeeklyConfetti, setShowWeeklyConfetti] = React.useState(false);
@@ -98,23 +99,35 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const DESCRIPTION_TRUNCATE_LENGTH = 100;
 
   React.useEffect(() => {
-    const now = new Date(); setCurrentDate(now); setTodayString(format(now, 'yyyy-MM-dd'));
+    const now = new Date();
+    setCurrentDate(now);
+    setTodayString(format(now, 'yyyy-MM-dd'));
   }, []);
 
-  React.useEffect(() => { setWeekViewDays(getCurrentWeekDays(currentDate)); }, [currentDate]);
+  React.useEffect(() => {
+    if (currentDate) {
+      setWeekViewDays(getCurrentWeekDays(currentDate));
+    }
+  }, [currentDate]);
 
-  if (!isOpen || !habit) return null;
+  const safeHabitDaysOfWeek = React.useMemo(() => {
+    return habit?.daysOfWeek || [];
+  }, [habit]);
 
-  const safeHabitDaysOfWeek = React.useMemo(() => habit.daysOfWeek || [], [habit.daysOfWeek]);
+  const isTodayCompleted = React.useMemo(() => {
+    if (!habit) return false;
+    return habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
+  }, [habit, todayString]);
 
-  const isTodayCompleted = React.useMemo(() =>
-    habit.completionLog.some(log => log.date === todayString && log.status === 'completed'),
-  [habit.completionLog, todayString]);
-
-  const streak = React.useMemo(() => calculateStreak(habit, currentDate), [habit, currentDate]);
+  const streak = React.useMemo(() => {
+    if (!habit || !currentDate) return 0;
+    return calculateStreak(habit, currentDate);
+  }, [habit, currentDate]);
 
   const { completedCountInCurrentWeek, scheduledDaysInWeek } = React.useMemo(() => {
-    let completed = 0, scheduled = 0;
+    if (!habit) return { completedCountInCurrentWeek: 0, scheduledDaysInWeek: 0 };
+    let completed = 0;
+    let scheduled = 0;
     if (safeHabitDaysOfWeek.length > 0 && weekViewDays.length > 0) {
       const completedOnScheduled = new Set<string>();
       weekViewDays.forEach(dayInfo => {
@@ -128,17 +141,20 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
       completed = completedOnScheduled.size;
     }
     return { completedCountInCurrentWeek: completed, scheduledDaysInWeek: scheduled };
-  }, [safeHabitDaysOfWeek, weekViewDays, habit.completionLog]);
-
-  const weeklyProgressPercent = scheduledDaysInWeek > 0 ? Math.round((completedCountInCurrentWeek / scheduledDaysInWeek) * 100) : 0;
+  }, [habit, safeHabitDaysOfWeek, weekViewDays]);
 
   React.useEffect(() => {
+    if (!habit) return;
     if (scheduledDaysInWeek > 0 && completedCountInCurrentWeek >= scheduledDaysInWeek && prevCompletedCountRef.current < scheduledDaysInWeek) {
       setShowWeeklyConfetti(true);
       setTimeout(() => setShowWeeklyConfetti(false), 2500);
     }
     prevCompletedCountRef.current = completedCountInCurrentWeek;
-  }, [completedCountInCurrentWeek, scheduledDaysInWeek]);
+  }, [completedCountInCurrentWeek, scheduledDaysInWeek, habit]);
+
+  if (!isOpen || !habit) return null;
+
+  const weeklyProgressPercent = scheduledDaysInWeek > 0 ? Math.round((completedCountInCurrentWeek / scheduledDaysInWeek) * 100) : 0;
 
   const handleToggleTodayCompletion = (complete: boolean) => {
     if (!habit) return;
@@ -161,7 +177,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
     if (!habit) return;
     try {
       const icsContent = generateICS(habit);
-      downloadICS(`${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}.ics`, icsContent);
+      downloadICS(`${habit.name.replace(/[^a-zA-Z0-9\\s]/g, '').replace(/\s+/g, '_')}.ics`, icsContent);
     } catch (error) { console.error("ICS Generation Error:", error); }
   };
 
@@ -334,3 +350,4 @@ export default HabitDetailViewDialog;
     
 
     
+
