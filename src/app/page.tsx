@@ -81,6 +81,7 @@ const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
 
 const HabitualPage: NextPage = () => {
   const router = useRouter();
+  const [mounted, setMounted] = React.useState(false);
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const previousAuthUserUidRef = React.useRef<string | null | undefined>(undefined);
@@ -135,12 +136,15 @@ const HabitualPage: NextPage = () => {
   const [programSuggestion, setProgramSuggestion] = React.useState<GenerateHabitProgramOutput | null>(null);
   const [isProgramSuggestionDialogOpen, setIsProgramSuggestionDialogOpen] = React.useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     const nowEffectToday = new Date();
     setTodayString(format(nowEffectToday, 'yyyy-MM-dd'));
     setTodayAbbr(dayIndexToWeekDayConstant[getDay(nowEffectToday)]);
-    setSelectedCalendarDate(nowEffectToday); // Initialize here as it depends on `new Date()`
+    setSelectedCalendarDate(nowEffectToday); 
   }, []);
 
 
@@ -178,7 +182,7 @@ const HabitualPage: NextPage = () => {
   }, []);
 
   React.useEffect(() => {
-    if (isLoadingAuth) { setIsLoadingHabits(false); return; }
+    if (isLoadingAuth || !mounted) { setIsLoadingHabits(false); return; } // Wait for mount and auth
     if (!authUser) {
       if (habits.length > 0 || earnedBadges.length > 0 || totalPoints > 0) {
         setHabits([]); setEarnedBadges([]); setTotalPoints(0);
@@ -236,10 +240,10 @@ const HabitualPage: NextPage = () => {
     const storedPointsLoadMain = typeof window !== 'undefined' ? localStorage.getItem(userPointsKeyLoadMain) : null;
     if (storedPointsLoadMain) { try { setTotalPoints(parseInt(storedPointsLoadMain, 10) || 0); } catch (e) { setTotalPoints(0); } } else { setTotalPoints(0); }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth, commonSuggestionsFetched]); // Added commonSuggestionsFetched
+  }, [authUser, isLoadingAuth, commonSuggestionsFetched, mounted]); // Added mounted
 
   React.useEffect(() => {
-    if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined') return;
+    if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return; // Wait for mount
     localStorage.setItem(`${LS_KEY_PREFIX_HABITS}${authUser.uid}`, JSON.stringify(habits));
     const newlyEarnedBadgesSaveMain = checkAndAwardBadges(habits, earnedBadges);
     if (newlyEarnedBadgesSaveMain.length > 0) {
@@ -252,10 +256,10 @@ const HabitualPage: NextPage = () => {
       });
       if (updatedBadgesSaveMain.length !== earnedBadges.length) setEarnedBadges(updatedBadgesSaveMain);
     }
-  }, [habits, authUser, isLoadingAuth, isLoadingHabits, earnedBadges]);
+  }, [habits, authUser, isLoadingAuth, isLoadingHabits, earnedBadges, mounted]); // Added mounted
 
-  React.useEffect(() => { if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined') return; localStorage.setItem(`${LS_KEY_PREFIX_BADGES}${authUser.uid}`, JSON.stringify(earnedBadges)); }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits]);
-  React.useEffect(() => { if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined') return; localStorage.setItem(`${LS_KEY_PREFIX_POINTS}${authUser.uid}`, totalPoints.toString()); }, [totalPoints, authUser, isLoadingAuth, isLoadingHabits]);
+  React.useEffect(() => { if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return; localStorage.setItem(`${LS_KEY_PREFIX_BADGES}${authUser.uid}`, JSON.stringify(earnedBadges)); }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits, mounted]); // Added mounted
+  React.useEffect(() => { if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return; localStorage.setItem(`${LS_KEY_PREFIX_POINTS}${authUser.uid}`, totalPoints.toString()); }, [totalPoints, authUser, isLoadingAuth, isLoadingHabits, mounted]); // Added mounted
 
   React.useEffect(() => {
     reminderTimeouts.current.forEach(clearTimeout); reminderTimeouts.current = [];
@@ -464,24 +468,14 @@ const HabitualPage: NextPage = () => {
 
   // Effect to keep selectedHabitForDetailView in sync with the main habits list
   React.useEffect(() => {
-    if (selectedHabitForDetailView?.id && authUser && isDetailViewDialogOpen) {
+    if (selectedHabitForDetailView?.id && authUser && isDetailViewDialogOpen && habits.length > 0) {
       const latestHabitInstance = habits.find(h => h.id === selectedHabitForDetailView.id);
       if (latestHabitInstance) {
-         if (
-          JSON.stringify(selectedHabitForDetailView.completionLog) !== JSON.stringify(latestHabitInstance.completionLog) ||
-          selectedHabitForDetailView.name !== latestHabitInstance.name ||
-          selectedHabitForDetailView.description !== latestHabitInstance.description ||
-          selectedHabitForDetailView.category !== latestHabitInstance.category ||
-          JSON.stringify(selectedHabitForDetailView.daysOfWeek) !== JSON.stringify(latestHabitInstance.daysOfWeek) ||
-          selectedHabitForDetailView.optimalTiming !== latestHabitInstance.optimalTiming ||
-          selectedHabitForDetailView.durationHours !== latestHabitInstance.durationHours ||
-          selectedHabitForDetailView.durationMinutes !== latestHabitInstance.durationMinutes ||
-          selectedHabitForDetailView.specificTime !== latestHabitInstance.specificTime ||
-          selectedHabitForDetailView.reminderEnabled !== latestHabitInstance.reminderEnabled
-        ) {
+         if (JSON.stringify(selectedHabitForDetailView) !== JSON.stringify(latestHabitInstance)) {
           setSelectedHabitForDetailView(latestHabitInstance);
         }
       } else {
+        // Habit might have been deleted
         handleCloseDetailView();
       }
     }
@@ -512,17 +506,32 @@ const HabitualPage: NextPage = () => {
   };
 
 
-  if (isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-sm max-h-[95vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Loading application...</p></div></div></div>;
-  if (!authUser && !isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-sm max-h-[95vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Redirecting to login...</p></div></div></div>;
+  const loadingScreen = (message: string) => (
+    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
+      <div className={cn(
+        "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
+        "w-full max-w-sm max-h-[95vh]",              
+        "md:max-w-md lg:max-w-lg"                  
+      )}>
+        <div className="flex flex-col items-center justify-center flex-grow p-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">{message}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!mounted) return loadingScreen("Initializing app...");
+  if (isLoadingAuth) return loadingScreen("Loading application...");
+  if (!authUser && !isLoadingAuth) return loadingScreen("Redirecting to login...");
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-sm",
-        "max-h-[95vh]",
-        "md:max-w-md",
-        "lg:max-w-lg"
+        "w-full max-w-sm max-h-[95vh]",
+        "md:max-w-md lg:max-w-lg"
       )}>
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
