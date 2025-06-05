@@ -467,16 +467,21 @@ const HabitualPage: NextPage = () => {
     if (selectedHabitForDetailView?.id && authUser && isDetailViewDialogOpen) {
       const latestHabitInstance = habits.find(h => h.id === selectedHabitForDetailView.id);
       if (latestHabitInstance) {
-        // Compare completionLog to prevent unnecessary updates if only other habits changed
-        if (JSON.stringify(selectedHabitForDetailView.completionLog) !== JSON.stringify(latestHabitInstance.completionLog) ||
-            selectedHabitForDetailView.name !== latestHabitInstance.name || // Add other fields if they can change and dialog depends on them
-            selectedHabitForDetailView.description !== latestHabitInstance.description ||
-            selectedHabitForDetailView.reminderEnabled !== latestHabitInstance.reminderEnabled
-            ) {
+         if (
+          JSON.stringify(selectedHabitForDetailView.completionLog) !== JSON.stringify(latestHabitInstance.completionLog) ||
+          selectedHabitForDetailView.name !== latestHabitInstance.name ||
+          selectedHabitForDetailView.description !== latestHabitInstance.description ||
+          selectedHabitForDetailView.category !== latestHabitInstance.category ||
+          JSON.stringify(selectedHabitForDetailView.daysOfWeek) !== JSON.stringify(latestHabitInstance.daysOfWeek) ||
+          selectedHabitForDetailView.optimalTiming !== latestHabitInstance.optimalTiming ||
+          selectedHabitForDetailView.durationHours !== latestHabitInstance.durationHours ||
+          selectedHabitForDetailView.durationMinutes !== latestHabitInstance.durationMinutes ||
+          selectedHabitForDetailView.specificTime !== latestHabitInstance.specificTime ||
+          selectedHabitForDetailView.reminderEnabled !== latestHabitInstance.reminderEnabled
+        ) {
           setSelectedHabitForDetailView(latestHabitInstance);
         }
       } else {
-        // Habit might have been deleted
         handleCloseDetailView();
       }
     }
@@ -507,17 +512,17 @@ const HabitualPage: NextPage = () => {
   };
 
 
-  if (isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-md max-h-[95vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Loading application...</p></div></div></div>;
-  if (!authUser && !isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-md max-h-[95vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Redirecting to login...</p></div></div></div>;
+  if (isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-sm max-h-[95vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Loading application...</p></div></div></div>;
+  if (!authUser && !isLoadingAuth) return <div className="min-h-screen flex items-center justify-center p-0 sm:p-4"><div className="bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto w-full max-w-sm max-h-[95vh]"><div className="flex flex-col items-center justify-center flex-grow p-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Redirecting to login...</p></div></div></div>;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-sm",                
-        "max-h-[95vh]",                   
-        "md:max-w-md",                   
-        "lg:max-w-lg"                     
+        "w-full max-w-sm",
+        "max-h-[95vh]",
+        "md:max-w-md",
+        "lg:max-w-lg"
       )}>
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
@@ -537,9 +542,21 @@ const HabitualPage: NextPage = () => {
                   </Button>
                 </div>
               )}
+
+              <div className="my-4 flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-3">
+                  <Button onClick={() => { setEditingHabit(null); setInitialFormDataForDialog(null); setIsCreateHabitDialogOpen(true); }}
+                          variant="default" className="w-full sm:w-auto sm:flex-1 max-w-xs">
+                      <Plus className="mr-2 h-4 w-4" /> Add New Habit
+                  </Button>
+                  <Button onClick={handleOpenGoalInputProgramDialog}
+                          variant="outline" className="w-full sm:w-auto sm:flex-1 max-w-xs">
+                      <WandSparkles className="mr-2 h-4 w-4" /> Create Program
+                  </Button>
+              </div>
+
               {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && (
                 <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
-                  <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3><p className="text-xs text-muted-foreground mb-1.5">Start by picking a common habit, add your own, or create a program from a goal:</p></div>
+                  <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3><p className="text-xs text-muted-foreground mb-1.5">Start by picking a common habit, or use the buttons above to add your own or create a program:</p></div>
                   <div className="p-1">
                     <div className="flex flex-wrap gap-2 justify-center mb-2">
                       {commonHabitSuggestions.map((sugg, idx) => (
@@ -548,15 +565,11 @@ const HabitualPage: NextPage = () => {
                         </Button>
                       ))}
                     </div>
-                     <Button onClick={handleOpenGoalInputProgramDialog} variant="default" className="w-full text-sm py-2.5 mt-2">
-                      <WandSparkles className="mr-2 h-4 w-4" /> Create Program from Goal
-                    </Button>
                   </div>
                 </div>
               )}
               {isLoadingCommonSuggestions && habits.length === 0 && (<div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading suggestions...</p></div> )}
-              {habits.length > 0 && (<div className="my-4 flex justify-center"><Button onClick={handleOpenGoalInputProgramDialog} variant="outline" className="w-full max-w-xs"><WandSparkles className="mr-2 h-4 w-4" /> Create Program from Goal</Button></div>)}
-
+              
               <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} />
             </main>
             <footer className="shrink-0 py-3 text-center text-xs text-muted-foreground border-t">
@@ -566,9 +579,7 @@ const HabitualPage: NextPage = () => {
         </ScrollArea>
         <BottomNavigationBar />
       </div>
-      <Button className="fixed bottom-[calc(4rem+1.5rem)] right-6 sm:right-10 h-14 w-14 p-0 rounded-full shadow-xl z-30 bg-accent hover:bg-accent/90 text-accent-foreground flex items-center justify-center" onClick={() => { setEditingHabit(null); setInitialFormDataForDialog(null); setIsCreateHabitDialogOpen(true); }} aria-label="Add New Habit">
-        <Plus className="h-7 w-7" />
-      </Button>
+
       <CreateHabitDialog isOpen={isCreateHabitDialogOpen} onClose={() => { setIsCreateHabitDialogOpen(false); setInitialFormDataForDialog(null); setEditingHabit(null); }} onSaveHabit={handleSaveHabit} initialData={initialFormDataForDialog} />
       {selectedHabitForAISuggestion && aiSuggestion && (<AISuggestionDialog isOpen={isAISuggestionDialogOpen} onClose={() => setIsAISuggestionDialogOpen(false)} habitName={selectedHabitForAISuggestion.name} suggestion={aiSuggestion.suggestionText} isLoading={aiSuggestion.isLoading} error={aiSuggestion.error} />)}
       {reflectionDialogData && (<AddReflectionNoteDialog isOpen={isReflectionDialogOpen} onClose={() => { setIsReflectionDialogOpen(false); setReflectionDialogData(null); }} onSaveNote={(note) => handleSaveReflectionNote(reflectionDialogData.habitId, reflectionDialogData.date, note)} initialNote={reflectionDialogData.initialNote} habitName={reflectionDialogData.habitName} completionDate={reflectionDialogData.date} />)}
