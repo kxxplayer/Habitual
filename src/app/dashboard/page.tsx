@@ -95,9 +95,10 @@ const DashboardPage: NextPage = () => {
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-md max-h-[95vh]",      
-        "md:max-w-lg",                    
-        "lg:max-w-2xl"                   
+        "w-full max-w-sm",      
+        "max-h-[95vh]",                    
+        "md:max-w-md",                   
+        "lg:max-w-lg"                   
       )}>
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">

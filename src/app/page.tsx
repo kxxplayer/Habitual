@@ -468,7 +468,11 @@ const HabitualPage: NextPage = () => {
       const latestHabitInstance = habits.find(h => h.id === selectedHabitForDetailView.id);
       if (latestHabitInstance) {
         // Compare completionLog to prevent unnecessary updates if only other habits changed
-        if (JSON.stringify(selectedHabitForDetailView.completionLog) !== JSON.stringify(latestHabitInstance.completionLog)) {
+        if (JSON.stringify(selectedHabitForDetailView.completionLog) !== JSON.stringify(latestHabitInstance.completionLog) ||
+            selectedHabitForDetailView.name !== latestHabitInstance.name || // Add other fields if they can change and dialog depends on them
+            selectedHabitForDetailView.description !== latestHabitInstance.description ||
+            selectedHabitForDetailView.reminderEnabled !== latestHabitInstance.reminderEnabled
+            ) {
           setSelectedHabitForDetailView(latestHabitInstance);
         }
       } else {
@@ -510,10 +514,10 @@ const HabitualPage: NextPage = () => {
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-md",                
+        "w-full max-w-sm",                
         "max-h-[95vh]",                   
-        "md:max-w-lg",                   
-        "lg:max-w-2xl"                     
+        "md:max-w-md",                   
+        "lg:max-w-lg"                     
       )}>
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
