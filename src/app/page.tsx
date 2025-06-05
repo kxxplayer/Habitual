@@ -468,18 +468,21 @@ const HabitualPage: NextPage = () => {
 
   // Effect to keep selectedHabitForDetailView in sync with the main habits list
   React.useEffect(() => {
-    if (selectedHabitForDetailView?.id && authUser && isDetailViewDialogOpen && habits.length > 0) {
-      const latestHabitInstance = habits.find(h => h.id === selectedHabitForDetailView.id);
-      if (latestHabitInstance) {
-         if (JSON.stringify(selectedHabitForDetailView) !== JSON.stringify(latestHabitInstance)) {
-          setSelectedHabitForDetailView(latestHabitInstance);
+    if (selectedHabitForDetailView?.id && authUser && isDetailViewDialogOpen && habits.length > 0 && mounted) {
+        const latestHabitInstance = habits.find(h => h.id === selectedHabitForDetailView.id);
+        if (latestHabitInstance) {
+            // Compare relevant parts, e.g., completionLog, to avoid unnecessary updates if only reference changes
+            if (JSON.stringify(selectedHabitForDetailView.completionLog) !== JSON.stringify(latestHabitInstance.completionLog) ||
+                JSON.stringify(selectedHabitForDetailView.name) !== JSON.stringify(latestHabitInstance.name) || // And other relevant fields
+                JSON.stringify(selectedHabitForDetailView.description) !== JSON.stringify(latestHabitInstance.description)
+            ) {
+                 setSelectedHabitForDetailView(latestHabitInstance);
+            }
+        } else {
+            handleCloseDetailView(); // Habit might have been deleted
         }
-      } else {
-        // Habit might have been deleted
-        handleCloseDetailView();
-      }
     }
-  }, [habits, selectedHabitForDetailView, isDetailViewDialogOpen, authUser, handleCloseDetailView]);
+  }, [habits, selectedHabitForDetailView, isDetailViewDialogOpen, authUser, handleCloseDetailView, mounted]);
 
 
   const calendarDialogModifiers = React.useMemo(() => { /* Omitted for brevity - unchanged */ return {}; }, [habits, selectedCalendarDate, authUser]);
@@ -535,8 +538,8 @@ const HabitualPage: NextPage = () => {
       )}>
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
-          <div className="flex flex-col">
-            <main className="flex-grow min-h-0 px-3 sm:px-4 py-4">
+          <div className="flex flex-col min-h-full">
+            <main className="px-3 sm:px-4 py-4">
               {habits.length > 0 && !allTodayTasksDone && (
                 <div className="mb-4 flex justify-center">
                   <Button onClick={handleMarkAllTodayDone} variant={"default"} className="w-full max-w-xs">
@@ -581,7 +584,7 @@ const HabitualPage: NextPage = () => {
               
               <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} />
             </main>
-            <footer className="shrink-0 py-3 text-center text-xs text-muted-foreground border-t">
+            <footer className="shrink-0 py-3 text-center text-xs text-muted-foreground border-t mt-auto">
               <p>&copy; {new Date().getFullYear()} Habitual.</p>
             </footer>
           </div>
