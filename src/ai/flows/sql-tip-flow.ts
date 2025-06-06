@@ -19,7 +19,7 @@ export async function getSqlTip(): Promise<SqlTipOutput> {
 
 const prompt = ai.definePrompt({
   name: 'sqlTipPrompt',
-  model: 'googleai/gemini-1.5-flash-latest',
+  model: 'googleai/gemini-2.5-pro-latest',
   output: {schema: SqlTipOutputSchema},
   prompt: `You are a helpful assistant providing SQL tips.
   Generate ONE concise, useful SQL tip for learners or intermediate users.

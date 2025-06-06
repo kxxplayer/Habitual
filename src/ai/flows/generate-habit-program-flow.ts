@@ -40,7 +40,7 @@ export async function generateHabitProgramFromGoal(input: GenerateHabitProgramIn
 
 const prompt = ai.definePrompt({
   name: 'generateHabitProgramPrompt',
-  model: 'googleai/gemini-1.5-flash-latest',
+  model: 'googleai/gemini-2.5-pro-latest',
   input: {schema: GenerateHabitProgramInputSchema},
   output: {schema: GenerateHabitProgramOutputSchema},
   prompt: `You are an expert habit formation coach and program designer.
@@ -138,5 +138,3 @@ const generateHabitProgramFromGoalFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
