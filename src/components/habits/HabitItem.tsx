@@ -62,7 +62,7 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
     <Card
       onClick={() => onOpenDetailView(habit)}
       className={cn(
-        "cursor-pointer p-3 transition-all duration-200 ease-in-out hover:shadow-lg hover:scale-[1.03] active:scale-95 rounded-xl flex flex-col justify-between min-h-[80px] sm:min-h-[90px]",
+        "cursor-pointer p-3 transition-all duration-200 ease-in-out hover:shadow-lg hover:scale-[1.03] active:scale-95 rounded-xl flex flex-col justify-between min-h-[100px] sm:min-h-[120px]",
         isCompletedToday ? "bg-accent/10 border-l-4 border-accent shadow-md" : `bg-card border-l-4 ${categoryBorderColor}`,
         "shadow-md"
       )}
