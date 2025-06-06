@@ -530,8 +530,15 @@ const HabitualPage: NextPage = () => {
     </div>
   );
 
-  if (!mounted || isLoadingAuth) return loadingScreen("Initializing app...");
-  if (!authUser) return loadingScreen("Redirecting to login...");
+  if (!mounted) {
+    return loadingScreen("Initializing app...");
+  }
+  if (isLoadingAuth) {
+    return loadingScreen("Initializing app..."); // Or "Loading authentication..."
+  }
+  if (!authUser) {
+    return loadingScreen("Redirecting to login...");
+  }
 
 
   return (
@@ -544,7 +551,7 @@ const HabitualPage: NextPage = () => {
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4"> {/* Removed flex-grow */}
+            <main className="px-3 sm:px-4 py-4">
               {habits.length > 0 && !allTodayTasksDone && (
                 <div className="mb-4 flex justify-center">
                   <Button onClick={handleMarkAllTodayDone} variant={"default"} className="w-full max-w-xs">
