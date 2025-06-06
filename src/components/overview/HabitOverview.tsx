@@ -280,7 +280,7 @@ const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints }) => {
           )}
         </>
       ) : (
-        <div className="text-center py-4">
+        <div className="text-center py-4 min-h-[200px] flex flex-col items-center justify-center">
           <JourneyIcon className="mx-auto h-10 w-10 text-muted-foreground/50 mb-2" />
           <p className="text-muted-foreground text-sm">{journeyMessage}</p>
         </div>

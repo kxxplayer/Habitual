@@ -95,7 +95,10 @@ const AchievementsPage: NextPage = () => {
                   </CardTitle>
                    <CardDescription>Your collection of earned badges.</CardDescription>
                 </CardHeader>
-                <CardContent className="pt-2 space-y-3">
+                <CardContent className={cn(
+                  "pt-2 space-y-3",
+                  earnedBadges.length === 0 && "min-h-[150px] flex items-center justify-center"
+                )}>
                   {earnedBadges.length === 0 ? (
                     <p className="text-muted-foreground text-center py-4">No badges earned yet. Keep up the great work!</p>
                   ) : (
