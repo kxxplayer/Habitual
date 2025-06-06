@@ -7,7 +7,7 @@
 import * as React from 'react';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'; // Added useCallback
 import type { NextPage } from 'next';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
 import Link from 'next/link';
 
 import { auth } from '@/lib/firebase';
@@ -81,6 +81,7 @@ const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
 
 const HabitualPage: NextPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams(); // For query param
   const [mounted, setMounted] = React.useState(false);
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
@@ -148,6 +149,17 @@ const HabitualPage: NextPage = () => {
         setSelectedCalendarDate(nowEffectToday);
     }
   }, [mounted]);
+
+  // Effect to handle ?action=addHabit query parameter
+  useEffect(() => {
+    if (mounted && searchParams.get('action') === 'addHabit') {
+      setInitialFormDataForDialog(null);
+      setEditingHabit(null);
+      setIsCreateHabitDialogOpen(true);
+      // Clean the URL by removing the action parameter
+      router.replace('/', { scroll: false });
+    }
+  }, [searchParams, router, mounted]);
 
 
   React.useEffect(() => {
@@ -531,7 +543,7 @@ const HabitualPage: NextPage = () => {
   );
 
   if (!mounted) return loadingScreen("Initializing app...");
-  if (isLoadingAuth) return loadingScreen("Initializing app..."); // Keep this consistent for hydration
+  if (isLoadingAuth) return loadingScreen("Initializing app...");
   if (!authUser && mounted && !isLoadingAuth) return loadingScreen("Redirecting to login...");
 
 
@@ -596,15 +608,6 @@ const HabitualPage: NextPage = () => {
           </div>
         </ScrollArea>
         <BottomNavigationBar />
-         {/* Floating Action Button for Add Habit */}
-        <Button
-            onClick={() => { setEditingHabit(null); setInitialFormDataForDialog(null); setIsCreateHabitDialogOpen(true); }}
-            variant="default"
-            className="absolute bottom-20 right-4 sm:right-6 z-40 h-14 w-14 rounded-full shadow-lg flex items-center justify-center" /* Kept larger FAB size for prominence */
-            aria-label="Add new habit"
-        >
-            <Plus className="h-6 w-6" />
-        </Button>
       </div>
 
       <CreateHabitDialog isOpen={isCreateHabitDialogOpen} onClose={() => { setIsCreateHabitDialogOpen(false); setInitialFormDataForDialog(null); setEditingHabit(null); }} onSaveHabit={handleSaveHabit} initialData={initialFormDataForDialog} />
@@ -653,3 +656,4 @@ const HabitualPage: NextPage = () => {
 };
 export default HabitualPage;
     
+
