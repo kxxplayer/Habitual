@@ -2,8 +2,7 @@
 "use client";
 
 // ==========================================================================
-// HABITUAL MAIN PAGE - Refactor for Tile View + Detail Dialog
-// + Suspense wrapper for useSearchParams
+// HABITUAL MAIN PAGE - Firestore Integration
 // ==========================================================================
 import * as React from 'react';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -11,7 +10,8 @@ import type { NextPage } from 'next';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase'; // Added db
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore'; // Firestore imports
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -73,12 +73,17 @@ const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu",
 const weekDaysArrayForForm = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const POINTS_PER_COMPLETION = 10;
 
-const LS_KEY_PREFIX_HABITS = "habits_";
-const LS_KEY_PREFIX_BADGES = "earnedBadges_";
-const LS_KEY_PREFIX_POINTS = "totalPoints_";
-const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
+// Firestore collection path
+const USER_DATA_COLLECTION = "users";
+const USER_APP_DATA_SUBCOLLECTION = "appData";
+const USER_MAIN_DOC_ID = "main";
 
-// Define the loading component for Suspense fallback
+// Remove localStorage keys as they are no longer the primary source
+// const LS_KEY_PREFIX_HABITS = "habits_";
+// const LS_KEY_PREFIX_BADGES = "earnedBadges_";
+// const LS_KEY_PREFIX_POINTS = "totalPoints_";
+const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_"; // This can remain localStorage specific
+
 const LoadingFallback: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
     <div className={cn(
@@ -94,7 +99,6 @@ const LoadingFallback: React.FC = () => (
   </div>
 );
 
-// Original HabitualPage content moved here
 const HabitualPageContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -104,7 +108,9 @@ const HabitualPageContent: React.FC = () => {
   const previousAuthUserUidRef = React.useRef<string | null | undefined>(undefined);
 
   const [habits, setHabits] = React.useState<Habit[]>([]);
-  const [isLoadingHabits, setIsLoadingHabits] = React.useState(true);
+  const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
+  const [totalPoints, setTotalPoints] = React.useState<number>(0);
+  const [isLoadingData, setIsLoadingData] = React.useState(true); // New state for Firestore data loading
 
   const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = React.useState(false);
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = React.useState<Habit | null>(null);
@@ -113,9 +119,8 @@ const HabitualPageContent: React.FC = () => {
   const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
   const [editingHabit, setEditingHabit] = React.useState<Habit | null>(null);
   const [initialFormDataForDialog, setInitialFormDataForDialog] = React.useState<Partial<CreateHabitFormData> | null>(null);
+  const [createHabitDialogStep, setCreateHabitDialogStep] = React.useState(1);
 
-  const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
-  const [totalPoints, setTotalPoints] = React.useState<number>(0);
 
   const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission | null>(null);
   const reminderTimeouts = React.useRef<NodeJS.Timeout[]>([]);
@@ -168,6 +173,7 @@ const HabitualPageContent: React.FC = () => {
     if (mounted && searchParams.get('action') === 'addHabit') {
       setInitialFormDataForDialog(null);
       setEditingHabit(null);
+      setCreateHabitDialogStep(1); // Start from step 1 for new habit
       setIsCreateHabitDialogOpen(true);
       router.replace('/', { scroll: false });
     }
@@ -180,9 +186,10 @@ const HabitualPageContent: React.FC = () => {
       const currentUidAuthMain = currentUserAuthMain?.uid || null;
 
       if (previousUidAuthMain !== undefined && previousUidAuthMain !== currentUidAuthMain) {
-        setHabits([]); setEarnedBadges([]); setTotalPoints(0);
+        // Reset all app state when user changes
+        setHabits([]); setEarnedBadges([]); setTotalPoints(0); setIsLoadingData(true);
         setCommonHabitSuggestions([]); setCommonSuggestionsFetched(false);
-        setEditingHabit(null); setInitialFormDataForDialog(null);
+        setEditingHabit(null); setInitialFormDataForDialog(null); setCreateHabitDialogStep(1);
         setReflectionDialogData(null); setRescheduleDialogData(null);
         setHabitToDelete(null); setIsDeleteHabitConfirmOpen(false);
         setIsAISuggestionDialogOpen(false); setIsCreateHabitDialogOpen(false);
@@ -207,85 +214,131 @@ const HabitualPageContent: React.FC = () => {
     }
   }, []);
 
-  React.useEffect(() => {
-    if (isLoadingAuth || !mounted) { setIsLoadingHabits(false); return; }
-    if (!authUser) {
-      if (habits.length > 0 || earnedBadges.length > 0 || totalPoints > 0) {
-        setHabits([]); setEarnedBadges([]); setTotalPoints(0);
-      }
-      setIsLoadingHabits(false); return;
+  // Load data from Firestore
+  useEffect(() => {
+    if (!authUser || !mounted) {
+      setIsLoadingData(false);
+      return;
     }
-    setIsLoadingHabits(true);
-    const userUidLoadMain = authUser.uid;
-    const userHabitsKeyLoadMain = `${LS_KEY_PREFIX_HABITS}${userUidLoadMain}`;
-    const storedHabitsLoadMain = typeof window !== 'undefined' ? localStorage.getItem(userHabitsKeyLoadMain) : null;
-    let parsedHabitsLoadMain: Habit[] = [];
-    if (storedHabitsLoadMain) {
-      try {
-        const rawHabitsLoadMain: any[] = JSON.parse(storedHabitsLoadMain);
-        parsedHabitsLoadMain = rawHabitsLoadMain.map((hItemMapLoadMain: any): Habit => ({
-          id: String(hItemMapLoadMain.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
-          name: String(hItemMapLoadMain.name || 'Unnamed Habit'),
-          description: typeof hItemMapLoadMain.description === 'string' ? hItemMapLoadMain.description : undefined,
-          category: HABIT_CATEGORIES.includes(hItemMapLoadMain.category as HabitCategory) ? hItemMapLoadMain.category : 'Other',
-          daysOfWeek: Array.isArray(hItemMapLoadMain.daysOfWeek) ? hItemMapLoadMain.daysOfWeek.filter((dValLoadMain: any) => weekDaysArrayForForm.includes(dValLoadMain as WeekDay)) : (typeof hItemMapLoadMain.frequency === 'string' && hItemMapLoadMain.frequency.toLowerCase() === 'daily' ? [...weekDaysArrayForForm] : []),
-          optimalTiming: typeof hItemMapLoadMain.optimalTiming === 'string' ? hItemMapLoadMain.optimalTiming : undefined,
-          durationHours: typeof hItemMapLoadMain.durationHours === 'number' ? hItemMapLoadMain.durationHours : undefined,
-          durationMinutes: typeof hItemMapLoadMain.durationMinutes === 'number' ? hItemMapLoadMain.durationMinutes : undefined,
-          specificTime: typeof hItemMapLoadMain.specificTime === 'string' ? hItemMapLoadMain.specificTime : undefined,
-          completionLog: (Array.isArray(hItemMapLoadMain.completionLog) ? hItemMapLoadMain.completionLog : []).map((logMapItemLoadMain: any): HabitCompletionLogEntry | null => {
-            if (typeof logMapItemLoadMain.date !== 'string' || !logMapItemLoadMain.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
-            return {
-              date: logMapItemLoadMain.date,
-              time: typeof logMapItemLoadMain.time === 'string' && logMapItemLoadMain.time.length > 0 ? logMapItemLoadMain.time : 'N/A',
-              note: typeof logMapItemLoadMain.note === 'string' ? logMapItemLoadMain.note : undefined,
-              status: ['completed', 'pending_makeup', 'skipped'].includes(logMapItemLoadMain.status) ? logMapItemLoadMain.status : 'completed',
-              originalMissedDate: typeof logMapItemLoadMain.originalMissedDate === 'string' && logMapItemLoadMain.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? logMapItemLoadMain.originalMissedDate : undefined,
-            };
-          }).filter((logItemFilterLoadMain): logItemFilterLoadMain is HabitCompletionLogEntry => logItemFilterLoadMain !== null).sort((aLogSortLoadMain,bLogSortLoadMain) => bLogSortLoadMain.date.localeCompare(aLogSortLoadMain.date)),
-          reminderEnabled: typeof hItemMapLoadMain.reminderEnabled === 'boolean' ? hItemMapLoadMain.reminderEnabled : false,
-        }));
-        setHabits(parsedHabitsLoadMain);
-      } catch (eParseHabitsLoadMain) { setHabits([]); }
-    } else { setHabits([]); }
-    if (authUser && parsedHabitsLoadMain.length === 0 && !commonSuggestionsFetched) {
-      setIsLoadingCommonSuggestions(true);
-      getCommonHabitSuggestions({ count: 5 })
-        .then(responseCommonSuggMain => setCommonHabitSuggestions(responseCommonSuggMain?.suggestions || []))
-        .catch(errCommonSuggMain => setCommonHabitSuggestions([]))
-        .finally(() => {
-          setIsLoadingCommonSuggestions(false); setCommonSuggestionsFetched(true);
-          const dailyQuestKeyLoadMain = `${LS_KEY_PREFIX_DAILY_QUEST}${userUidLoadMain}`;
-          if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKeyLoadMain)) setIsDailyQuestDialogOpen(true);
-        });
-    } else if (parsedHabitsLoadMain.length > 0) setCommonSuggestionsFetched(true);
-    const userBadgesKeyLoadMain = `${LS_KEY_PREFIX_BADGES}${userUidLoadMain}`;
-    const storedBadgesLoadMain = typeof window !== 'undefined' ? localStorage.getItem(userBadgesKeyLoadMain) : null;
-    if (storedBadgesLoadMain) { try { setEarnedBadges(JSON.parse(storedBadgesLoadMain)); } catch (e) { setEarnedBadges([]); } } else { setEarnedBadges([]); }
-    const userPointsKeyLoadMain = `${LS_KEY_PREFIX_POINTS}${userUidLoadMain}`;
-    const storedPointsLoadMain = typeof window !== 'undefined' ? localStorage.getItem(userPointsKeyLoadMain) : null;
-    if (storedPointsLoadMain) { try { setTotalPoints(parseInt(storedPointsLoadMain, 10) || 0); } catch (e) { setTotalPoints(0); } } else { setTotalPoints(0); }
-    setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth, commonSuggestionsFetched, mounted]);
+    setIsLoadingData(true);
+    const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
 
-  React.useEffect(() => {
-    if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return;
-    localStorage.setItem(`${LS_KEY_PREFIX_HABITS}${authUser.uid}`, JSON.stringify(habits));
-    const newlyEarnedBadgesSaveMain = checkAndAwardBadges(habits, earnedBadges);
-    if (newlyEarnedBadgesSaveMain.length > 0) {
-      const updatedBadgesSaveMain = [...earnedBadges];
-      newlyEarnedBadgesSaveMain.forEach(async newBadgeItemSaveMain => {
-        if (!earnedBadges.some(ebFindSaveMain => ebFindSaveMain.id === newBadgeItemSaveMain.id)) {
-            updatedBadgesSaveMain.push(newBadgeItemSaveMain);
-            if (newBadgeItemSaveMain.id === THREE_DAY_SQL_STREAK_BADGE_ID) { try { await getSqlTip(); } catch (e) {} }
+    const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        // Basic validation and sanitization (similar to previous localStorage parsing)
+        const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({
+          id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
+          name: String(h.name || 'Unnamed Habit'),
+          description: typeof h.description === 'string' ? h.description : undefined,
+          category: HABIT_CATEGORIES.includes(h.category as HabitCategory) ? h.category : 'Other',
+          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any) => weekDaysArrayForForm.includes(d as WeekDay)) : [],
+          optimalTiming: typeof h.optimalTiming === 'string' ? h.optimalTiming : undefined,
+          durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
+          durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
+          specificTime: typeof h.specificTime === 'string' ? h.specificTime : undefined,
+          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => {
+            if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
+            return {
+              date: log.date,
+              time: typeof log.time === 'string' && log.time.length > 0 ? log.time : 'N/A',
+              note: typeof log.note === 'string' ? log.note : undefined,
+              status: ['completed', 'pending_makeup', 'skipped'].includes(log.status) ? log.status : 'completed',
+              originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
+            };
+          }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a,b) => b.date.localeCompare(a.date)),
+          reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
+        }));
+        setHabits(parsedHabits);
+        setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
+        setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
+        
+        if (parsedHabits.length === 0 && !commonSuggestionsFetched) {
+          setIsLoadingCommonSuggestions(true);
+          getCommonHabitSuggestions({ count: 5 })
+            .then(response => setCommonHabitSuggestions(response?.suggestions || []))
+            .catch(err => setCommonHabitSuggestions([]))
+            .finally(() => {
+              setIsLoadingCommonSuggestions(false); setCommonSuggestionsFetched(true);
+              const dailyQuestKey = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`;
+              if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
+            });
+        } else if (parsedHabits.length > 0) {
+            setCommonSuggestionsFetched(true); // Mark as fetched if habits exist
+        }
+
+      } else {
+        // No data yet, initialize with defaults. This doc will be created on first save.
+        setHabits([]); setEarnedBadges([]); setTotalPoints(0);
+        if (!commonSuggestionsFetched) {
+          setIsLoadingCommonSuggestions(true);
+          getCommonHabitSuggestions({ count: 5 })
+            .then(response => setCommonHabitSuggestions(response?.suggestions || []))
+            .catch(err => setCommonHabitSuggestions([]))
+            .finally(() => {
+              setIsLoadingCommonSuggestions(false); setCommonSuggestionsFetched(true);
+              const dailyQuestKey = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`;
+              if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
+            });
+        }
+      }
+      setIsLoadingData(false);
+    }, (error) => {
+      console.error("Error listening to Firestore data:", error);
+      setIsLoadingData(false);
+      // Optionally set some error state here to inform the user
+    });
+
+    return () => unsubscribeFirestore();
+  }, [authUser, mounted, commonSuggestionsFetched]);
+
+
+  // Save data to Firestore
+  const firstSaveDoneRef = useRef(false);
+  useEffect(() => {
+    if (!authUser || !mounted || isLoadingData || !firstSaveDoneRef.current) {
+      // If data is still loading, or if it's the very first render cycle after loading, don't save yet
+      // to prevent overwriting Firestore with potentially empty initial client state.
+      // Only set firstSaveDoneRef to true after initial data load is complete.
+      if (!isLoadingData && authUser && mounted) {
+        firstSaveDoneRef.current = true;
+      }
+      return;
+    }
+
+    const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
+    const dataToSave = {
+      habits: habits, // Ensure habits are properly serialized if they contain complex objects not directly supported by Firestore (though current structure should be fine)
+      earnedBadges: earnedBadges,
+      totalPoints: totalPoints,
+      lastUpdated: new Date().toISOString(), // Optional: timestamp
+    };
+
+    setDoc(userDocRef, dataToSave, { merge: true }) // Use merge:true to avoid overwriting if doc exists but some fields are missing
+      .then(() => { /* console.log("Data saved to Firestore") */ })
+      .catch(error => console.error("Error saving data to Firestore:", error));
+
+  }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData]);
+
+
+  // Award badges (this effect depends on habits and earnedBadges which are now from Firestore)
+   React.useEffect(() => {
+    if (!authUser || isLoadingData || !mounted || !firstSaveDoneRef.current) return;
+
+    const newlyEarnedBadges = checkAndAwardBadges(habits, earnedBadges);
+    if (newlyEarnedBadges.length > 0) {
+      const updatedBadges = [...earnedBadges];
+      newlyEarnedBadges.forEach(async newBadge => {
+        if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
+          updatedBadges.push(newBadge);
+            if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) { try { await getSqlTip(); } catch (e) {} }
         }
       });
-      if (updatedBadgesSaveMain.length !== earnedBadges.length) setEarnedBadges(updatedBadgesSaveMain);
+      // This will trigger the save-to-Firestore effect because `earnedBadges` state changes.
+      if (updatedBadges.length !== earnedBadges.length) setEarnedBadges(updatedBadges);
     }
-  }, [habits, authUser, isLoadingAuth, isLoadingHabits, earnedBadges, mounted]);
+  }, [habits, earnedBadges, authUser, isLoadingData, mounted]);
 
-  React.useEffect(() => { if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return; localStorage.setItem(`${LS_KEY_PREFIX_BADGES}${authUser.uid}`, JSON.stringify(earnedBadges)); }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits, mounted]);
-  React.useEffect(() => { if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return; localStorage.setItem(`${LS_KEY_PREFIX_POINTS}${authUser.uid}`, totalPoints.toString()); }, [totalPoints, authUser, isLoadingAuth, isLoadingHabits, mounted]);
 
   React.useEffect(() => {
     reminderTimeouts.current.forEach(clearTimeout); reminderTimeouts.current = [];
@@ -293,12 +346,12 @@ const HabitualPageContent: React.FC = () => {
   }, [habits, notificationPermission, authUser]);
 
   React.useEffect(() => {
-    if (todayString && todayAbbr && habits.length > 0 && !isLoadingHabits) {
+    if (todayString && todayAbbr && habits.length > 0 && !isLoadingData) {
       const tasksScheduledTodayCheckAllDoneMain = habits.filter(hCheckAllDoneMain => hCheckAllDoneMain.daysOfWeek.includes(todayAbbr));
       if (tasksScheduledTodayCheckAllDoneMain.length === 0) { setAllTodayTasksDone(true); return; }
       setAllTodayTasksDone(tasksScheduledTodayCheckAllDoneMain.every(h => h.completionLog.some(l => l.date === todayString && l.status === 'completed')));
-    } else if (habits.length === 0 && !isLoadingHabits && todayString) setAllTodayTasksDone(true);
-  }, [habits, todayString, todayAbbr, isLoadingHabits]);
+    } else if (habits.length === 0 && !isLoadingData && todayString) setAllTodayTasksDone(true);
+  }, [habits, todayString, todayAbbr, isLoadingData]);
 
   const handleSaveHabit = (habitDataSaveHabitMain: CreateHabitFormData & { id?: string }) => {
     if (!authUser) return;
@@ -307,13 +360,13 @@ const HabitualPageContent: React.FC = () => {
       setHabits(prev => prev.map(h => h.id === habitDataSaveHabitMain.id ? { ...h, name: habitDataSaveHabitMain.name, description: habitDataSaveHabitMain.description, category: habitDataSaveHabitMain.category || 'Other', daysOfWeek: habitDataSaveHabitMain.daysOfWeek, optimalTiming: habitDataSaveHabitMain.optimalTiming, durationHours: habitDataSaveHabitMain.durationHours ?? undefined, durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined, specificTime: habitDataSaveHabitMain.specificTime } : h));
     } else {
       const newHabitSaveHabitMain: Habit = {
-        id: String(Date.now() + Math.random()), name: habitDataSaveHabitMain.name, description: habitDataSaveHabitMain.description, category: habitDataSaveHabitMain.category || 'Other', daysOfWeek: habitDataSaveHabitMain.daysOfWeek, optimalTiming: habitDataSaveHabitMain.optimalTiming, durationHours: habitDataSaveHabitMain.durationHours ?? undefined, durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined, specificTime: habitDataSaveHabitMain.specificTime, completionLog: [], reminderEnabled: false,
+        id: String(Date.now() + Math.random().toString(36).substring(2,9)), name: habitDataSaveHabitMain.name, description: habitDataSaveHabitMain.description, category: habitDataSaveHabitMain.category || 'Other', daysOfWeek: habitDataSaveHabitMain.daysOfWeek, optimalTiming: habitDataSaveHabitMain.optimalTiming, durationHours: habitDataSaveHabitMain.durationHours ?? undefined, durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined, specificTime: habitDataSaveHabitMain.specificTime, completionLog: [], reminderEnabled: false,
       };
       setHabits(prev => [...prev, newHabitSaveHabitMain]);
       if (commonHabitSuggestions.length > 0) setCommonHabitSuggestions([]);
     }
     if(isCreateHabitDialogOpen) setIsCreateHabitDialogOpen(false);
-    setInitialFormDataForDialog(null); setEditingHabit(null);
+    setInitialFormDataForDialog(null); setEditingHabit(null); setCreateHabitDialogStep(1);
   };
 
   const handleOpenEditDialog = (habitToEditOpenEditMain: Habit) => {
@@ -321,6 +374,7 @@ const HabitualPageContent: React.FC = () => {
     setInitialFormDataForDialog({
       id: habitToEditOpenEditMain.id, name: habitToEditOpenEditMain.name, description: habitToEditOpenEditMain.description || '', category: habitToEditOpenEditMain.category || 'Other', daysOfWeek: habitToEditOpenEditMain.daysOfWeek, optimalTiming: habitToEditOpenEditMain.optimalTiming || '', durationHours: habitToEditOpenEditMain.durationHours ?? null, durationMinutes: habitToEditOpenEditMain.durationMinutes ?? null, specificTime: habitToEditOpenEditMain.specificTime || '',
     });
+    setCreateHabitDialogStep(2); // Go directly to step 2 for editing
     setIsCreateHabitDialogOpen(true);
   };
 
@@ -464,6 +518,7 @@ const HabitualPageContent: React.FC = () => {
   const handleCustomizeSuggestedHabit = (suggestionCustomizeMain: CommonSuggestedHabitType) => {
     setEditingHabit(null);
     setInitialFormDataForDialog({ name: suggestionCustomizeMain.name, category: suggestionCustomizeMain.category || 'Other', description: '', daysOfWeek: [] as WeekDay[] });
+    setCreateHabitDialogStep(2); // Go to step 2 with prefill
     setIsCreateHabitDialogOpen(true);
   };
 
@@ -474,7 +529,7 @@ const HabitualPageContent: React.FC = () => {
   };
 
   const handleMarkAllTodayDone = () => {
-    if (!todayString || !todayAbbr || isLoadingHabits || !authUser) return;
+    if (!todayString || !todayAbbr || isLoadingData || !authUser) return;
     habits.forEach(h => {
       if (h.daysOfWeek.includes(todayAbbr) && !h.completionLog.some(l => l.date === todayString && l.status === 'completed')) {
         handleToggleComplete(h.id, todayString, true);
@@ -493,7 +548,7 @@ const HabitualPageContent: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
-    if (selectedHabitForDetailView?.id && authUser && isDetailViewDialogOpen && habits.length > 0 && mounted) {
+    if (selectedHabitForDetailView?.id && authUser && isDetailViewDialogOpen && habits.length > 0 && mounted && !isLoadingData) {
         const latestHabitInstance = habits.find(h => h.id === selectedHabitForDetailView.id);
         if (latestHabitInstance) {
             if (JSON.stringify(selectedHabitForDetailView.completionLog) !== JSON.stringify(latestHabitInstance.completionLog) ||
@@ -504,10 +559,10 @@ const HabitualPageContent: React.FC = () => {
                  setSelectedHabitForDetailView(latestHabitInstance);
             }
         } else {
-            handleCloseDetailView();
+            handleCloseDetailView(); // Habit no longer exists
         }
     }
-  }, [habits, selectedHabitForDetailView, isDetailViewDialogOpen, authUser, handleCloseDetailView, mounted]);
+  }, [habits, selectedHabitForDetailView, isDetailViewDialogOpen, authUser, handleCloseDetailView, mounted, isLoadingData]);
 
 
   const calendarDialogModifiers = React.useMemo(() => { return {}; }, [habits, selectedCalendarDate, authUser]);
@@ -549,8 +604,9 @@ const HabitualPageContent: React.FC = () => {
   );
 
   if (!mounted) return loadingScreen("Initializing app...");
-  if (isLoadingAuth) return loadingScreen("Initializing app...");
+  if (isLoadingAuth) return loadingScreen("Authenticating...");
   if (!authUser && mounted && !isLoadingAuth) return loadingScreen("Redirecting to login...");
+  if (authUser && isLoadingData) return loadingScreen("Loading your data...");
 
 
   return (
@@ -580,7 +636,7 @@ const HabitualPageContent: React.FC = () => {
               )}
 
               <div className="my-4 flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-3">
-                  <Button onClick={() => { setEditingHabit(null); setInitialFormDataForDialog(null); setIsCreateHabitDialogOpen(true); }}
+                  <Button onClick={() => { setEditingHabit(null); setInitialFormDataForDialog(null); setCreateHabitDialogStep(1); setIsCreateHabitDialogOpen(true); }}
                           variant="default" className="w-full sm:w-auto sm:flex-1 max-w-xs">
                       <Plus className="mr-2 h-4 w-4" /> Add New Habit
                   </Button>
@@ -616,7 +672,14 @@ const HabitualPageContent: React.FC = () => {
         <BottomNavigationBar />
       </div>
 
-      <CreateHabitDialog isOpen={isCreateHabitDialogOpen} onClose={() => { setIsCreateHabitDialogOpen(false); setInitialFormDataForDialog(null); setEditingHabit(null); }} onSaveHabit={handleSaveHabit} initialData={initialFormDataForDialog} />
+      <CreateHabitDialog 
+        isOpen={isCreateHabitDialogOpen} 
+        onClose={() => { setIsCreateHabitDialogOpen(false); setInitialFormDataForDialog(null); setEditingHabit(null); setCreateHabitDialogStep(1);}} 
+        onSaveHabit={handleSaveHabit} 
+        initialData={initialFormDataForDialog}
+        currentStep={createHabitDialogStep}
+        setCurrentStep={setCreateHabitDialogStep}
+      />
       {selectedHabitForAISuggestion && aiSuggestion && (<AISuggestionDialog isOpen={isAISuggestionDialogOpen} onClose={() => setIsAISuggestionDialogOpen(false)} habitName={selectedHabitForAISuggestion.name} suggestion={aiSuggestion.suggestionText} isLoading={aiSuggestion.isLoading} error={aiSuggestion.error} />)}
       {reflectionDialogData && (<AddReflectionNoteDialog isOpen={isReflectionDialogOpen} onClose={() => { setIsReflectionDialogOpen(false); setReflectionDialogData(null); }} onSaveNote={(note) => handleSaveReflectionNote(reflectionDialogData.habitId, reflectionDialogData.date, note)} initialNote={reflectionDialogData.initialNote} habitName={reflectionDialogData.habitName} completionDate={reflectionDialogData.date} />)}
       {rescheduleDialogData && (<RescheduleMissedHabitDialog isOpen={!!rescheduleDialogData} onClose={() => setRescheduleDialogData(null)} habitName={rescheduleDialogData.habit.name} originalMissedDate={rescheduleDialogData.missedDate} onReschedule={(newDate) => { handleSaveRescheduledHabit(rescheduleDialogData.habit.id, rescheduleDialogData.missedDate, newDate); setRescheduleDialogData(null); }} onMarkAsSkipped={() => { handleSaveMarkAsSkipped(rescheduleDialogData.habit.id, rescheduleDialogData.missedDate); setRescheduleDialogData(null); }} />)}
@@ -659,7 +722,6 @@ const HabitualPageContent: React.FC = () => {
   );
 };
 
-// The actual page component that Next.js renders
 const HabitualPage: NextPage = () => {
   return (
     <React.Suspense fallback={<LoadingFallback />}>
@@ -670,4 +732,3 @@ const HabitualPage: NextPage = () => {
 
 export default HabitualPage;
 
-    
