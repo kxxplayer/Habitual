@@ -79,9 +79,8 @@ const USER_DATA_COLLECTION = "users";
 const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
 
-const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_"; // This can remain localStorage specific
+const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
 
-// Helper function to remove undefined properties from an object or an array of objects
 function sanitizeForFirestore<T>(data: T): T {
   if (data === null || typeof data !== 'object') {
     return data;
@@ -103,21 +102,30 @@ function sanitizeForFirestore<T>(data: T): T {
   return sanitizedObject as T;
 }
 
-// Moved LoadingFallback to top-level
-const LoadingFallback: React.FC = () => (
-  <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
+const LoadingFallback: React.FC = () => {
+  const [isClientMounted, setIsClientMounted] = useState(false);
+  useEffect(() => {
+    setIsClientMounted(true);
+  }, []);
+
+  return (
     <div className={cn(
-      "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto h-full",
-      "w-full max-w-sm",
-      "md:max-w-md lg:max-w-lg"
-    )}>
-      <div className="flex flex-col items-center justify-center flex-grow p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading...</p>
+        "min-h-screen flex items-center justify-center p-0 sm:p-4",
+        isClientMounted && "h-[97vh]"
+      )}>
+      <div className={cn(
+        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto h-full",
+        "w-full max-w-sm",
+        "md:max-w-md lg:max-w-lg"
+      )}>
+        <div className="flex flex-col items-center justify-center flex-grow p-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const HabitualPageContent: React.FC = () => {
   const router = useRouter();
@@ -131,7 +139,7 @@ const HabitualPageContent: React.FC = () => {
   const [habits, setHabits] = React.useState<Habit[]>([]);
   const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
   const [totalPoints, setTotalPoints] = React.useState<number>(0);
-  const [isLoadingData, setIsLoadingData] = React.useState(true); 
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
 
   const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = React.useState(false);
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = React.useState<Habit | null>(null);
@@ -177,8 +185,15 @@ const HabitualPageContent: React.FC = () => {
   const [programSuggestion, setProgramSuggestion] = React.useState<GenerateHabitProgramOutput | null>(null);
   const [isProgramSuggestionDialogOpen, setIsProgramSuggestionDialogOpen] = React.useState(false);
 
+  const [isClientMounted, setIsClientMounted] = React.useState(false);
+
   useEffect(() => {
-    setMounted(true);
+    setIsClientMounted(true);
+    console.log("PAGE.TSX: HabitualPageContent component has mounted on CLIENT.");
+  }, []);
+
+  useEffect(() => {
+    setMounted(true); // Original mounted state for other logic
   }, []);
 
   React.useEffect(() => {
@@ -191,12 +206,12 @@ const HabitualPageContent: React.FC = () => {
   }, [mounted]);
 
   useEffect(() => {
-    console.log("PAGE.TSX: Mounted state:", mounted, "Search params action:", searchParams.get('action'));
+    console.log("PAGE.TSX: Search params effect. Mounted:", mounted, "Action:", searchParams.get('action'));
     if (mounted && searchParams.get('action') === 'addHabit') {
-      console.log("PAGE.TSX: addHabit action detected, opening dialog.");
+      console.log("PAGE.TSX: addHabit action detected, opening CreateHabitDialog.");
       setInitialFormDataForDialog(null);
       setEditingHabit(null);
-      setCreateHabitDialogStep(1); 
+      setCreateHabitDialogStep(1);
       setIsCreateHabitDialogOpen(true);
       router.replace('/', { scroll: false });
     }
@@ -209,7 +224,6 @@ const HabitualPageContent: React.FC = () => {
       const currentUidAuthMain = currentUserAuthMain?.uid || null;
 
       if (previousUidAuthMain !== undefined && previousUidAuthMain !== currentUidAuthMain) {
-        
         setHabits([]); setEarnedBadges([]); setTotalPoints(0); setIsLoadingData(true);
         setCommonHabitSuggestions([]); setCommonSuggestionsFetched(false);
         setEditingHabit(null); setInitialFormDataForDialog(null); setCreateHabitDialogStep(1);
@@ -237,7 +251,6 @@ const HabitualPageContent: React.FC = () => {
     }
   }, []);
 
-  // Load data from Firestore
   useEffect(() => {
     if (!authUser || !mounted) {
       setIsLoadingData(false);
@@ -249,7 +262,6 @@ const HabitualPageContent: React.FC = () => {
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        
         const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({
           id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
           name: String(h.name || 'Unnamed Habit'),
@@ -275,7 +287,6 @@ const HabitualPageContent: React.FC = () => {
         setHabits(parsedHabits);
         setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
         setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
-        
         if (parsedHabits.length === 0 && !commonSuggestionsFetched) {
           setIsLoadingCommonSuggestions(true);
           getCommonHabitSuggestions({ count: 5 })
@@ -291,11 +302,10 @@ const HabitualPageContent: React.FC = () => {
               if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
             });
         } else if (parsedHabits.length > 0) {
-            setCommonSuggestionsFetched(true); 
+            setCommonSuggestionsFetched(true);
         }
 
       } else {
-        
         setHabits([]); setEarnedBadges([]); setTotalPoints(0);
         if (!commonSuggestionsFetched) {
           setIsLoadingCommonSuggestions(true);
@@ -318,50 +328,37 @@ const HabitualPageContent: React.FC = () => {
       console.error("Error listening to Firestore data:", error);
       toast({ title: "Database Error", description: "Could not load your data from the cloud.", variant: "destructive" });
       setIsLoadingData(false);
-      
     });
-
     return () => unsubscribeFirestore();
   }, [authUser, mounted, commonSuggestionsFetched, toast]);
 
-
-  // Save data to Firestore
   const firstSaveDoneRef = React.useRef(false);
   useEffect(() => {
     if (!authUser || !mounted || isLoadingData || !firstSaveDoneRef.current) {
-      
       if (!isLoadingData && authUser && mounted) {
         firstSaveDoneRef.current = true;
       }
       return;
     }
-
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
-    
     const sanitizedHabits = sanitizeForFirestore(habits);
     const sanitizedBadges = sanitizeForFirestore(earnedBadges);
-
     const dataToSave = {
       habits: sanitizedHabits,
       earnedBadges: sanitizedBadges,
-      totalPoints: totalPoints, 
+      totalPoints: totalPoints,
       lastUpdated: new Date().toISOString(),
     };
-
     setDoc(userDocRef, dataToSave, { merge: true })
       .then(() => { /* console.log("Data saved to Firestore") */ })
       .catch(error => {
           console.error("Error saving data to Firestore:", error);
           toast({ title: "Save Error", description: "Could not save your changes to the cloud.", variant: "destructive" });
       });
-
   }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData, toast]);
 
-
-  // Award badges (this effect depends on habits and earnedBadges which are now from Firestore)
    React.useEffect(() => {
     if (!authUser || isLoadingData || !mounted || !firstSaveDoneRef.current) return;
-
     const newlyEarnedBadges = checkAndAwardBadges(habits, earnedBadges);
     if (newlyEarnedBadges.length > 0) {
       const updatedBadges = [...earnedBadges];
@@ -372,7 +369,6 @@ const HabitualPageContent: React.FC = () => {
             if (newBadge.id === THREE_DAY_SQL_STREAK_BADGE_ID) { try { await getSqlTip(); } catch (e) {} }
         }
       });
-      
       if (updatedBadges.length !== earnedBadges.length) setEarnedBadges(updatedBadges);
     }
   }, [habits, earnedBadges, authUser, isLoadingData, mounted, toast]);
@@ -395,30 +391,30 @@ const HabitualPageContent: React.FC = () => {
     if (!authUser) return;
     const isEditingModeSaveHabitMain = !!(habitDataSaveHabitMain.id && editingHabit && editingHabit.id === habitDataSaveHabitMain.id);
     if (isEditingModeSaveHabitMain) {
-      setHabits(prev => prev.map(h => h.id === habitDataSaveHabitMain.id ? { 
-        ...h, 
-        name: habitDataSaveHabitMain.name, 
-        description: habitDataSaveHabitMain.description || undefined, 
-        category: habitDataSaveHabitMain.category || 'Other', 
-        daysOfWeek: habitDataSaveHabitMain.daysOfWeek, 
-        optimalTiming: habitDataSaveHabitMain.optimalTiming || undefined, 
-        durationHours: habitDataSaveHabitMain.durationHours ?? undefined, 
-        durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined, 
+      setHabits(prev => prev.map(h => h.id === habitDataSaveHabitMain.id ? {
+        ...h,
+        name: habitDataSaveHabitMain.name,
+        description: habitDataSaveHabitMain.description || undefined,
+        category: habitDataSaveHabitMain.category || 'Other',
+        daysOfWeek: habitDataSaveHabitMain.daysOfWeek,
+        optimalTiming: habitDataSaveHabitMain.optimalTiming || undefined,
+        durationHours: habitDataSaveHabitMain.durationHours ?? undefined,
+        durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined,
         specificTime: habitDataSaveHabitMain.specificTime || undefined,
       } : h));
       toast({ title: "Habit Updated", description: `"${habitDataSaveHabitMain.name}" has been updated.`});
     } else {
       const newHabitSaveHabitMain: Habit = {
-        id: String(Date.now() + Math.random().toString(36).substring(2,9)), 
-        name: habitDataSaveHabitMain.name, 
-        description: habitDataSaveHabitMain.description || undefined, 
-        category: habitDataSaveHabitMain.category || 'Other', 
-        daysOfWeek: habitDataSaveHabitMain.daysOfWeek, 
-        optimalTiming: habitDataSaveHabitMain.optimalTiming || undefined, 
-        durationHours: habitDataSaveHabitMain.durationHours ?? undefined, 
-        durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined, 
-        specificTime: habitDataSaveHabitMain.specificTime || undefined, 
-        completionLog: [], 
+        id: String(Date.now() + Math.random().toString(36).substring(2,9)),
+        name: habitDataSaveHabitMain.name,
+        description: habitDataSaveHabitMain.description || undefined,
+        category: habitDataSaveHabitMain.category || 'Other',
+        daysOfWeek: habitDataSaveHabitMain.daysOfWeek,
+        optimalTiming: habitDataSaveHabitMain.optimalTiming || undefined,
+        durationHours: habitDataSaveHabitMain.durationHours ?? undefined,
+        durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined,
+        specificTime: habitDataSaveHabitMain.specificTime || undefined,
+        completionLog: [],
         reminderEnabled: false,
       };
       setHabits(prev => [...prev, newHabitSaveHabitMain]);
@@ -434,35 +430,39 @@ const HabitualPageContent: React.FC = () => {
     setInitialFormDataForDialog({
       id: habitToEditOpenEditMain.id, name: habitToEditOpenEditMain.name, description: habitToEditOpenEditMain.description || '', category: habitToEditOpenEditMain.category || 'Other', daysOfWeek: habitToEditOpenEditMain.daysOfWeek, optimalTiming: habitToEditOpenEditMain.optimalTiming || '', durationHours: habitToEditOpenEditMain.durationHours ?? null, durationMinutes: habitToEditOpenEditMain.durationMinutes ?? null, specificTime: habitToEditOpenEditMain.specificTime || '',
     });
-    setCreateHabitDialogStep(2); 
+    setCreateHabitDialogStep(2);
     setIsCreateHabitDialogOpen(true);
   };
 
   const handleToggleComplete = async (habitIdToggleCompMain: string, dateToggleCompMain: string, completedToggleCompMain: boolean) => {
-    console.log(`PAGE.TSX: handleToggleComplete called for habitId: ${habitIdToggleCompMain}, date: ${dateToggleCompMain}, completed: ${completedToggleCompMain}, authUser: ${authUser?.uid}`);
+    console.log(`PAGE.TSX: handleToggleComplete called. HabitID: ${habitIdToggleCompMain}, Date: ${dateToggleCompMain}, Completed: ${completedToggleCompMain}, AuthUser UID: ${authUser?.uid}`);
     if (!authUser) {
-      console.error("PAGE.TSX: handleToggleComplete - authUser is null, aborting.");
+      console.error("PAGE.TSX: handleToggleComplete - authUser is null. Aborting.");
+      toast({ title: "Error", description: "You must be logged in to update habits.", variant: "destructive" });
       return;
     }
     let habitNameForQuoteToggleCompMain: string | undefined = undefined;
     let pointsChangeToggleCompMain = 0;
     let justCompletedANewTaskToggleCompMain = false;
+
     setHabits(prevHabits => {
-        console.log("PAGE.TSX: handleToggleComplete - inside setHabits updater");
+        console.log("PAGE.TSX: handleToggleComplete - inside setHabits updater. PrevHabits count:", prevHabits.length);
         const newHabits = prevHabits.map(h => {
             if (h.id === habitIdToggleCompMain) {
+                console.log("PAGE.TSX: handleToggleComplete - Found habit:", h.name);
                 habitNameForQuoteToggleCompMain = h.name;
                 let newLog = [...h.completionLog];
                 const idx = newLog.findIndex(l => l.date === dateToggleCompMain);
                 const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-                if (completedToggleCompMain) {
-                    if (idx > -1) {
-                        if (newLog[idx].status !== 'completed') {
+
+                if (completedToggleCompMain) { // Marking as complete
+                    if (idx > -1) { // Log entry exists
+                        if (newLog[idx].status !== 'completed') { // Was not already 'completed'
                             pointsChangeToggleCompMain = POINTS_PER_COMPLETION;
                             justCompletedANewTaskToggleCompMain = true;
                         }
                         newLog[idx] = { ...newLog[idx], status: 'completed', time, note: newLog[idx].note }; // Preserve note
-                    } else {
+                    } else { // No log entry, create new one
                         pointsChangeToggleCompMain = POINTS_PER_COMPLETION;
                         justCompletedANewTaskToggleCompMain = true;
                         newLog.push({ date: dateToggleCompMain, time, status: 'completed' });
@@ -471,17 +471,18 @@ const HabitualPageContent: React.FC = () => {
                     if (idx > -1) {
                         const logEntry = newLog[idx];
                         if (logEntry.status === 'completed') pointsChangeToggleCompMain = -POINTS_PER_COMPLETION;
-                        
-                        if (logEntry.originalMissedDate) { // Was a makeup completion, revert to pending_makeup
+
+                        if (logEntry.originalMissedDate) {
                             newLog[idx] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-                        } else if (logEntry.note && logEntry.note.trim()) { // Had a note, mark as skipped if not already completed
-                           newLog[idx] = { ...logEntry, status: 'skipped', time: 'N/A' }; // Keep note
-                        } else { // No original missed date, no note, just remove the log entry
+                        } else if (logEntry.note && logEntry.note.trim()) {
+                           newLog[idx] = { ...logEntry, status: 'skipped', time: 'N/A' };
+                        } else {
                             newLog.splice(idx, 1);
                         }
                     }
                 }
                 const updatedHabit = { ...h, completionLog: newLog.sort((a, b) => b.date.localeCompare(a.date)) };
+                console.log("PAGE.TSX: handleToggleComplete - Updated habit log:", updatedHabit.completionLog);
                 if (selectedHabitForDetailView && selectedHabitForDetailView.id === updatedHabit.id) {
                     setSelectedHabitForDetailView(updatedHabit);
                 }
@@ -489,16 +490,18 @@ const HabitualPageContent: React.FC = () => {
             }
             return h;
         });
+        console.log("PAGE.TSX: handleToggleComplete - newHabits count after map:", newHabits.length);
         return newHabits;
     });
-    console.log("PAGE.TSX: handleToggleComplete - finished, pointsChange:", pointsChangeToggleCompMain);
-    if (justCompletedANewTaskToggleCompMain && habitNameForQuoteToggleCompMain && authUser) { 
-        try { 
-            const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuoteToggleCompMain }); 
+
+    console.log("PAGE.TSX: handleToggleComplete - finished processing. PointsChange:", pointsChangeToggleCompMain, "JustCompletedNew:", justCompletedANewTaskToggleCompMain);
+    if (justCompletedANewTaskToggleCompMain && habitNameForQuoteToggleCompMain && authUser) {
+        try {
+            const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuoteToggleCompMain });
             toast({ title: "Way to go!", description: quoteResult.quote });
         } catch (e) {
             console.error("Error getting motivational quote:", e);
-        } 
+        }
     }
     if (pointsChangeToggleCompMain !== 0) setTotalPoints(prev => Math.max(0, prev + pointsChangeToggleCompMain));
   };
@@ -529,7 +532,7 @@ const HabitualPageContent: React.FC = () => {
       const trackingData = `Completions & Status: ${habitParamAiSuggOpenMain.completionLog.map(l => `${l.date} at ${l.time || 'N/A'} (${l.status || 'completed'})${l.note ? ' Note: ' + l.note : ''}`).join('; ') || 'None yet'}.`;
       const result = await getHabitSuggestion({ habitName: habitParamAiSuggOpenMain.name, habitDescription: habitParamAiSuggOpenMain.description, daysOfWeek: habitParamAiSuggOpenMain.daysOfWeek, optimalTiming: habitParamAiSuggOpenMain.optimalTiming, durationHours: habitParamAiSuggOpenMain.durationHours, durationMinutes: habitParamAiSuggOpenMain.durationMinutes, specificTime: habitParamAiSuggOpenMain.specificTime, trackingData });
       setAISuggestion({ habitId: habitParamAiSuggOpenMain.id, suggestionText: result.suggestion, isLoading: false });
-    } catch (error) { 
+    } catch (error) {
         setAISuggestion({ habitId: habitParamAiSuggOpenMain.id, suggestionText: '', isLoading: false, error: 'Failed to get suggestion.' });
         console.error("Error getting AI habit suggestion:", error);
         toast({ title: "AI Tip Error", description: "Could not fetch AI suggestion for this habit.", variant: "destructive"});
@@ -549,11 +552,11 @@ const HabitualPageContent: React.FC = () => {
       if (h.id === habitId_reflection_save) {
         let logExists = false;
         const newLog = h.completionLog.map(l => {
-          if (l.date === date_reflection_save_note) { 
-            logExists = true; 
+          if (l.date === date_reflection_save_note) {
+            logExists = true;
             const updatedLogEntry: HabitCompletionLogEntry = { ...l, note: note_to_save_reflection.trim() || undefined };
             if (!updatedLogEntry.note && updatedLogEntry.status === 'skipped' && !updatedLogEntry.originalMissedDate && updatedLogEntry.time === 'N/A') {
-              return null; // Mark for removal if note is cleared and it was just a skipped entry
+              return null;
             }
             return updatedLogEntry;
           }
@@ -610,10 +613,10 @@ const HabitualPageContent: React.FC = () => {
     setHabitToDelete({ id: habitIdDeleteConfirmOpenMain, name: habitNameDeleteConfirmOpenMain }); setIsDeleteHabitConfirmOpen(true);
   };
   const handleConfirmDeleteSingleHabit = () => {
-    if (habitToDelete && authUser) { 
-        setHabits(prev => prev.filter(h => h.id !== habitToDelete.id)); 
+    if (habitToDelete && authUser) {
+        setHabits(prev => prev.filter(h => h.id !== habitToDelete.id));
         toast({ title: "Habit Deleted", description: `"${habitToDelete.name}" has been removed.`, variant: "destructive" });
-        setHabitToDelete(null); 
+        setHabitToDelete(null);
     }
     setIsDeleteHabitConfirmOpen(false);
   };
@@ -621,7 +624,7 @@ const HabitualPageContent: React.FC = () => {
   const handleCustomizeSuggestedHabit = (suggestionCustomizeMain: CommonSuggestedHabitType) => {
     setEditingHabit(null);
     setInitialFormDataForDialog({ name: suggestionCustomizeMain.name, category: suggestionCustomizeMain.category || 'Other', description: '', daysOfWeek: [] as WeekDay[] });
-    setCreateHabitDialogStep(2); 
+    setCreateHabitDialogStep(2);
     setIsCreateHabitDialogOpen(true);
   };
 
@@ -666,7 +669,7 @@ const HabitualPageContent: React.FC = () => {
                  setSelectedHabitForDetailView(latestHabitInstance);
             }
         } else {
-            handleCloseDetailView(); 
+            handleCloseDetailView();
         }
     }
   }, [habits, selectedHabitForDetailView, isDetailViewDialogOpen, authUser, handleCloseDetailView, mounted, isLoadingData]);
@@ -682,8 +685,8 @@ const HabitualPageContent: React.FC = () => {
     try {
       const suggestion = await generateHabitProgramFromGoal({ goal, focusDuration: duration });
       setProgramSuggestion(suggestion); setIsProgramSuggestionDialogOpen(true);
-    } catch (e: any) { 
-        console.error("Error generating habit program:", e?.message || e); 
+    } catch (e: any) {
+        console.error("Error generating habit program:", e?.message || e);
         toast({ title: "Program AI Error", description: "Could not generate a habit program. Please try again.", variant: "destructive"});
     }
     finally { setIsProgramSuggestionLoading(false); }
@@ -691,16 +694,16 @@ const HabitualPageContent: React.FC = () => {
   const handleAddProgramHabits = (suggestedProgramHabits: SuggestedProgramHabit[]) => {
     if (!authUser) return;
     const newHabits: Habit[] = suggestedProgramHabits.map(sph => ({
-      id: String(Date.now() + Math.random().toString(36).substring(2,9)), 
-      name: sph.name, 
-      description: sph.description || undefined, 
-      category: sph.category || 'Other', 
-      daysOfWeek: sph.daysOfWeek as WeekDay[], 
-      optimalTiming: sph.optimalTiming || undefined, 
-      durationHours: sph.durationHours, 
-      durationMinutes: sph.durationMinutes, 
-      specificTime: sph.specificTime || undefined, 
-      completionLog: [], 
+      id: String(Date.now() + Math.random().toString(36).substring(2,9)),
+      name: sph.name,
+      description: sph.description || undefined,
+      category: sph.category || 'Other',
+      daysOfWeek: sph.daysOfWeek as WeekDay[],
+      optimalTiming: sph.optimalTiming || undefined,
+      durationHours: sph.durationHours,
+      durationMinutes: sph.durationMinutes,
+      specificTime: sph.specificTime || undefined,
+      completionLog: [],
       reminderEnabled: false,
     }));
     setHabits(prev => [...prev, ...newHabits]);
@@ -710,7 +713,10 @@ const HabitualPageContent: React.FC = () => {
   };
 
   const loadingScreen = (message: string) => (
-    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
+    <div className={cn(
+        "min-h-screen flex items-center justify-center p-0 sm:p-4",
+        isClientMounted && "h-[97vh]" // Apply h-[97vh] only on client
+      )}>
       <div className={cn(
         "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto h-full",
         "w-full max-w-sm",
@@ -731,7 +737,10 @@ const HabitualPageContent: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
+    <div className={cn(
+        "min-h-screen flex items-center justify-center p-0 sm:p-4",
+        isClientMounted && "h-[97vh]" // Apply h-[97vh] only on client
+      )}>
       <div className={cn(
         "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto relative h-full",
         "w-full max-w-sm",
@@ -760,8 +769,8 @@ const HabitualPageContent: React.FC = () => {
                 <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
                   <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
                     <p className="text-xs text-muted-foreground mb-1.5">
-                      Start by picking a common habit, or use the 
-                      <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link> 
+                      Start by picking a common habit, or use the
+                      <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link>
                        to add your own. You can also
                       <Button onClick={handleOpenGoalInputProgramDialog} variant="link" className="text-xs h-auto p-0 ml-1 text-primary underline">
                         create a program from a goal
@@ -791,10 +800,10 @@ const HabitualPageContent: React.FC = () => {
         <BottomNavigationBar />
       </div>
 
-      <CreateHabitDialog 
-        isOpen={isCreateHabitDialogOpen} 
-        onClose={() => { setIsCreateHabitDialogOpen(false); setInitialFormDataForDialog(null); setEditingHabit(null); setCreateHabitDialogStep(1);}} 
-        onSaveHabit={handleSaveHabit} 
+      <CreateHabitDialog
+        isOpen={isCreateHabitDialogOpen}
+        onClose={() => { setIsCreateHabitDialogOpen(false); setInitialFormDataForDialog(null); setEditingHabit(null); setCreateHabitDialogStep(1);}}
+        onSaveHabit={handleSaveHabit}
         initialData={initialFormDataForDialog}
         currentStep={createHabitDialogStep}
         setCurrentStep={setCreateHabitDialogStep}
