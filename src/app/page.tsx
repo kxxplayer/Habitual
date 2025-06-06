@@ -78,11 +78,30 @@ const USER_DATA_COLLECTION = "users";
 const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
 
-// Remove localStorage keys as they are no longer the primary source
-// const LS_KEY_PREFIX_HABITS = "habits_";
-// const LS_KEY_PREFIX_BADGES = "earnedBadges_";
-// const LS_KEY_PREFIX_POINTS = "totalPoints_";
 const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_"; // This can remain localStorage specific
+
+// Helper function to remove undefined properties from an object or an array of objects
+function sanitizeForFirestore<T>(data: T): T {
+  if (data === null || typeof data !== 'object') {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeForFirestore(item)) as unknown as T;
+  }
+
+  const sanitizedObject: { [key: string]: any } = {};
+  for (const key in data) {
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
+      const value = (data as any)[key];
+      if (value !== undefined) {
+        sanitizedObject[key] = sanitizeForFirestore(value);
+      }
+    }
+  }
+  return sanitizedObject as T;
+}
+
 
 const LoadingFallback: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
@@ -307,14 +326,19 @@ const HabitualPageContent: React.FC = () => {
     }
 
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
+    
+    // Sanitize data before saving
+    const sanitizedHabits = sanitizeForFirestore(habits);
+    const sanitizedBadges = sanitizeForFirestore(earnedBadges);
+
     const dataToSave = {
-      habits: habits, // Ensure habits are properly serialized if they contain complex objects not directly supported by Firestore (though current structure should be fine)
-      earnedBadges: earnedBadges,
-      totalPoints: totalPoints,
-      lastUpdated: new Date().toISOString(), // Optional: timestamp
+      habits: sanitizedHabits,
+      earnedBadges: sanitizedBadges,
+      totalPoints: totalPoints, // totalPoints is a number, no sanitization needed for undefined
+      lastUpdated: new Date().toISOString(),
     };
 
-    setDoc(userDocRef, dataToSave, { merge: true }) // Use merge:true to avoid overwriting if doc exists but some fields are missing
+    setDoc(userDocRef, dataToSave, { merge: true })
       .then(() => { /* console.log("Data saved to Firestore") */ })
       .catch(error => console.error("Error saving data to Firestore:", error));
 
@@ -357,10 +381,30 @@ const HabitualPageContent: React.FC = () => {
     if (!authUser) return;
     const isEditingModeSaveHabitMain = !!(habitDataSaveHabitMain.id && editingHabit && editingHabit.id === habitDataSaveHabitMain.id);
     if (isEditingModeSaveHabitMain) {
-      setHabits(prev => prev.map(h => h.id === habitDataSaveHabitMain.id ? { ...h, name: habitDataSaveHabitMain.name, description: habitDataSaveHabitMain.description, category: habitDataSaveHabitMain.category || 'Other', daysOfWeek: habitDataSaveHabitMain.daysOfWeek, optimalTiming: habitDataSaveHabitMain.optimalTiming, durationHours: habitDataSaveHabitMain.durationHours ?? undefined, durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined, specificTime: habitDataSaveHabitMain.specificTime } : h));
+      setHabits(prev => prev.map(h => h.id === habitDataSaveHabitMain.id ? { 
+        ...h, 
+        name: habitDataSaveHabitMain.name, 
+        description: habitDataSaveHabitMain.description || undefined, 
+        category: habitDataSaveHabitMain.category || 'Other', 
+        daysOfWeek: habitDataSaveHabitMain.daysOfWeek, 
+        optimalTiming: habitDataSaveHabitMain.optimalTiming || undefined, 
+        durationHours: habitDataSaveHabitMain.durationHours ?? undefined, 
+        durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined, 
+        specificTime: habitDataSaveHabitMain.specificTime || undefined,
+      } : h));
     } else {
       const newHabitSaveHabitMain: Habit = {
-        id: String(Date.now() + Math.random().toString(36).substring(2,9)), name: habitDataSaveHabitMain.name, description: habitDataSaveHabitMain.description, category: habitDataSaveHabitMain.category || 'Other', daysOfWeek: habitDataSaveHabitMain.daysOfWeek, optimalTiming: habitDataSaveHabitMain.optimalTiming, durationHours: habitDataSaveHabitMain.durationHours ?? undefined, durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined, specificTime: habitDataSaveHabitMain.specificTime, completionLog: [], reminderEnabled: false,
+        id: String(Date.now() + Math.random().toString(36).substring(2,9)), 
+        name: habitDataSaveHabitMain.name, 
+        description: habitDataSaveHabitMain.description || undefined, 
+        category: habitDataSaveHabitMain.category || 'Other', 
+        daysOfWeek: habitDataSaveHabitMain.daysOfWeek, 
+        optimalTiming: habitDataSaveHabitMain.optimalTiming || undefined, 
+        durationHours: habitDataSaveHabitMain.durationHours ?? undefined, 
+        durationMinutes: habitDataSaveHabitMain.durationMinutes ?? undefined, 
+        specificTime: habitDataSaveHabitMain.specificTime || undefined, 
+        completionLog: [], 
+        reminderEnabled: false,
       };
       setHabits(prev => [...prev, newHabitSaveHabitMain]);
       if (commonHabitSuggestions.length > 0) setCommonHabitSuggestions([]);
@@ -400,7 +444,7 @@ const HabitualPageContent: React.FC = () => {
                     } else {
                         pointsChangeToggleCompMain = POINTS_PER_COMPLETION;
                         justCompletedANewTaskToggleCompMain = true;
-                        newLog.push({ date: dateToggleCompMain, time, status: 'completed', note: undefined });
+                        newLog.push({ date: dateToggleCompMain, time, status: 'completed' }); // note: undefined will be handled by sanitizer
                     }
                 } else {
                     if (idx > -1) {
@@ -408,7 +452,7 @@ const HabitualPageContent: React.FC = () => {
                         if (logEntry.status === 'completed') pointsChangeToggleCompMain = -POINTS_PER_COMPLETION;
                         if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                             newLog[idx] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-                        } else if (logEntry.note?.trim()) {
+                        } else if (logEntry.note?.trim()) { // If there's a note, change to skipped, otherwise remove
                             newLog[idx] = { ...logEntry, status: 'skipped', time: 'N/A' };
                         } else {
                             newLog.splice(idx, 1);
@@ -464,10 +508,19 @@ const HabitualPageContent: React.FC = () => {
       if (h.id === habitId_reflection_save) {
         let logExists = false;
         const newLog = h.completionLog.map(l => {
-          if (l.date === date_reflection_save_note) { logExists = true; return { ...l, note: note_to_save_reflection.trim() === "" ? undefined : note_to_save_reflection.trim() }; }
+          if (l.date === date_reflection_save_note) { 
+            logExists = true; 
+            const updatedLog = { ...l, note: note_to_save_reflection.trim() };
+            if (updatedLog.note === "") delete updatedLog.note; // Remove note property if empty, will be handled by sanitizer if undefined
+            return updatedLog;
+          }
           return l;
         });
-        if (!logExists) newLog.push({ date: date_reflection_save_note, time: 'N/A', note: note_to_save_reflection.trim() === "" ? undefined : note_to_save_reflection.trim(), status: 'skipped' });
+        if (!logExists) {
+          const newEntry: HabitCompletionLogEntry = { date: date_reflection_save_note, time: 'N/A', status: 'skipped' };
+          if (note_to_save_reflection.trim() !== "") newEntry.note = note_to_save_reflection.trim();
+          newLog.push(newEntry);
+        }
         return { ...h, completionLog: newLog.sort((a,b) => b.date.localeCompare(a.date)) };
       } return h;
     }));
@@ -581,7 +634,17 @@ const HabitualPageContent: React.FC = () => {
   const handleAddProgramHabits = (suggestedProgramHabits: SuggestedProgramHabit[]) => {
     if (!authUser) return;
     const newHabits: Habit[] = suggestedProgramHabits.map(sph => ({
-      id: String(Date.now() + Math.random().toString(36).substring(2,9)), name: sph.name, description: sph.description, category: sph.category || 'Other', daysOfWeek: sph.daysOfWeek as WeekDay[], optimalTiming: sph.optimalTiming, durationHours: sph.durationHours, durationMinutes: sph.durationMinutes, specificTime: sph.specificTime, completionLog: [], reminderEnabled: false,
+      id: String(Date.now() + Math.random().toString(36).substring(2,9)), 
+      name: sph.name, 
+      description: sph.description || undefined, 
+      category: sph.category || 'Other', 
+      daysOfWeek: sph.daysOfWeek as WeekDay[], 
+      optimalTiming: sph.optimalTiming || undefined, 
+      durationHours: sph.durationHours, 
+      durationMinutes: sph.durationMinutes, 
+      specificTime: sph.specificTime || undefined, 
+      completionLog: [], 
+      reminderEnabled: false,
     }));
     setHabits(prev => [...prev, ...newHabits]);
     if (habits.length === 0 && commonHabitSuggestions.length > 0 && newHabits.length > 0) setCommonHabitSuggestions([]);
@@ -731,4 +794,3 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
