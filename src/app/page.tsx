@@ -141,11 +141,13 @@ const HabitualPage: NextPage = () => {
   }, []);
 
   React.useEffect(() => {
-    const nowEffectToday = new Date();
-    setTodayString(format(nowEffectToday, 'yyyy-MM-dd'));
-    setTodayAbbr(dayIndexToWeekDayConstant[getDay(nowEffectToday)]);
-    setSelectedCalendarDate(nowEffectToday); 
-  }, []);
+    if (mounted) {
+        const nowEffectToday = new Date();
+        setTodayString(format(nowEffectToday, 'yyyy-MM-dd'));
+        setTodayAbbr(dayIndexToWeekDayConstant[getDay(nowEffectToday)]);
+        setSelectedCalendarDate(nowEffectToday);
+    }
+  }, [mounted]);
 
 
   React.useEffect(() => {
@@ -182,7 +184,7 @@ const HabitualPage: NextPage = () => {
   }, []);
 
   React.useEffect(() => {
-    if (isLoadingAuth || !mounted) { setIsLoadingHabits(false); return; } // Wait for mount and auth
+    if (isLoadingAuth || !mounted) { setIsLoadingHabits(false); return; }
     if (!authUser) {
       if (habits.length > 0 || earnedBadges.length > 0 || totalPoints > 0) {
         setHabits([]); setEarnedBadges([]); setTotalPoints(0);
@@ -240,10 +242,10 @@ const HabitualPage: NextPage = () => {
     const storedPointsLoadMain = typeof window !== 'undefined' ? localStorage.getItem(userPointsKeyLoadMain) : null;
     if (storedPointsLoadMain) { try { setTotalPoints(parseInt(storedPointsLoadMain, 10) || 0); } catch (e) { setTotalPoints(0); } } else { setTotalPoints(0); }
     setIsLoadingHabits(false);
-  }, [authUser, isLoadingAuth, commonSuggestionsFetched, mounted]); // Added mounted
+  }, [authUser, isLoadingAuth, commonSuggestionsFetched, mounted]);
 
   React.useEffect(() => {
-    if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return; // Wait for mount
+    if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return;
     localStorage.setItem(`${LS_KEY_PREFIX_HABITS}${authUser.uid}`, JSON.stringify(habits));
     const newlyEarnedBadgesSaveMain = checkAndAwardBadges(habits, earnedBadges);
     if (newlyEarnedBadgesSaveMain.length > 0) {
@@ -256,10 +258,10 @@ const HabitualPage: NextPage = () => {
       });
       if (updatedBadgesSaveMain.length !== earnedBadges.length) setEarnedBadges(updatedBadgesSaveMain);
     }
-  }, [habits, authUser, isLoadingAuth, isLoadingHabits, earnedBadges, mounted]); // Added mounted
+  }, [habits, authUser, isLoadingAuth, isLoadingHabits, earnedBadges, mounted]);
 
-  React.useEffect(() => { if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return; localStorage.setItem(`${LS_KEY_PREFIX_BADGES}${authUser.uid}`, JSON.stringify(earnedBadges)); }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits, mounted]); // Added mounted
-  React.useEffect(() => { if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return; localStorage.setItem(`${LS_KEY_PREFIX_POINTS}${authUser.uid}`, totalPoints.toString()); }, [totalPoints, authUser, isLoadingAuth, isLoadingHabits, mounted]); // Added mounted
+  React.useEffect(() => { if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return; localStorage.setItem(`${LS_KEY_PREFIX_BADGES}${authUser.uid}`, JSON.stringify(earnedBadges)); }, [earnedBadges, authUser, isLoadingAuth, isLoadingHabits, mounted]);
+  React.useEffect(() => { if (!authUser || isLoadingAuth || isLoadingHabits || typeof window === 'undefined' || !mounted) return; localStorage.setItem(`${LS_KEY_PREFIX_POINTS}${authUser.uid}`, totalPoints.toString()); }, [totalPoints, authUser, isLoadingAuth, isLoadingHabits, mounted]);
 
   React.useEffect(() => {
     reminderTimeouts.current.forEach(clearTimeout); reminderTimeouts.current = [];
@@ -337,6 +339,10 @@ const HabitualPage: NextPage = () => {
                     }
                 }
                 const updatedHabit = { ...h, completionLog: newLog.sort((a, b) => b.date.localeCompare(a.date)) };
+                // This is a critical point: if selectedHabitForDetailView refers to this habit, it must be updated
+                if (selectedHabitForDetailView && selectedHabitForDetailView.id === updatedHabit.id) {
+                    setSelectedHabitForDetailView(updatedHabit);
+                }
                 return updatedHabit;
             }
             return h;
@@ -471,10 +477,10 @@ const HabitualPage: NextPage = () => {
     if (selectedHabitForDetailView?.id && authUser && isDetailViewDialogOpen && habits.length > 0 && mounted) {
         const latestHabitInstance = habits.find(h => h.id === selectedHabitForDetailView.id);
         if (latestHabitInstance) {
-            // Compare relevant parts, e.g., completionLog, to avoid unnecessary updates if only reference changes
             if (JSON.stringify(selectedHabitForDetailView.completionLog) !== JSON.stringify(latestHabitInstance.completionLog) ||
-                JSON.stringify(selectedHabitForDetailView.name) !== JSON.stringify(latestHabitInstance.name) || // And other relevant fields
-                JSON.stringify(selectedHabitForDetailView.description) !== JSON.stringify(latestHabitInstance.description)
+                selectedHabitForDetailView.name !== latestHabitInstance.name ||
+                selectedHabitForDetailView.description !== latestHabitInstance.description ||
+                selectedHabitForDetailView.reminderEnabled !== latestHabitInstance.reminderEnabled
             ) {
                  setSelectedHabitForDetailView(latestHabitInstance);
             }
@@ -532,14 +538,14 @@ const HabitualPage: NextPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
-        "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
+        "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto relative", // Added relative
         "w-full max-w-sm max-h-[95vh]",
         "md:max-w-md lg:max-w-lg"
       )}>
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4">
+            <main className="px-3 sm:px-4 py-4 flex-grow"> {/* Added flex-grow */}
               {habits.length > 0 && !allTodayTasksDone && (
                 <div className="mb-4 flex justify-center">
                   <Button onClick={handleMarkAllTodayDone} variant={"default"} className="w-full max-w-xs">
@@ -590,6 +596,15 @@ const HabitualPage: NextPage = () => {
           </div>
         </ScrollArea>
         <BottomNavigationBar />
+         {/* Floating Action Button for Add Habit */}
+        <Button
+            onClick={() => { setEditingHabit(null); setInitialFormDataForDialog(null); setIsCreateHabitDialogOpen(true); }}
+            variant="default"
+            className="absolute bottom-20 right-4 sm:right-6 z-40 h-14 w-14 rounded-full shadow-lg flex items-center justify-center"
+            aria-label="Add new habit"
+        >
+            <Plus className="h-6 w-6" />
+        </Button>
       </div>
 
       <CreateHabitDialog isOpen={isCreateHabitDialogOpen} onClose={() => { setIsCreateHabitDialogOpen(false); setInitialFormDataForDialog(null); setEditingHabit(null); }} onSaveHabit={handleSaveHabit} initialData={initialFormDataForDialog} />
@@ -638,4 +653,3 @@ const HabitualPage: NextPage = () => {
 };
 export default HabitualPage;
     
-
