@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { FC } from 'react';
@@ -15,7 +14,7 @@ interface HabitListProps {
 const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString }) => {
   if (habits.length === 0) {
     return (
-      <div className="text-center py-10">
+      <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
         <ListChecks className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
         <h3 className="text-xl font-semibold text-foreground">No Habits Yet</h3>
         <p className="text-muted-foreground">Tap the "+" button to add your first habit!</p>
