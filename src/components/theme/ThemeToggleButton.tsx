@@ -16,7 +16,7 @@ const ThemeToggleButton: FC = () => {
 
   if (!mounted) {
     // Render a placeholder or null on the server and during initial client hydration
-    return <Button variant="ghost" size="icon" aria-label="Change theme" disabled className="h-10 w-10" />;
+    return <Button variant="ghost" size="icon" aria-label="Change theme" disabled className="h-8 w-8" />;
   }
 
   const CurrentIcon = () => {
@@ -26,11 +26,10 @@ const ThemeToggleButton: FC = () => {
   };
   
   return (
-    <Button variant="ghost" size="icon" onClick={cycleTheme} aria-label="Change theme" className="h-10 w-10">
+    <Button variant="ghost" size="icon" onClick={cycleTheme} aria-label="Change theme" className="h-8 w-8">
       <CurrentIcon />
     </Button>
   );
 };
 
 export default ThemeToggleButton;
-
