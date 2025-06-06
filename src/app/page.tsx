@@ -102,17 +102,15 @@ function sanitizeForFirestore<T>(data: T): T {
   return sanitizedObject as T;
 }
 
+// Moved LoadingFallback to top level for better SSR consistency
 const LoadingFallback: React.FC = () => {
-  const [isClientMounted, setIsClientMounted] = useState(false);
+  const [isClientMounted, setIsClientMounted] = React.useState(false);
   useEffect(() => {
     setIsClientMounted(true);
   }, []);
 
   return (
-    <div className={cn(
-        "min-h-screen flex items-center justify-center p-0 sm:p-4",
-        isClientMounted && "h-[97vh]"
-      )}>
+    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
       <div className={cn(
         "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto h-full",
         "w-full max-w-sm",
@@ -126,6 +124,7 @@ const LoadingFallback: React.FC = () => {
     </div>
   );
 };
+
 
 const HabitualPageContent: React.FC = () => {
   const router = useRouter();
@@ -713,10 +712,7 @@ const HabitualPageContent: React.FC = () => {
   };
 
   const loadingScreen = (message: string) => (
-    <div className={cn(
-        "min-h-screen flex items-center justify-center p-0 sm:p-4",
-        isClientMounted && "h-[97vh]" // Apply h-[97vh] only on client
-      )}>
+    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
       <div className={cn(
         "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto h-full",
         "w-full max-w-sm",
@@ -737,10 +733,7 @@ const HabitualPageContent: React.FC = () => {
 
 
   return (
-    <div className={cn(
-        "min-h-screen flex items-center justify-center p-0 sm:p-4",
-        isClientMounted && "h-[97vh]" // Apply h-[97vh] only on client
-      )}>
+    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
       <div className={cn(
         "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto relative h-full",
         "w-full max-w-sm",
