@@ -30,6 +30,7 @@ const BottomNavigationBar: FC = () => {
             <Link
               key={item.label}
               href={item.href}
+              onClick={() => console.log(`BOTTOMNAV: Clicked on Nav Item: ${item.label}, Href: ${item.href}`)}
               className={cn(
                 "flex flex-col items-center justify-center h-12 w-12 rounded-full text-primary-foreground transition-colors duration-150 ease-in-out",
                 "bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95",
@@ -46,6 +47,7 @@ const BottomNavigationBar: FC = () => {
           <Link
             key={item.label}
             href={item.href}
+            onClick={() => console.log(`BOTTOMNAV: Clicked on Nav Item: ${item.label}, Href: ${item.href}`)}
             className={cn(
               buttonVariants({ variant: "ghost" }),
               "flex flex-col items-center justify-center h-full p-1 flex-1",
@@ -62,4 +64,3 @@ const BottomNavigationBar: FC = () => {
 };
 
 export default BottomNavigationBar;
-

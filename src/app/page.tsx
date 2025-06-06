@@ -103,7 +103,7 @@ function sanitizeForFirestore<T>(data: T): T {
   return sanitizedObject as T;
 }
 
-
+// Moved LoadingFallback to top-level
 const LoadingFallback: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
     <div className={cn(
@@ -191,9 +191,9 @@ const HabitualPageContent: React.FC = () => {
   }, [mounted]);
 
   useEffect(() => {
-    console.log("Page.tsx: Mounted state:", mounted, "Search params action:", searchParams.get('action'));
+    console.log("PAGE.TSX: Mounted state:", mounted, "Search params action:", searchParams.get('action'));
     if (mounted && searchParams.get('action') === 'addHabit') {
-      console.log("Page.tsx: addHabit action detected, opening dialog.");
+      console.log("PAGE.TSX: addHabit action detected, opening dialog.");
       setInitialFormDataForDialog(null);
       setEditingHabit(null);
       setCreateHabitDialogStep(1); 
@@ -439,11 +439,16 @@ const HabitualPageContent: React.FC = () => {
   };
 
   const handleToggleComplete = async (habitIdToggleCompMain: string, dateToggleCompMain: string, completedToggleCompMain: boolean) => {
-    if (!authUser) return;
+    console.log(`PAGE.TSX: handleToggleComplete called for habitId: ${habitIdToggleCompMain}, date: ${dateToggleCompMain}, completed: ${completedToggleCompMain}, authUser: ${authUser?.uid}`);
+    if (!authUser) {
+      console.error("PAGE.TSX: handleToggleComplete - authUser is null, aborting.");
+      return;
+    }
     let habitNameForQuoteToggleCompMain: string | undefined = undefined;
     let pointsChangeToggleCompMain = 0;
     let justCompletedANewTaskToggleCompMain = false;
     setHabits(prevHabits => {
+        console.log("PAGE.TSX: handleToggleComplete - inside setHabits updater");
         const newHabits = prevHabits.map(h => {
             if (h.id === habitIdToggleCompMain) {
                 habitNameForQuoteToggleCompMain = h.name;
@@ -486,6 +491,7 @@ const HabitualPageContent: React.FC = () => {
         });
         return newHabits;
     });
+    console.log("PAGE.TSX: handleToggleComplete - finished, pointsChange:", pointsChangeToggleCompMain);
     if (justCompletedANewTaskToggleCompMain && habitNameForQuoteToggleCompMain && authUser) { 
         try { 
             const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuoteToggleCompMain }); 
@@ -752,7 +758,16 @@ const HabitualPageContent: React.FC = () => {
 
               {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && (
                 <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
-                  <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3><p className="text-xs text-muted-foreground mb-1.5">Start by picking a common habit, or use the '+' button to add your own or create a program:</p></div>
+                  <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
+                    <p className="text-xs text-muted-foreground mb-1.5">
+                      Start by picking a common habit, or use the 
+                      <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link> 
+                       to add your own. You can also
+                      <Button onClick={handleOpenGoalInputProgramDialog} variant="link" className="text-xs h-auto p-0 ml-1 text-primary underline">
+                        create a program from a goal
+                      </Button>.
+                    </p>
+                  </div>
                   <div className="p-1">
                     <div className="flex flex-wrap gap-2 justify-center mb-2">
                       {commonHabitSuggestions.map((sugg, idx) => (
@@ -761,11 +776,6 @@ const HabitualPageContent: React.FC = () => {
                         </Button>
                       ))}
                     </div>
-                  </div>
-                  <div className="mt-3 text-center">
-                     <Button onClick={handleOpenGoalInputProgramDialog} variant="link" className="text-xs h-auto p-0">
-                        <WandSparkles className="mr-1.5 h-3.5 w-3.5" /> Or create a multi-habit program from a goal
-                    </Button>
                   </div>
                 </div>
               )}

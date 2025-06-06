@@ -157,7 +157,11 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const weeklyProgressPercent = scheduledDaysInWeek > 0 ? Math.round((completedCountInCurrentWeek / scheduledDaysInWeek) * 100) : 0;
 
   const handleToggleTodayCompletion = (complete: boolean) => {
-    if (!habit) return;
+    if (!habit) {
+      console.log("HABITDETAILVIEWDIALOG.TSX: handleToggleTodayCompletion - habit is null, returning.");
+      return;
+    }
+    console.log(`HABITDETAILVIEWDIALOG.TSX: handleToggleTodayCompletion for habit ${habit.name}, complete: ${complete}`);
     const wasCompletedBefore = isTodayCompleted;
     onToggleComplete(habit.id, todayString, complete);
     if (!wasCompletedBefore && complete) {
@@ -167,6 +171,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
 
   const handleDayToggle = (dateToToggle: string) => {
     if (!habit) return;
+    console.log(`HABITDETAILVIEWDIALOG.TSX: handleDayToggle for habit ${habit.name}, date: ${dateToToggle}`);
     const logForDay = habit.completionLog.find(log => log.date === dateToToggle);
     const isCurrentlyCompleted = logForDay?.status === 'completed';
     onToggleComplete(habit.id, dateToToggle, !isCurrentlyCompleted);
@@ -346,8 +351,6 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
 
 export default HabitDetailViewDialog;
     
-
     
 
     
-
