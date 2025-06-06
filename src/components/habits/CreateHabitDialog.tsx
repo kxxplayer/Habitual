@@ -154,7 +154,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onSave
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-[600px] bg-card rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] bg-card rounded-lg shadow-xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold flex items-center">
             {isEditing ? <Edit3 className="mr-2 h-6 w-6 text-primary" /> : <PlusCircle className="mr-2 h-6 w-6 text-primary" />}
@@ -239,6 +239,6 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({ isOpen, onClose, onSave
   );
 };
 export default CreateHabitDialog;
-
+    
 
     
