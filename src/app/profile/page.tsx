@@ -77,7 +77,7 @@ const ProfilePage: NextPage = () => {
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4">
+            <main className="px-3 sm:px-4 py-4 flex-grow">
               <Card className="w-full">
                 <CardHeader className="space-y-1 text-center">
                   <CardTitle className="text-2xl font-bold flex items-center justify-center">

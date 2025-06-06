@@ -103,7 +103,7 @@ const DashboardPage: NextPage = () => {
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4">
+            <main className="px-3 sm:px-4 py-4 flex-grow">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xl font-bold text-primary flex items-center">

@@ -530,15 +530,9 @@ const HabitualPage: NextPage = () => {
     </div>
   );
 
-  if (!mounted) {
-    return loadingScreen("Initializing app...");
-  }
-  if (isLoadingAuth) {
-    return loadingScreen("Initializing app..."); // Or "Loading authentication..."
-  }
-  if (!authUser) {
-    return loadingScreen("Redirecting to login...");
-  }
+  if (!mounted) return loadingScreen("Initializing app...");
+  if (isLoadingAuth && mounted) return loadingScreen("Initializing app...");
+  if (!authUser && mounted && !isLoadingAuth) return loadingScreen("Redirecting to login...");
 
 
   return (
@@ -551,7 +545,7 @@ const HabitualPage: NextPage = () => {
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4">
+            <main className="px-3 sm:px-4 py-4 flex-grow">
               {habits.length > 0 && !allTodayTasksDone && (
                 <div className="mb-4 flex justify-center">
                   <Button onClick={handleMarkAllTodayDone} variant={"default"} className="w-full max-w-xs">
@@ -596,7 +590,7 @@ const HabitualPage: NextPage = () => {
 
               <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} />
             </main>
-            <footer className="shrink-0 py-3 text-center text-xs text-muted-foreground border-t mt-auto">
+            <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto shrink-0">
               <p>&copy; {new Date().getFullYear()} Habitual.</p>
             </footer>
           </div>
