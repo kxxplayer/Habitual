@@ -4,7 +4,7 @@
 import * as React from 'react';
 import type { FC } from 'react';
 import { Card } from '@/components/ui/card';
-import { CheckCircle2, Circle, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, Flame } from 'lucide-react';
+import { CheckCircle2, Circle, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, Flame, Clock } from 'lucide-react';
 import type { Habit, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { calculateStreak } from '@/lib/dateUtils';
@@ -58,13 +58,30 @@ const getCategoryTileColor = (category?: HabitCategory): string => {
   return (category && HABIT_CATEGORIES.includes(category) && categoryColorMap[category]) ? categoryColorMap[category] : categoryColorMap["Other"];
 }
 
+const isTimerBased = (habit: Habit): boolean => {
+  const nameDesc = `${habit.name.toLowerCase()} ${habit.description?.toLowerCase() || ''}`;
+  const durationKeywords = ['minute', 'minutes', 'min', 'hour', 'hours', 'hr', 'hrs', 'timer', 'duration', 'session'];
+  const forPattern = /\bfor\s+(\d+)\s*(min|minute|minutes|hr|hour|hours)/i;
+  const durationPattern = /(\d+)\s*(min|minute|minutes|hr|hour|hours)\s*(session|practice|reading|workout)/i;
+
+  if (forPattern.test(nameDesc) || durationPattern.test(nameDesc)) return true;
+  if (durationKeywords.some(keyword => nameDesc.includes(keyword))) {
+     // Further check if there's an associated number like durationHours/Minutes
+     if (habit.durationHours && habit.durationHours > 0) return true;
+     if (habit.durationMinutes && habit.durationMinutes > 0) return true;
+  }
+  return false;
+};
+
+
 const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString }) => {
   const isCompletedToday = habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
   const categoryBorderColor = getCategoryTileColor(habit.category);
+  const habitIsTimerBased = isTimerBased(habit);
 
   let streak = 0;
   try {
-    const todayDate = parseISO(todayString); // Assuming todayString is always valid
+    const todayDate = parseISO(todayString); 
     streak = calculateStreak(habit, todayDate);
   } catch (e) {
     console.error("Error calculating streak for habit item:", e);
@@ -99,6 +116,8 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
         <div>
           {isCompletedToday ? (
             <CheckCircle2 className="h-5 w-5 text-accent" />
+          ) : habitIsTimerBased ? (
+            <Clock className="h-5 w-5 text-blue-500" />
           ) : (
             <Circle className="h-5 w-5 text-muted-foreground/60" />
           )}

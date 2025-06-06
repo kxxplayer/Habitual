@@ -750,20 +750,9 @@ const HabitualPageContent: React.FC = () => {
                 </div>
               )}
 
-              <div className="my-4 flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-3">
-                  <Button onClick={() => { setEditingHabit(null); setInitialFormDataForDialog(null); setCreateHabitDialogStep(1); setIsCreateHabitDialogOpen(true); }}
-                          variant="default" className="w-full sm:w-auto sm:flex-1 max-w-xs">
-                      <Plus className="mr-2 h-4 w-4" /> Add New Habit
-                  </Button>
-                  <Button onClick={handleOpenGoalInputProgramDialog}
-                          variant="outline" className="w-full sm:w-auto sm:flex-1 max-w-xs">
-                      <WandSparkles className="mr-2 h-4 w-4" /> Create Program
-                  </Button>
-              </div>
-
               {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && (
                 <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
-                  <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3><p className="text-xs text-muted-foreground mb-1.5">Start by picking a common habit, or use the buttons above to add your own or create a program:</p></div>
+                  <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3><p className="text-xs text-muted-foreground mb-1.5">Start by picking a common habit, or use the '+' button to add your own or create a program:</p></div>
                   <div className="p-1">
                     <div className="flex flex-wrap gap-2 justify-center mb-2">
                       {commonHabitSuggestions.map((sugg, idx) => (
@@ -773,11 +762,16 @@ const HabitualPageContent: React.FC = () => {
                       ))}
                     </div>
                   </div>
+                  <div className="mt-3 text-center">
+                     <Button onClick={handleOpenGoalInputProgramDialog} variant="link" className="text-xs h-auto p-0">
+                        <WandSparkles className="mr-1.5 h-3.5 w-3.5" /> Or create a multi-habit program from a goal
+                    </Button>
+                  </div>
                 </div>
               )}
               {isLoadingCommonSuggestions && habits.length === 0 && (<div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading suggestions...</p></div> )}
 
-              <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} />
+              <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
             </main>
             <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto shrink-0">
               <p>&copy; {new Date().getFullYear()} Habitual.</p>
