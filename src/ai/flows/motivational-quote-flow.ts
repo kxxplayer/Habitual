@@ -25,7 +25,7 @@ export async function getMotivationalQuote(input?: MotivationalQuoteInput): Prom
 
 const prompt = ai.definePrompt({
   name: 'motivationalQuotePrompt',
-  model: 'googleai/gemini-2.5-pro-latest',
+  model: 'googleai/gemini-1.5-pro-latest',
   input: {schema: MotivationalQuoteInputSchema},
   output: {schema: MotivationalQuoteOutputSchema},
   prompt: `You are a motivational coach. Generate a short, encouraging, actionable quote.
@@ -41,3 +41,4 @@ const motivationalQuoteFlow = ai.defineFlow(
   { name: 'motivationalQuoteFlow', inputSchema: MotivationalQuoteInputSchema, outputSchema: MotivationalQuoteOutputSchema },
   async input => { const {output} = await prompt(input); return output!; }
 );
+

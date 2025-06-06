@@ -32,7 +32,7 @@ export async function createHabitFromDescription(input: HabitCreationInput): Pro
 
 const prompt = ai.definePrompt({
   name: 'habitCreationPrompt',
-  model: 'googleai/gemini-2.5-pro-latest', // Explicitly choose a model
+  model: 'googleai/gemini-1.5-pro-latest', // Explicitly choose a model
   input: {schema: HabitCreationInputSchema},
   output: {schema: HabitCreationOutputSchema},
   prompt: `You are a helpful assistant that suggests habit details based on a user-provided description.
@@ -67,3 +67,4 @@ const createHabitFromDescriptionFlow = ai.defineFlow(
     return output!;
   }
 );
+

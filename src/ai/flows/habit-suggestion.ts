@@ -32,7 +32,7 @@ export async function getHabitSuggestion(input: HabitSuggestionInput): Promise<H
 
 const prompt = ai.definePrompt({
   name: 'habitSuggestionPrompt',
-  model: 'googleai/gemini-2.5-pro-latest',
+  model: 'googleai/gemini-1.5-pro-latest',
   input: {schema: HabitSuggestionInputSchema},
   output: {schema: HabitSuggestionOutputSchema},
   prompt: `You are an encouraging habit coach. Provide ONE concise, actionable suggestion for the habit: '{{habitName}}'.
@@ -58,3 +58,4 @@ const habitSuggestionFlow = ai.defineFlow(
   { name: 'habitSuggestionFlow', inputSchema: HabitSuggestionInputSchema, outputSchema: HabitSuggestionOutputSchema },
   async input => { const {output} = await prompt(input); return output!; }
 );
+

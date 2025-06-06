@@ -32,7 +32,7 @@ export async function getCommonHabitSuggestions(input: CommonHabitSuggestionsInp
 
 const prompt = ai.definePrompt({
   name: 'commonHabitSuggestionsPrompt',
-  model: 'googleai/gemini-2.5-pro-latest',
+  model: 'googleai/gemini-1.5-pro-latest',
   input: {schema: CommonHabitSuggestionsInputSchema},
   output: {schema: CommonHabitSuggestionsOutputSchema},
   prompt: `You are a helpful assistant suggesting common positive habits for a habit tracking app.
@@ -52,3 +52,4 @@ const commonHabitSuggestionsFlow = ai.defineFlow(
   { name: 'commonHabitSuggestionsFlow', inputSchema: CommonHabitSuggestionsInputSchema, outputSchema: CommonHabitSuggestionsOutputSchema },
   async (input) => { const {output} = await prompt(input); return output!; }
 );
+
