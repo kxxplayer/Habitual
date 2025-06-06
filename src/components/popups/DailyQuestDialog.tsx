@@ -1,12 +1,6 @@
 
 "use client";
 
-// ==========================================================================
-// DAILY QUEST DIALOG - VERCEL BUILD DEBUG ATTEMPT (Force Rebuild v2)
-// Date: 2025-05-21 (Ensuring PlayCircle is NOT imported, adding explicit React import)
-// Reverted to Category 2: "Unlocking Potential" theme as requested.
-// ==========================================================================
-
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,4 +50,3 @@ const DailyQuestDialog: React.FC<DailyQuestDialogProps> = ({ isOpen, onClose }) 
 };
 
 export default DailyQuestDialog;
-

@@ -1,8 +1,4 @@
 
-// ==========================================================================
-// HABIT OVERVIEW COMPONENT - Vercel Build Debug ATTEMPT (Force Rebuild v8 - 2025-05-21)
-// Removed Card, CardHeader, CardTitle, CardDescription. Component returns content directly.
-// ==========================================================================
 "use client";
 
 import * as React from 'react'; 
