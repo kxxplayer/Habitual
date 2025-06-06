@@ -3,21 +3,33 @@
 
 import type { FC } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // Added for back button
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
-import { buttonVariants } from '@/components/ui/button';
-import { CalendarDays } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { CalendarDays, ChevronLeft } from 'lucide-react'; // Added ChevronLeft
 import { cn } from '@/lib/utils';
 
 const AppHeader: FC = () => {
+  const router = useRouter(); // Initialize router
+
   return (
     <header className="bg-card shadow sticky top-0 z-40 shrink-0">
       <div className="px-4 py-3 flex justify-between items-center w-full">
         <div className="flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-2 text-primary align-text-bottom">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            className="h-8 w-8 mr-2"
+            aria-label="Go back"
+          >
+            <ChevronLeft className="h-5 w-5 text-primary" />
+          </Button>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-2 text-primary align-text-bottom">
             <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
             <path d="m9 12 2 2 4-4"></path>
           </svg>
-          <h1 className="text-xl font-semibold text-primary">
+          <h1 className="text-lg font-semibold text-primary">
             Habitual
           </h1>
         </div>
