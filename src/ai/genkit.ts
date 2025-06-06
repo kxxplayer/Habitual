@@ -1,7 +1,7 @@
 
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-import {firebase} from '@genkit-ai/firebase'; // Import the firebase plugin
+import { firebase } from '@genkit-ai/firebase'; // Import the firebase plugin
 
 // Ensure your Firebase project ID is available as an environment variable
 // For local development, this might be in your .env.local file
