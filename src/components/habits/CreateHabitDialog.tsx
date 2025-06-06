@@ -27,6 +27,7 @@ import type { CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
+import { useToast } from "@/hooks/use-toast";
 
 interface CreateHabitDialogProps {
   isOpen: boolean;
@@ -79,6 +80,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   setCurrentStep
 }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
+  const { toast } = useToast();
   const { control, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = useForm<CreateHabitFormData>({
     resolver: zodResolver(createHabitFormSchema),
     defaultValues: {
@@ -108,11 +110,11 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
           durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
           specificTime: initialData.specificTime || '',
         });
-         if (isEditing) setCurrentStep(2); // If editing, go straight to step 2
-         // If initialData is present for non-editing (e.g. from common suggestion), page.tsx should set step to 2.
+         if (isEditing) setCurrentStep(2); 
+         
       } else {
         reset(defaultVals);
-        if (!isEditing) setCurrentStep(1); // Only reset to step 1 if not editing and fully new habit
+        if (!isEditing) setCurrentStep(1); 
       }
     }
     setIsAISuggesting(false);
@@ -120,6 +122,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
 
   const handleAISuggestDetails = async () => {
     if (!habitDescriptionForAI || habitDescriptionForAI.trim() === "") {
+      toast({ title: "Input Missing", description: "Please describe your habit first.", variant: "destructive" });
       return;
     }
     setIsAISuggesting(true);
@@ -149,6 +152,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
       setCurrentStep(2);
     } catch (error) {
       console.error("AI Suggestion Error:", error);
+      toast({ title: "AI Suggestion Failed", description: "Could not get AI suggestions. Please fill manually or try again.", variant: "destructive" });
     } finally {
       setIsAISuggesting(false);
     }
@@ -157,7 +161,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   const onSubmitDialog = (data: CreateHabitFormData) => {
     const dataToSave = isEditing && initialData?.id ? { ...data, id: initialData.id } : data;
     onSaveHabit(dataToSave);
-    // onClose(); // Handled by parent or DialogClose
+    
   };
 
   return (
@@ -258,7 +262,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                 <Label htmlFor="dialog-habit-optimalTiming" className="text-sm font-medium flex items-center"><CalendarClock className="mr-1.5 h-4 w-4 text-muted-foreground" />Optimal General Timing (Optional)</Label>
                 <Controller name="optimalTiming" control={control} render={({ field }) => <Input id="dialog-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50 text-sm"/>} />
               </div>
-               <div className={cn("space-y-1", isEditing ? "hidden" : "")}> {/* Hide description field in step 2 for new habits, only for editing if needed */}
+               <div className={cn("space-y-1", isEditing ? "hidden" : "")}> 
                 <Label htmlFor="dialog-final-description" className="text-sm font-medium">Description (Optional)</Label>
                 <Controller name="description" control={control} render={({ field }) => <Textarea id="dialog-final-description" placeholder="Detailed description of the habit" {...field} className="bg-input/50 text-sm" rows={2}/>} />
               </div>
@@ -279,3 +283,4 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   );
 };
 export default CreateHabitDialog;
+

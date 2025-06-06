@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { WandSparkles, Send } from 'lucide-react';
+import { WandSparkles, Send, Loader2 } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 
 interface GoalInputProgramDialogProps {
   isOpen: boolean;
@@ -28,12 +29,26 @@ interface GoalInputProgramDialogProps {
 const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClose, onSubmit, isLoading }) => {
   const [goal, setGoal] = useState('');
   const [duration, setDuration] = useState('');
+  const { toast } = useToast();
 
   const handleSubmit = () => {
     if (goal.trim() && duration.trim()) {
       onSubmit(goal, duration);
+    } else {
+      toast({
+        title: "Input Missing",
+        description: "Please provide both a goal and a duration.",
+        variant: "destructive",
+      });
     }
   };
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setGoal('');
+      setDuration('');
+    }
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -76,12 +91,12 @@ const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClo
         </div>
         <DialogFooter className="pt-4">
           <DialogClose asChild>
-            <Button type="button" variant="outline" disabled={isLoading}>
+            <Button type="button" variant="outline" disabled={isLoading} onClick={onClose}>
               Cancel
             </Button>
           </DialogClose>
           <Button onClick={handleSubmit} disabled={isLoading || !goal.trim() || !duration.trim()}>
-            <Send className="mr-2 h-4 w-4" />
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
             {isLoading ? 'Generating...' : 'Get Program Suggestion'}
           </Button>
         </DialogFooter>
@@ -93,3 +108,4 @@ const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClo
 export default GoalInputProgramDialog;
 
     
+
