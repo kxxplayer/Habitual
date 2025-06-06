@@ -88,7 +88,7 @@ function sanitizeForFirestore<T>(data: T): T {
   }
 
   if (Array.isArray(data)) {
-    return data.map(item => sanitizeForFirestore(item)) as unknown as T;
+    return data.map(item => sanitizeForFirestore(item)).filter(item => item !== undefined) as unknown as T;
   }
 
   const sanitizedObject: { [key: string]: any } = {};
@@ -338,7 +338,6 @@ const HabitualPageContent: React.FC = () => {
 
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
     
-    
     const sanitizedHabits = sanitizeForFirestore(habits);
     const sanitizedBadges = sanitizeForFirestore(earnedBadges);
 
@@ -470,8 +469,8 @@ const HabitualPageContent: React.FC = () => {
                         
                         if (logEntry.originalMissedDate) { // Was a makeup completion, revert to pending_makeup
                             newLog[idx] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-                        } else if (logEntry.note?.trim()) { // Had a note, mark as skipped
-                            newLog[idx] = { ...logEntry, status: 'skipped', time: 'N/A' };
+                        } else if (logEntry.note && logEntry.note.trim()) { // Had a note, mark as skipped if not already completed
+                           newLog[idx] = { ...logEntry, status: 'skipped', time: 'N/A' }; // Keep note
                         } else { // No original missed date, no note, just remove the log entry
                             newLog.splice(idx, 1);
                         }
@@ -546,19 +545,16 @@ const HabitualPageContent: React.FC = () => {
         const newLog = h.completionLog.map(l => {
           if (l.date === date_reflection_save_note) { 
             logExists = true; 
-            const updatedLogEntry = { ...l, note: note_to_save_reflection.trim() };
-            if (updatedLogEntry.note === "") {
-                // If note is empty and status was 'skipped' due to only having a note, and not 'completed' or 'pending_makeup', remove the log.
-                // Otherwise, just remove the note property.
-                if(updatedLogEntry.status === 'skipped' && !updatedLogEntry.originalMissedDate && updatedLogEntry.time === 'N/A' ) return null; // Mark for removal
-                delete updatedLogEntry.note; 
+            const updatedLogEntry: HabitCompletionLogEntry = { ...l, note: note_to_save_reflection.trim() || undefined };
+            if (!updatedLogEntry.note && updatedLogEntry.status === 'skipped' && !updatedLogEntry.originalMissedDate && updatedLogEntry.time === 'N/A') {
+              return null; // Mark for removal if note is cleared and it was just a skipped entry
             }
             return updatedLogEntry;
           }
           return l;
-        }).filter(Boolean) as HabitCompletionLogEntry[]; // filter out nulls
+        }).filter(Boolean) as HabitCompletionLogEntry[];
 
-        if (!logExists && note_to_save_reflection.trim() !== "") { // Only add if note is not empty
+        if (!logExists && note_to_save_reflection.trim()) {
           const newEntry: HabitCompletionLogEntry = { date: date_reflection_save_note, time: 'N/A', status: 'skipped', note: note_to_save_reflection.trim() };
           newLog.push(newEntry);
         }
@@ -850,4 +846,4 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
-
+    
