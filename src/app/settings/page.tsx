@@ -64,7 +64,9 @@ const SettingsPage: NextPage = () => {
       await signOut(auth);
       console.log("Signed Out from Settings");
       router.push('/auth/login');
-    } catch (error: any)      console.error("Sign Out Failed:", error.message || "Could not sign out.");
+    } catch (error: any) {
+      console.error("Sign Out Failed:", error.message || "Could not sign out.");
+    } finally {
       setIsSigningOut(false); 
     }
   };
@@ -184,4 +186,3 @@ const SettingsPage: NextPage = () => {
 };
 
 export default SettingsPage;
-
