@@ -11,13 +11,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Lightbulb, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CalendarX, CheckCircle2, Circle, XCircle, Check, Bell, FilePenLine, StickyNote, Trash2, ChevronRightSquare, CalendarClock, CalendarDays, Edit3, Save, Wand2, PlusCircle, Hourglass, Clock } from 'lucide-react';
+import { Lightbulb, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CalendarX, CheckCircle2, Circle, XCircle, Check, Bell, FilePenLine, StickyNote, Trash2, ChevronRightSquare, CalendarClock, CalendarDays, Edit3, Save, Wand2, PlusCircle, Hourglass, Clock, Brain } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { format, parseISO, isSameDay, startOfDay, addDays as dateFnsAddDays } from 'date-fns';
 import { getCurrentWeekDays, WeekDayInfo, calculateStreak, getDayAbbreviationFromDate } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
+import { getReflectionStarter, type ReflectionStarterInput, type ReflectionStarterOutput } from '@/ai/flows/reflection-starter-flow';
+import AIReflectionPromptDialog from '@/components/popups/AIReflectionPromptDialog';
+import { useToast } from "@/hooks/use-toast";
+
 
 interface HabitDetailViewDialogProps {
   habit: Habit | null;
@@ -89,6 +93,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   habit, isOpen, onClose, onToggleComplete, onGetAISuggestion, onOpenReflectionDialog,
   onOpenRescheduleDialog, onToggleReminder, onOpenEditDialog, onOpenDeleteConfirm,
 }) => {
+  const { toast } = useToast();
   const [todayString, setTodayString] = React.useState('');
   const [currentDate, setCurrentDate] = React.useState<Date | null>(null);
   const [weekViewDays, setWeekViewDays] = React.useState<WeekDayInfo[]>([]);
@@ -97,6 +102,13 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const prevCompletedCountRef = React.useRef<number>(0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
   const DESCRIPTION_TRUNCATE_LENGTH = 100;
+
+  // State for AI Reflection Prompt
+  const [isAIReflectionPromptDialogOpen, setIsAIReflectionPromptDialogOpen] = React.useState(false);
+  const [aiReflectionPromptText, setAIReflectionPromptText] = React.useState<string | null>(null);
+  const [isAIReflectionLoading, setIsAIReflectionLoading] = React.useState(false);
+  const [aiReflectionError, setAIReflectionError] = React.useState<string | null>(null);
+
 
   React.useEffect(() => {
     const now = new Date();
@@ -109,6 +121,16 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
       setWeekViewDays(getCurrentWeekDays(currentDate));
     }
   }, [currentDate]);
+
+  React.useEffect(() => {
+    // Reset AI reflection state when dialog is opened/habit changes
+    if (isOpen) {
+      setIsAIReflectionPromptDialogOpen(false);
+      setAIReflectionPromptText(null);
+      setIsAIReflectionLoading(false);
+      setAIReflectionError(null);
+    }
+  }, [isOpen, habit]);
 
   const safeHabitDaysOfWeek = React.useMemo(() => {
     return habit?.daysOfWeek || [];
@@ -151,6 +173,38 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
     }
     prevCompletedCountRef.current = completedCountInCurrentWeek;
   }, [completedCountInCurrentWeek, scheduledDaysInWeek, habit]);
+
+
+  const handleGetAIReflectionPrompt = async () => {
+    if (!habit) return;
+    setIsAIReflectionLoading(true);
+    setAIReflectionError(null);
+    setAIReflectionPromptText(null);
+    setIsAIReflectionPromptDialogOpen(true);
+
+    try {
+      const input: ReflectionStarterInput = {
+        habitName: habit.name,
+        habitCategory: habit.category,
+        currentStreak: streak,
+        recentCompletions: completedCountInCurrentWeek,
+        scheduledDaysInWeek: scheduledDaysInWeek,
+      };
+      const result = await getReflectionStarter(input);
+      setAIReflectionPromptText(result.prompt);
+    } catch (error: any) {
+      console.error("Error getting AI reflection prompt:", error);
+      setAIReflectionError(error.message || "Failed to generate reflection prompt.");
+      toast({
+        title: "AI Reflection Error",
+        description: "Could not fetch an AI reflection prompt. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAIReflectionLoading(false);
+    }
+  };
+
 
   if (!isOpen || !habit) return null;
 
@@ -211,6 +265,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   }
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col bg-card shadow-xl rounded-xl">
         <DialogHeader className="p-4 pr-14 border-b">
@@ -325,18 +380,22 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               <DropdownMenuContent align="start" side="top">
                 <DropdownMenuItem onClick={() => {onOpenEditDialog(habit); onClose();}}><FilePenLine className="mr-2 h-4 w-4" /><span>Edit Habit</span></DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}><MessageSquarePlus className="mr-2 h-4 w-4" /><span>Add/Edit Note</span></DropdownMenuItem>
+                 <DropdownMenuItem onClick={handleGetAIReflectionPrompt}><Brain className="mr-2 h-4 w-4" /><span>AI Reflection Starter</span></DropdownMenuItem>
                 <DropdownMenuItem className="flex items-center justify-between" onSelect={e => e.preventDefault()}>
                   <Label htmlFor={`reminder-switch-dialog-${habit.id}`} className="flex items-center cursor-pointer text-sm"><Bell className="mr-2 h-4 w-4" />Enable Reminder</Label>
                   <Switch id={`reminder-switch-dialog-${habit.id}`} checked={!!habit.reminderEnabled} onCheckedChange={() => onToggleReminder(habit.id, !!habit.reminderEnabled)} className="ml-auto" />
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => {onGetAISuggestion(habit); /* Keep dialog open or manage AISuggestionDialog separately */}}><Lightbulb className="mr-2 h-4 w-4" /><span>AI Tip</span></DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onGetAISuggestion(habit)}><Lightbulb className="mr-2 h-4 w-4" /><span>AI Tip</span></DropdownMenuItem>
                 <DropdownMenuItem onClick={handleAddToCalendar}><CalendarPlus className="mr-2 h-4 w-4" /><span>Add to GCal</span></DropdownMenuItem>
                 <DropdownMenuItem onClick={handleShareHabit}><Share2 className="mr-2 h-4 w-4" /><span>Share</span></DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
                   const firstMissed = weekViewDays.find(d => safeHabitDaysOfWeek.includes(d.dayAbbrFull) && d.isPast && !d.isToday && !habit.completionLog.some(l => l.date === d.dateStr && (l.status === 'completed' || l.status === 'skipped' || l.status === 'pending_makeup')));
-                  if (firstMissed) { onOpenRescheduleDialog(habit, firstMissed.dateStr); /* Keep dialog open or manage RescheduleDialog separately */ }
-                  else console.log("Reschedule: No past, uncompleted days.");
+                  if (firstMissed) { onOpenRescheduleDialog(habit, firstMissed.dateStr); }
+                  else { 
+                    toast({ title: "No Missed Days", description: "No recent scheduled days to reschedule.", variant: "default" });
+                    console.log("Reschedule: No past, uncompleted days found in current week view."); 
+                  }
                 }}><CalendarClock className="mr-2 h-4 w-4" /><span>Reschedule Missed</span></DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => {onOpenDeleteConfirm(habit.id, habit.name); onClose();}} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Delete Habit</span></DropdownMenuItem>
@@ -346,11 +405,17 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    
+    <AIReflectionPromptDialog
+        isOpen={isAIReflectionPromptDialogOpen}
+        onClose={() => setIsAIReflectionPromptDialogOpen(false)}
+        habitName={habit?.name || "Habit"}
+        promptText={aiReflectionPromptText}
+        isLoading={isAIReflectionLoading}
+        error={aiReflectionError}
+      />
+    </>
   );
 };
 
 export default HabitDetailViewDialog;
-    
-    
-
-    
