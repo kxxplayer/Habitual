@@ -7,5 +7,6 @@ import '@/ai/flows/habit-suggestion';
 import '@/ai/flows/motivational-quote-flow';
 import '@/ai/flows/sql-tip-flow';
 import '@/ai/flows/common-habit-suggestions-flow';
-import '@/ai/flows/generate-habit-program-flow'; // Added new flow
+import '@/ai/flows/generate-habit-program-flow';
+import '@/ai/flows/app-improvement-suggester-flow'; // Added new flow
 
