@@ -519,8 +519,8 @@ const HabitualPage: NextPage = () => {
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-sm max-h-[95vh]",              
-        "md:max-w-md lg:max-w-lg"                  
+        "w-full max-w-sm max-h-[95vh]",
+        "md:max-w-md lg:max-w-lg"
       )}>
         <div className="flex flex-col items-center justify-center flex-grow p-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -531,8 +531,10 @@ const HabitualPage: NextPage = () => {
   );
 
   if (!mounted) return loadingScreen("Initializing app...");
-  if (isLoadingAuth) return loadingScreen("Loading application...");
-  if (!authUser && !isLoadingAuth) return loadingScreen("Redirecting to login...");
+  // Consistent loading message if not mounted OR if mounted but still loading auth
+  if (isLoadingAuth) return loadingScreen("Initializing app...");
+  // After mounted and auth is no longer loading:
+  if (!authUser) return loadingScreen("Redirecting to login...");
 
 
   return (
@@ -587,7 +589,7 @@ const HabitualPage: NextPage = () => {
                 </div>
               )}
               {isLoadingCommonSuggestions && habits.length === 0 && (<div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading suggestions...</p></div> )}
-              
+
               <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} />
             </main>
             <footer className="shrink-0 py-3 text-center text-xs text-muted-foreground border-t mt-auto">
@@ -635,7 +637,7 @@ const HabitualPage: NextPage = () => {
           handleOpenDeleteHabitConfirm(habitId, habitName); // Then open delete confirm
         }}
       />
-      
+
       {/* Calendar Dialog (kept for quick access if linked elsewhere, primary view is /calendar page) */}
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
         <DialogContentOriginal className="sm:max-w-lg bg-card">
@@ -647,9 +649,10 @@ const HabitualPage: NextPage = () => {
       </Dialog>
 
       <GoalInputProgramDialog isOpen={isGoalInputProgramDialogOpen} onClose={() => setIsGoalInputProgramDialogOpen(false)} onSubmit={handleSubmitGoalForProgram} isLoading={isProgramSuggestionLoading} />
-      <ProgramSuggestionDialog isOpen={isProgramSuggestionDialogOpen} onClose={() => { setIsProgramSuggestionDialogOpen(false); setProgramSuggestion(null); }} programSuggestion={programSuggestion} onAddProgramHabits={handleAddProgramHabits} isLoading={isProgramSuggestionLoading} />
+      <ProgramSuggestionDialog isOpen={isProgramSuggestionDialogOpen} onClose={() => { setIsProgramSuggestionDialogOpen(false); setProgramSuggestion(null); }} programSuggestion={programSuggestion} onAddProgramHabits={handleAddProgramHabits} isLoading={isLoadingCommonSuggestions} />
     </div>
   );
 };
 export default HabitualPage;
     
+
