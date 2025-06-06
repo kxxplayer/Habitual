@@ -26,7 +26,7 @@ interface ThemeProviderState {
 }
 
 const initialState: ThemeProviderState = {
-  theme: THEME_NAMES[0],
+  theme: THEME_NAMES[0], // This default is fine for context shape
   setTheme: () => null,
   cycleTheme: () => null,
 };
@@ -36,25 +36,46 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 export const ThemeProvider: FC<ThemeProviderProps> = ({
   children,
   defaultTheme = THEME_NAMES[0],
-  storageKey = "habitual-multi-theme", // Changed key for multi-theme
+  storageKey = "habitual-multi-theme",
   ...props
 }) => {
-  const [theme, setThemeInternal] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return defaultTheme;
-    const storedTheme = localStorage.getItem(storageKey) as Theme;
-    return THEME_NAMES.includes(storedTheme) ? storedTheme : defaultTheme;
-  });
+  // Initialize theme state *always* with defaultTheme for the first render.
+  const [theme, setThemeInternal] = useState<Theme>(defaultTheme);
 
   useEffect(() => {
+    // This effect runs only on the client, after the component has mounted.
+    // Now, it's safe to read from localStorage and update the theme.
+    const storedTheme = localStorage.getItem(storageKey) as Theme;
+    if (THEME_NAMES.includes(storedTheme) && storedTheme !== theme) { // Check if it's different from current (default)
+      setThemeInternal(storedTheme);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]); // Only run on mount (and if storageKey changed, which it shouldn't)
+
+  useEffect(() => {
+    // This effect applies the theme to the document and updates localStorage.
+    // It runs whenever 'theme' or 'storageKey' changes.
     if (typeof window === 'undefined') return;
     const root = window.document.documentElement;
-    THEME_NAMES.forEach(name => root.classList.remove(name));
-    if (theme) root.classList.add(theme);
-    localStorage.setItem(storageKey, theme);
+    
+    // Remove any existing theme classes
+    THEME_NAMES.forEach(name => {
+      if (root.classList.contains(name)) {
+        root.classList.remove(name);
+      }
+    });
+    
+    // Add the new theme class
+    if (theme) {
+      root.classList.add(theme);
+      localStorage.setItem(storageKey, theme);
+    }
   }, [theme, storageKey]);
 
   const handleSetTheme = (newTheme: Theme) => {
-    if (THEME_NAMES.includes(newTheme)) setThemeInternal(newTheme);
+    if (THEME_NAMES.includes(newTheme)) {
+      setThemeInternal(newTheme);
+    }
   };
 
   const cycleTheme = () => {
