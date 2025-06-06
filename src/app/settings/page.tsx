@@ -6,14 +6,13 @@ import type { NextPage } from 'next';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
-import type { User } from 'firebase/auth';
-import { onAuthStateChanged } from 'firebase/auth';
+import { signOut, type User, onAuthStateChanged } from 'firebase/auth';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Loader2, UserCircle, CalendarDays, BellRing, Palette, Bell, Settings as SettingsIcon } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Loader2, UserCircle, CalendarDays, BellRing, Palette, Bell, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
 import { Label } from '@/components/ui/label';
@@ -22,6 +21,7 @@ const SettingsPage: NextPage = () => {
   const router = useRouter();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
   const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission | null>(null);
 
   React.useEffect(() => {
@@ -53,6 +53,18 @@ const SettingsPage: NextPage = () => {
           console.log('Notification permission status:', permission);
         });
       }
+    }
+  };
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut(auth);
+      console.log("Signed Out from Settings");
+      router.push('/auth/login');
+    } catch (error: any) {
+      console.error("Sign Out Failed:", error.message || "Could not sign out.");
+      setIsSigningOut(false); // Only set to false on error, successful sign out navigates away
     }
   };
 
@@ -96,7 +108,7 @@ const SettingsPage: NextPage = () => {
                   <CardTitle className="text-xl font-bold text-primary flex items-center">
                     <SettingsIcon className="mr-2 h-5 w-5" /> Settings
                   </CardTitle>
-                  <CardDescription>Manage your application preferences.</CardDescription>
+                  <CardDescription>Manage your application preferences and account.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-2">
                   {settingsItems.map((item) => (
@@ -136,6 +148,11 @@ const SettingsPage: NextPage = () => {
                     {notificationPermission === 'denied' && <p className="text-xs text-muted-foreground mt-1">Notifications are blocked. Please enable them in your browser settings for Habitual to send reminders.</p>}
                      {notificationPermission === 'granted' && <p className="text-xs text-muted-foreground mt-1">Reminders can be set per habit from the habit's menu.</p>}
                   </div>
+                  
+                  <Button onClick={handleSignOut} variant="destructive" className="w-full text-base py-3 h-auto" disabled={isSigningOut}>
+                    {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+                    Sign Out
+                  </Button>
 
                 </CardContent>
               </Card>

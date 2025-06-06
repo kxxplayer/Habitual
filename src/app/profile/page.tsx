@@ -8,12 +8,11 @@ import { useEffect, useState } from 'react';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { auth } from '@/lib/firebase';
-import { signOut, onAuthStateChanged, type User } from 'firebase/auth';
-import { Loader2, LogOut, UserCircle2 } from 'lucide-react';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { Loader2, UserCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
@@ -21,7 +20,6 @@ const ProfilePage: NextPage = () => {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -35,18 +33,6 @@ const ProfilePage: NextPage = () => {
     });
     return () => unsubscribe();
   }, [router]);
-
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    try {
-      await signOut(auth);
-      console.log("Signed Out");
-      router.push('/auth/login');
-    } catch (error: any) {
-      console.error("Sign Out Failed:", error.message || "Could not sign out.");
-      setIsSigningOut(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -83,7 +69,7 @@ const ProfilePage: NextPage = () => {
                   <CardTitle className="text-2xl font-bold flex items-center justify-center">
                     <UserCircle2 className="mr-2 h-6 w-6 text-primary" /> Your Profile
                   </CardTitle>
-                  <CardDescription>Manage your account details and session.</CardDescription>
+                  <CardDescription>View your account details.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
@@ -98,10 +84,6 @@ const ProfilePage: NextPage = () => {
                       For security reasons, your password cannot be displayed.
                     </div>
                   </div>
-                  <Button onClick={handleSignOut} className="w-full" disabled={isSigningOut}>
-                    {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-                    Sign Out
-                  </Button>
                 </CardContent>
               </Card>
             </main>
