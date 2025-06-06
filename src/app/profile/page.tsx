@@ -68,7 +68,7 @@ const ProfilePage: NextPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
        <div className={cn(
-        "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
+        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
         "w-full max-w-sm", 
         "max-h-[97vh]",                    
         "md:max-w-md",                    

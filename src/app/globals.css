@@ -137,6 +137,8 @@
     background: linear-gradient(-45deg, hsl(var(--background-anim-start)), hsl(var(--background-anim-mid)), hsl(var(--background-anim-end)), hsl(var(--background-anim-mid)));
     background-size: 400% 400%;
     animation: gradientAnimation 25s ease infinite;
+    letter-spacing: 0.01em; /* Added subtle letter spacing */
+    line-height: 1.6; /* Adjusted line height */
   }
 }
 

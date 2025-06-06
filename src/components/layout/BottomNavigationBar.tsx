@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 const BottomNavigationBar: FC = () => {
   // TODO: Add active state highlighting based on current route
   return (
-    <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16 sticky bottom-0 z-30">
+    <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-14 sticky bottom-0 z-30">
       <Link href="/" className={cn(buttonVariants({ variant: "ghost" }), "flex flex-col items-center justify-center h-full p-1 text-muted-foreground hover:text-primary w-1/4")}>
         <Home className="h-4 w-4" />
         <span className="text-xs mt-0.5">Home</span>
@@ -32,4 +32,3 @@ const BottomNavigationBar: FC = () => {
 };
 
 export default BottomNavigationBar;
-

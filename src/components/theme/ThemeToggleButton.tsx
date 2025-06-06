@@ -16,17 +16,20 @@ const ThemeToggleButton: FC = () => {
 
   if (!mounted) {
     // Render a placeholder or null on the server and during initial client hydration
-    return <Button variant="ghost" size="icon" aria-label="Change theme" disabled className="h-8 w-8" />;
+    // Size adjusted to h-7 w-7 to match other header icons
+    return <Button variant="ghost" size="icon" aria-label="Change theme" disabled className="h-7 w-7" />;
   }
 
   const CurrentIcon = () => {
-    if (theme === "theme-vibrant-purple") return <Moon className="h-4 w-4" />;
-    if (theme === "theme-calm-blue") return <Sun className="h-4 w-4" />;
-    return <Palette className="h-4 w-4" />; // Default for other themes
+    // Icon size adjusted to h-3.5 w-3.5
+    if (theme === "theme-vibrant-purple") return <Moon className="h-3.5 w-3.5" />;
+    if (theme === "theme-calm-blue") return <Sun className="h-3.5 w-3.5" />;
+    return <Palette className="h-3.5 w-3.5" />; // Default for other themes
   };
   
   return (
-    <Button variant="ghost" size="icon" onClick={cycleTheme} aria-label="Change theme" className="h-8 w-8">
+    // Size adjusted to h-7 w-7
+    <Button variant="ghost" size="icon" onClick={cycleTheme} aria-label="Change theme" className="h-7 w-7">
       <CurrentIcon />
     </Button>
   );

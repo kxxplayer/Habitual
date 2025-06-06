@@ -518,7 +518,7 @@ const HabitualPage: NextPage = () => {
   const loadingScreen = (message: string) => (
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
-        "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
+        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
         "w-full max-w-sm max-h-[97vh]",
         "md:max-w-md lg:max-w-lg"
       )}>
@@ -531,14 +531,14 @@ const HabitualPage: NextPage = () => {
   );
 
   if (!mounted) return loadingScreen("Initializing app...");
-  if (isLoadingAuth && mounted) return loadingScreen("Initializing app...");
+  if (isLoadingAuth) return loadingScreen("Initializing app..."); // Keep this consistent for hydration
   if (!authUser && mounted && !isLoadingAuth) return loadingScreen("Redirecting to login...");
 
 
   return (
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
-        "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto relative", // Added relative
+        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto relative", 
         "w-full max-w-sm max-h-[97vh]",
         "md:max-w-md lg:max-w-lg"
       )}>
@@ -600,7 +600,7 @@ const HabitualPage: NextPage = () => {
         <Button
             onClick={() => { setEditingHabit(null); setInitialFormDataForDialog(null); setIsCreateHabitDialogOpen(true); }}
             variant="default"
-            className="absolute bottom-20 right-4 sm:right-6 z-40 h-14 w-14 rounded-full shadow-lg flex items-center justify-center"
+            className="absolute bottom-20 right-4 sm:right-6 z-40 h-14 w-14 rounded-full shadow-lg flex items-center justify-center" /* Kept larger FAB size for prominence */
             aria-label="Add new habit"
         >
             <Plus className="h-6 w-6" />
@@ -653,4 +653,3 @@ const HabitualPage: NextPage = () => {
 };
 export default HabitualPage;
     
-
