@@ -3,11 +3,12 @@
 
 // ==========================================================================
 // HABITUAL MAIN PAGE - Refactor for Tile View + Detail Dialog
+// + Suspense wrapper for useSearchParams
 // ==========================================================================
 import * as React from 'react';
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'; // Added useCallback
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { NextPage } from 'next';
-import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 import { auth } from '@/lib/firebase';
@@ -22,12 +23,11 @@ import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
 import DailyQuestDialog from '@/components/popups/DailyQuestDialog';
-import HabitDetailViewDialog from '@/components/habits/HabitDetailViewDialog'; // New Dialog
+import HabitDetailViewDialog from '@/components/habits/HabitDetailViewDialog';
 import GoalInputProgramDialog from '@/components/programs/GoalInputProgramDialog';
 import ProgramSuggestionDialog from '@/components/programs/ProgramSuggestionDialog';
 
-
-import { Calendar } from '@/components/ui/calendar'; // Keep for potential direct access
+import { Calendar } from '@/components/ui/calendar';
 import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabitForCommonList as CommonSuggestedHabitType } from '@/types';
 import { HABIT_CATEGORIES, SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID, THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 
@@ -43,8 +43,8 @@ import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Dialog, // Keep for Calendar Dialog if needed
-  DialogContent as DialogContentOriginal, // Rename to avoid conflict
+  Dialog,
+  DialogContent as DialogContentOriginal,
   DialogHeader as DialogHeaderOriginal,
   DialogTitle as DialogTitleOriginal,
   DialogClose as DialogCloseOriginal,
@@ -65,7 +65,7 @@ import {
 import {
   Plus, Loader2, ListChecks, CalendarDays, BellRing, Bell, Home,
   Trash2, CheckCircle2, XCircle, Circle, CalendarClock as MakeupIcon, WandSparkles,
-} from 'lucide-react'; // Home added
+} from 'lucide-react';
 import { format, parseISO, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday as dateFnsIsToday, isPast as dateFnsIsPast, isSameDay } from 'date-fns';
 
 
@@ -78,10 +78,26 @@ const LS_KEY_PREFIX_BADGES = "earnedBadges_";
 const LS_KEY_PREFIX_POINTS = "totalPoints_";
 const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
 
+// Define the loading component for Suspense fallback
+const LoadingFallback: React.FC = () => (
+  <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
+    <div className={cn(
+      "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
+      "w-full max-w-sm max-h-[97vh]",
+      "md:max-w-md lg:max-w-lg"
+    )}>
+      <div className="flex flex-col items-center justify-center flex-grow p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  </div>
+);
 
-const HabitualPage: NextPage = () => {
+// Original HabitualPage content moved here
+const HabitualPageContent: React.FC = () => {
   const router = useRouter();
-  const searchParams = useSearchParams(); // For query param
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = React.useState(false);
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
@@ -127,8 +143,6 @@ const HabitualPage: NextPage = () => {
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = React.useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(undefined);
 
-
-  // State for HabitDetailViewDialog
   const [selectedHabitForDetailView, setSelectedHabitForDetailView] = React.useState<Habit | null>(null);
   const [isDetailViewDialogOpen, setIsDetailViewDialogOpen] = React.useState(false);
 
@@ -150,13 +164,11 @@ const HabitualPage: NextPage = () => {
     }
   }, [mounted]);
 
-  // Effect to handle ?action=addHabit query parameter
   useEffect(() => {
     if (mounted && searchParams.get('action') === 'addHabit') {
       setInitialFormDataForDialog(null);
       setEditingHabit(null);
       setIsCreateHabitDialogOpen(true);
-      // Clean the URL by removing the action parameter
       router.replace('/', { scroll: false });
     }
   }, [searchParams, router, mounted]);
@@ -277,7 +289,6 @@ const HabitualPage: NextPage = () => {
 
   React.useEffect(() => {
     reminderTimeouts.current.forEach(clearTimeout); reminderTimeouts.current = [];
-    // Reminder logic placeholder - actual notification scheduling removed for brevity in this context
     return () => { reminderTimeouts.current.forEach(clearTimeout); reminderTimeouts.current = []; };
   }, [habits, notificationPermission, authUser]);
 
@@ -351,7 +362,6 @@ const HabitualPage: NextPage = () => {
                     }
                 }
                 const updatedHabit = { ...h, completionLog: newLog.sort((a, b) => b.date.localeCompare(a.date)) };
-                // This is a critical point: if selectedHabitForDetailView refers to this habit, it must be updated
                 if (selectedHabitForDetailView && selectedHabitForDetailView.id === updatedHabit.id) {
                     setSelectedHabitForDetailView(updatedHabit);
                 }
@@ -472,7 +482,6 @@ const HabitualPage: NextPage = () => {
     });
   };
 
-  // --- HabitDetailViewDialog Open/Close ---
   const handleOpenDetailView = (habit: Habit) => {
     setSelectedHabitForDetailView(habit);
     setIsDetailViewDialogOpen(true);
@@ -482,9 +491,7 @@ const HabitualPage: NextPage = () => {
     setIsDetailViewDialogOpen(false);
     setSelectedHabitForDetailView(null);
   }, []);
-  // --- End HabitDetailViewDialog ---
 
-  // Effect to keep selectedHabitForDetailView in sync with the main habits list
   React.useEffect(() => {
     if (selectedHabitForDetailView?.id && authUser && isDetailViewDialogOpen && habits.length > 0 && mounted) {
         const latestHabitInstance = habits.find(h => h.id === selectedHabitForDetailView.id);
@@ -497,15 +504,15 @@ const HabitualPage: NextPage = () => {
                  setSelectedHabitForDetailView(latestHabitInstance);
             }
         } else {
-            handleCloseDetailView(); // Habit might have been deleted
+            handleCloseDetailView();
         }
     }
   }, [habits, selectedHabitForDetailView, isDetailViewDialogOpen, authUser, handleCloseDetailView, mounted]);
 
 
-  const calendarDialogModifiers = React.useMemo(() => { /* Omitted for brevity - unchanged */ return {}; }, [habits, selectedCalendarDate, authUser]);
-  const calendarDialogModifierStyles: Record<string, React.CSSProperties> = { /* Omitted for brevity - unchanged */ };
-  const habitsForSelectedCalendarDate = React.useMemo(() => { /* Omitted for brevity - unchanged */ return []; }, [selectedCalendarDate, habits, authUser]);
+  const calendarDialogModifiers = React.useMemo(() => { return {}; }, [habits, selectedCalendarDate, authUser]);
+  const calendarDialogModifierStyles: Record<string, React.CSSProperties> = { };
+  const habitsForSelectedCalendarDate = React.useMemo(() => { return []; }, [selectedCalendarDate, habits, authUser]);
 
   const handleOpenGoalInputProgramDialog = () => setIsGoalInputProgramDialogOpen(true);
   const handleSubmitGoalForProgram = async (goal: string, duration: string) => {
@@ -525,7 +532,6 @@ const HabitualPage: NextPage = () => {
     if (habits.length === 0 && commonHabitSuggestions.length > 0 && newHabits.length > 0) setCommonHabitSuggestions([]);
     setIsProgramSuggestionDialogOpen(false); setProgramSuggestion(null);
   };
-
 
   const loadingScreen = (message: string) => (
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
@@ -550,7 +556,7 @@ const HabitualPage: NextPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
-        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto relative", 
+        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto relative",
         "w-full max-w-sm max-h-[97vh]",
         "md:max-w-md lg:max-w-lg"
       )}>
@@ -619,7 +625,6 @@ const HabitualPage: NextPage = () => {
       </AlertDialog>
       <DailyQuestDialog isOpen={isDailyQuestDialogOpen} onClose={handleCloseDailyQuestDialog} />
 
-      {/* New Habit Detail View Dialog */}
       <HabitDetailViewDialog
         habit={selectedHabitForDetailView}
         isOpen={isDetailViewDialogOpen}
@@ -630,16 +635,15 @@ const HabitualPage: NextPage = () => {
         onOpenRescheduleDialog={handleOpenRescheduleDialog}
         onToggleReminder={handleToggleReminder}
         onOpenEditDialog={(habitToEdit) => {
-          handleCloseDetailView(); // Close detail view first
-          handleOpenEditDialog(habitToEdit); // Then open edit dialog
+          handleCloseDetailView();
+          handleOpenEditDialog(habitToEdit);
         }}
         onOpenDeleteConfirm={(habitId, habitName) => {
-          handleCloseDetailView(); // Close detail view first
-          handleOpenDeleteHabitConfirm(habitId, habitName); // Then open delete confirm
+          handleCloseDetailView();
+          handleOpenDeleteHabitConfirm(habitId, habitName);
         }}
       />
 
-      {/* Calendar Dialog (kept for quick access if linked elsewhere, primary view is /calendar page) */}
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
         <DialogContentOriginal className="sm:max-w-lg bg-card">
           <DialogHeaderOriginal><DialogTitleOriginal className="flex items-center"><CalendarDays className="mr-2 h-5 w-5 text-primary"/>Habit Calendar</DialogTitleOriginal><DialogDescriptionOriginal>View your habit activity.</DialogDescriptionOriginal></DialogHeaderOriginal>
@@ -654,6 +658,16 @@ const HabitualPage: NextPage = () => {
     </div>
   );
 };
-export default HabitualPage;
-    
 
+// The actual page component that Next.js renders
+const HabitualPage: NextPage = () => {
+  return (
+    <React.Suspense fallback={<LoadingFallback />}>
+      <HabitualPageContent />
+    </React.Suspense>
+  );
+};
+
+export default HabitualPage;
+
+    
