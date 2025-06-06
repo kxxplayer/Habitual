@@ -107,7 +107,7 @@ const LoadingFallback: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
     <div className={cn(
       "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-      "w-full max-w-sm max-h-[97vh]",
+      "w-full max-w-sm h-[97vh] max-h-[97vh]",
       "md:max-w-md lg:max-w-lg"
     )}>
       <div className="flex flex-col items-center justify-center flex-grow p-4">
@@ -444,7 +444,7 @@ const HabitualPageContent: React.FC = () => {
                     } else {
                         pointsChangeToggleCompMain = POINTS_PER_COMPLETION;
                         justCompletedANewTaskToggleCompMain = true;
-                        newLog.push({ date: dateToggleCompMain, time, status: 'completed' }); // note: undefined will be handled by sanitizer
+                        newLog.push({ date: dateToggleCompMain, time, status: 'completed' });
                     }
                 } else {
                     if (idx > -1) {
@@ -452,7 +452,7 @@ const HabitualPageContent: React.FC = () => {
                         if (logEntry.status === 'completed') pointsChangeToggleCompMain = -POINTS_PER_COMPLETION;
                         if (logEntry.status === 'completed' && logEntry.originalMissedDate) {
                             newLog[idx] = { ...logEntry, status: 'pending_makeup', time: 'N/A' };
-                        } else if (logEntry.note?.trim()) { // If there's a note, change to skipped, otherwise remove
+                        } else if (logEntry.note?.trim()) { 
                             newLog[idx] = { ...logEntry, status: 'skipped', time: 'N/A' };
                         } else {
                             newLog.splice(idx, 1);
@@ -511,7 +511,7 @@ const HabitualPageContent: React.FC = () => {
           if (l.date === date_reflection_save_note) { 
             logExists = true; 
             const updatedLog = { ...l, note: note_to_save_reflection.trim() };
-            if (updatedLog.note === "") delete updatedLog.note; // Remove note property if empty, will be handled by sanitizer if undefined
+            if (updatedLog.note === "") delete updatedLog.note; 
             return updatedLog;
           }
           return l;
@@ -655,7 +655,7 @@ const HabitualPageContent: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-sm max-h-[97vh]",
+        "w-full max-w-sm h-[97vh] max-h-[97vh]",
         "md:max-w-md lg:max-w-lg"
       )}>
         <div className="flex flex-col items-center justify-center flex-grow p-4">
@@ -676,7 +676,7 @@ const HabitualPageContent: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto relative",
-        "w-full max-w-sm max-h-[97vh]",
+        "w-full max-w-sm h-[97vh] max-h-[97vh]",
         "md:max-w-md lg:max-w-lg"
       )}>
         <AppHeader />
