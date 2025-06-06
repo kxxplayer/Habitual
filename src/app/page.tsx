@@ -519,7 +519,7 @@ const HabitualPage: NextPage = () => {
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-sm max-h-[95vh]",
+        "w-full max-w-sm max-h-[97vh]",
         "md:max-w-md lg:max-w-lg"
       )}>
         <div className="flex flex-col items-center justify-center flex-grow p-4">
@@ -530,10 +530,7 @@ const HabitualPage: NextPage = () => {
     </div>
   );
 
-  if (!mounted) return loadingScreen("Initializing app...");
-  // Consistent loading message if not mounted OR if mounted but still loading auth
-  if (isLoadingAuth) return loadingScreen("Initializing app...");
-  // After mounted and auth is no longer loading:
+  if (!mounted || isLoadingAuth) return loadingScreen("Initializing app...");
   if (!authUser) return loadingScreen("Redirecting to login...");
 
 
@@ -541,13 +538,13 @@ const HabitualPage: NextPage = () => {
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto relative", // Added relative
-        "w-full max-w-sm max-h-[95vh]",
+        "w-full max-w-sm max-h-[97vh]",
         "md:max-w-md lg:max-w-lg"
       )}>
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4 flex-grow"> {/* Added flex-grow */}
+            <main className="px-3 sm:px-4 py-4"> {/* Removed flex-grow */}
               {habits.length > 0 && !allTodayTasksDone && (
                 <div className="mb-4 flex justify-center">
                   <Button onClick={handleMarkAllTodayDone} variant={"default"} className="w-full max-w-xs">

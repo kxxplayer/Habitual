@@ -83,7 +83,7 @@ const SettingsPage: NextPage = () => {
       <div className={cn(
         "bg-card text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
         "w-full max-w-sm",     
-        "max-h-[95vh]",                   
+        "max-h-[97vh]",                   
         "md:max-w-md",                   
         "lg:max-w-lg"                     
       )}>
