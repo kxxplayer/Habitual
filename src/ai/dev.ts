@@ -30,9 +30,6 @@ if (localResult.error) {
   }
 } else {
   console.log('[Genkit Env] .env.local file loaded successfully. Parsed keys:', Object.keys(localResult.parsed || {}).join(', '));
-  // If .env.local was loaded, we can optionally also load .env to fill in any missing vars,
-  // but dotenv by default doesn't override existing process.env vars.
-  // For simplicity, we'll assume .env.local is comprehensive if it exists.
 }
 
 // Debug log the critical environment variables as seen by the Genkit dev process
@@ -59,5 +56,7 @@ console.log('[Genkit Dev] If Genkit starts successfully now, the issue is likely
 // executed by this dev.ts script right now unless something else triggers its import.
 // However, the genkit start command itself will try to initialize Genkit.
 // Let's ensure genkit.ts is at least processed by importing it directly to see if plugin loading fails.
+console.log('[Genkit Dev] Attempting to import src/ai/genkit.ts directly...');
 import '@/ai/genkit';
 console.log('[Genkit Dev] src/ai/genkit.ts has been imported directly.');
+console.log('[Genkit Dev] End of dev.ts script. Genkit start should now proceed with discovered elements.');

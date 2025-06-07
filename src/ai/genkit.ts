@@ -1,18 +1,21 @@
 
+console.log('[Genkit Init] Starting src/ai/genkit.ts execution...');
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 // import { enableFirebaseTelemetry } from '@genkit-ai/firebase'; // Ensure this path is correct for your version
 
+// Temporarily comment out Firebase telemetry for debugging
+// console.log('[Genkit Firebase] Attempting to get NEXT_PUBLIC_FIREBASE_PROJECT_ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
 // const firebaseProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
 // if (firebaseProjectId) {
 //   try {
+//     console.log('[Genkit Firebase] Calling enableFirebaseTelemetry with projectId:', firebaseProjectId);
 //     enableFirebaseTelemetry({ // This function is called for its side effects
 //       projectId: firebaseProjectId,
 //       traceStore: { provider: 'firestore' },
 //       flowStateStore: { provider: 'firestore' },
 //     });
-//     console.log('[Genkit Firebase] Telemetry setup attempted.');
+//     console.log('[Genkit Firebase] Telemetry setup attempted for project:', firebaseProjectId);
 //   } catch (error) {
 //     console.error('[Genkit Firebase] Failed to setup Firebase telemetry:', error);
 //   }
@@ -22,6 +25,7 @@ import {googleAI} from '@genkit-ai/googleai';
 //   );
 // }
 
+console.log('[Genkit Init] Initializing Genkit object with GoogleAI plugin...');
 export const ai = genkit({
   plugins: [
     googleAI({apiVersion: 'v1beta'}),
@@ -32,3 +36,5 @@ export const ai = genkit({
   // Optional: Configure log level for Genkit
   // logLevel: 'debug', // Can be 'info', 'warn', 'error', 'debug'
 });
+console.log('[Genkit Init] Genkit object initialized. enableTracing is false.');
+console.log('[Genkit Init] End of src/ai/genkit.ts execution.');
