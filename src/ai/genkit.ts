@@ -1,48 +1,34 @@
 
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-// Try importing enableFirebaseTelemetry as suggested by build errors for version 1.8.0
-// import { enableFirebaseTelemetry } from '@genkit-ai/firebase'; 
+// import { enableFirebaseTelemetry } from '@genkit-ai/firebase'; // Ensure this path is correct for your version
 
 // const firebaseProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-// const firebaseStorageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET; // Keep this for potential future use
 
-// Call enableFirebaseTelemetry for its side effects if projectId is available
 // if (firebaseProjectId) {
 //   try {
-//     enableFirebaseTelemetry({
+//     enableFirebaseTelemetry({ // This function is called for its side effects
 //       projectId: firebaseProjectId,
-//       // Configure traceStore to use Firestore
-//       traceStore: {
-//         provider: 'firestore',
-//         // Optional: collection: 'genkit-traces', // Default is 'genkit-traces'
-//       },
-//       // Configure flowStateStore to use Firestore
-//       flowStateStore: {
-//         provider: 'firestore',
-//         // Optional: collection: 'genkit-flow-states', // Default is 'genkit-flow-states'
-//       },
+//       traceStore: { provider: 'firestore' },
+//       flowStateStore: { provider: 'firestore' },
 //     });
-//     console.log('Firebase telemetry setup for Genkit has been attempted.');
+//     console.log('[Genkit Firebase] Telemetry setup attempted.');
 //   } catch (error) {
-//     console.error('Failed to setup Firebase telemetry for Genkit:', error);
-//     // Proceed without the Firebase plugin if initialization fails
+//     console.error('[Genkit Firebase] Failed to setup Firebase telemetry:', error);
 //   }
 // } else {
 //   console.warn(
-//     'Firebase Project ID (NEXT_PUBLIC_FIREBASE_PROJECT_ID) is not set. Genkit Firebase plugin for tracing will not be enabled.'
+//     '[Genkit Firebase] Project ID (NEXT_PUBLIC_FIREBASE_PROJECT_ID) not set. Firebase plugin for tracing/state will not be enabled.'
 //   );
 // }
 
 export const ai = genkit({
   plugins: [
     googleAI({apiVersion: 'v1beta'}),
-    // The return value of enableFirebaseTelemetry is not added here
-  ].filter(Boolean), // filter(Boolean) is kept in case any plugin factory could return undefined
-  // No model specified here, will be specified per call or in flow defaults.
+    // Do not add the return value of enableFirebaseTelemetry here if it doesn't return a plugin
+  ].filter(Boolean),
   // Enable OpenTelemetry trace collection. Traces are sent to the configured traceStore.
-  enableTracing: true, 
+  enableTracing: false, // Temporarily set to false for debugging
   // Optional: Configure log level for Genkit
   // logLevel: 'debug', // Can be 'info', 'warn', 'error', 'debug'
 });
-
