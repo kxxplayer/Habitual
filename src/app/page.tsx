@@ -83,7 +83,7 @@ const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
 
 const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
-const DEBOUNCE_SAVE_DELAY_MS = 1500; // 1.5 seconds for debouncing Firestore saves
+const DEBOUNCE_SAVE_DELAY_MS = 2500; // Increased debounce delay
 
 function sanitizeForFirestore<T>(data: T): T {
   if (data === null || typeof data !== 'object') {
@@ -190,6 +190,10 @@ const HabitualPageContent: React.FC = () => {
 
   const [isClientMounted, setIsClientMounted] = React.useState(false);
 
+  const firstDataLoadCompleteRef = React.useRef(false); // Ref to track if initial data load via onSnapshot is done
+  const debounceSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+
   useEffect(() => {
     setIsClientMounted(true);
     console.log("PAGE.TSX: HabitualPageContent component has mounted on CLIENT.");
@@ -228,6 +232,7 @@ const HabitualPageContent: React.FC = () => {
 
       if (previousUidAuthMain !== undefined && previousUidAuthMain !== currentUidAuthMain) {
         setHabits([]); setEarnedBadges([]); setTotalPoints(0); setIsLoadingData(true);
+        firstDataLoadCompleteRef.current = false; // Reset for new user
         setCommonHabitSuggestions([]); setCommonSuggestionsFetched(false);
         setEditingHabit(null); setInitialFormDataForDialog(null); setCreateHabitDialogStep(1);
         setReflectionDialogData(null); setRescheduleDialogData(null);
@@ -259,7 +264,9 @@ const HabitualPageContent: React.FC = () => {
       setIsLoadingData(false);
       return;
     }
-    setIsLoadingData(true);
+    setIsLoadingData(true); // Set loading true before subscribing
+    firstDataLoadCompleteRef.current = false; // Ensure this is false before first snapshot data arrives
+
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
 
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
@@ -290,13 +297,13 @@ const HabitualPageContent: React.FC = () => {
         setHabits(parsedHabits);
         setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
         setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
+
         if (parsedHabits.length === 0 && !commonSuggestionsFetched) {
           setIsLoadingCommonSuggestions(true);
           getCommonHabitSuggestions({ count: 5 })
             .then(response => setCommonHabitSuggestions(response?.suggestions || []))
             .catch(err => {
-                setCommonHabitSuggestions([]);
-                console.error("Failed to load common habit suggestions:", err);
+                setCommonHabitSuggestions([]); console.error("Failed to load common habit suggestions:", err);
                  toast({ title: "AI Error", description: "Could not load common habit suggestions.", variant: "destructive" });
             })
             .finally(() => {
@@ -308,15 +315,14 @@ const HabitualPageContent: React.FC = () => {
             setCommonSuggestionsFetched(true);
         }
 
-      } else {
+      } else { // Document does not exist
         setHabits([]); setEarnedBadges([]); setTotalPoints(0);
         if (!commonSuggestionsFetched) {
           setIsLoadingCommonSuggestions(true);
           getCommonHabitSuggestions({ count: 5 })
             .then(response => setCommonHabitSuggestions(response?.suggestions || []))
             .catch(err => {
-                setCommonHabitSuggestions([]);
-                console.error("Failed to load common habit suggestions (no data):", err);
+                setCommonHabitSuggestions([]); console.error("Failed to load common habit suggestions (no data):", err);
                 toast({ title: "AI Error", description: "Could not load common habit suggestions.", variant: "destructive" });
             })
             .finally(() => {
@@ -326,26 +332,22 @@ const HabitualPageContent: React.FC = () => {
             });
         }
       }
-      setIsLoadingData(false);
+      if (isLoadingData) setIsLoadingData(false); // Set loading false after processing snapshot
+      firstDataLoadCompleteRef.current = true; // Mark initial data load as complete
     }, (error) => {
       console.error("Error listening to Firestore data:", error);
       toast({ title: "Database Error", description: "Could not load your data from the cloud.", variant: "destructive" });
-      setIsLoadingData(false);
+      if (isLoadingData) setIsLoadingData(false);
+      firstDataLoadCompleteRef.current = true; // Still mark as "done" to allow potential local ops or retries
     });
     return () => unsubscribeFirestore();
-  }, [authUser, mounted, commonSuggestionsFetched, toast]);
+  }, [authUser, mounted, commonSuggestionsFetched, toast]); // isLoadingData removed from here to avoid re-subscribing too often
 
-  const firstSaveDoneRef = React.useRef(false);
-  const debounceSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!isLoadingData && authUser && mounted && !firstSaveDoneRef.current) {
-      firstSaveDoneRef.current = true;
-    }
-  }, [authUser, mounted, isLoadingData]);
-
-  useEffect(() => {
-    if (!authUser || !mounted || isLoadingData || !firstSaveDoneRef.current) {
+    // This effect is responsible for debounced writes to Firestore.
+    // It only runs if authUser, mounted, and firstDataLoadCompleteRef.current are true.
+    if (!authUser || !mounted || !firstDataLoadCompleteRef.current) {
       return;
     }
 
@@ -378,10 +380,11 @@ const HabitualPageContent: React.FC = () => {
         clearTimeout(debounceSaveTimeoutRef.current);
       }
     };
-  }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData, toast]);
+  }, [habits, earnedBadges, totalPoints, authUser, mounted, toast]); // firstDataLoadCompleteRef is a ref, not needed in deps. isLoadingData removed.
+
 
    React.useEffect(() => {
-    if (!authUser || isLoadingData || !mounted || !firstSaveDoneRef.current) return;
+    if (!authUser || isLoadingData || !mounted || !firstDataLoadCompleteRef.current) return;
     const newlyEarnedBadges = checkAndAwardBadges(habits, earnedBadges);
     if (newlyEarnedBadges.length > 0) {
       const updatedBadges = [...earnedBadges];
@@ -394,8 +397,7 @@ const HabitualPageContent: React.FC = () => {
       });
       if (updatedBadges.length !== earnedBadges.length) setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, authUser, isLoadingData, mounted, toast]);
-
+  }, [habits, earnedBadges, authUser, isLoadingData, mounted, toast]); // firstDataLoadCompleteRef is a ref
 
   React.useEffect(() => {
     reminderTimeouts.current.forEach(clearTimeout); reminderTimeouts.current = [];
