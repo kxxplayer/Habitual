@@ -36,6 +36,8 @@ import { getSqlTip } from '@/ai/flows/sql-tip-flow';
 import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
 import { getCommonHabitSuggestions } from '@/ai/flows/common-habit-suggestions-flow';
 import { generateHabitProgramFromGoal, type GenerateHabitProgramOutput, type SuggestedProgramHabit } from '@/ai/flows/generate-habit-program-flow';
+import { getReflectionStarter, type ReflectionStarterInput, type ReflectionStarterOutput } from '@/ai/flows/reflection-starter-flow';
+
 
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { cn } from "@/lib/utils";
@@ -66,6 +68,7 @@ import {
 import {
   Plus, Loader2, ListChecks, CalendarDays, BellRing, Bell, Home,
   Trash2, CheckCircle2, XCircle, Circle, CalendarClock as MakeupIcon, WandSparkles,
+  Brain,
 } from 'lucide-react';
 import { format, parseISO, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday as dateFnsIsToday, isPast as dateFnsIsPast, isSameDay } from 'date-fns';
 
@@ -80,6 +83,7 @@ const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
 
 const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
+const DEBOUNCE_SAVE_DELAY_MS = 1500; // 1.5 seconds for debouncing Firestore saves
 
 function sanitizeForFirestore<T>(data: T): T {
   if (data === null || typeof data !== 'object') {
@@ -332,28 +336,48 @@ const HabitualPageContent: React.FC = () => {
   }, [authUser, mounted, commonSuggestionsFetched, toast]);
 
   const firstSaveDoneRef = React.useRef(false);
+  const debounceSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!isLoadingData && authUser && mounted && !firstSaveDoneRef.current) {
+      firstSaveDoneRef.current = true;
+    }
+  }, [authUser, mounted, isLoadingData]);
+
   useEffect(() => {
     if (!authUser || !mounted || isLoadingData || !firstSaveDoneRef.current) {
-      if (!isLoadingData && authUser && mounted) {
-        firstSaveDoneRef.current = true;
-      }
       return;
     }
-    const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
-    const sanitizedHabits = sanitizeForFirestore(habits);
-    const sanitizedBadges = sanitizeForFirestore(earnedBadges);
-    const dataToSave = {
-      habits: sanitizedHabits,
-      earnedBadges: sanitizedBadges,
-      totalPoints: totalPoints,
-      lastUpdated: new Date().toISOString(),
+
+    if (debounceSaveTimeoutRef.current) {
+      clearTimeout(debounceSaveTimeoutRef.current);
+    }
+
+    debounceSaveTimeoutRef.current = setTimeout(() => {
+      const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
+      const sanitizedHabits = sanitizeForFirestore(habits);
+      const sanitizedBadges = sanitizeForFirestore(earnedBadges);
+      const dataToSave = {
+        habits: sanitizedHabits,
+        earnedBadges: sanitizedBadges,
+        totalPoints: totalPoints,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      console.log(`PAGE.TSX: Debounced save triggered for user ${authUser.uid} at ${new Date().toLocaleTimeString()}`);
+      setDoc(userDocRef, dataToSave, { merge: true })
+        .then(() => { /* console.log("Data saved to Firestore after debounce") */ })
+        .catch(error => {
+            console.error("Error saving debounced data to Firestore:", error);
+            toast({ title: "Save Error", description: "Could not save your changes to the cloud.", variant: "destructive" });
+        });
+    }, DEBOUNCE_SAVE_DELAY_MS);
+
+    return () => {
+      if (debounceSaveTimeoutRef.current) {
+        clearTimeout(debounceSaveTimeoutRef.current);
+      }
     };
-    setDoc(userDocRef, dataToSave, { merge: true })
-      .then(() => { /* console.log("Data saved to Firestore") */ })
-      .catch(error => {
-          console.error("Error saving data to Firestore:", error);
-          toast({ title: "Save Error", description: "Could not save your changes to the cloud.", variant: "destructive" });
-      });
   }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData, toast]);
 
    React.useEffect(() => {
@@ -826,6 +850,7 @@ const HabitualPageContent: React.FC = () => {
           handleCloseDetailView();
           handleOpenDeleteHabitConfirm(habitId, habitName);
         }}
+        onGetAIReflectionPrompt={getReflectionStarter}
       />
 
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>

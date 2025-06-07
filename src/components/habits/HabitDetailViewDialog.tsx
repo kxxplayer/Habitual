@@ -18,7 +18,7 @@ import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { format, parseISO, isSameDay, startOfDay, addDays as dateFnsAddDays } from 'date-fns';
 import { getCurrentWeekDays, WeekDayInfo, calculateStreak, getDayAbbreviationFromDate } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
-import { getReflectionStarter, type ReflectionStarterInput, type ReflectionStarterOutput } from '@/ai/flows/reflection-starter-flow';
+import type { ReflectionStarterInput, ReflectionStarterOutput } from '@/ai/flows/reflection-starter-flow'; // Import types
 import AIReflectionPromptDialog from '@/components/popups/AIReflectionPromptDialog';
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,6 +34,7 @@ interface HabitDetailViewDialogProps {
   onToggleReminder: (habitId: string, currentReminderState: boolean) => void;
   onOpenEditDialog: (habit: Habit) => void;
   onOpenDeleteConfirm: (habitId: string, habitName: string) => void;
+  onGetAIReflectionPrompt: (input: ReflectionStarterInput) => Promise<ReflectionStarterOutput>; // Prop for the flow
 }
 
 const formatSpecificTime = (timeStr?: string): string | undefined => {
@@ -92,6 +93,7 @@ const getHabitDisplayIcon = (habit: Habit | null): React.ReactNode => {
 const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   habit, isOpen, onClose, onToggleComplete, onGetAISuggestion, onOpenReflectionDialog,
   onOpenRescheduleDialog, onToggleReminder, onOpenEditDialog, onOpenDeleteConfirm,
+  onGetAIReflectionPrompt, // Destructure the new prop
 }) => {
   const { toast } = useToast();
   const [todayString, setTodayString] = React.useState('');
@@ -175,7 +177,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   }, [completedCountInCurrentWeek, scheduledDaysInWeek, habit]);
 
 
-  const handleGetAIReflectionPrompt = async () => {
+  const handleTriggerAIReflection = async () => {
     if (!habit) return;
     setIsAIReflectionLoading(true);
     setAIReflectionError(null);
@@ -190,7 +192,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
         recentCompletions: completedCountInCurrentWeek,
         scheduledDaysInWeek: scheduledDaysInWeek,
       };
-      const result = await getReflectionStarter(input);
+      const result = await onGetAIReflectionPrompt(input); // Use the passed prop
       setAIReflectionPromptText(result.prompt);
     } catch (error: any) {
       console.error("Error getting AI reflection prompt:", error);
@@ -380,7 +382,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               <DropdownMenuContent align="start" side="top">
                 <DropdownMenuItem onClick={() => {onOpenEditDialog(habit); onClose();}}><FilePenLine className="mr-2 h-4 w-4" /><span>Edit Habit</span></DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}><MessageSquarePlus className="mr-2 h-4 w-4" /><span>Add/Edit Note</span></DropdownMenuItem>
-                 <DropdownMenuItem onClick={handleGetAIReflectionPrompt}><Brain className="mr-2 h-4 w-4" /><span>AI Reflection Starter</span></DropdownMenuItem>
+                 <DropdownMenuItem onClick={handleTriggerAIReflection}><Brain className="mr-2 h-4 w-4" /><span>AI Reflection Starter</span></DropdownMenuItem>
                 <DropdownMenuItem className="flex items-center justify-between" onSelect={e => e.preventDefault()}>
                   <Label htmlFor={`reminder-switch-dialog-${habit.id}`} className="flex items-center cursor-pointer text-sm"><Bell className="mr-2 h-4 w-4" />Enable Reminder</Label>
                   <Switch id={`reminder-switch-dialog-${habit.id}`} checked={!!habit.reminderEnabled} onCheckedChange={() => onToggleReminder(habit.id, !!habit.reminderEnabled)} className="ml-auto" />
@@ -419,3 +421,4 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
 };
 
 export default HabitDetailViewDialog;
+
