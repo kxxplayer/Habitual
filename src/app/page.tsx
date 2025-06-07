@@ -197,7 +197,7 @@ const HabitualPageContent: React.FC = () => {
 
   useEffect(() => {
     setIsClientMounted(true);
-    console.log("PAGE.TSX: HabitualPageContent component has mounted on CLIENT.");
+    console.log("PAGE.TSX: Content mounted. Initial state: isLoadingAuth=", isLoadingAuth, "isLoadingData=", isLoadingData);
   }, []);
 
   useEffect(() => {
@@ -223,22 +223,25 @@ const HabitualPageContent: React.FC = () => {
         setCreateHabitDialogStep(1);
         setIsCreateHabitDialogOpen(true);
         setDialogTriggeredByUrl(true); 
-
         router.replace('/', { scroll: false });
-        console.log("PAGE.TSX: URL action 'addHabit' processed, dialog opening, URL cleaned.");
       }
     }
   }, [searchParams, mounted, router, isCreateHabitDialogOpen, dialogTriggeredByUrl]);
 
 
+  // Auth State Change Effect
   React.useEffect(() => {
+    console.log("PAGE.TSX: Auth effect attaching. Current authUser UID:", authUser?.uid);
     const unsubscribeAuthMain = onAuthStateChanged(auth, (currentUserAuthMain) => {
       const previousUidAuthMain = previousAuthUserUidRef.current;
       const currentUidAuthMain = currentUserAuthMain?.uid || null;
+      console.log(`PAGE.TSX: onAuthStateChanged fired. Prev UID: ${previousUidAuthMain}, New UID: ${currentUidAuthMain}. isLoadingAuth: ${isLoadingAuth}, isLoadingData: ${isLoadingData}`);
 
       if (previousUidAuthMain !== undefined && previousUidAuthMain !== currentUidAuthMain) {
-        setHabits([]); setEarnedBadges([]); setTotalPoints(0); setIsLoadingData(true);
-        firstDataLoadCompleteRef.current = false; // Reset for new user
+        console.log("PAGE.TSX: User changed or logged in/out. Resetting states.");
+        setHabits([]); setEarnedBadges([]); setTotalPoints(0);
+        setIsLoadingData(true); // Explicitly start loading for new user/no user
+        firstDataLoadCompleteRef.current = false;
         setCommonHabitSuggestions([]); setCommonSuggestionsFetched(false);
         setEditingHabit(null); setInitialFormDataForDialog(null); setCreateHabitDialogStep(1);
         setReflectionDialogData(null); setRescheduleDialogData(null);
@@ -247,16 +250,30 @@ const HabitualPageContent: React.FC = () => {
         setIsDailyQuestDialogOpen(false); setIsCalendarDialogOpen(false);
         setSelectedHabitForDetailView(null); setIsDetailViewDialogOpen(false);
         setIsGoalInputProgramDialogOpen(false); setIsProgramSuggestionDialogOpen(false); setProgramSuggestion(null);
-        setDialogTriggeredByUrl(false); // Reset URL action flag on user change
+        setDialogTriggeredByUrl(false);
+      } else if (previousUidAuthMain === undefined && !currentUidAuthMain) {
+        // Initial load, no user found yet or remains unauthenticated
+        console.log("PAGE.TSX: Initial auth check, no user. Setting isLoadingData=false.");
+        setIsLoadingData(false);
+        firstDataLoadCompleteRef.current = false;
       }
-      setAuthUser(currentUserAuthMain); setIsLoadingAuth(false);
+
+      setAuthUser(currentUserAuthMain);
+      setIsLoadingAuth(false); // Auth check itself is complete
       previousAuthUserUidRef.current = currentUidAuthMain;
-      if (!currentUserAuthMain && typeof window !== 'undefined' && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
+
+      if (!currentUserAuthMain && mounted && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
+        console.log("PAGE.TSX: No authUser, redirecting to login.");
         router.push('/auth/login');
+      } else if (currentUserAuthMain) {
+        console.log("PAGE.TSX: Auth user confirmed/set:", currentUserAuthMain.uid);
       }
     });
-    return () => unsubscribeAuthMain();
-  }, [router]);
+    return () => {
+      console.log("PAGE.TSX: Auth effect detaching.");
+      unsubscribeAuthMain();
+    };
+  }, [router, mounted]); // Added mounted to ensure router.push only happens client-side correctly
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -266,92 +283,106 @@ const HabitualPageContent: React.FC = () => {
     }
   }, []);
 
+  // Data Loading Effect
   useEffect(() => {
+    console.log(`PAGE.TSX: Data loading effect. authUser: ${authUser?.uid}, mounted: ${mounted}, isLoadingData: ${isLoadingData}, firstDataLoadComplete: ${firstDataLoadCompleteRef.current}, commonSuggestionsFetched: ${commonSuggestionsFetched}`);
+
     if (!authUser || !mounted) {
-      setIsLoadingData(false);
+      if (isLoadingData) {
+        console.log("PAGE.TSX: Data effect - No authUser or not mounted. Setting isLoadingData=false.");
+        setIsLoadingData(false);
+      }
+      // Ensure firstDataLoadCompleteRef is false if we bail out here, especially if authUser becomes null
+      if (!authUser) firstDataLoadCompleteRef.current = false;
       return;
     }
-    setIsLoadingData(true); 
+
+    // Only set isLoadingData to true if we are starting a fresh data load cycle
+    // for this user and the first load for this user hasn't completed yet.
+    if (!firstDataLoadCompleteRef.current && !isLoadingData) {
+      console.log("PAGE.TSX: Data effect - Conditions met to start loading. Setting isLoadingData=true.");
+      setIsLoadingData(true);
+    }
     
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
+    console.log(`PAGE.TSX: Subscribing to Firestore for user ${authUser.uid} at ${new Date().toISOString()}. Path: ${userDocRef.path}`);
+    console.log("PAGE.TSX: Firebase App Name (from db):", db.app.name);
+    console.log("PAGE.TSX: Firebase Project ID (from db options):", db.app.options.projectId);
+
 
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({
-          id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
-          name: String(h.name || 'Unnamed Habit'),
-          description: typeof h.description === 'string' ? h.description : undefined,
-          category: HABIT_CATEGORIES.includes(h.category as HabitCategory) ? h.category : 'Other',
-          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any) => weekDaysArrayForForm.includes(d as WeekDay)) : [],
-          optimalTiming: typeof h.optimalTiming === 'string' ? h.optimalTiming : undefined,
-          durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
-          durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
-          specificTime: typeof h.specificTime === 'string' ? h.specificTime : undefined,
-          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => {
-            if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
-            return {
-              date: log.date,
-              time: typeof log.time === 'string' && log.time.length > 0 ? log.time : 'N/A',
-              note: typeof log.note === 'string' ? log.note : undefined,
-              status: ['completed', 'pending_makeup', 'skipped'].includes(log.status) ? log.status : 'completed',
-              originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
-            };
-          }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a,b) => b.date.localeCompare(a.date)),
-          reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
-        }));
-        setHabits(parsedHabits);
-        setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
-        setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
+      console.log(`PAGE.TSX: Firestore snapshot received for user ${authUser.uid} at ${new Date().toISOString()}. Doc exists: ${docSnap.exists()}`);
+      const data = docSnap.exists() ? docSnap.data() : {};
+      
+      const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({
+        id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
+        name: String(h.name || 'Unnamed Habit'),
+        description: typeof h.description === 'string' ? h.description : undefined,
+        category: HABIT_CATEGORIES.includes(h.category as HabitCategory) ? h.category : 'Other',
+        daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any) => weekDaysArrayForForm.includes(d as WeekDay)) : [],
+        optimalTiming: typeof h.optimalTiming === 'string' ? h.optimalTiming : undefined,
+        durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
+        durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
+        specificTime: typeof h.specificTime === 'string' ? h.specificTime : undefined,
+        completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => {
+          if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
+          return {
+            date: log.date,
+            time: typeof log.time === 'string' && log.time.length > 0 ? log.time : 'N/A',
+            note: typeof log.note === 'string' ? log.note : undefined,
+            status: ['completed', 'pending_makeup', 'skipped'].includes(log.status) ? log.status : 'completed',
+            originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
+          };
+        }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a,b) => b.date.localeCompare(a.date)),
+        reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
+      }));
+      setHabits(parsedHabits);
+      setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
+      setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
+      console.log(`PAGE.TSX: Habits set (${parsedHabits.length}), Badges set (${(Array.isArray(data.earnedBadges) ? data.earnedBadges : []).length}), Points set (${typeof data.totalPoints === 'number' ? data.totalPoints : 0})`);
 
-        if (parsedHabits.length === 0 && !commonSuggestionsFetched) {
-          setIsLoadingCommonSuggestions(true);
-          getCommonHabitSuggestions({ count: 5 })
-            .then(response => setCommonHabitSuggestions(response?.suggestions || []))
-            .catch(err => {
-                setCommonHabitSuggestions([]); console.error("Failed to load common habit suggestions:", err);
-                 toast({ title: "AI Error", description: "Could not load common habit suggestions.", variant: "destructive" });
-            })
-            .finally(() => {
-              setIsLoadingCommonSuggestions(false); setCommonSuggestionsFetched(true);
-              const dailyQuestKey = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`;
-              if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
-            });
-        } else if (parsedHabits.length > 0) {
-            setCommonSuggestionsFetched(true);
-        }
-
-      } else { 
-        setHabits([]); setEarnedBadges([]); setTotalPoints(0);
-        if (!commonSuggestionsFetched) {
-          setIsLoadingCommonSuggestions(true);
-          getCommonHabitSuggestions({ count: 5 })
-            .then(response => setCommonHabitSuggestions(response?.suggestions || []))
-            .catch(err => {
-                setCommonHabitSuggestions([]); console.error("Failed to load common habit suggestions (no data):", err);
-                toast({ title: "AI Error", description: "Could not load common habit suggestions.", variant: "destructive" });
-            })
-            .finally(() => {
-              setIsLoadingCommonSuggestions(false); setCommonSuggestionsFetched(true);
-              const dailyQuestKey = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`;
-              if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
-            });
-        }
+      if (parsedHabits.length === 0 && !commonSuggestionsFetched && authUser) { // check authUser for safety
+        console.log("PAGE.TSX: No habits, fetching common suggestions.");
+        setIsLoadingCommonSuggestions(true);
+        getCommonHabitSuggestions({ count: 5 })
+          .then(response => {
+            setCommonHabitSuggestions(response?.suggestions || []);
+            console.log("PAGE.TSX: Common suggestions fetched:", response?.suggestions?.length || 0);
+          })
+          .catch(err => {
+              setCommonHabitSuggestions([]); console.error("Failed to load common habit suggestions:", err);
+               toast({ title: "AI Error", description: "Could not load common habit suggestions.", variant: "destructive" });
+          })
+          .finally(() => {
+            setIsLoadingCommonSuggestions(false); setCommonSuggestionsFetched(true);
+            const dailyQuestKey = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`; // authUser will be defined here
+            if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
+          });
+      } else if (parsedHabits.length > 0) {
+          if(!commonSuggestionsFetched) setCommonSuggestionsFetched(true); // ensure it's true
       }
-      if (isLoadingData) setIsLoadingData(false); 
-      firstDataLoadCompleteRef.current = true; 
+      
+      console.log("PAGE.TSX: Firestore snapshot processed. Setting isLoadingData=false, firstDataLoadComplete=true.");
+      setIsLoadingData(false);
+      firstDataLoadCompleteRef.current = true;
     }, (error) => {
-      console.error("Error listening to Firestore data:", error);
+      console.error(`PAGE.TSX: Firestore snapshot error for user ${authUser.uid} at ${new Date().toISOString()}:`, error);
       toast({ title: "Database Error", description: "Could not load your data from the cloud.", variant: "destructive" });
-      if (isLoadingData) setIsLoadingData(false);
-      firstDataLoadCompleteRef.current = true; 
+      setIsLoadingData(false);
+      firstDataLoadCompleteRef.current = true; // Mark as complete even on error to stop loading screen
     });
-    return () => unsubscribeFirestore();
-  }, [authUser, mounted, commonSuggestionsFetched, toast, isLoadingData]); 
+
+    return () => {
+      console.log(`PAGE.TSX: Unsubscribing Firestore for user ${authUser?.uid} at ${new Date().toISOString()}`);
+      unsubscribeFirestore();
+    };
+  }, [authUser, mounted, commonSuggestionsFetched, toast]); // Dependencies that trigger data re-fetch
 
 
+  // Debounced Save Effect
   useEffect(() => {
     if (!authUser || !mounted || !firstDataLoadCompleteRef.current) {
+      // console.log(`PAGE.TSX: Save effect skipped. AuthUser: ${!!authUser}, Mounted: ${mounted}, FirstLoadComplete: ${firstDataLoadCompleteRef.current}`);
       return;
     }
 
@@ -384,7 +415,7 @@ const HabitualPageContent: React.FC = () => {
         clearTimeout(debounceSaveTimeoutRef.current);
       }
     };
-  }, [habits, earnedBadges, totalPoints, authUser, mounted, toast]); 
+  }, [habits, earnedBadges, totalPoints, authUser, mounted, toast]); // Note: firstDataLoadCompleteRef.current is not a dep
 
 
    React.useEffect(() => {
@@ -452,7 +483,7 @@ const HabitualPageContent: React.FC = () => {
     }
     if(isCreateHabitDialogOpen) setIsCreateHabitDialogOpen(false);
     setInitialFormDataForDialog(null); setEditingHabit(null); setCreateHabitDialogStep(1);
-    setDialogTriggeredByUrl(false); // Also reset here when dialog is saved
+    setDialogTriggeredByUrl(false); 
   };
 
   const handleOpenEditDialog = (habitToEditOpenEditMain: Habit) => {
@@ -465,9 +496,7 @@ const HabitualPageContent: React.FC = () => {
   };
 
   const handleToggleComplete = async (habitIdToggleCompMain: string, dateToggleCompMain: string, completedToggleCompMain: boolean) => {
-    console.log(`PAGE.TSX: handleToggleComplete called. HabitID: ${habitIdToggleCompMain}, Date: ${dateToggleCompMain}, Completed: ${completedToggleCompMain}, AuthUser UID: ${authUser?.uid}`);
     if (!authUser) {
-      console.error("PAGE.TSX: handleToggleComplete - authUser is null. Aborting.");
       toast({ title: "Error", description: "You must be logged in to update habits.", variant: "destructive" });
       return;
     }
@@ -476,28 +505,26 @@ const HabitualPageContent: React.FC = () => {
     let justCompletedANewTaskToggleCompMain = false;
 
     setHabits(prevHabits => {
-        console.log("PAGE.TSX: handleToggleComplete - inside setHabits updater. PrevHabits count:", prevHabits.length);
         const newHabits = prevHabits.map(h => {
             if (h.id === habitIdToggleCompMain) {
-                console.log("PAGE.TSX: handleToggleComplete - Found habit:", h.name);
                 habitNameForQuoteToggleCompMain = h.name;
                 let newLog = [...h.completionLog];
                 const idx = newLog.findIndex(l => l.date === dateToggleCompMain);
                 const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
-                if (completedToggleCompMain) { // Marking as complete
-                    if (idx > -1) { // Log entry exists
-                        if (newLog[idx].status !== 'completed') { // Was not already 'completed'
+                if (completedToggleCompMain) { 
+                    if (idx > -1) { 
+                        if (newLog[idx].status !== 'completed') { 
                             pointsChangeToggleCompMain = POINTS_PER_COMPLETION;
                             justCompletedANewTaskToggleCompMain = true;
                         }
-                        newLog[idx] = { ...newLog[idx], status: 'completed', time, note: newLog[idx].note }; // Preserve note
-                    } else { // No log entry, create new one
+                        newLog[idx] = { ...newLog[idx], status: 'completed', time, note: newLog[idx].note }; 
+                    } else { 
                         pointsChangeToggleCompMain = POINTS_PER_COMPLETION;
                         justCompletedANewTaskToggleCompMain = true;
                         newLog.push({ date: dateToggleCompMain, time, status: 'completed' });
                     }
-                } else { // Uncompleting
+                } else { 
                     if (idx > -1) {
                         const logEntry = newLog[idx];
                         if (logEntry.status === 'completed') pointsChangeToggleCompMain = -POINTS_PER_COMPLETION;
@@ -512,7 +539,6 @@ const HabitualPageContent: React.FC = () => {
                     }
                 }
                 const updatedHabit = { ...h, completionLog: newLog.sort((a, b) => b.date.localeCompare(a.date)) };
-                console.log("PAGE.TSX: handleToggleComplete - Updated habit log:", updatedHabit.completionLog);
                 if (selectedHabitForDetailView && selectedHabitForDetailView.id === updatedHabit.id) {
                     setSelectedHabitForDetailView(updatedHabit);
                 }
@@ -520,11 +546,9 @@ const HabitualPageContent: React.FC = () => {
             }
             return h;
         });
-        console.log("PAGE.TSX: handleToggleComplete - newHabits count after map:", newHabits.length);
         return newHabits;
     });
 
-    console.log("PAGE.TSX: handleToggleComplete - finished processing. PointsChange:", pointsChangeToggleCompMain, "JustCompletedNew:", justCompletedANewTaskToggleCompMain);
     if (justCompletedANewTaskToggleCompMain && habitNameForQuoteToggleCompMain && authUser) {
         try {
             const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuoteToggleCompMain });
@@ -742,24 +766,31 @@ const HabitualPageContent: React.FC = () => {
     toast({ title: "Program Added!", description: "The suggested habits have been added to your list."});
   };
 
-  const loadingScreen = (message: string) => (
-    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
-      <div className={cn(
-        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto h-full",
-        "w-full max-w-sm",
-        "md:max-w-md lg:max-w-lg"
-      )}>
-        <div className="flex flex-col items-center justify-center flex-grow p-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">{message}</p>
+  const loadingScreen = (message: string) => {
+    console.log(`PAGE.TSX: Rendering loading screen: ${message}. isLoadingAuth: ${isLoadingAuth}, isLoadingData: ${isLoadingData}, authUser: ${!!authUser}, mounted: ${mounted}`);
+    return (
+        <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
+          <div className={cn(
+            "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto h-full",
+            "w-full max-w-sm",
+            "md:max-w-md lg:max-w-lg"
+          )}>
+            <div className="flex flex-col items-center justify-center flex-grow p-4">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <p className="mt-4 text-muted-foreground">{message}</p>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  );
+    );
+  };
+
 
   if (!mounted) return loadingScreen("Initializing app...");
   if (isLoadingAuth) return loadingScreen("Authenticating...");
-  if (!authUser && mounted && !isLoadingAuth) return loadingScreen("Redirecting to login...");
+  if (!authUser && mounted && !isLoadingAuth) { // Auth check done, no user, but mounted
+    // This case should be handled by the redirect in auth effect, but as a fallback:
+    return loadingScreen("Redirecting to login...");
+  }
   if (authUser && isLoadingData) return loadingScreen("Loading your data...");
 
 
@@ -831,7 +862,7 @@ const HabitualPageContent: React.FC = () => {
           setInitialFormDataForDialog(null);
           setEditingHabit(null);
           setCreateHabitDialogStep(1);
-          setDialogTriggeredByUrl(false); // Reset flag when dialog is closed
+          setDialogTriggeredByUrl(false); 
         }}
         onSaveHabit={handleSaveHabit}
         initialData={initialFormDataForDialog}
