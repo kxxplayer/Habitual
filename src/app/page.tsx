@@ -83,7 +83,7 @@ const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
 
 const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
-const DEBOUNCE_SAVE_DELAY_MS = 2500; // Increased debounce delay
+const DEBOUNCE_SAVE_DELAY_MS = 2500; 
 
 function sanitizeForFirestore<T>(data: T): T {
   if (data === null || typeof data !== 'object') {
@@ -152,6 +152,7 @@ const HabitualPageContent: React.FC = () => {
   const [editingHabit, setEditingHabit] = React.useState<Habit | null>(null);
   const [initialFormDataForDialog, setInitialFormDataForDialog] = React.useState<Partial<CreateHabitFormData> | null>(null);
   const [createHabitDialogStep, setCreateHabitDialogStep] = React.useState(1);
+  const [openCreateDialogAction, setOpenCreateDialogAction] = React.useState(false); // New state for URL action
 
 
   const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission | null>(null);
@@ -190,7 +191,7 @@ const HabitualPageContent: React.FC = () => {
 
   const [isClientMounted, setIsClientMounted] = React.useState(false);
 
-  const firstDataLoadCompleteRef = React.useRef(false); // Ref to track if initial data load via onSnapshot is done
+  const firstDataLoadCompleteRef = React.useRef(false); 
   const debounceSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
 
@@ -200,7 +201,7 @@ const HabitualPageContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setMounted(true); // Original mounted state for other logic
+    setMounted(true); 
   }, []);
 
   React.useEffect(() => {
@@ -212,17 +213,29 @@ const HabitualPageContent: React.FC = () => {
     }
   }, [mounted]);
 
-  useEffect(() => {
-    console.log("PAGE.TSX: Search params effect. Mounted:", mounted, "Action:", searchParams.get('action'));
+  // Effect to detect the URL action and set the state
+  React.useEffect(() => {
     if (mounted && searchParams.get('action') === 'addHabit') {
-      console.log("PAGE.TSX: addHabit action detected, opening CreateHabitDialog.");
+      console.log("PAGE.TSX: 'addHabit' action detected from URL. Setting openCreateDialogAction to true.");
+      setOpenCreateDialogAction(true);
+      // Clean up the URL immediately after detecting the action.
+      router.replace('/', { scroll: false });
+    }
+  }, [searchParams, mounted, router]);
+
+  // Effect to open the dialog when the action state is true
+  React.useEffect(() => {
+    if (openCreateDialogAction) {
+      console.log("PAGE.TSX: openCreateDialogAction is true. Opening CreateHabitDialog.");
       setInitialFormDataForDialog(null);
       setEditingHabit(null);
       setCreateHabitDialogStep(1);
       setIsCreateHabitDialogOpen(true);
-      router.replace('/', { scroll: false });
+      // Reset the action state so it doesn't re-trigger if the dialog is closed manually
+      // and then something else causes this effect to re-run.
+      setOpenCreateDialogAction(false);
     }
-  }, [searchParams, router, mounted]);
+  }, [openCreateDialogAction]);
 
 
   React.useEffect(() => {
@@ -241,6 +254,7 @@ const HabitualPageContent: React.FC = () => {
         setIsDailyQuestDialogOpen(false); setIsCalendarDialogOpen(false);
         setSelectedHabitForDetailView(null); setIsDetailViewDialogOpen(false);
         setIsGoalInputProgramDialogOpen(false); setIsProgramSuggestionDialogOpen(false); setProgramSuggestion(null);
+        setOpenCreateDialogAction(false); // Reset action state on user change
       }
       setAuthUser(currentUserAuthMain); setIsLoadingAuth(false);
       previousAuthUserUidRef.current = currentUidAuthMain;
@@ -264,9 +278,8 @@ const HabitualPageContent: React.FC = () => {
       setIsLoadingData(false);
       return;
     }
-    setIsLoadingData(true); // Set loading true before subscribing
-    firstDataLoadCompleteRef.current = false; // Ensure this is false before first snapshot data arrives
-
+    setIsLoadingData(true); 
+    
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
 
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
@@ -315,7 +328,7 @@ const HabitualPageContent: React.FC = () => {
             setCommonSuggestionsFetched(true);
         }
 
-      } else { // Document does not exist
+      } else { 
         setHabits([]); setEarnedBadges([]); setTotalPoints(0);
         if (!commonSuggestionsFetched) {
           setIsLoadingCommonSuggestions(true);
@@ -332,21 +345,19 @@ const HabitualPageContent: React.FC = () => {
             });
         }
       }
-      if (isLoadingData) setIsLoadingData(false); // Set loading false after processing snapshot
-      firstDataLoadCompleteRef.current = true; // Mark initial data load as complete
+      if (isLoadingData) setIsLoadingData(false); 
+      firstDataLoadCompleteRef.current = true; 
     }, (error) => {
       console.error("Error listening to Firestore data:", error);
       toast({ title: "Database Error", description: "Could not load your data from the cloud.", variant: "destructive" });
       if (isLoadingData) setIsLoadingData(false);
-      firstDataLoadCompleteRef.current = true; // Still mark as "done" to allow potential local ops or retries
+      firstDataLoadCompleteRef.current = true; 
     });
     return () => unsubscribeFirestore();
-  }, [authUser, mounted, commonSuggestionsFetched, toast]); // isLoadingData removed from here to avoid re-subscribing too often
+  }, [authUser, mounted, commonSuggestionsFetched, toast, isLoadingData]); 
 
 
   useEffect(() => {
-    // This effect is responsible for debounced writes to Firestore.
-    // It only runs if authUser, mounted, and firstDataLoadCompleteRef.current are true.
     if (!authUser || !mounted || !firstDataLoadCompleteRef.current) {
       return;
     }
@@ -380,7 +391,7 @@ const HabitualPageContent: React.FC = () => {
         clearTimeout(debounceSaveTimeoutRef.current);
       }
     };
-  }, [habits, earnedBadges, totalPoints, authUser, mounted, toast]); // firstDataLoadCompleteRef is a ref, not needed in deps. isLoadingData removed.
+  }, [habits, earnedBadges, totalPoints, authUser, mounted, toast]); 
 
 
    React.useEffect(() => {
@@ -397,7 +408,7 @@ const HabitualPageContent: React.FC = () => {
       });
       if (updatedBadges.length !== earnedBadges.length) setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, authUser, isLoadingData, mounted, toast]); // firstDataLoadCompleteRef is a ref
+  }, [habits, earnedBadges, authUser, isLoadingData, mounted, toast]); 
 
   React.useEffect(() => {
     reminderTimeouts.current.forEach(clearTimeout); reminderTimeouts.current = [];
