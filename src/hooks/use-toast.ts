@@ -9,8 +9,8 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 5000 // Changed from 1000000 to 5000 (5 seconds)
+const TOAST_LIMIT = 0 // Changed from 1 to 0 to disable toasts
+const TOAST_REMOVE_DELAY = 5000 
 
 type ToasterToast = ToastProps & {
   id: string
@@ -79,7 +79,7 @@ export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
       // Clear existing timeouts for any toasts that will be removed by TOAST_LIMIT
-      if (state.toasts.length >= TOAST_LIMIT) {
+      if (state.toasts.length >= TOAST_LIMIT && TOAST_LIMIT > 0) { // Added check for TOAST_LIMIT > 0
         state.toasts.slice(TOAST_LIMIT - 1).forEach(t => {
           if (toastTimeouts.has(t.id)) {
             clearTimeout(toastTimeouts.get(t.id));
@@ -87,6 +87,7 @@ export const reducer = (state: State, action: Action): State => {
           }
         });
       }
+      // If TOAST_LIMIT is 0, this will always result in an empty toasts array.
       return {
         ...state,
         toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
@@ -169,6 +170,8 @@ function toast({ ...props }: Toast) {
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
+  // If TOAST_LIMIT is 0, no toasts will be added by the reducer,
+  // so this dispatch effectively does nothing visible.
   dispatch({
     type: "ADD_TOAST",
     toast: {
@@ -181,9 +184,11 @@ function toast({ ...props }: Toast) {
     },
   })
 
-  // For new toasts, ensure they are added to the removal queue
-  // This is important if a toast is added while another is already displayed and TOAST_LIMIT is 1
-  if (props.duration === undefined || props.duration === null || props.duration > 0) { // Only queue if it's not an indefinite toast
+  // Add to remove queue only if the toast might have been added (TOAST_LIMIT > 0)
+  // and it's not an indefinite toast.
+  // With TOAST_LIMIT = 0, this part might not be strictly necessary as no toasts are stored,
+  // but keeping it doesn't harm.
+  if (TOAST_LIMIT > 0 && (props.duration === undefined || props.duration === null || props.duration > 0)) {
      addToRemoveQueue(id);
   }
 
@@ -216,4 +221,3 @@ function useToast() {
 }
 
 export { useToast, toast }
-
