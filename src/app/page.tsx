@@ -152,7 +152,7 @@ const HabitualPageContent: React.FC = () => {
   const [editingHabit, setEditingHabit] = React.useState<Habit | null>(null);
   const [initialFormDataForDialog, setInitialFormDataForDialog] = React.useState<Partial<CreateHabitFormData> | null>(null);
   const [createHabitDialogStep, setCreateHabitDialogStep] = React.useState(1);
-  const [openCreateDialogAction, setOpenCreateDialogAction] = React.useState(false); // New state for URL action
+  const [dialogTriggeredByUrl, setDialogTriggeredByUrl] = React.useState(false);
 
 
   const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission | null>(null);
@@ -213,29 +213,22 @@ const HabitualPageContent: React.FC = () => {
     }
   }, [mounted]);
 
-  // Effect to detect the URL action and set the state
+  // Effect to detect the URL action, open dialog, and clean URL
   React.useEffect(() => {
     if (mounted && searchParams.get('action') === 'addHabit') {
-      console.log("PAGE.TSX: 'addHabit' action detected from URL. Setting openCreateDialogAction to true.");
-      setOpenCreateDialogAction(true);
-      // Clean up the URL immediately after detecting the action.
-      router.replace('/', { scroll: false });
-    }
-  }, [searchParams, mounted, router]);
+      if (!isCreateHabitDialogOpen && !dialogTriggeredByUrl) {
+        console.log("PAGE.TSX: 'addHabit' action detected. Preparing to open dialog.");
+        setInitialFormDataForDialog(null);
+        setEditingHabit(null);
+        setCreateHabitDialogStep(1);
+        setIsCreateHabitDialogOpen(true);
+        setDialogTriggeredByUrl(true); 
 
-  // Effect to open the dialog when the action state is true
-  React.useEffect(() => {
-    if (openCreateDialogAction) {
-      console.log("PAGE.TSX: openCreateDialogAction is true. Opening CreateHabitDialog.");
-      setInitialFormDataForDialog(null);
-      setEditingHabit(null);
-      setCreateHabitDialogStep(1);
-      setIsCreateHabitDialogOpen(true);
-      // Reset the action state so it doesn't re-trigger if the dialog is closed manually
-      // and then something else causes this effect to re-run.
-      setOpenCreateDialogAction(false);
+        router.replace('/', { scroll: false });
+        console.log("PAGE.TSX: URL action 'addHabit' processed, dialog opening, URL cleaned.");
+      }
     }
-  }, [openCreateDialogAction]);
+  }, [searchParams, mounted, router, isCreateHabitDialogOpen, dialogTriggeredByUrl]);
 
 
   React.useEffect(() => {
@@ -254,7 +247,7 @@ const HabitualPageContent: React.FC = () => {
         setIsDailyQuestDialogOpen(false); setIsCalendarDialogOpen(false);
         setSelectedHabitForDetailView(null); setIsDetailViewDialogOpen(false);
         setIsGoalInputProgramDialogOpen(false); setIsProgramSuggestionDialogOpen(false); setProgramSuggestion(null);
-        setOpenCreateDialogAction(false); // Reset action state on user change
+        setDialogTriggeredByUrl(false); // Reset URL action flag on user change
       }
       setAuthUser(currentUserAuthMain); setIsLoadingAuth(false);
       previousAuthUserUidRef.current = currentUidAuthMain;
@@ -459,6 +452,7 @@ const HabitualPageContent: React.FC = () => {
     }
     if(isCreateHabitDialogOpen) setIsCreateHabitDialogOpen(false);
     setInitialFormDataForDialog(null); setEditingHabit(null); setCreateHabitDialogStep(1);
+    setDialogTriggeredByUrl(false); // Also reset here when dialog is saved
   };
 
   const handleOpenEditDialog = (habitToEditOpenEditMain: Habit) => {
@@ -832,7 +826,13 @@ const HabitualPageContent: React.FC = () => {
 
       <CreateHabitDialog
         isOpen={isCreateHabitDialogOpen}
-        onClose={() => { setIsCreateHabitDialogOpen(false); setInitialFormDataForDialog(null); setEditingHabit(null); setCreateHabitDialogStep(1);}}
+        onClose={() => {
+          setIsCreateHabitDialogOpen(false);
+          setInitialFormDataForDialog(null);
+          setEditingHabit(null);
+          setCreateHabitDialogStep(1);
+          setDialogTriggeredByUrl(false); // Reset flag when dialog is closed
+        }}
         onSaveHabit={handleSaveHabit}
         initialData={initialFormDataForDialog}
         currentStep={createHabitDialogStep}
