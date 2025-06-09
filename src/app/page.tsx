@@ -213,20 +213,31 @@ const HabitualPageContent: React.FC = () => {
     }
   }, [mounted]);
 
-  // Effect to detect the URL action, open dialog, and clean URL
+  // Function to directly open the Create Habit Dialog for a new habit
+  const openCreateHabitDialogForNew = () => {
+    console.log("PAGE.TSX: Opening Create Habit Dialog for new habit (direct action).");
+    setInitialFormDataForDialog(null);
+    setEditingHabit(null);
+    setCreateHabitDialogStep(1);
+    setIsCreateHabitDialogOpen(true);
+    setDialogTriggeredByUrl(false); // Not triggered by URL if opened directly
+  };
+  
+  // Effect to detect the URL action (e.g., for deep linking), open dialog, and clean URL
   React.useEffect(() => {
     if (mounted && searchParams.get('action') === 'addHabit') {
-      if (!isCreateHabitDialogOpen && !dialogTriggeredByUrl) {
-        console.log("PAGE.TSX: 'addHabit' action detected. Preparing to open dialog.");
+      if (!isCreateHabitDialogOpen) { // Only open if not already open
+        console.log("PAGE.TSX: 'addHabit' action detected from URL. Preparing to open dialog.");
         setInitialFormDataForDialog(null);
         setEditingHabit(null);
         setCreateHabitDialogStep(1);
         setIsCreateHabitDialogOpen(true);
-        setDialogTriggeredByUrl(true); 
-        router.replace('/', { scroll: false });
+        setDialogTriggeredByUrl(true); // Mark that URL triggered it
       }
+      // Always clean the URL if the action was present, regardless of whether dialog was opened by this effect or already open
+      router.replace('/', { scroll: false });
     }
-  }, [searchParams, mounted, router, isCreateHabitDialogOpen, dialogTriggeredByUrl]);
+  }, [searchParams, mounted, router, isCreateHabitDialogOpen]); // Removed dialogTriggeredByUrl from deps as it's set inside
 
 
   // Auth State Change Effect
@@ -273,7 +284,7 @@ const HabitualPageContent: React.FC = () => {
       console.log("PAGE.TSX: Auth effect detaching.");
       unsubscribeAuthMain();
     };
-  }, [router, mounted]); // Added mounted to ensure router.push only happens client-side correctly
+  }, [router, mounted]); 
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -292,13 +303,10 @@ const HabitualPageContent: React.FC = () => {
         console.log("PAGE.TSX: Data effect - No authUser or not mounted. Setting isLoadingData=false.");
         setIsLoadingData(false);
       }
-      // Ensure firstDataLoadCompleteRef is false if we bail out here, especially if authUser becomes null
       if (!authUser) firstDataLoadCompleteRef.current = false;
       return;
     }
 
-    // Only set isLoadingData to true if we are starting a fresh data load cycle
-    // for this user and the first load for this user hasn't completed yet.
     if (!firstDataLoadCompleteRef.current && !isLoadingData) {
       console.log("PAGE.TSX: Data effect - Conditions met to start loading. Setting isLoadingData=true.");
       setIsLoadingData(true);
@@ -341,7 +349,7 @@ const HabitualPageContent: React.FC = () => {
       setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
       console.log(`PAGE.TSX: Habits set (${parsedHabits.length}), Badges set (${(Array.isArray(data.earnedBadges) ? data.earnedBadges : []).length}), Points set (${typeof data.totalPoints === 'number' ? data.totalPoints : 0})`);
 
-      if (parsedHabits.length === 0 && !commonSuggestionsFetched && authUser) { // check authUser for safety
+      if (parsedHabits.length === 0 && !commonSuggestionsFetched && authUser) { 
         console.log("PAGE.TSX: No habits, fetching common suggestions.");
         setIsLoadingCommonSuggestions(true);
         getCommonHabitSuggestions({ count: 5 })
@@ -355,11 +363,11 @@ const HabitualPageContent: React.FC = () => {
           })
           .finally(() => {
             setIsLoadingCommonSuggestions(false); setCommonSuggestionsFetched(true);
-            const dailyQuestKey = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`; // authUser will be defined here
+            const dailyQuestKey = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`; 
             if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
           });
       } else if (parsedHabits.length > 0) {
-          if(!commonSuggestionsFetched) setCommonSuggestionsFetched(true); // ensure it's true
+          if(!commonSuggestionsFetched) setCommonSuggestionsFetched(true); 
       }
       
       console.log("PAGE.TSX: Firestore snapshot processed. Setting isLoadingData=false, firstDataLoadComplete=true.");
@@ -369,20 +377,19 @@ const HabitualPageContent: React.FC = () => {
       console.error(`PAGE.TSX: Firestore snapshot error for user ${authUser.uid} at ${new Date().toISOString()}:`, error);
       toast({ title: "Database Error", description: "Could not load your data from the cloud.", variant: "destructive" });
       setIsLoadingData(false);
-      firstDataLoadCompleteRef.current = true; // Mark as complete even on error to stop loading screen
+      firstDataLoadCompleteRef.current = true; 
     });
 
     return () => {
       console.log(`PAGE.TSX: Unsubscribing Firestore for user ${authUser?.uid} at ${new Date().toISOString()}`);
       unsubscribeFirestore();
     };
-  }, [authUser, mounted, commonSuggestionsFetched, toast]); // Dependencies that trigger data re-fetch
+  }, [authUser, mounted, commonSuggestionsFetched, toast]); 
 
 
   // Debounced Save Effect
   useEffect(() => {
     if (!authUser || !mounted || !firstDataLoadCompleteRef.current) {
-      // console.log(`PAGE.TSX: Save effect skipped. AuthUser: ${!!authUser}, Mounted: ${mounted}, FirstLoadComplete: ${firstDataLoadCompleteRef.current}`);
       return;
     }
 
@@ -415,7 +422,7 @@ const HabitualPageContent: React.FC = () => {
         clearTimeout(debounceSaveTimeoutRef.current);
       }
     };
-  }, [habits, earnedBadges, totalPoints, authUser, mounted, toast]); // Note: firstDataLoadCompleteRef.current is not a dep
+  }, [habits, earnedBadges, totalPoints, authUser, mounted, toast]); 
 
 
    React.useEffect(() => {
@@ -777,8 +784,7 @@ const HabitualPageContent: React.FC = () => {
 
   if (!mounted) return loadingScreen("Initializing app...");
   if (isLoadingAuth) return loadingScreen("Authenticating...");
-  if (!authUser && mounted && !isLoadingAuth) { // Auth check done, no user, but mounted
-    // This case should be handled by the redirect in auth effect, but as a fallback:
+  if (!authUser && mounted && !isLoadingAuth) { 
     return loadingScreen("Redirecting to login...");
   }
   if (authUser && isLoadingData) return loadingScreen("Loading your data...");
@@ -794,8 +800,8 @@ const HabitualPageContent: React.FC = () => {
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 pt-4 pb-20 flex-grow"> {/* Increased pb from py-4 */}
-              {allTodayTasksDone && habits.length > 0 && !isLoadingData && (
+            <main className="px-3 sm:px-4 pt-4 pb-20 flex-grow">
+             {allTodayTasksDone && habits.length > 0 && !isLoadingData && (
                  <div className="flex flex-col items-center justify-center text-center py-6 my-4 bg-accent/10 rounded-lg shadow">
                   <CheckCircle2 className="mx-auto h-12 w-12 text-accent mb-3" />
                   <h3 className="text-lg font-semibold text-primary">All Done for Today!</h3>
@@ -815,8 +821,7 @@ const HabitualPageContent: React.FC = () => {
                   <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
                     <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
                       <p className="text-xs text-muted-foreground mb-1.5">
-                        Start by picking a common habit. You can also tap the
-                        <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link>
+                        Start by picking a common habit. You can also tap the "+" button (below)
                          to add your own custom habit or create a multi-habit program from a goal.
                       </p>
                     </div>
@@ -835,9 +840,7 @@ const HabitualPageContent: React.FC = () => {
                       <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
                       <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
                       <p className="text-sm text-muted-foreground">
-                        Tap the 
-                        <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link>
-                         to add a habit or create a program from a goal!
+                        Tap the "+" button to add a habit or create a program from a goal!
                       </p>
                     </div>
                 )
@@ -845,10 +848,9 @@ const HabitualPageContent: React.FC = () => {
                 <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
               )}
             </main>
-            {/* Footer with copyright already removed */}
           </div>
         </ScrollArea>
-        <BottomNavigationBar />
+        <BottomNavigationBar onAddNewHabitClick={openCreateHabitDialogForNew} />
       </div>
 
       <CreateHabitDialog
