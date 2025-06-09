@@ -34,9 +34,6 @@
     --chart-3: 220 50% 70%;
     --chart-4: 45 60% 75%;
     --chart-5: 280 50% 75%;
-    --background-anim-start: 180 60% 85%;   /* Soft Pastel Teal */
-    --background-anim-mid: 275 70% 90%;     /* Bright Pastel Lavender/Pink */
-    --background-anim-end: 30 100% 88%;     /* Soft Pastel Peach/Orange */
   }
 
   .theme-vibrant-purple {
@@ -64,9 +61,6 @@
     --chart-3: 210 70% 65%;
     --chart-4: 50 80% 60%;
     --chart-5: 290 70% 70%;
-    --background-anim-start: 240 50% 20%;
-    --background-anim-mid: 180 60% 25%;
-    --background-anim-end: 280 50% 22%;
   }
 
   .theme-forest-green {
@@ -94,9 +88,6 @@
     --chart-3: 150 50% 55%;
     --chart-4: 60 60% 50%;
     --chart-5: 35 40% 50%;
-    --background-anim-start: 120 50% 85%;
-    --background-anim-mid: 140 40% 90%;
-    --background-anim-end: 100 50% 88%;
   }
 
   .theme-sunset-orange {
@@ -124,9 +115,6 @@
     --chart-3: 40 90% 60%;
     --chart-4: 0 80% 60%;
     --chart-5: 180 50% 55%;
-    --background-anim-start: 40 100% 90%;
-    --background-anim-mid: 20 100% 92%;
-    --background-anim-end: 0 90% 90%;
   }
 
   * {
@@ -134,18 +122,10 @@
   }
   body {
     @apply text-foreground;
-    background: linear-gradient(-45deg, hsl(var(--background-anim-start)), hsl(var(--background-anim-mid)), hsl(var(--background-anim-end)), hsl(var(--background-anim-mid)));
-    background-size: 400% 400%;
-    animation: gradientAnimation 25s ease infinite;
+    background: linear-gradient(to bottom, #f2fcf1, #ffffff);
     letter-spacing: 0.01em; /* Added subtle letter spacing */
     line-height: 1.6; /* Adjusted line height */
   }
-}
-
-@keyframes gradientAnimation {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
 }
 
 .sparkle-container {
