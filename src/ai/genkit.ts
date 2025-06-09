@@ -27,7 +27,7 @@ import {googleAI} from '@genkit-ai/googleai'; // Re-enabled googleAI
 console.log('[Genkit Init] Initializing Genkit object with GoogleAI plugin...');
 export const ai = genkit({
   plugins: [
-    googleAI({apiVersion: 'v1beta'}), // Re-enabled googleAI
+    googleAI(), // Removed apiVersion: 'v1beta'
   ].filter(Boolean),
   enableTracing: false, // Keep tracing disabled
   // Optional: Configure log level for Genkit

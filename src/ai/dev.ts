@@ -37,6 +37,11 @@ console.log('[Genkit Env Debug] process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID:', p
 console.log('[Genkit Env Debug] process.env.GOOGLE_CLOUD_PROJECT:', process.env.GOOGLE_CLOUD_PROJECT);
 console.log('[Genkit Env Debug] process.env.GOOGLE_API_KEY:', !!process.env.GOOGLE_API_KEY ? 'Exists' : 'Not Found');
 
+// Flows will import genkit.ts as needed.
+// console.log('[Genkit Dev] Attempting to import src/ai/genkit.ts directly to ensure it runs before genkit start takes over...');
+// import '@/ai/genkit'; // This ensures genkit.ts is processed and its logs appear
+// console.log('[Genkit Dev] src/ai/genkit.ts has been imported directly.');
+
 
 // Temporarily comment out most flow imports for debugging
 // import '@/ai/flows/habit-creation-from-description';
@@ -51,7 +56,4 @@ import '@/ai/flows/motivational-quote-flow'; // UNCOMMENTED this one
 console.log('[Genkit Dev] Only motivational-quote-flow is currently imported for debugging.');
 console.log('[Genkit Dev] If Genkit starts successfully now, the issue is likely in one of the other flow files or how Genkit handles no flows/plugins.');
 
-console.log('[Genkit Dev] Attempting to import src/ai/genkit.ts directly to ensure it runs before genkit start takes over...');
-import '@/ai/genkit'; // This ensures genkit.ts is processed and its logs appear
-console.log('[Genkit Dev] src/ai/genkit.ts has been imported directly.');
 console.log('[Genkit Dev] End of dev.ts script. Genkit start should now proceed with discovered elements.');
