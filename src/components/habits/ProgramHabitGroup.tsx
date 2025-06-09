@@ -45,7 +45,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
 
   return (
     <Accordion type="single" collapsible className="w-full" defaultValue={`program-${programId}`}>
-      <AccordionItem value={`program-${programId}`} className="border border-border rounded-lg shadow overflow-hidden bg-card">
+      <AccordionItem value={`program-${programId}`} className="border border-border rounded-lg shadow-md overflow-hidden bg-card">
         <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 transition-colors w-full">
           <div className="flex flex-col w-full space-y-1.5"> {/* Outer flex column for title and progress bar */}
             <div className="flex items-center justify-between w-full"> {/* Top row: Icon, Name, Status */}
