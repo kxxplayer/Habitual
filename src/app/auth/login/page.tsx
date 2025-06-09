@@ -16,7 +16,7 @@ import { GoogleIcon } from '@/components/ui/icons';
 import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
-import { Loader2, Mail, Lock } from 'lucide-react'; // Added Mail and Lock
+import { Loader2, Mail, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
@@ -87,7 +87,7 @@ const LoginPage: NextPage = () => {
               </div>
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
-            <Button type="submit" className="w-full" disabled={isEmailLoading}>
+            <Button variant="neutralBlue" type="submit" className="w-full" disabled={isEmailLoading}>
               {isEmailLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Login
             </Button>
