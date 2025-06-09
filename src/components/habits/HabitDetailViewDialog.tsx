@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Lightbulb, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CalendarX, CheckCircle2, Circle, Check, Bell, FilePenLine, StickyNote, Trash2, ChevronRightSquare, CalendarClock, CalendarDays, Edit3, Save, Wand2, PlusCircle, Hourglass, Clock, Brain } from 'lucide-react';
+import { Lightbulb, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CalendarX, CheckCircle2, Circle, Check, Bell, FilePenLine, StickyNote, Trash2, ChevronRightSquare, CalendarClock, CalendarDays, Edit3, Save, Wand2, PlusCircle, Hourglass, Clock, Brain, XCircle } from 'lucide-react'; // Added XCircle
 import type { Habit, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
