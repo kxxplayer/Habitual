@@ -135,7 +135,7 @@ const SettingsPage: NextPage = () => {
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="text-base font-semibold text-primary">Account &amp; Data</CardTitle>
                 </CardHeader>
-                <CardContent className="p-4 pt-2 space-y-2">
+                <CardContent className="p-4 pt-2 space-y-3">
                   {accountSettingsItems.map((item) => (
                     <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
                       <Button variant="outline" className="w-full justify-start text-sm py-2 h-auto">
