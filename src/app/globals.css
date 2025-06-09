@@ -5,7 +5,7 @@
 
 @layer base {
   :root {
-    --radius: 0.75rem; /* Updated from 0.5rem to 0.75rem (12px) */
+    --radius: 1rem; /* Updated from 0.75rem to 1rem (16px) */
   }
 
   /* Default Theme: Calm Blue (Modified for softer palette) */
