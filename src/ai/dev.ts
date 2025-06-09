@@ -38,25 +38,20 @@ console.log('[Genkit Env Debug] process.env.GOOGLE_CLOUD_PROJECT:', process.env.
 console.log('[Genkit Env Debug] process.env.GOOGLE_API_KEY:', !!process.env.GOOGLE_API_KEY ? 'Exists' : 'Not Found');
 
 
-// Temporarily comment out flow imports for debugging
+// Temporarily comment out most flow imports for debugging
 // import '@/ai/flows/habit-creation-from-description';
 // import '@/ai/flows/habit-suggestion';
-// import '@/ai/flows/motivational-quote-flow';
+import '@/ai/flows/motivational-quote-flow'; // UNCOMMENTED this one
 // import '@/ai/flows/sql-tip-flow';
 // import '@/ai/flows/common-habit-suggestions-flow';
 // import '@/ai/flows/generate-habit-program-flow';
 // import '@/ai/flows/app-improvement-suggester-flow';
 // import '@/ai/flows/reflection-starter-flow';
 
-console.log('[Genkit Dev] All flow imports are currently commented out for debugging.');
-console.log('[Genkit Dev] If Genkit starts successfully now, the issue is likely in one of the flow files or src/ai/genkit.ts during plugin initialization.');
+console.log('[Genkit Dev] Only motivational-quote-flow is currently imported for debugging.');
+console.log('[Genkit Dev] If Genkit starts successfully now, the issue is likely in one of the other flow files or how Genkit handles no flows/plugins.');
 
-// The ai object from genkit.ts will be initialized when genkit.ts is implicitly loaded
-// if any flow was imported. Since no flows are imported, genkit.ts might not be directly
-// executed by this dev.ts script right now unless something else triggers its import.
-// However, the genkit start command itself will try to initialize Genkit.
-// Let's ensure genkit.ts is at least processed by importing it directly to see if plugin loading fails.
-console.log('[Genkit Dev] Attempting to import src/ai/genkit.ts directly...');
-import '@/ai/genkit';
+console.log('[Genkit Dev] Attempting to import src/ai/genkit.ts directly to ensure it runs before genkit start takes over...');
+import '@/ai/genkit'; // This ensures genkit.ts is processed and its logs appear
 console.log('[Genkit Dev] src/ai/genkit.ts has been imported directly.');
 console.log('[Genkit Dev] End of dev.ts script. Genkit start should now proceed with discovered elements.');
