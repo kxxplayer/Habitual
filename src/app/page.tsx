@@ -794,7 +794,7 @@ const HabitualPageContent: React.FC = () => {
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4 flex-grow">
+            <main className="px-3 sm:px-4 pt-4 pb-20 flex-grow"> {/* Increased pb from py-4 */}
               {allTodayTasksDone && habits.length > 0 && !isLoadingData && (
                  <div className="flex flex-col items-center justify-center text-center py-6 my-4 bg-accent/10 rounded-lg shadow">
                   <CheckCircle2 className="mx-auto h-12 w-12 text-accent mb-3" />
@@ -919,4 +919,3 @@ const HabitualPage: NextPage = () => {
 
 export default HabitualPage;
     
-
