@@ -50,12 +50,13 @@ const BottomNavigationBar: FC = () => {
             onClick={() => console.log(`BOTTOMNAV: Clicked on Nav Item: ${item.label}, Href: ${item.href}`)}
             className={cn(
               buttonVariants({ variant: "ghost" }),
-              "flex flex-col items-center justify-center h-full p-1 flex-1",
+              "flex flex-col items-center justify-center h-full p-1 flex-1", // Ensure icons are centered
               isActive ? "text-primary" : "text-muted-foreground hover:text-primary"
             )}
+            aria-label={item.label}
           >
-            <IconComponent className="h-4 w-4" />
-            <span className="text-xs mt-0.5">{item.label}</span>
+            <IconComponent className="h-5 w-5" /> {/* Icon size adjusted for no label */}
+            {/* <span className="text-xs mt-0.5">{item.label}</span> // Label removed */}
           </Link>
         );
       })}
@@ -64,3 +65,4 @@ const BottomNavigationBar: FC = () => {
 };
 
 export default BottomNavigationBar;
+

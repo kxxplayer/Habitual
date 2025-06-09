@@ -839,7 +839,7 @@ const HabitualPageContent: React.FC = () => {
               {isLoadingCommonSuggestions && habits.length === 0 && !isLoadingData && (<div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading suggestions...</p></div> )}
 
               {allTodayTasksDone && habits.length > 0 && !isLoadingData ? (
-                <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
+                 <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
                   <CheckCircle2 className="mx-auto h-16 w-16 text-accent mb-4" />
                   <h3 className="text-xl font-semibold text-primary">All Done for Today!</h3>
                   <p className="text-muted-foreground">Great job completing all your tasks. Enjoy your success!</p>
@@ -849,7 +849,7 @@ const HabitualPageContent: React.FC = () => {
               )}
             </main>
             <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto shrink-0">
-              <p>&copy; {new Date().getFullYear()} Habitual.</p>
+              {/* Copyright removed from here */}
             </footer>
           </div>
         </ScrollArea>
