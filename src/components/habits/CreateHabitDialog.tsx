@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, ChevronRight } from 'lucide-react';
+import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, ChevronRight, Brain } from 'lucide-react';
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import type { CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -36,6 +36,7 @@ interface CreateHabitDialogProps {
   initialData?: Partial<CreateHabitFormData> | null;
   currentStep: number;
   setCurrentStep: (step: number) => void;
+  onOpenGoalProgramDialog: () => void; 
 }
 
 const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -77,7 +78,8 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   onSaveHabit,
   initialData,
   currentStep,
-  setCurrentStep
+  setCurrentStep,
+  onOpenGoalProgramDialog
 }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
   const { toast } = useToast();
@@ -164,6 +166,11 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
     
   };
 
+  const handleOpenProgramDialog = () => {
+    onClose(); // Close current (CreateHabitDialog)
+    onOpenGoalProgramDialog(); // Open the GoalInputProgramDialog
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[600px] bg-card rounded-lg shadow-xl">
@@ -173,7 +180,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
             {isEditing ? "Edit Habit" : (currentStep === 1 ? "Create New Habit: Step 1" : "Create New Habit: Step 2")}
           </DialogTitle>
           <DialogDescription>
-            {isEditing ? "Modify the details of your habit." : (currentStep === 1 ? "Describe your new habit. AI can help suggest details." : "Refine the details for your new habit.")}
+            {isEditing ? "Modify the details of your habit." : (currentStep === 1 ? "Describe your new habit, or create a program from a goal." : "Refine the details for your new habit.")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmitDialog)} className="space-y-4 p-1 pt-3">
@@ -183,14 +190,24 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                 <Label htmlFor="dialog-ai-description" className="text-sm font-medium">Describe your habit (for AI suggestion)</Label>
                 <Controller name="description" control={control} render={({ field }) => <Textarea id="dialog-ai-description" placeholder="e.g., Go to the gym 3 times a week in the evenings for 1 hour" {...field} className="bg-input/50 text-sm" rows={3}/>} />
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 mt-1">
-                <Button type="button" onClick={handleAISuggestDetails} disabled={isAISuggesting || !habitDescriptionForAI?.trim()} variant="default" className="w-full sm:flex-1">
+              <div className="flex flex-col gap-2 mt-1">
+                <Button type="button" onClick={handleAISuggestDetails} disabled={isAISuggesting || !habitDescriptionForAI?.trim()} variant="default" className="w-full">
                   {isAISuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                  Suggest with AI
+                  Suggest Details with AI
                 </Button>
-                <Button type="button" onClick={() => setCurrentStep(2)} variant="outline" className="w-full sm:flex-1" disabled={isAISuggesting}>
+                <Button type="button" onClick={() => setCurrentStep(2)} variant="outline" className="w-full" disabled={isAISuggesting}>
                   Fill Manually
                   <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+                 <div className="relative my-1">
+                    <div className="absolute inset-0 flex items-center"> <span className="w-full border-t" /> </div>
+                    <div className="relative flex justify-center text-xs">
+                        <span className="bg-card px-2 text-muted-foreground"> OR </span>
+                    </div>
+                </div>
+                <Button type="button" onClick={handleOpenProgramDialog} variant="secondary" className="w-full" disabled={isAISuggesting}>
+                  <Brain className="mr-2 h-4 w-4" />
+                  Create Program from Goal
                 </Button>
               </div>
               {isAISuggesting && (

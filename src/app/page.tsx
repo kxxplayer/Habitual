@@ -809,19 +809,15 @@ const HabitualPageContent: React.FC = () => {
                   <p className="ml-3 text-muted-foreground">Loading habits...</p>
                 </div>
               ) : habits.length === 0 ? (
-                // No habits loaded, show common suggestions or loading for them
                 isLoadingCommonSuggestions ? (
                   <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading suggestions...</p></div>
                 ) : commonHabitSuggestions.length > 0 ? (
                   <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
                     <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
                       <p className="text-xs text-muted-foreground mb-1.5">
-                        Start by picking a common habit, or use the
+                        Start by picking a common habit. You can also tap the
                         <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link>
-                         to add your own. You can also
-                        <Button onClick={handleOpenGoalInputProgramDialog} variant="link" className="text-xs h-auto p-0 ml-1 text-primary underline">
-                           create a program from a goal
-                        </Button>.
+                         to add your own custom habit or create a multi-habit program from a goal.
                       </p>
                     </div>
                     <div className="p-1">
@@ -835,22 +831,17 @@ const HabitualPageContent: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  // If no habits and no common suggestions (or not loading them)
                    <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
                       <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
                       <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
                       <p className="text-sm text-muted-foreground">
                         Tap the 
                         <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link>
-                         to add a habit, or 
-                        <Button onClick={handleOpenGoalInputProgramDialog} variant="link" className="text-sm h-auto p-0 ml-1 text-primary underline">
-                          create a program from a goal
-                        </Button>!
+                         to add a habit or create a program from a goal!
                       </p>
                     </div>
                 )
               ) : (
-                // Habits exist, show the list.
                 <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
               )}
             </main>
@@ -873,6 +864,7 @@ const HabitualPageContent: React.FC = () => {
         initialData={initialFormDataForDialog}
         currentStep={createHabitDialogStep}
         setCurrentStep={setCreateHabitDialogStep}
+        onOpenGoalProgramDialog={handleOpenGoalInputProgramDialog}
       />
       {selectedHabitForAISuggestion && aiSuggestion && (<AISuggestionDialog isOpen={isAISuggestionDialogOpen} onClose={() => setIsAISuggestionDialogOpen(false)} habitName={selectedHabitForAISuggestion.name} suggestion={aiSuggestion.suggestionText} isLoading={aiSuggestion.isLoading} error={aiSuggestion.error} />)}
       {reflectionDialogData && (<AddReflectionNoteDialog isOpen={isReflectionDialogOpen} onClose={() => { setIsReflectionDialogOpen(false); setReflectionDialogData(null); }} onSaveNote={(note) => handleSaveReflectionNote(reflectionDialogData.habitId, reflectionDialogData.date, note)} initialNote={reflectionDialogData.initialNote} habitName={reflectionDialogData.habitName} completionDate={reflectionDialogData.date} />)}
@@ -927,3 +919,4 @@ const HabitualPage: NextPage = () => {
 
 export default HabitualPage;
     
+
