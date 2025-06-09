@@ -161,17 +161,24 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  if (TOAST_LIMIT === 0) {
+    // If limit is 0, do nothing visible and return dummy functions
+    return {
+      id: genId(), // Still generate an ID for consistency if anything expects it
+      dismiss: () => {},
+      update: (newProps: Partial<ToasterToast>) => {}, // Provide a typed dummy update
+    };
+  }
+
   const id = genId()
 
-  const update = (props: ToasterToast) =>
+  const update = (newProps: Partial<ToasterToast>) => // Typed newProps
     dispatch({
       type: "UPDATE_TOAST",
-      toast: { ...props, id },
+      toast: { ...newProps, id }, // Spread newProps
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
-  // If TOAST_LIMIT is 0, no toasts will be added by the reducer,
-  // so this dispatch effectively does nothing visible.
   dispatch({
     type: "ADD_TOAST",
     toast: {
@@ -186,8 +193,6 @@ function toast({ ...props }: Toast) {
 
   // Add to remove queue only if the toast might have been added (TOAST_LIMIT > 0)
   // and it's not an indefinite toast.
-  // With TOAST_LIMIT = 0, this part might not be strictly necessary as no toasts are stored,
-  // but keeping it doesn't harm.
   if (TOAST_LIMIT > 0 && (props.duration === undefined || props.duration === null || props.duration > 0)) {
      addToRemoveQueue(id);
   }
