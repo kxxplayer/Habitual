@@ -43,17 +43,18 @@ console.log('[Genkit Env Debug] process.env.GOOGLE_API_KEY:', !!process.env.GOOG
 // console.log('[Genkit Dev] src/ai/genkit.ts has been imported directly.');
 
 
-// Temporarily comment out most flow imports for debugging
+// Temporarily comment out ALL flow imports for debugging
 // import '@/ai/flows/habit-creation-from-description';
 // import '@/ai/flows/habit-suggestion';
-import '@/ai/flows/motivational-quote-flow'; // UNCOMMENTED this one
+// import '@/ai/flows/motivational-quote-flow'; // Also commented out
 // import '@/ai/flows/sql-tip-flow';
 // import '@/ai/flows/common-habit-suggestions-flow';
 // import '@/ai/flows/generate-habit-program-flow';
 // import '@/ai/flows/app-improvement-suggester-flow';
 // import '@/ai/flows/reflection-starter-flow';
 
-console.log('[Genkit Dev] Only motivational-quote-flow is currently imported for debugging.');
+console.log('[Genkit Dev] ALL flow imports are currently commented out for debugging.');
 console.log('[Genkit Dev] If Genkit starts successfully now, the issue is likely in one of the other flow files or how Genkit handles no flows/plugins.');
 
 console.log('[Genkit Dev] End of dev.ts script. Genkit start should now proceed with discovered elements.');
+

@@ -27,11 +27,12 @@ import {googleAI} from '@genkit-ai/googleai'; // Re-enabled googleAI
 console.log('[Genkit Init] Initializing Genkit object with GoogleAI plugin...');
 export const ai = genkit({
   plugins: [
-    googleAI(), // Removed apiVersion: 'v1beta'
-  ].filter(Boolean),
+    googleAI(), // googleAI plugin is active
+  ],
   enableTracing: false, // Keep tracing disabled
   // Optional: Configure log level for Genkit
   // logLevel: 'debug', // Can be 'info', 'warn', 'error', 'debug'
 });
 console.log('[Genkit Init] Genkit object initialized. enableTracing is false.');
 console.log('[Genkit Init] End of src/ai/genkit.ts execution.');
+
