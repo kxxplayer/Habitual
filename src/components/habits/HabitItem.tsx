@@ -90,7 +90,7 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
           </div>
           <h3 className={cn(
             "text-sm font-semibold flex-grow min-w-0 pr-1 break-words",
-            isCompletedToday ? "line-through text-muted-foreground" : "text-foreground"
+            isCompletedToday ? "line-through text-muted-foreground" : "text-primary" // Changed text-foreground to text-primary for active habits
           )}>
             {habit.name}
           </h3>
@@ -123,3 +123,4 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
 
 export default HabitItem;
     
+
