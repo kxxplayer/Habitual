@@ -17,6 +17,7 @@ import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -66,7 +67,7 @@ const LoginPage: NextPage = () => {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Login</CardTitle>
-          <CardDescription>Enter your email below to login to your account</CardDescription>
+          <CardDescription className="font-light">Enter your email below to login to your account</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onEmailLogin)}>
           <CardContent className="space-y-4">
