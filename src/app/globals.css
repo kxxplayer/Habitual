@@ -137,8 +137,8 @@
 
 .sparkle {
   position: absolute;
-  width: 8px;
-  height: 8px;
+  width: 5px; /* Smaller particles */
+  height: 5px; /* Smaller particles */
   background-color: hsl(var(--accent));
   border-radius: 50%;
   opacity: 0;
@@ -198,4 +198,14 @@
 
 .animate-pulse-glow-accent {
   animation: pulse-glow-accent 0.8s ease-out forwards;
+}
+
+@keyframes button-pop-effect {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.animate-button-pop {
+  animation: button-pop-effect 0.4s ease-out forwards;
 }

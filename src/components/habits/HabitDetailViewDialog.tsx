@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Lightbulb, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CalendarX, CheckCircle2, Circle, XCircle, Check, Bell, FilePenLine, StickyNote, Trash2, ChevronRightSquare, CalendarClock, CalendarDays, Edit3, Save, Wand2, PlusCircle, Hourglass, Clock, Brain } from 'lucide-react';
+import { Lightbulb, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CalendarX, CheckCircle2, Circle, Check, Bell, FilePenLine, StickyNote, Trash2, ChevronRightSquare, CalendarClock, CalendarDays, Edit3, Save, Wand2, PlusCircle, Hourglass, Clock, Brain } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
@@ -131,6 +131,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
       setAIReflectionPromptText(null);
       setIsAIReflectionLoading(false);
       setAIReflectionError(null);
+      setIsDescriptionExpanded(false); // Reset description expansion
     }
   }, [isOpen, habit]);
 
@@ -231,7 +232,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
     const logForDay = habit.completionLog.find(log => log.date === dateToToggle);
     const isCurrentlyCompleted = logForDay?.status === 'completed';
     onToggleComplete(habit.id, dateToToggle, !isCurrentlyCompleted);
-    if (!isCurrentlyCompleted) { setShowSparkles(true); setTimeout(() => setShowSparkles(false), 800); }
+    if (!isCurrentlyCompleted && dateToToggle === todayString) { setShowSparkles(true); setTimeout(() => setShowSparkles(false), 800); }
   };
 
   const handleAddToCalendar = () => {
@@ -351,8 +352,29 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
             )}
 
             <div className="pt-3 flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-              <Button onClick={() => handleToggleTodayCompletion(true)} disabled={isTodayCompleted}
-                  className={cn("rounded-lg py-2.5 px-5 text-sm transition-all active:scale-95 flex-1", !isTodayCompleted ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95" : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed", isTodayCompleted && showSparkles && "animate-pulse-glow-accent", isTodayCompleted && !showSparkles && "shadow-[0_0_8px_hsl(var(--accent))]")} >
+              <Button 
+                  onClick={() => handleToggleTodayCompletion(true)} 
+                  disabled={isTodayCompleted}
+                  className={cn(
+                    "rounded-lg py-2.5 px-5 text-sm transition-all active:scale-95 flex-1 relative overflow-hidden",
+                    !isTodayCompleted 
+                      ? "bg-gradient-to-r from-primary to-destructive text-primary-foreground hover:brightness-95" 
+                      : "bg-accent/30 text-accent-foreground/70 cursor-not-allowed",
+                    isTodayCompleted && showSparkles && "animate-pulse-glow-accent animate-button-pop",
+                    isTodayCompleted && !showSparkles && "shadow-[0_0_8px_hsl(var(--accent))]"
+                  )} 
+              >
+                  {isTodayCompleted && showSparkles && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="relative w-full h-full">
+                            <div className="sparkle sparkle-1" style={{top: "10%", left: "20%", "--tx": "-10px", "--ty": "-15px"} as React.CSSProperties}></div>
+                            <div className="sparkle sparkle-2" style={{top: "20%", right: "15%", "--tx": "10px", "--ty": "-15px"} as React.CSSProperties}></div>
+                            <div className="sparkle sparkle-3" style={{bottom: "15%", left: "25%", "--tx": "-10px", "--ty": "10px"} as React.CSSProperties}></div>
+                            <div className="sparkle sparkle-4" style={{bottom: "10%", right: "20%", "--tx": "10px", "--ty": "10px"} as React.CSSProperties}></div>
+                            <div className="sparkle sparkle-5" style={{top: "40%", left: "45%", "--tx": "0px", "--ty": "-10px"} as React.CSSProperties}></div>
+                        </div>
+                    </div>
+                  )}
                   {!isTodayCompleted ? <><Check className="mr-2 h-4 w-4" /> Mark Today Done</> : <><CheckCircle2 className="mr-2 h-4 w-4" /> Done for Today!</>}
               </Button>
               <Button onClick={() => handleToggleTodayCompletion(false)} disabled={!isTodayCompleted} variant={isTodayCompleted ? "destructive" : "outline"}
@@ -360,14 +382,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                   <XCircle className="mr-2 h-4 w-4" /> Not Done Today
               </Button>
             </div>
-             {showSparkles && isTodayCompleted && (
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
-                <div className="relative w-20 h-20">
-                  <div className="sparkle sparkle-1"></div> <div className="sparkle sparkle-2"></div> <div className="sparkle sparkle-3"></div>
-                  <div className="sparkle sparkle-4"></div> <div className="sparkle sparkle-5"></div> <div className="sparkle sparkle-6"></div>
-                </div>
-              </div>
-            )}
+            
             {showWeeklyConfetti && (
               <div className="weekly-goal-animation-container">
                 <div className="weekly-goal-text">Weekly Goal Met!</div>
@@ -421,4 +436,3 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
 };
 
 export default HabitDetailViewDialog;
-
