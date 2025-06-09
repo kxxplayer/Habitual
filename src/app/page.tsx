@@ -379,7 +379,14 @@ const HabitualPageContent: React.FC = () => {
       console.error(`PAGE.TSX: Firestore snapshot error for user ${authUser.uid} at ${new Date().toISOString()}:`, error);
       toast({ title: "Database Error", description: "Could not load your data from the cloud.", variant: "destructive" });
       setIsLoadingData(false);
-      firstDataLoadCompleteRef.current = true; 
+      // If firstDataLoadCompleteRef.current is false, it means this error occurred during the *initial* data fetch.
+      // In this case, we should NOT set firstDataLoadCompleteRef.current to true,
+      // to prevent the debounced save from writing an empty local state over potentially existing data in Firestore.
+      if (!firstDataLoadCompleteRef.current) {
+        console.warn("PAGE.TSX: Initial data load from Firestore failed. Automatic saving is temporarily disabled to protect existing data. Please try refreshing the page.");
+      }
+      // If firstDataLoadCompleteRef.current was already true (meaning a previous load was successful),
+      // it remains true, indicating this is a subsequent error.
     });
 
     return () => {
