@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
   devIndicators: {
     allowedDevOrigins: [
       'https://9000-firebase-studio-1747227899807.cluster-iktsryn7xnhpexlu6255bftka4.cloudworkstations.dev',
+      'https://3000-firebase-studio-1747227899807.cluster-iktsryn7xnhpexlu6255bftka4.cloudworkstations.dev',
     ],
   },
 };
