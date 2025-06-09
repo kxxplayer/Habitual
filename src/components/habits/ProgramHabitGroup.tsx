@@ -55,16 +55,18 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
                   {programName}
                 </span>
               </div>
-              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+              <div className="flex items-center space-x-1 text-xs">
                 {allProgramTasksForTodayCompleted ? 
                   <CheckCircle2 className="h-4 w-4 text-accent" /> : 
                   <Circle className={cn("h-3.5 w-3.5", habitsScheduledToday.length > 0 ? "text-orange-500" : "text-muted-foreground/60")} />
                 }
-                <span>
-                  {habitsScheduledToday.length > 0 
-                    ? `${completedTodayCount}/${habitsScheduledToday.length} today`
-                    : "No tasks today"}
-                </span>
+                {habitsScheduledToday.length > 0 ? (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-700/30 dark:text-amber-200">
+                    {`${completedTodayCount}/${habitsScheduledToday.length} today`}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">No tasks today</span>
+                )}
               </div>
             </div>
             {habitsScheduledToday.length > 0 && ( /* Conditional progress bar row */
