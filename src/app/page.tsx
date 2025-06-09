@@ -68,7 +68,7 @@ import {
 import {
   Plus, Loader2, ListChecks, CalendarDays, BellRing, Bell, Home,
   Trash2, CheckCircle2, XCircle, Circle, CalendarClock as MakeupIcon, WandSparkles,
-  Brain,
+  Brain, Target,
 } from 'lucide-react';
 import { format, parseISO, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday as dateFnsIsToday, isPast as dateFnsIsPast, isSameDay } from 'date-fns';
 
@@ -441,7 +441,10 @@ const HabitualPageContent: React.FC = () => {
 
   React.useEffect(() => {
     if (todayString && todayAbbr && habits.length > 0 && !isLoadingData) {
-      const tasksScheduledTodayCheckAllDoneMain = habits.filter(hCheckAllDoneMain => hCheckAllDoneMain.daysOfWeek.includes(todayAbbr));
+      const tasksScheduledTodayCheckAllDoneMain = habits.filter(hCheckAllDoneMain => 
+        hCheckAllDoneMain.daysOfWeek.includes(todayAbbr) || 
+        hCheckAllDoneMain.completionLog.some(log => log.date === todayString && log.status === 'pending_makeup')
+      );
       if (tasksScheduledTodayCheckAllDoneMain.length === 0) { setAllTodayTasksDone(true); return; }
       setAllTodayTasksDone(tasksScheduledTodayCheckAllDoneMain.every(h => h.completionLog.some(l => l.date === todayString && l.status === 'completed')));
     } else if (habits.length === 0 && !isLoadingData && todayString) setAllTodayTasksDone(true);
@@ -688,19 +691,6 @@ const HabitualPageContent: React.FC = () => {
     if (authUser && typeof window !== 'undefined') localStorage.setItem(`${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`, 'true');
   };
 
-  const handleMarkAllTodayDone = () => {
-    if (!todayString || !todayAbbr || isLoadingData || !authUser) return;
-    let markedAny = false;
-    habits.forEach(h => {
-      if (h.daysOfWeek.includes(todayAbbr) && !h.completionLog.some(l => l.date === todayString && l.status === 'completed')) {
-        handleToggleComplete(h.id, todayString, true);
-        markedAny = true;
-      }
-    });
-    if(markedAny) toast({title: "All Done!", description: "Marked all applicable habits for today as complete."});
-    else toast({title: "Nothing to Mark", description: "All today's habits were already complete or none were scheduled."});
-  };
-
   const handleOpenDetailView = (habit: Habit) => {
     setSelectedHabitForDetailView(habit);
     setIsDetailViewDialogOpen(true);
@@ -805,14 +795,6 @@ const HabitualPageContent: React.FC = () => {
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
             <main className="px-3 sm:px-4 py-4 flex-grow">
-              {habits.length > 0 && !allTodayTasksDone && todayString && todayAbbr && !isLoadingData && (
-                <div className="mb-4 flex justify-center">
-                  <Button onClick={handleMarkAllTodayDone} variant={"default"} className="w-full max-w-xs">
-                    <ListChecks className="mr-2 h-4 w-4" /> Mark All Today Done
-                  </Button>
-                </div>
-              )}
-              
               {allTodayTasksDone && habits.length > 0 && !isLoadingData && (
                  <div className="flex flex-col items-center justify-center text-center py-6 my-4 bg-accent/10 rounded-lg shadow">
                   <CheckCircle2 className="mx-auto h-12 w-12 text-accent mb-3" />
@@ -838,7 +820,7 @@ const HabitualPageContent: React.FC = () => {
                         <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link>
                          to add your own. You can also
                         <Button onClick={handleOpenGoalInputProgramDialog} variant="link" className="text-xs h-auto p-0 ml-1 text-primary underline">
-                          create a program from a goal
+                           create a program from a goal
                         </Button>.
                       </p>
                     </div>
@@ -853,11 +835,22 @@ const HabitualPageContent: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  // If no habits and no common suggestions (or not loading them), HabitList will show "No habits yet"
-                  <HabitList habits={[]} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
+                  // If no habits and no common suggestions (or not loading them)
+                   <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
+                      <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
+                      <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Tap the 
+                        <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link>
+                         to add a habit, or 
+                        <Button onClick={handleOpenGoalInputProgramDialog} variant="link" className="text-sm h-auto p-0 ml-1 text-primary underline">
+                          create a program from a goal
+                        </Button>!
+                      </p>
+                    </div>
                 )
               ) : (
-                // Habits exist, show the list. HabitList will show "No habits for today" if applicable.
+                // Habits exist, show the list.
                 <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
               )}
             </main>

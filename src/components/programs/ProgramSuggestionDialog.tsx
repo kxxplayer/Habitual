@@ -15,17 +15,48 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { CheckSquare, Sparkles, Tag, CalendarDays as CalendarIcon, Clock, Hourglass } from 'lucide-react';
-import type { GenerateHabitProgramOutput, SuggestedProgramHabit } from '@/ai/flows/generate-habit-program-flow'; // Adjusted import
-import { HABIT_CATEGORIES, type HabitCategory, type WeekDay } from '@/types'; // Ensure WeekDay is imported
+import { CheckSquare, Sparkles, Tag, CalendarDays as CalendarIcon, Clock, Hourglass, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIconLucide } from 'lucide-react';
+import type { GenerateHabitProgramOutput, SuggestedProgramHabit } from '@/ai/flows/generate-habit-program-flow'; 
+import { HABIT_CATEGORIES, type HabitCategory, type WeekDay } from '@/types'; 
+import { cn } from '@/lib/utils';
 
 interface ProgramSuggestionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   programSuggestion: GenerateHabitProgramOutput | null;
-  onAddProgramHabits: (habits: SuggestedProgramHabit[]) => void; // Callback to add habits
+  onAddProgramHabits: (habits: SuggestedProgramHabit[]) => void; 
   isLoading?: boolean;
 }
+
+const getSuggestedHabitIcon = (habit: SuggestedProgramHabit): React.ReactNode => {
+  const nameLower = habit.name.toLowerCase();
+  if (nameLower.includes('gym') || nameLower.includes('workout')) return <span className="text-lg">🏋️</span>;
+  if (nameLower.includes('sql') || nameLower.includes('code') || nameLower.includes('python')) return <span className="text-lg">💻</span>;
+  if (nameLower.includes('walk') || nameLower.includes('run') || nameLower.includes('jog')) return <span className="text-lg">🚶</span>;
+  if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-lg">📚</span>;
+  if (nameLower.includes('meditate') || nameLower.includes('mindfulness')) return <span className="text-lg">🧘</span>;
+  if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="h-4 w-4 text-blue-600" />;
+  if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="h-4 w-4 text-blue-500" />;
+  if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="h-4 w-4 text-purple-500" />;
+  if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="h-4 w-4 text-yellow-600" />;
+  if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="h-4 w-4 text-red-500" />;
+
+  if (habit.category) {
+    switch (habit.category) {
+      case 'Health & Wellness': return <HeartPulse className="h-4 w-4 text-red-500" />;
+      case 'Work/Study': return <Briefcase className="h-4 w-4 text-blue-600" />;
+      case 'Creative': return <Paintbrush className="h-4 w-4 text-orange-500" />;
+      case 'Chores': return <HomeIconLucide className="h-4 w-4 text-green-600" />;
+      case 'Finance': return <Landmark className="h-4 w-4 text-indigo-500" />;
+      case 'Social': return <Users className="h-4 w-4 text-pink-500" />;
+      case 'Personal Growth': return <SparklesIconLucide className="h-4 w-4 text-yellow-500" />;
+      case 'Lifestyle': return <LifestyleIcon className="h-4 w-4 text-teal-500" />;
+      default: return <ListChecks className="h-4 w-4 text-muted-foreground" />;
+    }
+  }
+  return <ListChecks className="h-4 w-4 text-muted-foreground" />;
+};
+
 
 const ProgramSuggestionDialog: FC<ProgramSuggestionDialogProps> = ({
   isOpen,
@@ -65,12 +96,17 @@ const ProgramSuggestionDialog: FC<ProgramSuggestionDialogProps> = ({
         <ScrollArea className="max-h-[60vh] p-1 pr-3">
           <div className="space-y-3 py-2">
             {programSuggestion.suggestedHabits.map((habit, index) => (
-              <Card key={index} className="bg-input/30">
-                <CardHeader className="pb-2 pt-3 px-3">
-                  <CardTitle className="text-md font-semibold">{habit.name}</CardTitle>
-                  {habit.description && <CardDescription className="text-xs">{habit.description}</CardDescription>}
+              <Card key={index} className="bg-input/30 shadow-sm">
+                <CardHeader className="pb-1.5 pt-2.5 px-3">
+                  <div className="flex items-start space-x-2">
+                    <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center mt-0.5">
+                      {getSuggestedHabitIcon(habit)}
+                    </div>
+                    <CardTitle className="text-md font-semibold flex-grow">{habit.name}</CardTitle>
+                  </div>
+                  {habit.description && <CardDescription className="text-xs mt-0.5 ml-7">{habit.description}</CardDescription>}
                 </CardHeader>
-                <CardContent className="text-xs space-y-0.5 px-3 pb-2">
+                <CardContent className="text-xs space-y-0.5 px-3 pb-2.5 ml-7">
                   {habit.category && (
                     <div className="flex items-center"><Tag className="mr-1.5 h-3 w-3 text-muted-foreground" /> Category: {habit.category}</div>
                   )}
@@ -85,7 +121,7 @@ const ProgramSuggestionDialog: FC<ProgramSuggestionDialogProps> = ({
                       {habit.durationMinutes ? ` ${habit.durationMinutes}m` : ""}
                     </div>
                   )}
-                  {habit.specificTime && (
+                  {habit.specificTime && habit.specificTime.toLowerCase() !== "anytime" && habit.specificTime.toLowerCase() !== "flexible" && (
                      <div className="flex items-center"><Clock className="mr-1.5 h-3 w-3 text-muted-foreground" /> Specific Time: {habit.specificTime}</div>
                   )}
                 </CardContent>
@@ -95,7 +131,7 @@ const ProgramSuggestionDialog: FC<ProgramSuggestionDialogProps> = ({
         </ScrollArea>
         <DialogFooter className="pt-4">
           <DialogClose asChild>
-            <Button type="button" variant="outline" disabled={isLoading}>
+            <Button type="button" variant="outline" disabled={isLoading} onClick={onClose}>
               Cancel
             </Button>
           </DialogClose>
