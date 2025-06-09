@@ -3,7 +3,7 @@
 
 import type { FC } from 'react';
 import Link from 'next/link';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'; // Removed buttonVariants as direct styling will be used
 import { Home, LayoutDashboard, Award, Settings, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
@@ -40,7 +40,7 @@ const BottomNavigationBar: FC<BottomNavigationBarProps> = ({ onAddNewHabitClick 
 
         if (item.isCentral) {
           return (
-            <Button // Changed from Link to Button
+            <Button
               key={item.id}
               onClick={() => {
                 console.log(`BOTTOMNAV: Clicked on Nav Item: ${item.label}`);
@@ -63,15 +63,20 @@ const BottomNavigationBar: FC<BottomNavigationBarProps> = ({ onAddNewHabitClick 
         return (
           <Link
             key={item.id}
-            href={item.href!} // href will exist for non-central items
+            href={item.href!} 
             className={cn(
-              buttonVariants({ variant: "ghost" }),
-              "flex flex-col items-center justify-center h-full p-1 flex-1",
+              "flex flex-col items-center justify-center h-full p-1 flex-1 transition-colors duration-150 ease-in-out group",
               isActive ? "text-primary" : "text-muted-foreground hover:text-primary"
             )}
             aria-label={item.label}
           >
             <IconComponent className="h-5 w-5" />
+            <span className={cn(
+              "mt-0.5 text-[10px] leading-tight",
+              isActive ? "text-primary font-medium" : "text-muted-foreground group-hover:text-primary"
+            )}>
+              {item.label}
+            </span>
           </Link>
         );
       })}
