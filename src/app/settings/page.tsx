@@ -129,7 +129,7 @@ const SettingsPage: NextPage = () => {
                     </Link>
                   ))}
                   <Separator className="my-2" />
-                  <Button onClick={handleSignOut} variant="destructive" className="w-full text-sm py-2 h-auto" disabled={isSigningOut}>
+                  <Button onClick={handleSignOut} variant="destructive-soft" className="w-full text-sm py-2 h-auto" disabled={isSigningOut}>
                     {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
                     Sign Out
                   </Button>

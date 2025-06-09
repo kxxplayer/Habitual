@@ -41,6 +41,11 @@ export default {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
   			},
+        'destructive-soft': {
+          DEFAULT: 'hsl(var(--destructive-soft-background))',
+          foreground: 'hsl(var(--destructive-soft-foreground))',
+        },
+        'destructive-soft-hover': 'hsl(var(--destructive-soft-hover-background))',
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
@@ -68,6 +73,7 @@ export default {
         none: 'none',
       },
       transitionDuration: {
+        '300': '300ms',
         '400': '400ms',
       },
   		keyframes: {
