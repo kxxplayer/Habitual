@@ -73,11 +73,10 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
         onOpenDetailView(habit);
       }}
       className={cn(
-        "cursor-pointer p-3 transition-all duration-200 ease-in-out active:scale-[0.98] rounded-lg flex flex-col justify-between min-h-[100px] sm:min-h-[110px]", 
+        "cursor-pointer p-3 transition-all duration-200 ease-in-out active:scale-[0.98] hover:scale-[1.02] rounded-lg flex flex-col justify-between min-h-[100px] sm:min-h-[110px]", 
         isCompletedToday 
           ? "opacity-75 bg-card shadow-sm" 
           : `bg-card border-l-2 ${categoryBorderColor} shadow-md hover:shadow-lg`, 
-        "hover:scale-[1.02]" 
       )}
     >
       <div> 
@@ -90,7 +89,7 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
           </div>
           <h3 className={cn(
             "text-sm font-semibold flex-grow min-w-0 pr-1 break-words",
-            isCompletedToday ? "line-through text-muted-foreground" : "text-primary" // Changed text-foreground to text-primary for active habits
+            isCompletedToday ? "line-through text-muted-foreground" : "text-primary"
           )}>
             {habit.name}
           </h3>
@@ -123,4 +122,3 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
 
 export default HabitItem;
     
-
