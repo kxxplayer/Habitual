@@ -3,7 +3,7 @@
 
 import type { FC } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button'; // Removed buttonVariants as direct styling will be used
+import { Button } from '@/components/ui/button';
 import { Home, LayoutDashboard, Award, Settings, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
@@ -63,14 +63,22 @@ const BottomNavigationBar: FC<BottomNavigationBarProps> = ({ onAddNewHabitClick 
         return (
           <Link
             key={item.id}
-            href={item.href!} 
+            href={item.href!}
             className={cn(
               "flex flex-col items-center justify-center h-full p-1 flex-1 transition-colors duration-150 ease-in-out group",
-              isActive ? "text-primary" : "text-muted-foreground hover:text-primary"
+              !isActive && "hover:text-primary" // Apply hover to Link for group hover effect
             )}
             aria-label={item.label}
           >
-            <IconComponent className="h-5 w-5" />
+            <div className={cn(
+              "p-1 rounded-full transition-colors",
+              isActive ? "bg-primary/10" : "bg-transparent"
+            )}>
+              <IconComponent className={cn(
+                "h-5 w-5",
+                isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary"
+              )} />
+            </div>
             <span className={cn(
               "mt-0.5 text-[10px] leading-tight",
               isActive ? "text-primary font-medium" : "text-muted-foreground group-hover:text-primary"
