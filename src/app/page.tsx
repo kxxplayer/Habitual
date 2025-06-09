@@ -237,7 +237,7 @@ const HabitualPageContent: React.FC = () => {
       // Always clean the URL if the action was present, regardless of whether dialog was opened by this effect or already open
       router.replace('/', { scroll: false });
     }
-  }, [searchParams, mounted, router, isCreateHabitDialogOpen]); // Removed dialogTriggeredByUrl from deps as it's set inside
+  }, [searchParams, mounted, router, isCreateHabitDialogOpen]);
 
 
   // Auth State Change Effect
@@ -343,6 +343,8 @@ const HabitualPageContent: React.FC = () => {
           };
         }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a,b) => b.date.localeCompare(a.date)),
         reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
+        programId: typeof h.programId === 'string' ? h.programId : undefined,
+        programName: typeof h.programName === 'string' ? h.programName : undefined,
       }));
       setHabits(parsedHabits);
       setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
@@ -731,21 +733,28 @@ const HabitualPageContent: React.FC = () => {
   const habitsForSelectedCalendarDate = React.useMemo(() => { return []; }, [selectedCalendarDate, habits, authUser]);
 
   const handleOpenGoalInputProgramDialog = () => setIsGoalInputProgramDialogOpen(true);
+  
   const handleSubmitGoalForProgram = async (goal: string, duration: string) => {
-    setIsProgramSuggestionLoading(true); setIsGoalInputProgramDialogOpen(false);
+    if (!programSuggestion) setIsProgramSuggestionLoading(true); // Only set loading if no suggestion already exists
+    setIsGoalInputProgramDialogOpen(false);
     try {
       const suggestion = await generateHabitProgramFromGoal({ goal, focusDuration: duration });
-      setProgramSuggestion(suggestion); setIsProgramSuggestionDialogOpen(true);
+      setProgramSuggestion(suggestion); 
+      setIsProgramSuggestionDialogOpen(true);
     } catch (e: any) {
         console.error("Error generating habit program:", e?.message || e);
         toast({ title: "Program AI Error", description: "Could not generate a habit program. Please try again.", variant: "destructive"});
     }
     finally { setIsProgramSuggestionLoading(false); }
   };
+
   const handleAddProgramHabits = (suggestedProgramHabits: SuggestedProgramHabit[]) => {
-    if (!authUser) return;
-    const newHabits: Habit[] = suggestedProgramHabits.map(sph => ({
-      id: String(Date.now() + Math.random().toString(36).substring(2,9)),
+    if (!authUser || !programSuggestion) return;
+
+    const programInstanceId = String(Date.now() + Math.random().toString(36).substring(2,9));
+
+    const newHabitsFromProgram: Habit[] = suggestedProgramHabits.map(sph => ({
+      id: String(Date.now() + Math.random().toString(36).substring(2,9) + sph.name.slice(0,3)), // Ensure unique ID
       name: sph.name,
       description: sph.description || undefined,
       category: sph.category || 'Other',
@@ -756,11 +765,17 @@ const HabitualPageContent: React.FC = () => {
       specificTime: sph.specificTime || undefined,
       completionLog: [],
       reminderEnabled: false,
+      programId: programInstanceId,
+      programName: programSuggestion.programName,
     }));
-    setHabits(prev => [...prev, ...newHabits]);
-    if (habits.length === 0 && commonHabitSuggestions.length > 0 && newHabits.length > 0) setCommonHabitSuggestions([]);
-    setIsProgramSuggestionDialogOpen(false); setProgramSuggestion(null);
-    toast({ title: "Program Added!", description: "The suggested habits have been added to your list."});
+
+    setHabits(prev => [...prev, ...newHabitsFromProgram]);
+    if (habits.length === 0 && commonHabitSuggestions.length > 0 && newHabitsFromProgram.length > 0) {
+      setCommonHabitSuggestions([]);
+    }
+    setIsProgramSuggestionDialogOpen(false); 
+    setProgramSuggestion(null); // Clear suggestion after adding
+    toast({ title: "Program Added!", description: `"${programSuggestion.programName}" habits have been added.`});
   };
 
   const loadingScreen = (message: string) => {
@@ -800,7 +815,7 @@ const HabitualPageContent: React.FC = () => {
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 pt-4 pb-20 flex-grow">
+            <main className="px-3 sm:px-4 pt-4 pb-20 flex-grow"> {/* Increased pb-20 for scroll clearance */}
              {allTodayTasksDone && habits.length > 0 && !isLoadingData && (
                  <div className="flex flex-col items-center justify-center text-center py-6 my-4 bg-accent/10 rounded-lg shadow">
                   <CheckCircle2 className="mx-auto h-12 w-12 text-accent mb-3" />
@@ -822,7 +837,7 @@ const HabitualPageContent: React.FC = () => {
                     <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
                       <p className="text-xs text-muted-foreground mb-1.5">
                         Start by picking a common habit. You can also tap the "+" button (below)
-                         to add your own custom habit or create a multi-habit program from a goal.
+                         to add your own custom habit or create a multi-habit program.
                       </p>
                     </div>
                     <div className="p-1">
@@ -840,12 +855,17 @@ const HabitualPageContent: React.FC = () => {
                       <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
                       <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
                       <p className="text-sm text-muted-foreground">
-                        Tap the "+" button to add a habit or create a program from a goal!
+                        Tap the "+" button to add a habit or create a program!
                       </p>
                     </div>
                 )
               ) : (
-                <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
+                <HabitList 
+                    habits={habits} 
+                    onOpenDetailView={handleOpenDetailView} 
+                    todayString={todayString} 
+                    todayAbbr={todayAbbr}
+                />
               )}
             </main>
           </div>
@@ -906,7 +926,13 @@ const HabitualPageContent: React.FC = () => {
       </Dialog>
 
       <GoalInputProgramDialog isOpen={isGoalInputProgramDialogOpen} onClose={() => setIsGoalInputProgramDialogOpen(false)} onSubmit={handleSubmitGoalForProgram} isLoading={isProgramSuggestionLoading} />
-      <ProgramSuggestionDialog isOpen={isProgramSuggestionDialogOpen} onClose={() => { setIsProgramSuggestionDialogOpen(false); setProgramSuggestion(null); }} programSuggestion={programSuggestion} onAddProgramHabits={handleAddProgramHabits} isLoading={isLoadingCommonSuggestions} />
+      <ProgramSuggestionDialog 
+        isOpen={isProgramSuggestionDialogOpen} 
+        onClose={() => { setIsProgramSuggestionDialogOpen(false); setProgramSuggestion(null); }} 
+        programSuggestion={programSuggestion} 
+        onAddProgramHabits={handleAddProgramHabits} 
+        isLoading={isProgramSuggestionLoading} 
+      />
     </div>
   );
 };
@@ -920,4 +946,6 @@ const HabitualPage: NextPage = () => {
 };
 
 export default HabitualPage;
+    
+
     

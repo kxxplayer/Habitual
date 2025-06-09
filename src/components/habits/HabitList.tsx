@@ -2,11 +2,12 @@
 "use client";
 
 import type { FC } from 'react';
+import * as React from 'react'; 
 import HabitItem from './HabitItem';
+import ProgramHabitGroup from './ProgramHabitGroup'; // Import new component
 import type { Habit, WeekDay } from '@/types';
 import { ListChecks } from 'lucide-react';
-// getCurrentWeekDays and WeekDayInfo are no longer needed here as currentWeekDays prop is removed
-import * as React from 'react'; 
+import { cn } from '@/lib/utils';
 
 interface HabitListProps {
   habits: Habit[];
@@ -16,8 +17,6 @@ interface HabitListProps {
 }
 
 const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString, todayAbbr }) => {
-  // currentWeekDays state and useEffect are removed as the prop is no longer used
-
   if (!todayAbbr) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
@@ -28,12 +27,41 @@ const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString, 
     );
   }
 
-  const habitsForToday = habits.filter(habit => 
+  const habitsRelevantToday = habits.filter(habit => 
     habit.daysOfWeek.includes(todayAbbr) || 
     habit.completionLog.some(log => log.date === todayString && log.status === 'pending_makeup')
   );
 
-  if (habits.length > 0 && habitsForToday.length === 0) {
+  const standaloneHabits = habitsRelevantToday.filter(h => !h.programId);
+  const programHabits = habitsRelevantToday.filter(h => h.programId && h.programName);
+
+  const groupedProgramHabits = programHabits.reduce<Record<string, { name: string; id: string; habits: Habit[] }>>((acc, habit) => {
+    if (habit.programId && habit.programName) {
+      if (!acc[habit.programId]) {
+        acc[habit.programId] = { id: habit.programId, name: habit.programName, habits: [] };
+      }
+      acc[habit.programId].habits.push(habit);
+    }
+    return acc;
+  }, {});
+
+  const programGroupsArray = Object.values(groupedProgramHabits);
+  
+  const noTasksAtAll = habits.length === 0;
+  const noTasksForToday = habits.length > 0 && habitsRelevantToday.length === 0;
+
+
+  if (noTasksAtAll) {
+     return (
+      <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
+        <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
+        <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
+        <p className="text-sm text-muted-foreground">Tap the '+' button to add habits or create a program!</p>
+      </div>
+    );
+  }
+  
+  if (noTasksForToday) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
         <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
@@ -42,27 +70,26 @@ const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString, 
       </div>
     );
   }
-  
-  if (habits.length === 0) {
-     return (
-      <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
-        <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
-        <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
-        <p className="text-sm text-muted-foreground">Tap the '+' button to add some habits and get started!</p>
-      </div>
-    );
-  }
 
-  // Always display only habits scheduled for today or pending makeup
   return (
-    <div className="flex flex-col space-y-4">
-      {habitsForToday.map((habit) => (
+    <div className="flex flex-col space-y-3">
+      {programGroupsArray.map((group) => (
+        <ProgramHabitGroup
+          key={group.id}
+          programId={group.id}
+          programName={group.name}
+          habitsInProgram={group.habits}
+          onOpenDetailView={onOpenDetailView}
+          todayString={todayString}
+          todayAbbr={todayAbbr}
+        />
+      ))}
+      {standaloneHabits.map((habit) => (
         <HabitItem
           key={habit.id}
           habit={habit}
           onOpenDetailView={onOpenDetailView}
           todayString={todayString}
-          // currentWeekDays prop removed
         />
       ))}
     </div>
@@ -70,4 +97,5 @@ const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString, 
 };
 
 export default HabitList;
+
     
