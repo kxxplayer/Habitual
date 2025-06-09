@@ -11,12 +11,13 @@ import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'; // CardFooter removed as signout is separate
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Loader2, UserCircle, CalendarDays, BellRing, Palette, Bell, Settings as SettingsIcon, LogOut, BrainCircuit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
 import { Label } from '@/components/ui/label';
-import AppImprovementDialog from '@/components/app_suggestions/AppImprovementDialog'; // Import new dialog
+import AppImprovementDialog from '@/components/app_suggestions/AppImprovementDialog';
+import { Separator } from '@/components/ui/separator';
 
 const SettingsPage: NextPage = () => {
   const router = useRouter();
@@ -24,7 +25,7 @@ const SettingsPage: NextPage = () => {
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
   const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission | null>(null);
-  const [isAppImprovementDialogOpen, setIsAppImprovementDialogOpen] = React.useState(false); // State for new dialog
+  const [isAppImprovementDialogOpen, setIsAppImprovementDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -71,7 +72,7 @@ const SettingsPage: NextPage = () => {
     }
   };
 
-  const settingsItems = [
+  const accountSettingsItems = [
     { href: '/profile', label: 'Profile', icon: UserCircle },
     { href: '/calendar', label: 'Calendar View', icon: CalendarDays },
   ];
@@ -97,7 +98,7 @@ const SettingsPage: NextPage = () => {
     <>
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
       <div className={cn(
-        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto h-full", // Use h-full for inner container
+        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto h-full",
         "w-full max-w-sm",     
         "md:max-w-md",                   
         "lg:max-w-lg"                     
@@ -106,42 +107,57 @@ const SettingsPage: NextPage = () => {
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
             <main className="px-3 sm:px-4 py-4 flex-grow">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-xl font-bold text-primary flex items-center">
-                    <SettingsIcon className="mr-2 h-5 w-5" /> Settings
-                  </CardTitle>
-                  <CardDescription>Manage your application preferences and account.</CardDescription>
+              <div className="flex items-center mb-4">
+                <SettingsIcon className="mr-3 h-6 w-6 text-primary" />
+                <div>
+                  <h2 className="text-2xl font-bold text-primary">Settings</h2>
+                  <p className="text-sm text-muted-foreground">Manage preferences and account.</p>
+                </div>
+              </div>
+
+              <Card className="mb-4 shadow-md rounded-lg">
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base font-semibold text-primary">Account &amp; Data</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 pt-2">
-                  {settingsItems.map((item) => (
+                <CardContent className="p-4 pt-2 space-y-2">
+                  {accountSettingsItems.map((item) => (
                     <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
-                      <Button variant="outline" className="w-full justify-start text-base py-2.5 h-auto">
+                      <Button variant="outline" className="w-full justify-start text-sm py-2 h-auto">
                         <item.icon className="mr-2 h-4 w-4" />
                         {item.label}
                       </Button>
                     </Link>
                   ))}
+                  <Separator className="my-2" />
+                  <Button onClick={handleSignOut} variant="destructive" className="w-full text-sm py-2 h-auto" disabled={isSigningOut}>
+                    {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+                    Sign Out
+                  </Button>
+                </CardContent>
+              </Card>
 
+              <Card className="mb-4 shadow-md rounded-lg">
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base font-semibold text-primary">App Preferences</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-2 space-y-3">
                   <Button 
                     variant="outline" 
-                    className="w-full justify-start text-base py-2.5 h-auto"
+                    className="w-full justify-start text-sm py-2 h-auto"
                     onClick={() => setIsAppImprovementDialogOpen(true)}
                   >
                     <BrainCircuit className="mr-2 h-4 w-4" />
                     AI App Advisor
                   </Button>
-
-                  <div className="p-3 border rounded-md space-y-1.5 bg-input/20">
-                    <Label className="text-base font-medium flex items-center"><Palette className="mr-2 h-4 w-4" />Change Theme</Label>
+                  <div className="p-3 border rounded-md space-y-1.5 bg-background shadow-sm">
+                    <Label className="text-sm font-medium flex items-center"><Palette className="mr-2 h-4 w-4" />Change Theme</Label>
                     <ThemeToggleButton />
                     <p className="text-xs text-muted-foreground">Cycle through available app themes.</p>
                   </div>
-
-                  <div className="p-3 border rounded-md space-y-1.5 bg-input/20">
-                    <Label className="text-base font-medium flex items-center"><BellRing className="mr-2 h-4 w-4" />Reminders</Label>
+                  <div className="p-3 border rounded-md space-y-1.5 bg-background shadow-sm">
+                    <Label className="text-sm font-medium flex items-center"><BellRing className="mr-2 h-4 w-4" />Reminders</Label>
                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-sm">
+                        <div className="flex items-center text-xs">
                             <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
                             <span>Notification Status:</span>
                             <span className={cn("ml-1 font-semibold",
@@ -160,14 +176,9 @@ const SettingsPage: NextPage = () => {
                     {notificationPermission === 'denied' && <p className="text-xs text-muted-foreground mt-1">Notifications are blocked. Please enable them in your browser settings.</p>}
                     {notificationPermission === 'granted' && <p className="text-xs text-muted-foreground mt-1">Reminders can be set per habit.</p>}
                   </div>
-                  
-                  <Button onClick={handleSignOut} variant="destructive" className="w-full text-base py-2.5 h-auto" disabled={isSigningOut}>
-                    {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-                    Sign Out
-                  </Button>
-
                 </CardContent>
               </Card>
+
             </main>
             <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0 mt-auto">
               <p>&copy; {new Date().getFullYear()} Habitual.</p>
