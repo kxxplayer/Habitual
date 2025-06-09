@@ -55,7 +55,7 @@ const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString, 
 
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+    <div className="flex flex-col space-y-4">
       {habitsToDisplay.map((habit) => (
         <HabitItem
           key={habit.id}
