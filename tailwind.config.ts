@@ -53,19 +53,22 @@ export default {
   			}
   		},
   		borderRadius: {
-  			lg: 'var(--radius)', /* 12px */
-  			md: 'calc(var(--radius) - 4px)', /* 8px, increased difference for more distinction */
-  			sm: 'calc(var(--radius) - 6px)'  /* 6px, increased difference */
+  			lg: 'var(--radius)', /* 16px */
+  			md: 'calc(var(--radius) - 4px)', /* 12px, increased difference for more distinction */
+  			sm: 'calc(var(--radius) - 6px)'  /* 10px, increased difference */
   		},
-      boxShadow: { /* New softer shadows */
+      boxShadow: {
         sm: '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
         DEFAULT: '0 1px 4px 0 rgba(0, 0, 0, 0.04)',
-        md: '0 2px 8px 0 rgba(0, 0, 0, 0.08)', // Updated this line
+        md: '0 2px 8px 0 rgba(0,0,0,0.08)',
         lg: '0 3px 10px 0 rgba(0, 0, 0, 0.05)',
         xl: '0 4px 12px 0 rgba(0, 0, 0, 0.06)',
         '2xl': '0 5px 15px 0 rgba(0, 0, 0, 0.06)',
         inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
         none: 'none',
+      },
+      transitionDuration: {
+        '400': '400ms',
       },
   		keyframes: {
   			'accordion-down': {
