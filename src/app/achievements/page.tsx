@@ -4,7 +4,8 @@
 import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase'; // Added db
+import { doc, onSnapshot } from 'firebase/firestore'; // Firestore imports
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { EarnedBadge } from '@/types';
@@ -13,20 +14,26 @@ import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Loader2, Trophy } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns'; // Added parseISO
 import { cn } from '@/lib/utils';
+import { useToast } from "@/hooks/use-toast";
 
-const LS_KEY_PREFIX_BADGES = "earnedBadges_";
+// Firestore constants
+const USER_DATA_COLLECTION = "users";
+const USER_APP_DATA_SUBCOLLECTION = "appData";
+const USER_MAIN_DOC_ID = "main";
+
 
 const AchievementsPage: NextPage = () => {
   const router = useRouter();
+  const { toast } = useToast();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
 
   React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setAuthUser(user);
       } else {
@@ -35,28 +42,68 @@ const AchievementsPage: NextPage = () => {
       }
       setIsLoadingAuth(false);
     });
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, [router]);
 
   React.useEffect(() => {
-    if (!authUser || isLoadingAuth) return;
-
+    if (!authUser || isLoadingAuth) {
+       if (!authUser && !isLoadingAuth) { // No user, auth check complete
+        setIsLoadingData(false);
+      }
+      return;
+    }
+    
     setIsLoadingData(true);
-    const userUid = authUser.uid;
-    const badgesKey = `${LS_KEY_PREFIX_BADGES}${userUid}`;
-    const storedBadges = localStorage.getItem(badgesKey);
-    if (storedBadges) {
-      try {
-        setEarnedBadges(JSON.parse(storedBadges));
-      } catch (e) {
-        console.error("Error parsing badges from localStorage on achievements page:", e);
+    const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
+
+    const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const badgesFromDb = Array.isArray(data.earnedBadges) ? data.earnedBadges : [];
+        // Ensure dateAchieved is a valid date string before parsing for robust display
+        const parsedBadges = badgesFromDb.map(b => {
+          let dateAchieved = b.dateAchieved || new Date().toISOString(); // Fallback to today if missing
+          try {
+            parseISO(dateAchieved); // Test if it's a valid ISO string
+          } catch (e) {
+            console.warn(`Invalid dateAchieved '${b.dateAchieved}' for badge '${b.name}', falling back to current date.`);
+            dateAchieved = new Date().toISOString();
+          }
+          return { ...b, dateAchieved };
+        });
+        setEarnedBadges(parsedBadges);
+      } else {
         setEarnedBadges([]);
       }
-    } else {
+      setIsLoadingData(false);
+    }, (error) => {
+      console.error("Error fetching achievements data from Firestore:", error);
+      toast({ title: "Data Error", description: "Could not load achievements data.", variant: "destructive" });
       setEarnedBadges([]);
+      setIsLoadingData(false);
+    });
+
+    return () => unsubscribeFirestore();
+  }, [authUser, isLoadingAuth, toast]);
+
+
+  const formatDateSafe = (dateString: string) => {
+    try {
+      // Attempt to parse assuming it might be YYYY-MM-DD or full ISO
+      const dateObj = parseISO(dateString);
+      return format(dateObj, "MMMM d, yyyy");
+    } catch (e) {
+      // If it fails, try to format it directly if it's already a simple format like 'yyyy-MM-dd'
+      // or if it's some other format that format() can handle (less likely for consistency)
+      try {
+          return format(new Date(dateString), "MMMM d, yyyy");
+      } catch (e2) {
+          console.warn(`Could not format date string: ${dateString}`, e2);
+          return "Date unavailable"; // Fallback for unparseable dates
+      }
     }
-    setIsLoadingData(false);
-  }, [authUser, isLoadingAuth]);
+  };
+
 
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
@@ -108,7 +155,7 @@ const AchievementsPage: NextPage = () => {
                           <h4 className="font-semibold text-primary">{badge.name}</h4>
                         </div>
                         <p className="text-xs text-muted-foreground mb-1">{badge.description}</p>
-                        <p className="text-xs text-muted-foreground">Achieved: {format(new Date(badge.dateAchieved), "MMMM d, yyyy")}</p>
+                        <p className="text-xs text-muted-foreground">Achieved: {formatDateSafe(badge.dateAchieved)}</p>
                       </div>
                     ))
                   )}

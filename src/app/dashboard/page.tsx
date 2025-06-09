@@ -4,23 +4,30 @@
 import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase'; // Added db
+import { doc, onSnapshot } from 'firebase/firestore'; // Firestore imports
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import HabitOverview from '@/components/overview/HabitOverview';
-import type { Habit } from '@/types';
+import type { Habit, HabitCategory, HabitCompletionLogEntry, WeekDay } from '@/types'; // Added more types
+import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm } from '@/types'; // Import constants
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Loader2, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from "@/hooks/use-toast";
 
-const LS_KEY_PREFIX_HABITS = "habits_";
-const LS_KEY_PREFIX_POINTS = "totalPoints_";
+
+// Firestore constants (ensure these match your main page)
+const USER_DATA_COLLECTION = "users";
+const USER_APP_DATA_SUBCOLLECTION = "appData";
+const USER_MAIN_DOC_ID = "main";
 
 const DashboardPage: NextPage = () => {
   const router = useRouter();
+  const { toast } = useToast();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [habits, setHabits] = React.useState<Habit[]>([]);
@@ -28,7 +35,7 @@ const DashboardPage: NextPage = () => {
   const [isLoadingData, setIsLoadingData] = React.useState(true);
 
   React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setAuthUser(user);
       } else {
@@ -37,42 +44,64 @@ const DashboardPage: NextPage = () => {
       }
       setIsLoadingAuth(false);
     });
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, [router]);
 
   React.useEffect(() => {
-    if (!authUser || isLoadingAuth) return;
+    if (!authUser || isLoadingAuth) {
+      if (!authUser && !isLoadingAuth) { // No user, auth check complete
+        setIsLoadingData(false);
+      }
+      return;
+    }
 
     setIsLoadingData(true);
-    const userUid = authUser.uid;
+    const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
 
-    const habitsKey = `${LS_KEY_PREFIX_HABITS}${userUid}`;
-    const storedHabits = localStorage.getItem(habitsKey);
-    if (storedHabits) {
-      try {
-        setHabits(JSON.parse(storedHabits));
-      } catch (e) {
-        console.error("Error parsing habits from localStorage on dashboard:", e);
+    const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        
+        const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({
+          id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
+          name: String(h.name || 'Unnamed Habit'),
+          description: typeof h.description === 'string' ? h.description : undefined,
+          category: HABIT_CATEGORIES.includes(h.category as HabitCategory) ? h.category : 'Other',
+          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any) => weekDaysArrayForForm.includes(d as WeekDay)) : [],
+          optimalTiming: typeof h.optimalTiming === 'string' ? h.optimalTiming : undefined,
+          durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
+          durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
+          specificTime: typeof h.specificTime === 'string' ? h.specificTime : undefined,
+          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => {
+            if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
+            return {
+              date: log.date,
+              time: typeof log.time === 'string' && log.time.length > 0 ? log.time : 'N/A',
+              note: typeof log.note === 'string' ? log.note : undefined,
+              status: ['completed', 'pending_makeup', 'skipped'].includes(log.status) ? log.status : 'completed',
+              originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
+            };
+          }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a,b) => b.date.localeCompare(a.date)),
+          reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
+        }));
+        setHabits(parsedHabits);
+        setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
+      } else {
+        // Document doesn't exist, set to defaults
         setHabits([]);
-      }
-    } else {
-      setHabits([]);
-    }
-
-    const pointsKey = `${LS_KEY_PREFIX_POINTS}${userUid}`;
-    const storedPoints = localStorage.getItem(pointsKey);
-    if (storedPoints) {
-      try {
-        setTotalPoints(parseInt(storedPoints, 10) || 0);
-      } catch (e) {
-        console.error("Error parsing points from localStorage on dashboard:", e);
         setTotalPoints(0);
       }
-    } else {
+      setIsLoadingData(false);
+    }, (error) => {
+      console.error("Error fetching dashboard data from Firestore:", error);
+      toast({ title: "Data Error", description: "Could not load dashboard data.", variant: "destructive" });
+      setHabits([]);
       setTotalPoints(0);
-    }
-    setIsLoadingData(false);
-  }, [authUser, isLoadingAuth]);
+      setIsLoadingData(false);
+    });
+
+    return () => unsubscribeFirestore();
+  }, [authUser, isLoadingAuth, toast]);
 
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
