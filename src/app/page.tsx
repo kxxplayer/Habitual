@@ -813,44 +813,55 @@ const HabitualPageContent: React.FC = () => {
                 </div>
               )}
               
-              {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && !isLoadingData && (
-                <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
-                  <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
-                    <p className="text-xs text-muted-foreground mb-1.5">
-                      Start by picking a common habit, or use the
-                      <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link>
-                       to add your own. You can also
-                      <Button onClick={handleOpenGoalInputProgramDialog} variant="link" className="text-xs h-auto p-0 ml-1 text-primary underline">
-                        create a program from a goal
-                      </Button>.
-                    </p>
-                  </div>
-                  <div className="p-1">
-                    <div className="flex flex-wrap gap-2 justify-center mb-2">
-                      {commonHabitSuggestions.map((sugg, idx) => (
-                        <Button key={idx} variant="outline" className="p-2.5 h-auto flex flex-col items-center justify-center space-y-0.5 min-w-[90px] text-center shadow-sm hover:shadow-md transition-shadow text-xs" onClick={() => handleCustomizeSuggestedHabit(sugg)}>
-                          <span className="font-medium">{sugg.name}</span>{sugg.category && <span className="text-primary/80 opacity-80">{sugg.category}</span>}
-                        </Button>
-                      ))}
+              {allTodayTasksDone && habits.length > 0 && !isLoadingData && (
+                 <div className="flex flex-col items-center justify-center text-center py-6 my-4 bg-accent/10 rounded-lg shadow">
+                  <CheckCircle2 className="mx-auto h-12 w-12 text-accent mb-3" />
+                  <h3 className="text-lg font-semibold text-primary">All Done for Today!</h3>
+                  <p className="text-muted-foreground text-sm">Great job completing all your tasks.</p>
+                </div>
+              )}
+              
+              {isLoadingData ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-3 text-muted-foreground">Loading habits...</p>
+                </div>
+              ) : habits.length === 0 ? (
+                // No habits loaded, show common suggestions or loading for them
+                isLoadingCommonSuggestions ? (
+                  <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading suggestions...</p></div>
+                ) : commonHabitSuggestions.length > 0 ? (
+                  <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
+                    <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
+                      <p className="text-xs text-muted-foreground mb-1.5">
+                        Start by picking a common habit, or use the
+                        <Link href="/?action=addHabit" className="text-primary underline mx-1"> '+' button</Link>
+                         to add your own. You can also
+                        <Button onClick={handleOpenGoalInputProgramDialog} variant="link" className="text-xs h-auto p-0 ml-1 text-primary underline">
+                          create a program from a goal
+                        </Button>.
+                      </p>
+                    </div>
+                    <div className="p-1">
+                      <div className="flex flex-wrap gap-2 justify-center mb-2">
+                        {commonHabitSuggestions.map((sugg, idx) => (
+                          <Button key={idx} variant="outline" className="p-2.5 h-auto flex flex-col items-center justify-center space-y-0.5 min-w-[90px] text-center shadow-sm hover:shadow-md transition-shadow text-xs" onClick={() => handleCustomizeSuggestedHabit(sugg)}>
+                            <span className="font-medium">{sugg.name}</span>{sugg.category && <span className="text-primary/80 opacity-80">{sugg.category}</span>}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-              {isLoadingCommonSuggestions && habits.length === 0 && !isLoadingData && (<div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading suggestions...</p></div> )}
-
-              {allTodayTasksDone && habits.length > 0 && !isLoadingData ? (
-                 <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
-                  <CheckCircle2 className="mx-auto h-16 w-16 text-accent mb-4" />
-                  <h3 className="text-xl font-semibold text-primary">All Done for Today!</h3>
-                  <p className="text-muted-foreground">Great job completing all your tasks. Enjoy your success!</p>
-                </div>
+                ) : (
+                  // If no habits and no common suggestions (or not loading them), HabitList will show "No habits yet"
+                  <HabitList habits={[]} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
+                )
               ) : (
-                !isLoadingData && <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
+                // Habits exist, show the list. HabitList will show "No habits for today" if applicable.
+                <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
               )}
             </main>
-            <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto shrink-0">
-              {/* Copyright removed from here */}
-            </footer>
+            {/* Footer with copyright already removed */}
           </div>
         </ScrollArea>
         <BottomNavigationBar />

@@ -5,10 +5,9 @@ import * as React from 'react';
 import type { FC } from 'react';
 import { Card } from '@/components/ui/card';
 import { CheckCircle2, Circle, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, Flame } from 'lucide-react';
-// Progress component is no longer needed here
-import type { Habit, HabitCategory } from '@/types'; // WeekDay removed as currentWeekDays is no longer used directly for display
+import type { Habit, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
-import { calculateStreak } from '@/lib/dateUtils'; // WeekDayInfo removed
+import { calculateStreak } from '@/lib/dateUtils';
 import { parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -16,7 +15,6 @@ interface HabitItemProps {
   habit: Habit;
   onOpenDetailView: (habit: Habit) => void;
   todayString: string; // YYYY-MM-DD
-  // currentWeekDays prop is no longer used by this component for display
 }
 
 const getHabitTileIcon = (habit: Habit): React.ReactNode => {
@@ -42,10 +40,10 @@ const getHabitTileIcon = (habit: Habit): React.ReactNode => {
       case 'Social': return <Users className="h-6 w-6 text-pink-500" />;
       case 'Personal Growth': return <SparklesIcon className="h-6 w-6 text-yellow-500" />;
       case 'Lifestyle': return <LifestyleIcon className="h-6 w-6 text-teal-500" />;
-      default: return <ListChecks className="h-6 w-6" />; // Default color will be text-muted-foreground or text-primary based on completion
+      default: return <ListChecks className="h-6 w-6" />;
     }
   }
-  return <ListChecks className="h-6 w-6" />; // Default color will be text-muted-foreground or text-primary based on completion
+  return <ListChecks className="h-6 w-6" />;
 };
 
 const getCategoryTileColor = (category?: HabitCategory): string => {
@@ -69,26 +67,24 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
     console.error("Error calculating streak for habit item:", e);
   }
 
-  // Weekly progress calculation and display is removed from this component
-
   return (
     <Card
       onClick={() => {
         onOpenDetailView(habit);
       }}
       className={cn(
-        "cursor-pointer p-3 transition-all duration-200 ease-in-out hover:shadow-md active:scale-[0.98] rounded-xl flex flex-col justify-between min-h-[100px] sm:min-h-[110px]", // Adjusted min-height
+        "cursor-pointer p-3 transition-all duration-200 ease-in-out hover:shadow-md active:scale-[0.98] rounded-xl flex flex-col justify-between min-h-[100px] sm:min-h-[110px]", 
         isCompletedToday 
-          ? "opacity-75 bg-card shadow-sm" // Subtle styling for completed
-          : `bg-card border-l-2 ${categoryBorderColor} shadow`, // Styling for not completed
-        "hover:scale-[1.02]" // Slightly reduced hover scale
+          ? "opacity-75 bg-card shadow-sm" 
+          : `bg-card border-l-2 ${categoryBorderColor} shadow`, 
+        "hover:scale-[1.02]" 
       )}
     >
-      <div> {/* Wrapper for top content */}
+      <div> 
         <div className="flex items-start space-x-2 mb-1">
           <div className={cn(
             "flex-shrink-0 w-7 h-7 flex items-center justify-center mt-0.5",
-            isCompletedToday ? "text-muted-foreground" : "text-primary" // Icon color based on completion
+            isCompletedToday ? "text-muted-foreground" : "text-primary" 
           )}>
             {getHabitTileIcon(habit)}
           </div>
@@ -99,7 +95,6 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
             {habit.name}
           </h3>
         </div>
-        {/* Weekly progress bar and text removed */}
       </div>
       
       <div className="flex items-center justify-between mt-auto pt-1">
@@ -116,7 +111,7 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
         </div>
         <div>
           {isCompletedToday ? (
-            <CheckCircle2 className="h-5 w-5 text-muted-foreground" /> // Icon color unified for completed state
+            <CheckCircle2 className="h-5 w-5 text-muted-foreground" /> 
           ) : (
             <Circle className="h-5 w-5 text-muted-foreground/60" />
           )}
