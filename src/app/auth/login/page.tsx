@@ -16,7 +16,7 @@ import { GoogleIcon } from '@/components/ui/icons';
 import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, Lock } from 'lucide-react'; // Added Mail and Lock
 import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
@@ -73,12 +73,18 @@ const LoginPage: NextPage = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="m@example.com" {...register("email")} />
+              <div className="relative flex items-center">
+                <Mail className="absolute left-3 h-4 w-4 text-muted-foreground" />
+                <Input id="email" type="email" placeholder="m@example.com" {...register("email")} className="pl-10" />
+              </div>
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" {...register("password")} />
+              <div className="relative flex items-center">
+                <Lock className="absolute left-3 h-4 w-4 text-muted-foreground" />
+                <Input id="password" type="password" {...register("password")} className="pl-10" />
+              </div>
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={isEmailLoading}>
