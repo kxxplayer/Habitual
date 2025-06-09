@@ -26,6 +26,7 @@ const SettingsPage: NextPage = () => {
   const [isSigningOut, setIsSigningOut] = React.useState(false);
   const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission | null>(null);
   const [isAppImprovementDialogOpen, setIsAppImprovementDialogOpen] = React.useState(false);
+  const [triggerBellAnimation, setTriggerBellAnimation] = React.useState(false);
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -53,11 +54,21 @@ const SettingsPage: NextPage = () => {
       if (Notification.permission !== 'granted') {
         Notification.requestPermission().then(permission => {
           setNotificationPermission(permission);
+          if (permission === 'granted') {
+            setTriggerBellAnimation(true);
+          }
           console.log('Notification permission status:', permission);
         });
       }
     }
   };
+
+  React.useEffect(() => {
+    if (triggerBellAnimation) {
+      const timer = setTimeout(() => setTriggerBellAnimation(false), 500); // Corresponds to wiggle animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [triggerBellAnimation]);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -93,6 +104,11 @@ const SettingsPage: NextPage = () => {
       </div>
     );
   }
+
+  const getStatusText = () => {
+    if (!notificationPermission) return 'Checking...';
+    return notificationPermission.charAt(0).toUpperCase() + notificationPermission.slice(1);
+  };
 
   return (
     <>
@@ -158,13 +174,15 @@ const SettingsPage: NextPage = () => {
                     <Label className="text-sm font-medium flex items-center"><BellRing className="mr-2 h-4 w-4" />Reminders</Label>
                      <div className="flex items-center justify-between">
                         <div className="flex items-center text-xs">
-                            <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <Bell className={cn("mr-2 h-4 w-4 text-muted-foreground", { 'animate-wiggle-subtle': triggerBellAnimation })} />
                             <span>Notification Status:</span>
-                            <span className={cn("ml-1 font-semibold",
-                                notificationPermission === 'granted' ? 'text-green-600' :
-                                notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
+                            <span className={cn(
+                                "ml-1.5 inline-block px-2 py-0.5 rounded-full text-xs font-semibold",
+                                notificationPermission === 'granted' ? 'bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-300' :
+                                notificationPermission === 'denied' ? 'bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-300' :
+                                'bg-yellow-100 text-yellow-700 dark:bg-yellow-700/30 dark:text-yellow-300'
                             )}>
-                                {notificationPermission ? notificationPermission.charAt(0).toUpperCase() + notificationPermission.slice(1) : 'Checking...'}
+                                {getStatusText()}
                             </span>
                         </div>
                     </div>
