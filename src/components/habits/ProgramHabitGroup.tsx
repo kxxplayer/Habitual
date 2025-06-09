@@ -6,7 +6,7 @@ import type { FC } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import HabitItem from './HabitItem';
 import type { Habit, WeekDay } from '@/types';
-import { Layers, CheckCircle2, Circle } from 'lucide-react';
+import { Target, CheckCircle2, Circle } from 'lucide-react'; // Changed Layers to Target
 import { cn } from '@/lib/utils';
 
 interface ProgramHabitGroupProps {
@@ -38,7 +38,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   const allProgramTasksForTodayCompleted = habitsScheduledToday.length > 0 && completedTodayCount === habitsScheduledToday.length;
 
   if (habitsInProgram.length === 0) {
-    return null; // Don't render if no habits in program (shouldn't happen with current logic)
+    return null; 
   }
 
   return (
@@ -47,7 +47,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
         <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 transition-colors w-full">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center space-x-2">
-              <Layers className={cn("h-5 w-5", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} />
+              <Target className={cn("h-5 w-5", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} /> 
               <span className={cn("font-semibold text-md", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
                 {programName}
               </span>
@@ -87,5 +87,3 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
 };
 
 export default ProgramHabitGroup;
-
-    
