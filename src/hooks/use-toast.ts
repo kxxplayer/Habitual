@@ -9,7 +9,7 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 0 // Changed from 1 to 0 to disable toasts
+const TOAST_LIMIT = 3 // Changed from 0 to 3 to allow up to 3 toasts
 const TOAST_REMOVE_DELAY = 5000 
 
 type ToasterToast = ToastProps & {
@@ -79,7 +79,7 @@ export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
       // Clear existing timeouts for any toasts that will be removed by TOAST_LIMIT
-      if (state.toasts.length >= TOAST_LIMIT && TOAST_LIMIT > 0) { // Added check for TOAST_LIMIT > 0
+      if (state.toasts.length >= TOAST_LIMIT && TOAST_LIMIT > 0) {
         state.toasts.slice(TOAST_LIMIT - 1).forEach(t => {
           if (toastTimeouts.has(t.id)) {
             clearTimeout(toastTimeouts.get(t.id));
@@ -87,7 +87,6 @@ export const reducer = (state: State, action: Action): State => {
           }
         });
       }
-      // If TOAST_LIMIT is 0, this will always result in an empty toasts array.
       return {
         ...state,
         toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
@@ -161,21 +160,12 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
-  if (TOAST_LIMIT === 0) {
-    // If limit is 0, do nothing visible and return dummy functions
-    return {
-      id: genId(), // Still generate an ID for consistency if anything expects it
-      dismiss: () => {},
-      update: (newProps: Partial<ToasterToast>) => {}, // Provide a typed dummy update
-    };
-  }
-
   const id = genId()
 
-  const update = (newProps: Partial<ToasterToast>) => // Typed newProps
+  const update = (newProps: Partial<ToasterToast>) =>
     dispatch({
       type: "UPDATE_TOAST",
-      toast: { ...newProps, id }, // Spread newProps
+      toast: { ...newProps, id },
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
@@ -191,9 +181,8 @@ function toast({ ...props }: Toast) {
     },
   })
 
-  // Add to remove queue only if the toast might have been added (TOAST_LIMIT > 0)
-  // and it's not an indefinite toast.
-  if (TOAST_LIMIT > 0 && (props.duration === undefined || props.duration === null || props.duration > 0)) {
+  // Add to remove queue if not an indefinite toast.
+  if (props.duration === undefined || props.duration === null || props.duration > 0) {
      addToRemoveQueue(id);
   }
 
