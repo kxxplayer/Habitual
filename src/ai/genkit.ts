@@ -30,9 +30,8 @@ export const ai = genkit({
     googleAI(), // googleAI plugin is active
   ],
   enableTracing: false, // Keep tracing disabled
-  // Optional: Configure log level for Genkit
-  // logLevel: 'debug', // Can be 'info', 'warn', 'error', 'debug'
+  logLevel: 'debug', // Enabled debug logging
 });
-console.log('[Genkit Init] Genkit object initialized. enableTracing is false.');
+console.log('[Genkit Init] Genkit object initialized. enableTracing is false. logLevel is debug.');
 console.log('[Genkit Init] End of src/ai/genkit.ts execution.');
 
