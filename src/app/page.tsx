@@ -805,22 +805,15 @@ const HabitualPageContent: React.FC = () => {
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
             <main className="px-3 sm:px-4 py-4 flex-grow">
-              {habits.length > 0 && !allTodayTasksDone && (
+              {habits.length > 0 && !allTodayTasksDone && todayString && todayAbbr && !isLoadingData && (
                 <div className="mb-4 flex justify-center">
                   <Button onClick={handleMarkAllTodayDone} variant={"default"} className="w-full max-w-xs">
                     <ListChecks className="mr-2 h-4 w-4" /> Mark All Today Done
                   </Button>
                 </div>
               )}
-              {habits.length > 0 && allTodayTasksDone && (
-                <div className="mb-4 flex justify-center">
-                   <Button disabled variant="outline" className="w-full max-w-xs">
-                      <ListChecks className="mr-2 h-4 w-4" /> All Done for Today!
-                  </Button>
-                </div>
-              )}
-
-              {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && (
+              
+              {!isLoadingCommonSuggestions && habits.length === 0 && commonHabitSuggestions.length > 0 && !isLoadingData && (
                 <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
                   <div className="px-2 pt-0"><h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
                     <p className="text-xs text-muted-foreground mb-1.5">
@@ -843,9 +836,17 @@ const HabitualPageContent: React.FC = () => {
                   </div>
                 </div>
               )}
-              {isLoadingCommonSuggestions && habits.length === 0 && (<div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading suggestions...</p></div> )}
+              {isLoadingCommonSuggestions && habits.length === 0 && !isLoadingData && (<div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading suggestions...</p></div> )}
 
-              <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
+              {allTodayTasksDone && habits.length > 0 && !isLoadingData ? (
+                <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
+                  <CheckCircle2 className="mx-auto h-16 w-16 text-accent mb-4" />
+                  <h3 className="text-xl font-semibold text-primary">All Done for Today!</h3>
+                  <p className="text-muted-foreground">Great job completing all your tasks. Enjoy your success!</p>
+                </div>
+              ) : (
+                !isLoadingData && <HabitList habits={habits} onOpenDetailView={handleOpenDetailView} todayString={todayString} todayAbbr={todayAbbr} />
+              )}
             </main>
             <footer className="py-3 text-center text-xs text-muted-foreground border-t mt-auto shrink-0">
               <p>&copy; {new Date().getFullYear()} Habitual.</p>
