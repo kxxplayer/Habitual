@@ -175,7 +175,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[600px] bg-card rounded-lg shadow-xl flex flex-col max-h-[90vh]">
-        <DialogHeader className="shrink-0">
+        <DialogHeader className="shrink-0 p-4 pb-2">
           <DialogTitle className="text-2xl font-semibold flex items-center">
             {isEditing ? <Edit3 className="mr-2 h-6 w-6 text-primary" /> : <PlusCircle className="mr-2 h-6 w-6 text-primary" />}
             {isEditing ? "Edit Habit" : (currentStep === 1 ? "Create New Habit: Step 1" : "Create New Habit: Step 2")}
@@ -184,7 +184,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
             {isEditing ? "Modify the details of your habit." : (currentStep === 1 ? "Describe your new habit, or create a program from a goal." : "Refine the details for your new habit.")}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmitDialog)} className="flex flex-col flex-grow min-h-0 space-y-3 p-1 pt-2">
+        <form onSubmit={handleSubmit(onSubmitDialog)} className="flex flex-col flex-grow min-h-0 space-y-3 px-4 pt-2">
           {currentStep === 1 && !isEditing && (
             <div className="space-y-3 flex-grow flex flex-col justify-center">
               <div className="space-y-1">
@@ -220,8 +220,8 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
           )}
 
           {currentStep === 2 && (
-            <ScrollArea className="flex-grow min-h-0">
-              <div className="space-y-4 pr-4"> {/* Added pr-4 for scrollbar */}
+            <ScrollArea className="flex-grow min-h-0 -mx-1">
+              <div className="space-y-4 px-1 pr-3"> {/* Added pr-3 for scrollbar */}
                 { !isEditing && (
                   <Button type="button" onClick={() => setCurrentStep(1)} variant="ghost" size="sm" className="text-xs text-muted-foreground mb-2 px-1">
                     &larr; Back to Description
@@ -288,7 +288,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
               </div>
             </ScrollArea>
           )}
-          <DialogFooter className="pt-4 shrink-0">
+          <DialogFooter className="pt-4 shrink-0 px-0 pb-2">
             <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>Cancel</Button></DialogClose>
             {currentStep === 2 && (
               <Button type="submit" disabled={isSubmitting || isAISuggesting}>
@@ -303,6 +303,8 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   );
 };
 export default CreateHabitDialog;
+    
+
     
 
     
