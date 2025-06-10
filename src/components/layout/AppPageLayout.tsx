@@ -15,9 +15,9 @@ const AppPageLayout: FC<AppPageLayoutProps> = ({ children, onAddNew }) => {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader />
-      <div className="flex-grow w-full max-w-lg mx-auto flex flex-col">
+      <div className="flex-grow w-full max-w-2xl mx-auto flex flex-col">
         <ScrollArea className="flex-grow">
-          <main className="px-4 py-6">
+          <main className="px-4 sm:px-6 py-6">
             {children}
           </main>
         </ScrollArea>
