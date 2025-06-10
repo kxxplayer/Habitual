@@ -52,11 +52,12 @@ const LoginPage: NextPage = () => {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
+      console.log("Attempting Google Sign-In from hostname:", window.location.hostname);
       await signInWithPopup(auth, provider);
       console.log("Google Login Successful!");
       router.push('/');
     } catch (error: any) {
-      console.error("Google Sign-In Failed:", error.message || "Could not sign in with Google.");
+      console.error("Google Sign-In Failed for hostname:", window.location.hostname, "Error message:", error.message || "Could not sign in with Google.", "Full error:", error);
     } finally {
       setIsGoogleLoading(false);
     }
