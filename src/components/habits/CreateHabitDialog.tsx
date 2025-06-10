@@ -164,9 +164,8 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   const onSubmitDialog = (data: CreateHabitFormData) => {
     const dataToSave = isEditing && initialData?.id ? { ...data, id: initialData.id } : data;
     onSaveHabit(dataToSave);
-
   };
-
+  
   const handleOpenProgramDialog = () => {
     onClose(); 
     onOpenGoalProgramDialog(); 
@@ -184,6 +183,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
             {isEditing ? "Modify the details of your habit." : (currentStep === 1 ? "Describe your new habit, or create a program from a goal." : "Refine the details for your new habit.")}
           </DialogDescription>
         </DialogHeader>
+
         <form onSubmit={handleSubmit(onSubmitDialog)} className="flex flex-col flex-grow min-h-0 space-y-3 px-4 pt-2">
           {currentStep === 1 && !isEditing && (
             <div className="space-y-3 flex-grow flex flex-col justify-center">
@@ -221,7 +221,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
 
           {currentStep === 2 && (
             <ScrollArea className="flex-grow min-h-0 -mx-1">
-              <div className="space-y-4 px-1 pr-3"> {/* Added pr-3 for scrollbar */}
+              <div className="space-y-4 px-1 pr-3 pb-2"> {/* Added pb-2 for bottom padding within scroll */}
                 { !isEditing && (
                   <Button type="button" onClick={() => setCurrentStep(1)} variant="ghost" size="sm" className="text-xs text-muted-foreground mb-2 px-1">
                     &larr; Back to Description
@@ -281,13 +281,14 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                   <Label htmlFor="dialog-habit-optimalTiming" className="text-sm font-medium flex items-center"><CalendarClock className="mr-1.5 h-4 w-4 text-muted-foreground" />Optimal General Timing (Optional)</Label>
                   <Controller name="optimalTiming" control={control} render={({ field }) => <Input id="dialog-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50 text-sm"/>} />
                 </div>
-                 <div className={cn("space-y-1 pb-2", isEditing ? "hidden" : "")}>
+                 <div className={cn("space-y-1", isEditing ? "hidden" : "")}>
                   <Label htmlFor="dialog-final-description" className="text-sm font-medium">Description (Optional)</Label>
                   <Controller name="description" control={control} render={({ field }) => <Textarea id="dialog-final-description" placeholder="Detailed description of the habit" {...field} className="bg-input/50 text-sm" rows={2}/>} />
                 </div>
               </div>
             </ScrollArea>
           )}
+          
           <DialogFooter className="pt-4 shrink-0 px-0 pb-2">
             <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>Cancel</Button></DialogClose>
             {currentStep === 2 && (
@@ -303,8 +304,5 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   );
 };
 export default CreateHabitDialog;
-    
-
-    
 
     
