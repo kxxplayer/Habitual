@@ -7,7 +7,7 @@ import type { FC } from 'react';
 import type { Habit } from '@/types';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { Check, Flame, Repeat, Info, Trash2, Edit, CalendarPlus, X } from 'lucide-react';
+import { Check, Flame, Trash2, Edit, CalendarPlus } from 'lucide-react';
 import { getHabitIcon } from '@/lib/getHabitIcon';
 import { Badge } from '@/components/ui/badge';
 
@@ -44,22 +44,22 @@ const HabitItem: FC<HabitItemProps> = ({
   };
 
   const handleToggleComplete = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Stop event from bubbling up to the card
     onToggleComplete(habit.id, currentDate);
   };
   
   const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Stop event from bubbling up to the card
     onDelete(habit.id);
   };
   
   const handleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Stop event from bubbling up to the card
     onEdit(habit);
   };
   
   const handleReschedule = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Stop event from bubbling up to the card
     onReschedule(habit);
   };
 
