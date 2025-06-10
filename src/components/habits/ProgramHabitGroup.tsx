@@ -46,23 +46,23 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
 
   return (
     <Accordion type="single" collapsible className="w-full" defaultValue={`program-${programId}`}>
-      <AccordionItem value={`program-${programId}`} className="border border-border rounded-lg shadow-md overflow-hidden bg-card">
+      <AccordionItem value={`program-${programId}`} className="border border-primary/20 rounded-lg shadow-md overflow-hidden bg-card/80">
         <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 transition-colors w-full">
           <div className="flex flex-col w-full space-y-1.5">
             <div className="flex items-center justify-between w-full">
-              <div className="flex items-center space-x-2">
-                <Target className={cn("h-5 w-5", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} /> 
-                <span className={cn("font-semibold text-md text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
+              <div className="flex items-center space-x-3">
+                <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} /> 
+                <span className={cn("font-semibold text-lg text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
                   {programName}
                 </span>
               </div>
-              <div className="flex items-center space-x-1 text-xs">
+              <div className="flex items-center space-x-1.5 text-xs">
                 {allProgramTasksForTodayCompleted ? 
                   <CheckCircle2 className="h-4 w-4 text-accent" /> : 
                   <Circle className={cn("h-3.5 w-3.5", habitsScheduledToday.length > 0 ? "text-orange-500" : "text-muted-foreground/60")} />
                 }
                 {habitsScheduledToday.length > 0 ? (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-700/30 dark:text-amber-200">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-700/30 dark:text-amber-200">
                     {`${completedTodayCount}/${habitsScheduledToday.length} today`}
                   </span>
                 ) : (
@@ -73,7 +73,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
             {habitsScheduledToday.length > 0 && (
               <Progress 
                 value={progressPercentToday} 
-                className="h-1.5 w-full" 
+                className="h-1.5 w-full mt-1" 
                 indicatorClassName={allProgramTasksForTodayCompleted ? "bg-accent" : "bg-primary"}
               />
             )}

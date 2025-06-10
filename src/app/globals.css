@@ -1,14 +1,13 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --radius: 1rem; /* Updated from 0.75rem to 1rem (16px) */
+    --radius: 1rem;
   }
 
-  /* Default Theme: Calm Blue (Modified for softer palette) */
+  /* Enhanced Theme: Calm Blue (More Vibrant) */
   .theme-calm-blue {
     --background: 210 40% 98%;
     --foreground: 210 20% 20%;
@@ -16,13 +15,13 @@
     --card-foreground: 210 20% 20%;
     --popover: 0 0% 100%;
     --popover-foreground: 210 20% 20%;
-    --primary: 180 45% 55%; /* Muted Teal */
-    --primary-foreground: 0 0% 100%; /* White */
+    --primary: 190 60% 45%; /* Brighter, more saturated Teal/Blue */
+    --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 94%;
     --secondary-foreground: 210 10% 40%;
     --muted: 210 40% 90%;
     --muted-foreground: 210 10% 55%;
-    --accent: 145 55% 60%; /* Softer Green */
+    --accent: 145 65% 55%; /* More vibrant Green */
     --accent-foreground: 0 0% 10%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
@@ -30,15 +29,16 @@
     --destructive-soft-foreground: 0 0% 98%;
     --destructive-soft-hover-background: 0 100% 60%;
     --border: 210 20% 88%;
-    --input: 210 20% 88%;
-    --ring: 180 45% 55%;
-    --chart-1: 180 45% 55%;
-    --chart-2: 145 55% 60%;
-    --chart-3: 220 50% 70%;
-    --chart-4: 45 60% 75%;
-    --chart-5: 280 50% 75%;
+    --input: 210 30% 96%;
+    --ring: 190 60% 45%;
+    --chart-1: 190 60% 45%;
+    --chart-2: 145 65% 55%;
+    --chart-3: 220 60% 70%;
+    --chart-4: 45 70% 75%;
+    --chart-5: 280 60% 75%;
   }
 
+  /* Other themes remain as they were... */
   .theme-vibrant-purple {
     --background: 248 30% 12%;
     --foreground: 220 15% 95%;
@@ -133,10 +133,10 @@
     @apply border-border;
   }
   body {
-    @apply text-foreground;
-    background: linear-gradient(to bottom, #f2fcf1, #ffffff);
-    letter-spacing: 0.01em; /* Added subtle letter spacing */
-    line-height: 1.6; /* Adjusted line height */
+    @apply bg-background text-foreground;
+    background-image: linear-gradient(to bottom, hsl(var(--secondary)) 0%, hsl(var(--background)) 20%);
+    letter-spacing: 0.01em;
+    line-height: 1.6;
   }
 }
 
@@ -149,8 +149,8 @@
 
 .sparkle {
   position: absolute;
-  width: 5px; /* Smaller particles */
-  height: 5px; /* Smaller particles */
+  width: 5px;
+  height: 5px;
   background-color: hsl(var(--accent));
   border-radius: 50%;
   opacity: 0;
@@ -214,7 +214,7 @@
 
 @keyframes button-pop-effect {
   0% { transform: scale(1); }
-  50% { transform: scale(1.15); }
+  50% { transform: scale(1.05); } /* Reduced scale for subtlety */
   100% { transform: scale(1); }
 }
 

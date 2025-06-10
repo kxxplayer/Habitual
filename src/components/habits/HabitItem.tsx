@@ -11,15 +11,17 @@ export interface HabitItemProps {
   todayString: string;
 }
 
+// A more representative icon getter function for the list view
 const getHabitListIcon = (habit: Habit): React.ReactNode => {
-  const nameLower = habit.name.toLowerCase();
-  if (nameLower.includes('sql') || nameLower.includes('code')) return <span className="text-lg">💻</span>;
-  if (nameLower.includes('gym') || nameLower.includes('workout')) return <span className="text-lg">🏋️</span>;
-  if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-lg">📚</span>;
-  if (nameLower.includes('meditate')) return <span className="text-lg">🧘</span>;
-  if (habit.programId) return <Target className="h-4 w-4 text-primary/80" />;
-  return <Circle className="h-4 w-4 text-primary/80" />;
+    const nameLower = habit.name.toLowerCase();
+    if (nameLower.includes('sql') || nameLower.includes('code')) return <span className="text-lg">💻</span>;
+    if (nameLower.includes('gym') || nameLower.includes('workout')) return <span className="text-lg">🏋️</span>;
+    if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-lg">📚</span>;
+    if (nameLower.includes('meditate')) return <span className="text-lg">🧘</span>;
+    if (habit.programId) return <Target className="h-4 w-4 text-primary/80" />;
+    return <Circle className="h-4 w-4 text-primary/80" />;
 };
+
 
 const HabitItem: FC<HabitItemProps> = ({ habit, todayString }) => {
   const logForToday = habit.completionLog.find(log => log.date === todayString);
@@ -39,8 +41,8 @@ const HabitItem: FC<HabitItemProps> = ({ habit, todayString }) => {
     <div
       style={cardStyle}
       className={cn(
-        "flex items-center justify-between p-3 rounded-lg border shadow-sm transition-all duration-200 ease-in-out",
-        isCompleted && "bg-accent/10"
+        "flex items-center justify-between p-3 rounded-lg border shadow-sm transition-all duration-200 ease-in-out hover:shadow-md hover:bg-accent/10 hover:scale-[1.02]",
+        isCompleted ? "bg-accent/10" : "bg-card"
       )}
     >
       <div className="flex items-center space-x-3 overflow-hidden">
