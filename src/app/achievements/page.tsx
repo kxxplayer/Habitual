@@ -1,24 +1,20 @@
-
 "use client";
 
 import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
-import { auth, db } from '@/lib/firebase'; // Added db
-import { doc, onSnapshot } from 'firebase/firestore'; // Firestore imports
+import { auth, db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { EarnedBadge } from '@/types';
-import AppHeader from '@/components/layout/AppHeader';
-import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import AppPageLayout from '@/components/layout/AppPageLayout';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Loader2, Trophy } from 'lucide-react';
-import { format, parseISO } from 'date-fns'; // Added parseISO
+import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 
-// Firestore constants
 const USER_DATA_COLLECTION = "users";
 const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
@@ -47,7 +43,7 @@ const AchievementsPage: NextPage = () => {
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth) {
-       if (!authUser && !isLoadingAuth) { // No user, auth check complete
+       if (!authUser && !isLoadingAuth) {
         setIsLoadingData(false);
       }
       return;
@@ -59,27 +55,15 @@ const AchievementsPage: NextPage = () => {
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const badgesFromDb = Array.isArray(data.earnedBadges) ? data.earnedBadges : [];
-        // Ensure dateAchieved is a valid date string before parsing for robust display
-        const parsedBadges = badgesFromDb.map(b => {
-          let dateAchieved = b.dateAchieved || new Date().toISOString(); // Fallback to today if missing
-          try {
-            parseISO(dateAchieved); // Test if it's a valid ISO string
-          } catch (e) {
-            console.warn(`Invalid dateAchieved '${b.dateAchieved}' for badge '${b.name}', falling back to current date.`);
-            dateAchieved = new Date().toISOString();
-          }
-          return { ...b, dateAchieved };
-        });
-        setEarnedBadges(parsedBadges);
+        const badgesFromDb: EarnedBadge[] = Array.isArray(data.earnedBadges) ? data.earnedBadges : [];
+        setEarnedBadges(badgesFromDb.sort((a, b) => new Date(b.dateAchieved).getTime() - new Date(a.dateAchieved).getTime()));
       } else {
         setEarnedBadges([]);
       }
       setIsLoadingData(false);
     }, (error) => {
-      console.error("Error fetching achievements data from Firestore:", error);
-      toast({ title: "Data Error", description: "Could not load achievements data.", variant: "destructive" });
-      setEarnedBadges([]);
+      console.error("Error fetching achievements data:", error);
+      toast({ title: "Data Error", description: "Could not load achievements.", variant: "destructive" });
       setIsLoadingData(false);
     });
 
@@ -89,87 +73,63 @@ const AchievementsPage: NextPage = () => {
 
   const formatDateSafe = (dateString: string) => {
     try {
-      // Attempt to parse assuming it might be YYYY-MM-DD or full ISO
       const dateObj = parseISO(dateString);
       return format(dateObj, "MMMM d, yyyy");
     } catch (e) {
-      // If it fails, try to format it directly if it's already a simple format like 'yyyy-MM-dd'
-      // or if it's some other format that format() can handle (less likely for consistency)
-      try {
-          return format(new Date(dateString), "MMMM d, yyyy");
-      } catch (e2) {
-          console.warn(`Could not format date string: ${dateString}`, e2);
-          return "Date unavailable"; // Fallback for unparseable dates
-      }
+      return "Date unavailable";
     }
   };
 
 
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading achievements...</p>
       </div>
     );
   }
 
-  if (!authUser) {
-     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
-        <p className="text-muted-foreground">Redirecting to login...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
-      <div className={cn(
-        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-sm h-[97vh] max-h-[97vh]",
-        "md:max-w-md",                   
-        "lg:max-w-lg"                     
-      )}>
-        <AppHeader />
-        <ScrollArea className="flex-grow min-h-0">
-          <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4 flex-grow">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-xl font-bold text-primary flex items-center">
-                    <Trophy className="mr-2 h-5 w-5 text-yellow-500" /> Achievements
-                  </CardTitle>
-                   <CardDescription>Your collection of earned badges.</CardDescription>
-                </CardHeader>
-                <CardContent className={cn(
-                  "pt-2 space-y-3",
-                  earnedBadges.length === 0 && "min-h-[150px] flex items-center justify-center"
-                )}>
-                  {earnedBadges.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-4">No badges earned yet. Keep up the great work!</p>
-                  ) : (
-                    earnedBadges.map((badge) => (
-                      <div key={badge.id} className="p-3 border rounded-md bg-card shadow-sm">
-                        <div className="flex items-center mb-1">
-                          <span className="text-2xl mr-2">{badge.icon || "🏆"}</span>
-                          <h4 className="font-semibold text-primary">{badge.name}</h4>
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-1">{badge.description}</p>
-                        <p className="text-xs text-muted-foreground">Achieved: {formatDateSafe(badge.dateAchieved)}</p>
-                      </div>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-            </main>
-            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0 mt-auto">
-              <p>&copy; {new Date().getFullYear()} Habitual.</p>
-            </footer>
-          </div>
-        </ScrollArea>
-        <BottomNavigationBar />
-      </div>
-    </div>
+    <AppPageLayout>
+        <div className="flex items-center mb-6">
+            <Trophy className="mr-3 h-8 w-8 text-yellow-500" />
+            <div>
+                <h2 className="text-3xl font-bold tracking-tight">Achievements</h2>
+                <p className="text-muted-foreground">Your collection of earned badges.</p>
+            </div>
+        </div>
+        
+        {earnedBadges.length === 0 ? (
+            <div className="text-center py-10 min-h-[200px] flex flex-col items-center justify-center bg-card/50 rounded-lg animate-card-fade-in">
+              <Trophy className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
+              <h3 className="text-lg font-semibold text-foreground">No Badges Yet</h3>
+              <p className="text-sm text-muted-foreground">Keep completing habits to earn them!</p>
+            </div>
+        ) : (
+            <div className="space-y-4">
+                {earnedBadges.map((badge, index) => (
+                    <Card 
+                        key={badge.id} 
+                        className="animate-list-item-fade-in"
+                        style={{ animationDelay: `${index * 75}ms` }}
+                    >
+                        <CardContent className="p-4 flex items-center space-x-4">
+                            <span className="text-4xl">{badge.icon || "🏆"}</span>
+                            <div className="flex-grow">
+                                <h4 className="font-semibold text-primary">{badge.name}</h4>
+                                <p className="text-sm text-muted-foreground">{badge.description}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                                <p className="text-xs font-semibold text-muted-foreground">Achieved</p>
+                                <p className="text-xs text-muted-foreground">{formatDateSafe(badge.dateAchieved)}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        )}
+    </AppPageLayout>
   );
 };
 

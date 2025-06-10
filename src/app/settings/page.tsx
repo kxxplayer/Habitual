@@ -1,5 +1,3 @@
-// src/app/settings/page.tsx
-
 "use client";
 
 import * as React from 'react';
@@ -8,17 +6,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { signOut, type User, onAuthStateChanged } from 'firebase/auth';
-import AppHeader from '@/components/layout/AppHeader';
-import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import AppPageLayout from '@/components/layout/AppPageLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-// Removed BrainCircuit icon as it's no longer used for the AI App Advisor button
-import { Loader2, UserCircle, CalendarDays, BellRing, Palette, Bell, Settings as SettingsIcon, LogOut } from 'lucide-react'; 
-import { cn } from '@/lib/utils';
+import { Loader2, UserCircle, CalendarDays, Palette, BellRing, Settings as SettingsIcon, LogOut } from 'lucide-react'; 
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
 import { Label } from '@/components/ui/label';
-// Removed import for AppImprovementDialog
 import { Separator } from '@/components/ui/separator';
 
 const SettingsPage: NextPage = () => {
@@ -26,9 +19,6 @@ const SettingsPage: NextPage = () => {
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
-  const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission | null>(null);
-  // Removed state for AI App Improvement Dialog
-  const [triggerBellAnimation, setTriggerBellAnimation] = React.useState(false);
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -43,40 +33,10 @@ const SettingsPage: NextPage = () => {
     return () => unsubscribe();
   }, [router]);
 
-  React.useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    } else {
-      setNotificationPermission('denied');
-    }
-  }, []);
-
-  const handleRequestNotificationPermission = () => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission !== 'granted') {
-        Notification.requestPermission().then(permission => {
-          setNotificationPermission(permission);
-          if (permission === 'granted') {
-            setTriggerBellAnimation(true);
-          }
-          console.log('Notification permission status:', permission);
-        });
-      }
-    }
-  };
-
-  React.useEffect(() => {
-    if (triggerBellAnimation) {
-      const timer = setTimeout(() => setTriggerBellAnimation(false), 500); // Corresponds to wiggle animation duration
-      return () => clearTimeout(timer);
-    }
-  }, [triggerBellAnimation]);
-
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
       await signOut(auth);
-      console.log("Signed Out from Settings");
       router.push('/auth/login');
     } catch (error: any) {
       console.error("Sign Out Failed:", error.message || "Could not sign out.");
@@ -90,119 +50,75 @@ const SettingsPage: NextPage = () => {
     { href: '/calendar', label: 'Calendar View', icon: CalendarDays },
   ];
 
-  if (isLoadingAuth) {
+  if (isLoadingAuth || !authUser) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4 h-[97vh]">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading settings...</p>
       </div>
     );
   }
 
-  if (!authUser) {
-    return (
-       <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4 h-[97vh]">
-        <p className="text-muted-foreground">Redirecting to login...</p>
-      </div>
-    );
-  }
-
-  const getStatusText = () => {
-    if (!notificationPermission) return 'Checking...';
-    return notificationPermission.charAt(0).toUpperCase() + notificationPermission.slice(1);
-  };
-
   return (
-    <>
-    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4 h-[97vh]">
-      <div className={cn(
-        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto h-full",
-        "w-full max-w-sm",     
-        "md:max-w-md",                   
-        "lg:max-w-lg"                     
-      )}>
-        <AppHeader />
-        <ScrollArea className="flex-grow min-h-0">
-          <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4 flex-grow">
-              <div className="flex items-center mb-4">
-                <SettingsIcon className="mr-3 h-6 w-6 text-primary" />
-                <div>
-                  <h2 className="text-2xl font-bold text-primary">Settings</h2>
-                  <p className="text-sm text-muted-foreground">Manage preferences and account.</p>
-                </div>
-              </div>
+    <AppPageLayout>
+        <div className="flex items-center mb-6">
+            <SettingsIcon className="mr-3 h-8 w-8 text-primary" />
+            <div>
+                <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+                <p className="text-muted-foreground">Manage preferences and account.</p>
+            </div>
+        </div>
 
-              <Card className="mb-4 shadow-md rounded-lg">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-base font-semibold text-primary">Account &amp; Data</CardTitle>
+        <div className="space-y-6">
+            <Card className="animate-card-fade-in" style={{ animationDelay: '100ms' }}>
+                <CardHeader>
+                    <CardTitle className="text-lg">Account</CardTitle>
+                    <CardDescription>Manage your profile and linked data.</CardDescription>
                 </CardHeader>
-                <CardContent className="p-4 pt-2 space-y-3">
-                  {accountSettingsItems.map((item) => (
-                    <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
-                      <Button variant="outline" className="w-full justify-start text-sm py-2 h-auto">
-                        <item.icon className="mr-2 h-4 w-4" />
-                        {item.label}
-                      </Button>
-                    </Link>
-                  ))}
-                  <Separator className="my-2" />
-                  <Button onClick={handleSignOut} variant="destructive-soft" className="w-full text-sm py-2 h-auto" disabled={isSigningOut}>
-                    {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-                    Sign Out
-                  </Button>
+                <CardContent className="space-y-3">
+                    {accountSettingsItems.map((item) => (
+                        <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
+                            <Button variant="outline" className="w-full justify-start text-base py-6">
+                                <item.icon className="mr-3 h-5 w-5" />
+                                {item.label}
+                            </Button>
+                        </Link>
+                    ))}
+                    <Separator className="my-4" />
+                    <Button onClick={handleSignOut} variant="destructive" className="w-full text-base py-6" disabled={isSigningOut}>
+                        {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
+                        Sign Out
+                    </Button>
                 </CardContent>
-              </Card>
+            </Card>
 
-              <Card className="mb-4 shadow-md rounded-lg">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-base font-semibold text-primary">App Preferences</CardTitle>
+            <Card className="animate-card-fade-in" style={{ animationDelay: '200ms' }}>
+                <CardHeader>
+                    <CardTitle className="text-lg">App Preferences</CardTitle>
+                    <CardDescription>Customize the look and feel of Habitual.</CardDescription>
                 </CardHeader>
-                <CardContent className="p-4 pt-2 space-y-3">
-                  {/* Removed AI App Advisor Button */}
-                  <div className="p-3 border rounded-md space-y-1.5 bg-background shadow-sm">
-                    <Label className="text-sm font-medium flex items-center"><Palette className="mr-2 h-4 w-4" />Change Theme</Label>
-                    <ThemeToggleButton />
-                    <p className="text-xs text-muted-foreground">Cycle through available app themes.</p>
-                  </div>
-                  <div className="p-3 border rounded-md space-y-1.5 bg-background shadow-sm">
-                    <Label className="text-sm font-medium flex items-center"><BellRing className="mr-2 h-4 w-4" />Reminders</Label>
-                     <div className="flex items-center justify-between">
-                        <div className="flex items-center text-xs">
-                            <Bell className={cn("mr-2 h-4 w-4 text-muted-foreground", { 'animate-wiggle-subtle': triggerBellAnimation })} />
-                            <span>Notification Status:</span>
-                            <span className={cn(
-                                "ml-1.5 inline-block px-2 py-0.5 rounded-full text-xs font-semibold",
-                                notificationPermission === 'granted' ? 'bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-300' :
-                                notificationPermission === 'denied' ? 'bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-300' :
-                                'bg-yellow-100 text-yellow-700 dark:bg-yellow-700/30 dark:text-yellow-300'
-                            )}>
-                                {getStatusText()}
-                            </span>
+                <CardContent className="space-y-4">
+                    <div className="p-4 border rounded-lg flex items-center justify-between">
+                        <div className="flex items-center">
+                            <Palette className="mr-3 h-5 w-5 text-muted-foreground" />
+                            <Label className="text-base font-medium">App Theme</Label>
                         </div>
+                        <ThemeToggleButton />
                     </div>
-                    {(notificationPermission === 'default' || notificationPermission === 'denied') && (
-                        <Button size="sm" variant="outline" onClick={handleRequestNotificationPermission} className="w-full text-xs h-8">
-                            Enable Notifications
-                        </Button>
-                    )}
-                    {notificationPermission === 'denied' && <p className="text-xs text-muted-foreground mt-1">Notifications are blocked. Please enable them in your browser settings.</p>}
-                    {notificationPermission === 'granted' && <p className="text-xs text-muted-foreground mt-1">Reminders can be set per habit.</p>}
-                  </div>
+                     <div className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                               <BellRing className="mr-3 h-5 w-5 text-muted-foreground" />
+                               <Label className="text-base font-medium">Reminders</Label>
+                            </div>
+                            <Button size="sm" variant="outline" disabled>Manage</Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2 pl-8">Habit-specific reminders are coming soon!</p>
+                    </div>
                 </CardContent>
-              </Card>
-
-            </main>
-            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0 mt-auto">
-              <p>&copy; {new Date().getFullYear()} Habitual.</p>
-            </footer>
-          </div>
-        </ScrollArea>
-        <BottomNavigationBar />
-      </div>
-    </div>
-    {/* Removed AppImprovementDialog */}
-    </>
+            </Card>
+        </div>
+    </AppPageLayout>
   );
 };
 
