@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { FC } from 'react';
@@ -16,7 +15,7 @@ import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, XCircle, T
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import type { Habit, CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
-// import { useToast } from '@/hooks/use-toast'; // Commented out
+import { useToast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -63,7 +62,7 @@ const normalizeDay = (day: string): WeekDay | undefined => {
 
 const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onCloseForm, initialData }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
-  // const { toast } = useToast(); // Commented out
+  const { toast } = useToast();
 
   const {
     control,
@@ -108,7 +107,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
         durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
         specificTime: initialData.specificTime || '',
       });
-    } else if (!initialData) { // Ensure form resets if initialData becomes null (e.g., manual add after suggested)
+    } else if (!initialData) {
         reset({
             description: '',
             name: '',
@@ -126,11 +125,12 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
   const handleAISuggestDetails = async () => {
     const currentDescription = habitDescriptionForAI || "";
     if (currentDescription.trim() === "") {
-      console.error("No Description Provided for AI suggestion.");
+      toast({ title: "Input Missing", description: "Please describe your habit first.", variant: "destructive" });
       return;
     }
     setIsAISuggesting(true);
     try {
+      // Corrected: Use the correct AI flow for creating from description
       const result = await createHabitFromDescription({ description: currentDescription });
       setValue('name', result.habitName || '');
       
@@ -159,10 +159,10 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       } else {
         setValue('specificTime', result.specificTime || '');
       }
-      console.log("AI Suggestion Applied");
+      toast({ title: "AI Suggestion Applied!", description: "The details have been filled in for you."});
     } catch (error) {
       console.error("AI suggestion error:", error);
-      console.error("AI Suggestion Failed: Could not get suggestions from AI.");
+      toast({ title: "AI Suggestion Failed", description: "Could not get suggestions from AI. Please fill manually or try again.", variant: "destructive" });
     } finally {
       setIsAISuggesting(false);
     }
@@ -346,4 +346,3 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
 };
 
 export default InlineCreateHabitForm;
-
