@@ -1,100 +1,152 @@
-
-const CACHE_NAME = 'habitual-cache-v1';
-const APP_SHELL_FILES = [
+// public/sw.js
+const CACHE_NAME = 'habitual-cache-v3'; // Incremented version
+const ESSENTIAL_ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
-  // Add paths to your main JS/CSS bundles if known and static
-  // e.g., '/_next/static/css/main.css', '/_next/static/chunks/main-app.js'
-  // These are often dynamic, so be careful or use Workbox for better handling.
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  // Add other critical icons/assets needed for the app shell
+  '/icons/icon-192x192.png', // A key icon
+  '/icons/icon-512x512.png', // Another key icon
+  // Add other truly essential, small, and guaranteed-to-exist assets here.
+  // Avoid adding Next.js chunk files here unless their names are stable across builds,
+  // or use a more advanced caching strategy (e.g., Workbox) for them.
 ];
 
-const API_HOSTS = [
-  'firestore.googleapis.com',
-  'identitytoolkit.googleapis.com',
-  'securetoken.googleapis.com',
-  'www.googleapis.com',
-  // Add other API hosts your app communicates with for Genkit or other services
+// List of assets that are less critical or might change more often.
+// We will try to cache these but won't fail installation if they are missing.
+const OPTIONAL_ASSETS_TO_CACHE = [
+  '/icons/icon-72x72.png',
+  '/icons/icon-96x96.png',
+  '/icons/icon-128x128.png',
+  '/icons/icon-144x144.png',
+  '/icons/icon-152x152.png',
+  '/icons/icon-384x384.png',
+  '/icons/icon-16x16.png',
+  '/icons/icon-32x32.png',
+  '/icons/apple-touch-icon.png',
 ];
 
+const NETWORK_ONLY_PATTERNS = [
+  /firestore\.googleapis\.com/,
+  /identitytoolkit\.googleapis\.com/,
+  /www\.googleapis\.com/,
+  /maps\.googleapis\.com/,
+  /fonts\.googleapis\.com/,
+  /fonts\.gstatic\.com/,
+  // Add regex for your Genkit API if it's on a different domain
+  // e.g., /api\.your-genkit-service\.com/
+];
+
+// Install event: cache essential assets and prepare the new service worker.
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Install event');
+  console.log(`[ServiceWorker V${CACHE_NAME.split('-v')[1] || 'unknown'}] Install event fired.`);
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Caching app shell');
-      return cache.addAll(APP_SHELL_FILES).catch(error => {
-        console.error('[Service Worker] Failed to cache app shell files:', error);
-      });
-    })
+    (async () => {
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        console.log('[ServiceWorker] Caching essential assets...');
+        await cache.addAll(ESSENTIAL_ASSETS_TO_CACHE.filter(Boolean)); // Filter out any potential empty strings
+        console.log('[ServiceWorker] Essential assets cached.');
+
+        // Attempt to cache optional assets without failing the installation
+        // console.log('[ServiceWorker] Attempting to cache optional assets...');
+        // try {
+        //   await cache.addAll(OPTIONAL_ASSETS_TO_CACHE.filter(Boolean));
+        //   console.log('[ServiceWorker] Optional assets cached.');
+        // } catch (optionalError) {
+        //   console.warn('[ServiceWorker] Failed to cache some optional assets:', optionalError);
+        // }
+
+        // Force the waiting service worker to become the active service worker.
+        await self.skipWaiting();
+        console.log('[ServiceWorker] Installation successful, skipWaiting() called.');
+      } catch (error) {
+        console.error('[ServiceWorker] Caching essential assets failed during install:', error);
+        // If essential caching fails, the SW installation should ideally not complete.
+        // Throwing an error here will cause the registration promise to reject if not handled by the browser differently.
+        throw error;
+      }
+    })()
   );
-  self.skipWaiting();
 });
 
+// Activate event: clean up old caches and take control of clients.
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activate event');
+  console.log(`[ServiceWorker V${CACHE_NAME.split('-v')[1] || 'unknown'}] Activate event fired.`);
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    (async () => {
+      try {
+        const cacheWhitelist = [CACHE_NAME];
+        const cacheNames = await caches.keys();
+        
+        await Promise.all(
+          cacheNames.map(async (cacheName) => {
+            if (!cacheWhitelist.includes(cacheName)) {
+              console.log('[ServiceWorker] Deleting old cache:', cacheName);
+              await caches.delete(cacheName);
+            }
+          })
+        );
+        console.log('[ServiceWorker] Old caches cleaned up.');
+
+        // Take control of all open clients without requiring a reload.
+        await self.clients.claim();
+        console.log('[ServiceWorker] Clients claimed. Activation complete.');
+      } catch (error) {
+        console.error('[ServiceWorker] Activation failed:', error);
+        throw error;
+      }
+    })()
   );
 });
 
+// Fetch event: handle network requests, serving from cache when appropriate.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Always go to network for API requests
-  if (API_HOSTS.includes(url.hostname)) {
+  // Always fetch from network for specific domains/patterns (APIs, auth, etc.)
+  if (NETWORK_ONLY_PATTERNS.some(pattern => pattern.test(url.hostname) || pattern.test(url.href))) {
+    // console.log(`[ServiceWorker] Network-only fetch for: ${event.request.url}`);
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // For navigation requests (HTML pages), try network first, then cache (Stale-While-Revalidate approach for pages)
-  if (event.request.mode === 'navigate') {
+  // For GET requests, use a cache-first strategy.
+  if (event.request.method === 'GET') {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // If successful, cache the response for future offline use
-          if (response.ok) {
-            const cacheCopy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, cacheCopy);
-            });
+      (async () => {
+        try {
+          const cachedResponse = await caches.match(event.request);
+          if (cachedResponse) {
+            // console.log(`[ServiceWorker] Serving from cache: ${event.request.url}`);
+            return cachedResponse;
           }
-          return response;
-        })
-        .catch(() => {
-          // If network fails, try to serve from cache
-          return caches.match(event.request).then((cachedResponse) => {
-            return cachedResponse || caches.match('/'); // Fallback to homepage or a generic offline page
-          });
-        })
-    );
-    return;
-  }
 
-  // For other requests (static assets like CSS, JS, images), use Cache First strategy
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.ok && event.request.method === 'GET') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          // console.log(`[ServiceWorker] Serving from network: ${event.request.url}`);
+          const networkResponse = await fetch(event.request);
+
+          // Optional: Dynamically cache successful GET responses for assets
+          // if (networkResponse && networkResponse.status === 200) {
+          //   // Example: Cache only if it's one of the known assets to avoid caching everything
+          //   const allKnownAssets = [...ESSENTIAL_ASSETS_TO_CACHE, ...OPTIONAL_ASSETS_TO_CACHE];
+          //   if (allKnownAssets.includes(url.pathname)) {
+          //     const responseToCache = networkResponse.clone();
+          //     const cache = await caches.open(CACHE_NAME);
+          //     await cache.put(event.request, responseToCache);
+          //     // console.log(`[ServiceWorker] Cached new resource from network: ${event.request.url}`);
+          //   }
+          // }
+          return networkResponse;
+        } catch (error) {
+          console.error(`[ServiceWorker] Fetch error for ${event.request.url}:`, error);
+          // Optional: Respond with a fallback page for navigation requests if offline.
+          // For example, if (event.request.mode === 'navigate') return caches.match('/offline.html');
+          // For now, just let the browser handle the error (e.g., show its offline page).
+          throw error;
         }
-        return networkResponse;
-      }).catch(error => {
-        console.error('[Service Worker] Fetch failed for:', event.request.url, error);
-        // Optionally
+      })()
+    );
+  } else {
+    // For non-GET requests (POST, PUT, DELETE, etc.), always fetch from the network.
+    // console.log(`[ServiceWorker] Network fetch (non-GET) for: ${event.request.url}`);
+    event.respondWith(fetch(event.request));
+  }
+});
