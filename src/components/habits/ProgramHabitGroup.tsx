@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -8,7 +7,7 @@ import HabitItem from './HabitItem';
 import type { Habit, WeekDay } from '@/types';
 import { Target, CheckCircle2, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Progress } from '@/components/ui/progress'; // Import Progress component
+import { Progress } from '@/components/ui/progress';
 
 interface ProgramHabitGroupProps {
   programId: string;
@@ -27,10 +26,12 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   todayString,
   todayAbbr,
 }) => {
-  const habitsScheduledToday = habitsInProgram.filter(habit => 
-    habit.daysOfWeek.includes(todayAbbr) || 
-    habit.completionLog.some(log => log.date === todayString && log.status === 'pending_makeup')
-  );
+  const habitsScheduledToday = todayAbbr
+    ? habitsInProgram.filter(habit => 
+        habit.daysOfWeek.includes(todayAbbr) || 
+        habit.completionLog.some(log => log.date === todayString && log.status === 'pending_makeup')
+      )
+    : [];
 
   const completedTodayCount = habitsScheduledToday.filter(habit =>
     habit.completionLog.some(log => log.date === todayString && log.status === 'completed')
@@ -47,8 +48,8 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
     <Accordion type="single" collapsible className="w-full" defaultValue={`program-${programId}`}>
       <AccordionItem value={`program-${programId}`} className="border border-border rounded-lg shadow-md overflow-hidden bg-card">
         <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 transition-colors w-full">
-          <div className="flex flex-col w-full space-y-1.5"> {/* Outer flex column for title and progress bar */}
-            <div className="flex items-center justify-between w-full"> {/* Top row: Icon, Name, Status */}
+          <div className="flex flex-col w-full space-y-1.5">
+            <div className="flex items-center justify-between w-full">
               <div className="flex items-center space-x-2">
                 <Target className={cn("h-5 w-5", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} /> 
                 <span className={cn("font-semibold text-md text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
@@ -69,7 +70,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
                 )}
               </div>
             </div>
-            {habitsScheduledToday.length > 0 && ( /* Conditional progress bar row */
+            {habitsScheduledToday.length > 0 && (
               <Progress 
                 value={progressPercentToday} 
                 className="h-1.5 w-full" 
@@ -80,17 +81,17 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
         </AccordionTrigger>
         <AccordionContent className="bg-muted/20 border-t border-border">
           <div className="p-2 sm:p-3 space-y-2">
-            {habitsInProgram.length > 0 ? (
-              habitsInProgram.map(habit => (
-                <HabitItem
-                  key={habit.id}
-                  habit={habit}
-                  onOpenDetailView={onOpenDetailView}
-                  todayString={todayString}
-                />
+            {habitsScheduledToday.length > 0 ? (
+              habitsScheduledToday.map(habit => (
+                <div onClick={() => onOpenDetailView(habit)} key={habit.id} className="cursor-pointer">
+                  <HabitItem
+                    habit={habit}
+                    todayString={todayString}
+                  />
+                </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-2">No habits in this program.</p>
+              <p className="text-sm text-muted-foreground text-center py-2">No habits in this program scheduled for today.</p>
             )}
           </div>
         </AccordionContent>

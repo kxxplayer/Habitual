@@ -1,18 +1,16 @@
-// src/components/habits/HabitList.tsx
-
 "use client";
 
 import type { FC } from 'react';
 import * as React from 'react'; 
 import HabitItem from './HabitItem';
-import ProgramHabitGroup from './ProgramHabitGroup'; // Import new component
+import ProgramHabitGroup from './ProgramHabitGroup';
 import type { Habit, WeekDay } from '@/types';
 import { ListChecks } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface HabitListProps {
   habits: Habit[];
   onOpenDetailView: (habit: Habit) => void;
+  // These are still needed for the detail dialog, but not passed to HabitItem directly
   onToggleComplete: (habitId: string, date: string) => void;
   onDelete: (habitId: string) => void;
   onEdit: (habit: Habit) => void;
@@ -24,10 +22,6 @@ interface HabitListProps {
 const HabitList: FC<HabitListProps> = ({ 
   habits, 
   onOpenDetailView, 
-  onToggleComplete, 
-  onDelete, 
-  onEdit, 
-  onReschedule, 
   todayString, 
   todayAbbr 
 }) => {
@@ -64,7 +58,6 @@ const HabitList: FC<HabitListProps> = ({
   const noTasksAtAll = habits.length === 0;
   const noTasksForToday = habits.length > 0 && habitsRelevantToday.length === 0;
 
-
   if (noTasksAtAll) {
      return (
       <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
@@ -93,22 +86,18 @@ const HabitList: FC<HabitListProps> = ({
           programId={group.id}
           programName={group.name}
           habitsInProgram={group.habits}
- onOpenDetailView={onOpenDetailView}
+          onOpenDetailView={onOpenDetailView}
           todayString={todayString}
           todayAbbr={todayAbbr}
         />
       ))}
       {standaloneHabits.map((habit) => (
-        <HabitItem
-          key={habit.id}
-          habit={habit}
-          onToggleComplete={onToggleComplete}
-          onDelete={onDelete}
-          onEdit={onEdit}
-          onReschedule={onReschedule}
-          isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
-          currentDate={todayString}
-        />
+        <div onClick={() => onOpenDetailView(habit)} key={habit.id} className="cursor-pointer">
+            <HabitItem
+              habit={habit}
+              todayString={todayString}
+            />
+        </div>
       ))}
     </div>
   );
