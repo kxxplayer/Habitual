@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -239,7 +238,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
     if (!habit) return;
     try {
       const icsContent = generateICS(habit);
-      downloadICS(`${habit.name.replace(/[^a-zA-Z0-9\\s]/g, '').replace(/\s+/g, '_')}.ics`, icsContent);
+      downloadICS(`${habit.name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}.ics`, icsContent);
     } catch (error) { console.error("ICS Generation Error:", error); }
   };
 
