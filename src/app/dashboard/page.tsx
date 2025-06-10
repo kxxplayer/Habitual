@@ -1,16 +1,18 @@
+// src/app/dashboard/page.tsx
+// Added imports for updateDoc, arrayUnion, getDoc, CreateHabitDialog, Button, PlusCircle
 
 "use client";
 
 import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
-import { auth, db } from '@/lib/firebase'; // Added db
-import { doc, onSnapshot } from 'firebase/firestore'; // Firestore imports
+import { auth, db } from '@/lib/firebase';
+import { doc, onSnapshot, updateDoc, arrayUnion, getDoc } from 'firebase/firestore'; // ADDED imports
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import HabitOverview from '@/components/overview/HabitOverview';
-import type { Habit, HabitCategory, HabitCompletionLogEntry, WeekDay } from '@/types'; // Added more types
-import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm } from '@/types'; // Import constants
+import type { Habit, HabitCategory, HabitCompletionLogEntry, WeekDay, CreateHabitFormData } from '@/types';
+import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm } from '@/types';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,6 +20,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Loader2, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
+import CreateHabitDialog from '@/components/habits/CreateHabitDialog'; // IMPORTED
+import { Button } from '@/components/ui/button'; // IMPORTED
+import { PlusCircle } from 'lucide-react'; // IMPORTED
 
 
 // Firestore constants (ensure these match your main page)
@@ -33,6 +38,11 @@ const DashboardPage: NextPage = () => {
   const [habits, setHabits] = React.useState<Habit[]>([]);
   const [totalPoints, setTotalPoints] = React.useState<number>(0);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
+  // ADDED state for CreateHabitDialog
+  const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
+  const [createHabitDialogStep, setCreateHabitDialogStep] = React.useState(1);
+  const [editingHabitData, setEditingHabitData] = React.useState<Partial<CreateHabitFormData & { id: string }> | null>(null); // State for editing
+
 
   React.useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -61,7 +71,7 @@ const DashboardPage: NextPage = () => {
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        
+
         const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({
           id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
           name: String(h.name || 'Unnamed Habit'),
@@ -103,6 +113,72 @@ const DashboardPage: NextPage = () => {
     return () => unsubscribeFirestore();
   }, [authUser, isLoadingAuth, toast]);
 
+  // ADDED function to handle saving a new habit
+  const handleSaveNewHabit = async (newHabit: CreateHabitFormData) => {
+    if (!authUser) {
+      toast({ title: "Authentication Error", description: "You must be logged in to add a habit.", variant: "destructive" });
+      return;
+    }
+
+    setIsLoadingData(true); // Indicate loading while saving
+
+    const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
+
+    try {
+      // Fetch the current data to ensure we don't overwrite other fields
+      const docSnap = await getDoc(userDocRef);
+      let currentData = docSnap.exists() ? docSnap.data() : {};
+
+      // Ensure habits is an array
+      const currentHabits = Array.isArray(currentData.habits) ? currentData.habits : [];
+
+      // Assign a unique ID to the new habit if it doesn't have one
+      const habitToSave = {
+        id: newHabit.id || Date.now().toString() + Math.random().toString(36).substring(2, 7),
+        ...newHabit,
+        completionLog: [], // Ensure completionLog is initialized
+      };
+
+      // Add the new habit to the array
+      const updatedHabits = [...currentHabits, habitToSave];
+
+
+      // Update the document with the new habits array
+      await updateDoc(userDocRef, {
+        habits: updatedHabits,
+        // Preserve other fields if they exist
+        ...currentData,
+        habits: updatedHabits, // Ensure habits is the updated array
+      });
+
+      toast({ title: "Success", description: "Habit added successfully." });
+      setIsCreateHabitDialogOpen(false); // Close dialog on success
+      setCreateHabitDialogStep(1); // Reset step
+
+    } catch (error) {
+      console.error("Error saving new habit to Firestore:", error);
+      toast({ title: "Save Error", description: "Could not save the habit. Please try again.", variant: "destructive" });
+    } finally {
+       setIsLoadingData(false); // Stop loading
+    }
+  };
+
+  // Function to handle opening the Create Habit Dialog
+  const handleOpenCreateHabitDialog = () => {
+    setEditingHabitData(null); // Ensure we are not in editing mode when creating
+    setCreateHabitDialogStep(1); // Start at step 1 for creation
+    setIsCreateHabitDialogOpen(true);
+  };
+  
+   // Function to handle opening the Goal Program Dialog (placeholder)
+  const handleOpenGoalProgramDialog = () => {
+    console.log("Open Goal Program Dialog");
+    // Implement navigation or state change to open the Goal Program Dialog
+    // For now, just close the habit dialog
+     setIsCreateHabitDialogOpen(false);
+  };
+
+
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
@@ -124,20 +200,24 @@ const DashboardPage: NextPage = () => {
     <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
       <div className={cn(
         "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-sm h-[97vh] max-h-[97vh]",      
-        "md:max-w-md",                   
-        "lg:max-w-lg"                   
+        "w-full max-w-sm h-[97vh] max-h-[97vh]",
+        "md:max-w-md",
+        "lg:max-w-lg"
       )}>
         <AppHeader />
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
             <main className="px-3 sm:px-4 py-4 flex-grow">
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl font-bold text-primary flex items-center">
-                    <LayoutDashboard className="mr-2 h-5 w-5" /> Dashboard
-                  </CardTitle>
-                  <CardDescription>Your habit progress and statistics.</CardDescription>
+                <CardHeader className="pb-2 flex flex-row items-center justify-between"> {/* MODIFIED */}
+                  <div className="flex items-center">
+                     <LayoutDashboard className="mr-2 h-5 w-5 text-primary" /> {/* ADDED text-primary */}
+                     <CardTitle className="text-xl font-bold text-primary">Dashboard</CardTitle> {/* ADDED text-primary */}
+                  </div>
+                   {/* ADDED Add Habit Button */}
+                   <Button variant="outline" size="sm" onClick={handleOpenCreateHabitDialog}>
+                     <PlusCircle className="mr-1 h-4 w-4" /> Add Habit
+                   </Button>
                 </CardHeader>
                 <CardContent className="pt-2">
                   <HabitOverview habits={habits} totalPoints={totalPoints} />
@@ -150,6 +230,17 @@ const DashboardPage: NextPage = () => {
           </div>
         </ScrollArea>
         <BottomNavigationBar />
+
+        {/* ADDED CreateHabitDialog */}
+        <CreateHabitDialog
+           isOpen={isCreateHabitDialogOpen}
+           onClose={() => setIsCreateHabitDialogOpen(false)}
+           onSaveHabit={handleSaveNewHabit}
+           initialData={editingHabitData} // Pass editing data
+           currentStep={createHabitDialogStep}
+           setCurrentStep={setCreateHabitDialogStep}
+           onOpenGoalProgramDialog={handleOpenGoalProgramDialog}
+        />
       </div>
     </div>
   );
