@@ -1,3 +1,4 @@
+// src/app/settings/page.tsx
 
 "use client";
 
@@ -12,11 +13,12 @@ import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Loader2, UserCircle, CalendarDays, BellRing, Palette, Bell, Settings as SettingsIcon, LogOut, BrainCircuit } from 'lucide-react';
+// Removed BrainCircuit icon as it's no longer used for the AI App Advisor button
+import { Loader2, UserCircle, CalendarDays, BellRing, Palette, Bell, Settings as SettingsIcon, LogOut } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
 import { Label } from '@/components/ui/label';
-import AppImprovementDialog from '@/components/app_suggestions/AppImprovementDialog';
+// Removed import for AppImprovementDialog
 import { Separator } from '@/components/ui/separator';
 
 const SettingsPage: NextPage = () => {
@@ -25,7 +27,7 @@ const SettingsPage: NextPage = () => {
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
   const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission | null>(null);
-  const [isAppImprovementDialogOpen, setIsAppImprovementDialogOpen] = React.useState(false);
+  // Removed state for AI App Improvement Dialog
   const [triggerBellAnimation, setTriggerBellAnimation] = React.useState(false);
 
   React.useEffect(() => {
@@ -157,14 +159,7 @@ const SettingsPage: NextPage = () => {
                   <CardTitle className="text-base font-semibold text-primary">App Preferences</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-2 space-y-3">
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start text-sm py-2 h-auto"
-                    onClick={() => setIsAppImprovementDialogOpen(true)}
-                  >
-                    <BrainCircuit className="mr-2 h-4 w-4" />
-                    AI App Advisor
-                  </Button>
+                  {/* Removed AI App Advisor Button */}
                   <div className="p-3 border rounded-md space-y-1.5 bg-background shadow-sm">
                     <Label className="text-sm font-medium flex items-center"><Palette className="mr-2 h-4 w-4" />Change Theme</Label>
                     <ThemeToggleButton />
@@ -206,10 +201,7 @@ const SettingsPage: NextPage = () => {
         <BottomNavigationBar />
       </div>
     </div>
-    <AppImprovementDialog 
-        isOpen={isAppImprovementDialogOpen} 
-        onClose={() => setIsAppImprovementDialogOpen(false)} 
-    />
+    {/* Removed AppImprovementDialog */}
     </>
   );
 };

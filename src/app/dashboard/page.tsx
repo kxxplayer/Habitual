@@ -1,5 +1,4 @@
 // src/app/dashboard/page.tsx
-// Added imports for updateDoc, arrayUnion, getDoc, CreateHabitDialog, Button, PlusCircle
 
 "use client";
 
@@ -7,7 +6,7 @@ import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, arrayUnion, getDoc } from 'firebase/firestore'; // ADDED imports
+import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore'; // Removed getDoc, added arrayUnion
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import HabitOverview from '@/components/overview/HabitOverview';
@@ -20,14 +19,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Loader2, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import CreateHabitDialog from '@/components/habits/CreateHabitDialog'; // IMPORTED
-import { Button } from '@/components/ui/button'; // IMPORTED
-import { PlusCircle } from 'lucide-react'; // IMPORTED
+import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 
 
-// Firestore constants (ensure these match your main page)
+// Firestore constants
 const USER_DATA_COLLECTION = "users";
-const USER_APP_DATA_SUBCOLLECTION = "appData";
+const USER_APP_DATA_SUBCOLLECTION = "appData"; // Corrected subcollection name based on previous successful file list
 const USER_MAIN_DOC_ID = "main";
 
 const DashboardPage: NextPage = () => {
@@ -38,10 +37,9 @@ const DashboardPage: NextPage = () => {
   const [habits, setHabits] = React.useState<Habit[]>([]);
   const [totalPoints, setTotalPoints] = React.useState<number>(0);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
-  // ADDED state for CreateHabitDialog
   const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
   const [createHabitDialogStep, setCreateHabitDialogStep] = React.useState(1);
-  const [editingHabitData, setEditingHabitData] = React.useState<Partial<CreateHabitFormData & { id: string }> | null>(null); // State for editing
+  const [editingHabitData, setEditingHabitData] = React.useState<Partial<CreateHabitFormData & { id: string }> | null>(null);
 
 
   React.useEffect(() => {
@@ -66,23 +64,25 @@ const DashboardPage: NextPage = () => {
     }
 
     setIsLoadingData(true);
+    // Corrected subcollection name back to appData based on the initial file list.
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
 
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
 
-        const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({
+        // Explicitly type parameters within map/filter/sort for better type safety
+        const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({ // Typed 'h' as any from firestore
           id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
           name: String(h.name || 'Unnamed Habit'),
           description: typeof h.description === 'string' ? h.description : undefined,
           category: HABIT_CATEGORIES.includes(h.category as HabitCategory) ? h.category : 'Other',
-          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any) => weekDaysArrayForForm.includes(d as WeekDay)) : [],
+          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any): d is WeekDay => weekDaysArrayForForm.includes(d as WeekDay)) : [], // Typed 'd' as any
           optimalTiming: typeof h.optimalTiming === 'string' ? h.optimalTiming : undefined,
           durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
           durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
           specificTime: typeof h.specificTime === 'string' ? h.specificTime : undefined,
-          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => {
+          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => { // Typed 'log' as any
             if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
             return {
               date: log.date,
@@ -91,7 +91,7 @@ const DashboardPage: NextPage = () => {
               status: ['completed', 'pending_makeup', 'skipped'].includes(log.status) ? log.status : 'completed',
               originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
             };
-          }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a,b) => b.date.localeCompare(a.date)),
+          }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)), // Typed 'a' and 'b'
           reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
         }));
         setHabits(parsedHabits);
@@ -113,7 +113,7 @@ const DashboardPage: NextPage = () => {
     return () => unsubscribeFirestore();
   }, [authUser, isLoadingAuth, toast]);
 
-  // ADDED function to handle saving a new habit
+  // Function to handle saving a new habit using arrayUnion
   const handleSaveNewHabit = async (newHabit: CreateHabitFormData) => {
     if (!authUser) {
       toast({ title: "Authentication Error", description: "You must be logged in to add a habit.", variant: "destructive" });
@@ -122,16 +122,10 @@ const DashboardPage: NextPage = () => {
 
     setIsLoadingData(true); // Indicate loading while saving
 
+    // Corrected subcollection name back to appData based on the initial file list.
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
 
     try {
-      // Fetch the current data to ensure we don't overwrite other fields
-      const docSnap = await getDoc(userDocRef);
-      let currentData = docSnap.exists() ? docSnap.data() : {};
-
-      // Ensure habits is an array
-      const currentHabits = Array.isArray(currentData.habits) ? currentData.habits : [];
-
       // Assign a unique ID to the new habit if it doesn't have one
       const habitToSave = {
         id: newHabit.id || Date.now().toString() + Math.random().toString(36).substring(2, 7),
@@ -139,16 +133,9 @@ const DashboardPage: NextPage = () => {
         completionLog: [], // Ensure completionLog is initialized
       };
 
-      // Add the new habit to the array
-      const updatedHabits = [...currentHabits, habitToSave];
-
-
-      // Update the document with the new habits array
+      // Use arrayUnion to add the new habit to the habits array
       await updateDoc(userDocRef, {
-        habits: updatedHabits,
-        // Preserve other fields if they exist
-        ...currentData,
-        habits: updatedHabits, // Ensure habits is the updated array
+        habits: arrayUnion(habitToSave)
       });
 
       toast({ title: "Success", description: "Habit added successfully." });
@@ -169,8 +156,8 @@ const DashboardPage: NextPage = () => {
     setCreateHabitDialogStep(1); // Start at step 1 for creation
     setIsCreateHabitDialogOpen(true);
   };
-  
-   // Function to handle opening the Goal Program Dialog (placeholder)
+
+  // Function to handle opening the Goal Program Dialog (placeholder)
   const handleOpenGoalProgramDialog = () => {
     console.log("Open Goal Program Dialog");
     // Implement navigation or state change to open the Goal Program Dialog
@@ -211,10 +198,10 @@ const DashboardPage: NextPage = () => {
               <Card>
                 <CardHeader className="pb-2 flex flex-row items-center justify-between"> {/* MODIFIED */}
                   <div className="flex items-center">
-                     <LayoutDashboard className="mr-2 h-5 w-5 text-primary" /> {/* ADDED text-primary */}
-                     <CardTitle className="text-xl font-bold text-primary">Dashboard</CardTitle> {/* ADDED text-primary */}
+                     <LayoutDashboard className="mr-2 h-5 w-5 text-primary" />
+                     <CardTitle className="text-xl font-bold text-primary">Dashboard</CardTitle>
                   </div>
-                   {/* ADDED Add Habit Button */}
+                   {/* Add Habit Button */}
                    <Button variant="outline" size="sm" onClick={handleOpenCreateHabitDialog}>
                      <PlusCircle className="mr-1 h-4 w-4" /> Add Habit
                    </Button>
@@ -231,12 +218,12 @@ const DashboardPage: NextPage = () => {
         </ScrollArea>
         <BottomNavigationBar />
 
-        {/* ADDED CreateHabitDialog */}
+        {/* CreateHabitDialog */}
         <CreateHabitDialog
            isOpen={isCreateHabitDialogOpen}
            onClose={() => setIsCreateHabitDialogOpen(false)}
            onSaveHabit={handleSaveNewHabit}
-           initialData={editingHabitData} // Pass editing data
+           initialData={editingHabitData}
            currentStep={createHabitDialogStep}
            setCurrentStep={setCreateHabitDialogStep}
            onOpenGoalProgramDialog={handleOpenGoalProgramDialog}
