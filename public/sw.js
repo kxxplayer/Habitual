@@ -14,7 +14,6 @@ const ESSENTIAL_ASSETS_TO_CACHE = [
 // We will try to cache these but won't fail installation if they are missing.
 const OPTIONAL_ASSETS_TO_CACHE = [
   '/icons/icon-72x72.png',
-  '/icons/icon-96x96.png',
   '/icons/icon-128x128.png',
   '/icons/icon-144x144.png',
   '/icons/icon-152x152.png',
