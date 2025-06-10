@@ -904,15 +904,12 @@ const HabitualPageContent: React.FC = () => {
                       habits={habits}
                       onOpenDetailView={handleOpenDetailView}
                       todayString={todayString}
-                      todayAbbr={todayAbbr} onToggleComplete={function (habitId: string, date: string): void {
-                        throw new Error('Function not implemented.');
-                      } } onDelete={function (habitId: string): void {
-                        throw new Error('Function not implemented.');
-                      } } onEdit={function (habit: Habit): void {
-                        throw new Error('Function not implemented.');
-                      } } onReschedule={function (habit: Habit): void {
-                        throw new Error('Function not implemented.');
-                      } }                />
+                      todayAbbr={todayAbbr}
+                      onToggleComplete={handleToggleComplete}
+                      onDelete={handleOpenDeleteHabitConfirm}
+                      onEdit={handleOpenEditDialog}
+                      onReschedule={handleOpenRescheduleDialog}
+                />
               )}
             </main>
           </div>
