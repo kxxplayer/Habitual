@@ -1,137 +1,120 @@
+// public/sw.js
 
-const CACHE_NAME = 'habitual-cache-v2'; // Incremented version
-const urlsToCache = [
-  '/',
-  '/manifest.json',
-  '/icons/icon-192x192.png', // Ensure these paths match your actual icon locations
-  '/icons/icon-512x512.png',
-  // Add paths to critical JS/CSS bundles if known and stable,
-  // but Next.js often hashes these, making manual caching tricky.
-  // Consider using a Next.js PWA plugin like @ducanh2912/next-pwa for better caching.
+const CACHE_NAME = 'habitual-cache-v1'; // Increment version (e.g., v2, v3) when you update critical assets or sw.js logic
+const urlsToCacheOnInstall = [
+  // '/', // Caching root path can be tricky with Next.js routing. Often better handled by Next-PWA plugins.
+  // '/manifest.json', // Manifest is usually fetched directly
+  // '/icons/icon-192x192.png', // Icons are good candidates if they don't change often
+  // '/icons/icon-512x512.png',
+  // Add other critical static assets that are part of your app shell and don't change frequently.
+  // Next.js's build process usually hashes assets, so they get new URLs when they change,
+  // making aggressive caching here less critical for those hashed assets.
 ];
 
-self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Install event');
+self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[Service Worker] Opened cache:', CACHE_NAME);
-        return cache.addAll(urlsToCache.map(url => new Request(url, { cache: 'reload' }))) // Force reload from network for initial cache
-          .catch(error => {
-            console.error('[Service Worker] Failed to cache initial assets:', error);
-          });
+      .then(cache => {
+        console.log('[Service Worker] Opened cache and attempting to pre-cache assets');
+        // Pre-caching is optional. If urlsToCacheOnInstall is empty, this does nothing.
+        // return cache.addAll(urlsToCacheOnInstall);
       })
       .then(() => {
         console.log('[Service Worker] Skip waiting on install');
-        return self.skipWaiting(); // Activate new SW immediately
+        return self.skipWaiting(); // Ensures the new service worker activates upon installation
+      })
+      .catch(error => {
+        console.error('[Service Worker] Pre-caching failed:', error);
       })
   );
 });
 
-self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activate event');
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME) { // Delete all caches except the current one
             console.log('[Service Worker] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      console.log('[Service Worker] Clients claimed');
-      return self.clients.claim(); // Take control of all clients
+      console.log('[Service Worker] Claiming clients');
+      return self.clients.claim(); // Takes control of open pages without requiring a reload
     })
   );
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
   const { request } = event;
 
-  // For navigation requests (HTML pages), try network first, then cache.
+  // Always bypass cache for navigation requests (HTML pages) in a Next.js app
+  // to ensure the latest page structure is fetched, especially with SSR/ISR.
+  // For a more SPA-like PWA, you might cache the app shell.
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // If successful, clone and cache the response for future offline use.
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // If network fails, try to serve from cache.
-          return caches.match(request)
-            .then((cachedResponse) => {
-              return cachedResponse || caches.match('/'); // Fallback to root if specific page not cached
-            });
-        })
-    );
+    event.respondWith(fetch(request));
     return;
   }
 
-  // For other requests (CSS, JS, images), use cache-first strategy.
-  event.respondWith(
-    caches.match(request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        return fetch(request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200 && request.method === 'GET') {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(request, responseToCache);
-              });
+  // Do not cache requests to Firebase, Google APIs, or Vercel's internal/data routes.
+  const DENY_LIST_URL_PATTERNS = [
+    /https:\/\/[a-zA-Z0-9.-]*\.firebaseio\.com/,
+    /https:\/\/firestore\.googleapis\.com/,
+    /https:\/\/securetoken\.googleapis\.com/,
+    /https:\/\/firebaseinstallations\.googleapis\.com/,
+    /https:\/\/www\.googleapis\.com/,
+    /https:\/\/apis\.google\.com/,
+    /https:\/\/fonts\.gstatic\.com/, // Google Fonts
+    // Add Vercel specific patterns if you identify any causing issues (e.g., _next/data/)
+    // However, Next.js hashed assets in _next/static are generally safe to cache.
+  ];
+
+  if (DENY_LIST_URL_PATTERNS.some(pattern => pattern.test(request.url))) {
+    event.respondWith(fetch(request));
+    return;
+  }
+  
+  // For other GET requests (static assets like CSS, JS, images), try cache-first.
+  if (request.method === 'GET') {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(cache => {
+        return cache.match(request).then(cachedResponse => {
+          if (cachedResponse) {
+            return cachedResponse;
           }
-          return networkResponse;
+
+          return fetch(request).then(networkResponse => {
+            // Check if we received a valid response
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+              // IMPORTANT: Clone the response. A response is a stream
+              // and because we want the browser to consume the response
+              // as well as the cache consuming the response, we need
+              // to clone it so we have two streams.
+              const responseToCache = networkResponse.clone();
+              cache.put(request, responseToCache);
+            }
+            return networkResponse;
+          }).catch(error => {
+            console.error('[Service Worker] Fetch failed; returning offline page if available or error.', error);
+            // Optionally, return a custom offline page:
+            // return caches.match('/offline.html'); 
+            // Or just rethrow the error if no offline page.
+            throw error;
+          });
         });
-      }).catch(error => {
-        console.error('[Service Worker] Fetch error:', error);
-        // You could return a generic fallback response here for non-critical assets
       })
-  );
-});
-
-// Placeholder for Background Sync
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'my-background-sync-tag') {
-    console.log('[Service Worker] Background sync event triggered for tag:', event.tag);
-    // event.waitUntil(doSomeBackgroundWork());
+    );
+  } else {
+    // For non-GET requests, just fetch from network.
+    event.respondWith(fetch(request));
   }
 });
 
-// Placeholder for Periodic Background Sync
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'my-periodic-sync-tag') {
-    console.log('[Service Worker] Periodic background sync event triggered for tag:', event.tag);
-    // event.waitUntil(doSomePeriodicWork());
-  }
-});
-
-// Placeholder for Push Notifications
-self.addEventListener('push', (event) => {
-  console.log('[Service Worker] Push Received.');
-  console.log(`[Service Worker] Push had this data: "${event.data ? event.data.text() : 'no data'}"`);
-  // const title = 'Habitual Reminder';
-  // const options = {
-  //   body: event.data ? event.data.text() : 'A new notification!',
-  //   icon: '/icons/icon-192x192.png',
-  //   badge: '/icons/icon-96x96.png' // Example badge
-  // };
-  // event.waitUntil(self.registration.showNotification(title, options));
-});
-
-self.addEventListener('notificationclick', (event) => {
-  console.log('[Service Worker] Notification click Received.');
-  event.notification.close();
-  // event.waitUntil(
-  //   clients.openWindow('https://your-app-url.com') // Or a specific URL
-  // );
-});
+// You can add message listeners here for advanced communication with the client pages
+// self.addEventListener('message', event => {
+//   if (event.data && event.data.type === 'SKIP_WAITING') {
+//     self.skipWaiting();
+//   }
+// });
