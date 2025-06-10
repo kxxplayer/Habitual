@@ -1,3 +1,4 @@
+// src/components/habits/HabitList.tsx
 
 "use client";
 
@@ -12,11 +13,24 @@ import { cn } from '@/lib/utils';
 interface HabitListProps {
   habits: Habit[];
   onOpenDetailView: (habit: Habit) => void;
+  onToggleComplete: (habitId: string, date: string) => void;
+  onDelete: (habitId: string) => void;
+  onEdit: (habit: Habit) => void;
+  onReschedule: (habit: Habit) => void;
   todayString: string;
   todayAbbr: WeekDay | '';
 }
 
-const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString, todayAbbr }) => {
+const HabitList: FC<HabitListProps> = ({ 
+  habits, 
+  onOpenDetailView, 
+  onToggleComplete, 
+  onDelete, 
+  onEdit, 
+  onReschedule, 
+  todayString, 
+  todayAbbr 
+}) => {
   if (!todayAbbr) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
@@ -79,7 +93,7 @@ const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString, 
           programId={group.id}
           programName={group.name}
           habitsInProgram={group.habits}
-          onOpenDetailView={onOpenDetailView}
+ onOpenDetailView={onOpenDetailView}
           todayString={todayString}
           todayAbbr={todayAbbr}
         />
@@ -88,8 +102,12 @@ const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString, 
         <HabitItem
           key={habit.id}
           habit={habit}
-          onOpenDetailView={onOpenDetailView}
-          todayString={todayString}
+          onToggleComplete={onToggleComplete}
+          onDelete={onDelete}
+          onEdit={onEdit}
+          onReschedule={onReschedule}
+          isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
+          currentDate={todayString}
         />
       ))}
     </div>
@@ -97,5 +115,3 @@ const HabitList: FC<HabitListProps> = ({ habits, onOpenDetailView, todayString, 
 };
 
 export default HabitList;
-
-    

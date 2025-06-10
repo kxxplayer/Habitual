@@ -331,17 +331,17 @@ const HabitualPageContent: React.FC = () => {
         optimalTiming: typeof h.optimalTiming === 'string' ? h.optimalTiming : undefined,
         durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
         durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
-        specificTime: typeof h.specificTime === 'string' ? h.specificTime : undefined,
-        completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => {
+ specificTime: typeof h.specificTime === 'string' && h.specificTime.match(/^\d{2}:\d{2}$/) ? h.specificTime : undefined,
+        completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: { date?: string; time?: string; note?: string; status?: string; originalMissedDate?: string }): HabitCompletionLogEntry | null => {
           if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
           return {
             date: log.date,
             time: typeof log.time === 'string' && log.time.length > 0 ? log.time : 'N/A',
             note: typeof log.note === 'string' ? log.note : undefined,
             status: ['completed', 'pending_makeup', 'skipped'].includes(log.status) ? log.status : 'completed',
-            originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
+ originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
           };
-        }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a,b) => b.date.localeCompare(a.date)),
+        }).filter((log: null): log is HabitCompletionLogEntry => log !== null).sort((a: { date: any; },b: { date: string; }) => b.date.localeCompare(a.date)),
         reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
         programId: typeof h.programId === 'string' ? h.programId : undefined,
         programName: typeof h.programName === 'string' ? h.programName : undefined,
@@ -504,7 +504,7 @@ const HabitualPageContent: React.FC = () => {
     setInitialFormDataForDialog(null); setEditingHabit(null); setCreateHabitDialogStep(1);
     setDialogTriggeredByUrl(false); 
   };
-
+  
   const handleOpenEditDialog = (habitToEditOpenEditMain: Habit) => {
     setEditingHabit(habitToEditOpenEditMain);
     setInitialFormDataForDialog({
@@ -514,6 +514,7 @@ const HabitualPageContent: React.FC = () => {
     setIsCreateHabitDialogOpen(true);
   };
 
+  // This function is called from HabitDetailViewDialog
   const handleToggleComplete = async (habitIdToggleCompMain: string, dateToggleCompMain: string, completedToggleCompMain: boolean) => {
     if (!authUser) {
       toast({ title: "Error", description: "You must be logged in to update habits.", variant: "destructive" });
@@ -523,6 +524,7 @@ const HabitualPageContent: React.FC = () => {
     let pointsChangeToggleCompMain = 0;
     let justCompletedANewTaskToggleCompMain = false;
 
+    console.log(`PAGE.TSX: handleToggleComplete called for habit ${habitIdToggleCompMain} on date ${dateToggleCompMain}, completed: ${completedToggleCompMain}`);
     setHabits(prevHabits => {
         const newHabits = prevHabits.map(h => {
             if (h.id === habitIdToggleCompMain) {
@@ -532,10 +534,13 @@ const HabitualPageContent: React.FC = () => {
                 const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
                 if (completedToggleCompMain) { 
+                    console.log(`PAGE.TSX: Marking habit ${h.name} as completed on ${dateToggleCompMain}`);
                     if (idx > -1) { 
                         if (newLog[idx].status !== 'completed') { 
                             pointsChangeToggleCompMain = POINTS_PER_COMPLETION;
                             justCompletedANewTaskToggleCompMain = true;
+                            console.log(`PAGE.TSX: Earned ${POINTS_PER_COMPLETION} points for completing ${h.name}.`);
+
                         }
                         newLog[idx] = { ...newLog[idx], status: 'completed', time, note: newLog[idx].note }; 
                     } else { 
@@ -544,8 +549,10 @@ const HabitualPageContent: React.FC = () => {
                         newLog.push({ date: dateToggleCompMain, time, status: 'completed' });
                     }
                 } else { 
+                    console.log(`PAGE.TSX: Marking habit ${h.name} as incomplete/skipped on ${dateToggleCompMain}`);
                     if (idx > -1) {
                         const logEntry = newLog[idx];
+                        // Deduct points only if it was previously completed
                         if (logEntry.status === 'completed') pointsChangeToggleCompMain = -POINTS_PER_COMPLETION;
 
                         if (logEntry.originalMissedDate) {
@@ -557,6 +564,7 @@ const HabitualPageContent: React.FC = () => {
                         }
                     }
                 }
+                console.log(`PAGE.TSX: Updated log for ${h.name}:`, newLog);
                 const updatedHabit = { ...h, completionLog: newLog.sort((a, b) => b.date.localeCompare(a.date)) };
                 if (selectedHabitForDetailView && selectedHabitForDetailView.id === updatedHabit.id) {
                     setSelectedHabitForDetailView(updatedHabit);
@@ -568,6 +576,7 @@ const HabitualPageContent: React.FC = () => {
         return newHabits;
     });
 
+    // Trigger motivational quote and points update *after* state update is scheduled
     if (justCompletedANewTaskToggleCompMain && habitNameForQuoteToggleCompMain && authUser) {
         try {
             const quoteResult = await getMotivationalQuote({ habitName: habitNameForQuoteToggleCompMain });
@@ -576,7 +585,10 @@ const HabitualPageContent: React.FC = () => {
             console.error("Error getting motivational quote:", e);
         }
     }
-    if (pointsChangeToggleCompMain !== 0) setTotalPoints(prev => Math.max(0, prev + pointsChangeToggleCompMain));
+    if (pointsChangeToggleCompMain !== 0) {
+        console.log(`PAGE.TSX: Changing total points by ${pointsChangeToggleCompMain}`);
+        setTotalPoints(prev => Math.max(0, prev + pointsChangeToggleCompMain));
+    }
   };
 
   const handleToggleReminder = (habitIdReminderToggleMain: string, currentReminderStateReminderToggleMain: boolean) => {
@@ -927,7 +939,7 @@ const HabitualPageContent: React.FC = () => {
         <DialogContentOriginal className="sm:max-w-lg bg-card">
           <DialogHeaderOriginal><DialogTitleOriginal className="flex items-center"><CalendarDays className="mr-2 h-5 w-5 text-primary"/>Habit Calendar</DialogTitleOriginal><DialogDescriptionOriginal>View your habit activity.</DialogDescriptionOriginal></DialogHeaderOriginal>
           <Calendar mode="single" selected={selectedCalendarDate} onSelect={setSelectedCalendarDate} month={selectedCalendarDate || undefined} onMonthChange={(month) => { if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) setSelectedCalendarDate(startOfDay(month)); }} modifiers={calendarDialogModifiers} modifiersStyles={calendarDialogModifierStyles} className="rounded-md border p-0 sm:p-2" />
-          {selectedCalendarDate && ( <div className="mt-3 w-full"><h3 className="text-md font-semibold mb-1.5 text-center text-primary">Status for {format(selectedCalendarDate, 'MMMM d, yyyy')}</h3>{habitsForSelectedCalendarDate.length > 0 ? (<ScrollArea className="max-h-40"><ul className="space-y-1.5 text-sm pr-2">{habitsForSelectedCalendarDate.map(h => { const log = h.completionLog.find(l => l.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd')); const isSch = h.daysOfWeek.includes(dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)]); let statTxt="Scheduled"; let StatIcon=Circle; let iCol="text-orange-500"; if(log?.status==='completed'){statTxt=`Completed ${log.time||''}`; StatIcon=CheckCircle2;iCol="text-accent";}else if(log?.status==='pending_makeup'){statTxt=`Makeup for ${log.originalMissedDate||'earlier'}`; StatIcon=MakeupIcon;iCol="text-blue-500";}else if(log?.status==='skipped'){statTxt="Skipped";StatIcon=XCircle;iCol="text-muted-foreground";}else if(isSch && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !log){statTxt="Missed";StatIcon=XCircle;iCol="text-destructive";}else if(!isSch && !log){statTxt="Not Scheduled";StatIcon=Circle;iCol="text-muted-foreground/50";} return(<li key={h.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md text-xs"><span className="font-medium truncate pr-2">{h.name}</span><div className="flex items-center space-x-1"><StatIcon className={cn("h-3.5 w-3.5",iCol)}/><span>{statTxt}</span></div></li>);})}</ul></ScrollArea>) : (<p className="text-xs text-muted-foreground text-center py-2">No habits for this day.</p>)}</div>)}
+          {selectedCalendarDate && ( <div className="mt-3 w-full"><h3 className="text-md font-semibold mb-1.5 text-center text-primary">Status for {format(selectedCalendarDate, 'MMMM d, yyyy')}</h3>{habitsForSelectedCalendarDate.length > 0 ? (<ScrollArea className="max-h-40"><ul className="space-y-1.5 text-sm pr-2">{habitsForSelectedCalendarDate.map(h => { const log = h.completionLog.find((l: { date: string; }) => l.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd')); const isSch = h.daysOfWeek.includes(dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)]); let statTxt="Scheduled"; let StatIcon=Circle; let iCol="text-orange-500"; if(log?.status==='completed'){statTxt=`Completed ${log.time||''}`; StatIcon=CheckCircle2;iCol="text-accent";}else if(log?.status==='pending_makeup'){statTxt=`Makeup for ${log.originalMissedDate||'earlier'}`; StatIcon=MakeupIcon;iCol="text-blue-500";}else if(log?.status==='skipped'){statTxt="Skipped";StatIcon=XCircle;iCol="text-muted-foreground";}else if(isSch && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !log){statTxt="Missed";StatIcon=XCircle;iCol="text-destructive";}else if(!isSch && !log){statTxt="Not Scheduled";StatIcon=Circle;iCol="text-muted-foreground/50";} return(<li key={h.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md text-xs"><span className="font-medium truncate pr-2">{h.name}</span><div className="flex items-center space-x-1"><StatIcon className={cn("h-3.5 w-3.5",iCol)}/><span>{statTxt}</span></div></li>);})}</ul></ScrollArea>) : (<p className="text-xs text-muted-foreground text-center py-2">No habits for this day.</p>)}</div>)}
           <DialogFooterOriginal className="mt-2"><DialogCloseOriginal asChild><Button type="button" variant="outline">Close</Button></DialogCloseOriginal></DialogFooterOriginal>
         </DialogContentOriginal>
       </Dialog>
