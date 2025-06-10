@@ -1,3 +1,11 @@
+// Add this for debugging
+console.log("Firebase config check:", {
+    hasAuth: !!auth,
+    hasDb: !!db,
+    authConfig: auth?.app?.options,
+  });
+
+
 "use client";
 
 import * as React from 'react';
