@@ -46,18 +46,26 @@ const getHabitTileIcon = (habit: Habit): React.ReactNode => {
   return <ListChecks className="h-6 w-6" />;
 };
 
-const getCategoryTileColor = (category?: HabitCategory): string => {
+const getCategoryTileColorClass = (category?: HabitCategory): string => {
   const categoryColorMap: Record<HabitCategory, string> = {
-    "Lifestyle": "border-sky-500", "Work/Study": "border-blue-500", "Health & Wellness": "border-red-500",
-    "Creative": "border-orange-500", "Chores": "border-green-500", "Finance": "border-indigo-500",
-    "Social": "border-pink-500", "Personal Growth": "border-yellow-500", "Other": "border-gray-400",
+    "Lifestyle": "border-[hsl(var(--chart-1))]",
+    "Work/Study": "border-[hsl(var(--chart-2))]",
+    "Health & Wellness": "border-[hsl(var(--chart-3))]",
+    "Creative": "border-[hsl(var(--chart-4))]",
+    "Chores": "border-[hsl(var(--chart-5))]",
+    "Finance": "border-[hsl(var(--chart-1))]", // Reuse chart-1
+    "Social": "border-[hsl(var(--chart-2))]", // Reuse chart-2
+    "Personal Growth": "border-[hsl(var(--chart-3))]", // Reuse chart-3
+    "Other": "border-[hsl(var(--chart-4))]", // Reuse chart-4 for "Other"
   };
-  return (category && HABIT_CATEGORIES.includes(category) && categoryColorMap[category]) ? categoryColorMap[category] : categoryColorMap["Other"];
+  return (category && HABIT_CATEGORIES.includes(category) && categoryColorMap[category]) 
+    ? categoryColorMap[category] 
+    : "border-[hsl(var(--chart-5))]"; // Default to chart-5 if category is somehow invalid
 }
 
 const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString }) => {
   const isCompletedToday = habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
-  const categoryBorderColor = getCategoryTileColor(habit.category);
+  const categoryBorderColorClass = getCategoryTileColorClass(habit.category);
 
   let streak = 0;
   try {
@@ -76,7 +84,7 @@ const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString })
         "cursor-pointer p-3 transition-all duration-200 ease-in-out active:scale-[0.98] hover:scale-[1.02] rounded-lg flex flex-col justify-between min-h-[100px] sm:min-h-[110px]", 
         isCompletedToday 
           ? "opacity-75 bg-card shadow-sm" 
-          : `bg-card border-l-2 ${categoryBorderColor} shadow-md hover:shadow-lg`, 
+          : `bg-card border-l-2 ${categoryBorderColorClass} shadow-md hover:shadow-lg`, 
       )}
     >
       <div> 
