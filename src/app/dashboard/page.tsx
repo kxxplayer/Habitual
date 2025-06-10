@@ -80,16 +80,19 @@ const DashboardPage: NextPage = () => {
           durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
           durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
           specificTime: typeof h.specificTime === 'string' ? h.specificTime : undefined,
-          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => { 
-            if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
-            return {
-              date: log.date,
-              time: typeof log.time === 'string' && log.time.length > 0 ? log.time : 'N/A',
-              note: typeof log.note === 'string' ? log.note : undefined,
-              status: ['completed', 'pending_makeup', 'skipped'].includes(log.status) ? log.status : 'completed',
-              originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
-            };
-          }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)),
+          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : [])
+            .map((log: Partial<HabitCompletionLogEntry>): HabitCompletionLogEntry | null => { 
+              if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
+              return {
+                date: log.date,
+                time: typeof log.time === 'string' && log.time.length > 0 ? log.time : 'N/A',
+                note: typeof log.note === 'string' ? log.note : undefined,
+                status: ['completed', 'pending_makeup', 'skipped'].includes(log.status as string) ? log.status as 'completed' | 'pending_makeup' | 'skipped' : 'completed',
+                originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
+              };
+            })
+            .filter((log: HabitCompletionLogEntry | null): log is HabitCompletionLogEntry => log !== null)
+            .sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)),
           reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
         }));
         setHabits(parsedHabits);
