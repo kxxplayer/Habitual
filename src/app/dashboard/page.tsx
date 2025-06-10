@@ -6,7 +6,7 @@ import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore'; // Removed getDoc, added arrayUnion
+import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore'; 
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import HabitOverview from '@/components/overview/HabitOverview';
@@ -26,7 +26,7 @@ import { PlusCircle } from 'lucide-react';
 
 // Firestore constants
 const USER_DATA_COLLECTION = "users";
-const USER_APP_DATA_SUBCOLLECTION = "appData"; // Corrected subcollection name based on previous successful file list
+const USER_APP_DATA_SUBCOLLECTION = "appData"; 
 const USER_MAIN_DOC_ID = "main";
 
 const DashboardPage: NextPage = () => {
@@ -57,32 +57,30 @@ const DashboardPage: NextPage = () => {
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth) {
-      if (!authUser && !isLoadingAuth) { // No user, auth check complete
+      if (!authUser && !isLoadingAuth) { 
         setIsLoadingData(false);
       }
       return;
     }
 
     setIsLoadingData(true);
-    // Corrected subcollection name back to appData based on the initial file list.
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
 
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
 
-        // Explicitly type parameters within map/filter/sort for better type safety
-        const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({ // Typed 'h' as any from firestore
+        const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({ 
           id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
           name: String(h.name || 'Unnamed Habit'),
           description: typeof h.description === 'string' ? h.description : undefined,
           category: HABIT_CATEGORIES.includes(h.category as HabitCategory) ? h.category : 'Other',
-          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any): d is WeekDay => weekDaysArrayForForm.includes(d as WeekDay)) : [], // Typed 'd' as any
+          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any): d is WeekDay => weekDaysArrayForForm.includes(d as WeekDay)) : [], 
           optimalTiming: typeof h.optimalTiming === 'string' ? h.optimalTiming : undefined,
           durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
           durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
           specificTime: typeof h.specificTime === 'string' ? h.specificTime : undefined,
-          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => { // Typed 'log' as any
+          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => { 
             if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
             return {
               date: log.date,
@@ -91,13 +89,12 @@ const DashboardPage: NextPage = () => {
               status: ['completed', 'pending_makeup', 'skipped'].includes(log.status) ? log.status : 'completed',
               originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
             };
-          }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)), // Typed 'a' and 'b'
+          }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)),
           reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
         }));
         setHabits(parsedHabits);
         setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
       } else {
-        // Document doesn't exist, set to defaults
         setHabits([]);
         setTotalPoints(0);
       }
@@ -113,55 +110,47 @@ const DashboardPage: NextPage = () => {
     return () => unsubscribeFirestore();
   }, [authUser, isLoadingAuth, toast]);
 
-  // Function to handle saving a new habit using arrayUnion
   const handleSaveNewHabit = async (newHabit: CreateHabitFormData) => {
     if (!authUser) {
       toast({ title: "Authentication Error", description: "You must be logged in to add a habit.", variant: "destructive" });
       return;
     }
 
-    setIsLoadingData(true); // Indicate loading while saving
+    setIsLoadingData(true); 
 
-    // Corrected subcollection name back to appData based on the initial file list.
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
 
     try {
-      // Assign a unique ID to the new habit if it doesn't have one
       const habitToSave = {
         id: newHabit.id || Date.now().toString() + Math.random().toString(36).substring(2, 7),
         ...newHabit,
-        completionLog: [], // Ensure completionLog is initialized
+        completionLog: [],
       };
 
-      // Use arrayUnion to add the new habit to the habits array
       await updateDoc(userDocRef, {
         habits: arrayUnion(habitToSave)
       });
 
       toast({ title: "Success", description: "Habit added successfully." });
-      setIsCreateHabitDialogOpen(false); // Close dialog on success
-      setCreateHabitDialogStep(1); // Reset step
+      setIsCreateHabitDialogOpen(false);
+      setCreateHabitDialogStep(1);
 
     } catch (error) {
       console.error("Error saving new habit to Firestore:", error);
       toast({ title: "Save Error", description: "Could not save the habit. Please try again.", variant: "destructive" });
     } finally {
-       setIsLoadingData(false); // Stop loading
+       setIsLoadingData(false);
     }
   };
 
-  // Function to handle opening the Create Habit Dialog
   const handleOpenCreateHabitDialog = () => {
-    setEditingHabitData(null); // Ensure we are not in editing mode when creating
-    setCreateHabitDialogStep(1); // Start at step 1 for creation
+    setEditingHabitData(null);
+    setCreateHabitDialogStep(1);
     setIsCreateHabitDialogOpen(true);
   };
 
-  // Function to handle opening the Goal Program Dialog (placeholder)
   const handleOpenGoalProgramDialog = () => {
     console.log("Open Goal Program Dialog");
-    // Implement navigation or state change to open the Goal Program Dialog
-    // For now, just close the habit dialog
      setIsCreateHabitDialogOpen(false);
   };
 
@@ -196,12 +185,11 @@ const DashboardPage: NextPage = () => {
           <div className="flex flex-col min-h-full">
             <main className="px-3 sm:px-4 py-4 flex-grow">
               <Card>
-                <CardHeader className="pb-2 flex flex-row items-center justify-between"> {/* MODIFIED */}
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
                   <div className="flex items-center">
                      <LayoutDashboard className="mr-2 h-5 w-5 text-primary" />
                      <CardTitle className="text-xl font-bold text-primary">Dashboard</CardTitle>
                   </div>
-                   {/* Add Habit Button */}
                    <Button variant="outline" size="sm" onClick={handleOpenCreateHabitDialog}>
                      <PlusCircle className="mr-1 h-4 w-4" /> Add Habit
                    </Button>
@@ -216,9 +204,8 @@ const DashboardPage: NextPage = () => {
             </footer>
           </div>
         </ScrollArea>
-        <BottomNavigationBar />
+        <BottomNavigationBar onAddNewHabitClick={handleOpenCreateHabitDialog} />
 
-        {/* CreateHabitDialog */}
         <CreateHabitDialog
            isOpen={isCreateHabitDialogOpen}
            onClose={() => setIsCreateHabitDialogOpen(false)}
