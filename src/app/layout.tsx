@@ -14,19 +14,21 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+// This metadata object is the single source of truth for your app's icons.
+// Next.js will automatically generate the correct <link> tags from this.
 export const metadata: Metadata = {
   title: 'Habitual',
   description: 'Improve your habits, one day at a time.',
   manifest: '/manifest.json',
   icons: {
-    icon: "/icons/icon-192x192.png", // Default icon
-    shortcut: "/icons/icon-192x192.png", // Use existing icon instead of missing icon-96x96
-    apple: "/icons/icon-192x192.png", // Use existing icon instead of missing apple-touch-icon
-    // Removed references to missing 16x16 and 32x32 icons
+    // Main icon for browsers and Android PWA
+    icon: '/icons/icon-192x192.png', 
+    // Icon for Apple devices when added to home screen
+    apple: '/icons/apple-touch-icon.png', 
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default", // or "black-translucent"
+    statusBarStyle: "default", 
     title: "Habitual",
   },
 };
@@ -34,8 +36,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: '#3498db', 
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   width: 'device-width',
 };
 
@@ -47,26 +47,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="application-name" content="Habitual" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Habitual" />
-        <meta name="format-detection" content="telephone=no" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-TileColor" content="#3498db" />
-        <meta name="msapplication-tap-highlight" content="no" />
-        
-        {/* Use only existing icons to prevent 404 errors */}
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
-        
-        {/* Preconnect to Firebase and Google Fonts if used directly often */}
-        <link rel="preconnect" href="https://firestore.googleapis.com" />
-        <link rel="preconnect" href="https://www.googleapis.com" />
-        <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
-
+        {/* All icon <link> tags are now handled by the metadata object above. */}
+        {/* Do NOT add any manual <link rel="icon"> or <link rel="apple-touch-icon"> tags here. */}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider
