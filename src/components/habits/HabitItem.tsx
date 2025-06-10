@@ -1,132 +1,133 @@
+// src/components/habits/HabitItem.tsx
 
 "use client";
 
-import * as React from 'react';
+import React, { useState } from 'react';
 import type { FC } from 'react';
-import { Card } from '@/components/ui/card';
-import { CheckCircle2, Circle, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, Flame } from 'lucide-react';
-import type { Habit, HabitCategory } from '@/types';
-import { HABIT_CATEGORIES } from '@/types';
-import { calculateStreak } from '@/lib/dateUtils';
-import { parseISO } from 'date-fns';
+import type { Habit } from '@/types';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
+import { Check, Flame, Repeat, Info, Trash2, Edit, CalendarPlus, X } from 'lucide-react';
+import { getHabitIcon } from '@/lib/getHabitIcon';
+import { Badge } from '@/components/ui/badge';
 
 interface HabitItemProps {
   habit: Habit;
-  onOpenDetailView: (habit: Habit) => void;
-  todayString: string; // YYYY-MM-DD
+  onToggleComplete: (habitId: string, date: string) => void;
+  onDelete: (habitId: string) => void;
+  onEdit: (habit: Habit) => void;
+  onReschedule: (habit: Habit) => void;
+  isCompleted: boolean;
+  currentDate: string;
 }
 
-const getHabitTileIcon = (habit: Habit): React.ReactNode => {
-  const nameLower = habit.name.toLowerCase();
-  if (nameLower.includes('gym') || nameLower.includes('workout')) return <span className="text-xl">🏋️</span>;
-  if (nameLower.includes('sql') || nameLower.includes('code')) return <span className="text-xl">💻</span>;
-  if (nameLower.includes('walk') || nameLower.includes('run')) return <span className="text-xl">🚶</span>;
-  if (nameLower.includes('read') || nameLower.includes('book')) return <span className="text-xl">📚</span>;
-  if (nameLower.includes('meditate') || nameLower.includes('mindfulness')) return <span className="text-xl">🧘</span>;
-  if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase className="h-6 w-6" />;
-  if (nameLower.includes('water') || nameLower.includes('hydrate')) return <Droplets className="h-6 w-6" />;
-  if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed className="h-6 w-6" />;
-  if (nameLower.includes('journal') || nameLower.includes('write')) return <BookOpenText className="h-6 w-6" />;
-  if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="h-6 w-6" />;
+const HabitItem: FC<HabitItemProps> = ({
+  habit,
+  onToggleComplete,
+  onDelete,
+  onEdit,
+  onReschedule,
+  isCompleted,
+  currentDate
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const HabitIcon = getHabitIcon(habit.category);
+  const streak = habit.streak || 0;
 
-  if (habit.category) {
-    switch (habit.category) {
-      case 'Health & Wellness': return <HeartPulse className="h-6 w-6 text-red-500" />;
-      case 'Work/Study': return <Briefcase className="h-6 w-6 text-blue-600" />;
-      case 'Creative': return <Paintbrush className="h-6 w-6 text-orange-500" />;
-      case 'Chores': return <HomeIconLucide className="h-6 w-6 text-green-600" />;
-      case 'Finance': return <Landmark className="h-6 w-6 text-indigo-500" />;
-      case 'Social': return <Users className="h-6 w-6 text-pink-500" />;
-      case 'Personal Growth': return <SparklesIcon className="h-6 w-6 text-yellow-500" />;
-      case 'Lifestyle': return <LifestyleIcon className="h-6 w-6 text-teal-500" />;
-      default: return <ListChecks className="h-6 w-6" />;
+  const cardVariants = {
+    initial: { height: 'auto', opacity: 1, scale: 1 },
+    deleted: { height: 0, opacity: 0, scale: 0.8, transition: { duration: 0.4 } },
+    completed: {
+      borderColor: ['hsl(var(--primary))', 'hsl(var(--border))'],
+      transition: { duration: 1.5, ease: "circOut" }
     }
-  }
-  return <ListChecks className="h-6 w-6" />;
-};
-
-const getCategoryTileColorClass = (category?: HabitCategory): string => {
-  const categoryColorMap: Record<HabitCategory, string> = {
-    "Lifestyle": "border-[hsl(var(--chart-1))]",
-    "Work/Study": "border-[hsl(var(--chart-2))]",
-    "Health & Wellness": "border-[hsl(var(--chart-3))]",
-    "Creative": "border-[hsl(var(--chart-4))]",
-    "Chores": "border-[hsl(var(--chart-5))]",
-    "Finance": "border-[hsl(var(--chart-1))]", // Reuse chart-1
-    "Social": "border-[hsl(var(--chart-2))]", // Reuse chart-2
-    "Personal Growth": "border-[hsl(var(--chart-3))]", // Reuse chart-3
-    "Other": "border-[hsl(var(--chart-4))]", // Reuse chart-4 for "Other"
   };
-  return (category && HABIT_CATEGORIES.includes(category) && categoryColorMap[category]) 
-    ? categoryColorMap[category] 
-    : "border-[hsl(var(--chart-5))]"; // Default to chart-5 if category is somehow invalid
-}
 
-const HabitItem: FC<HabitItemProps> = ({ habit, onOpenDetailView, todayString }) => {
-  const isCompletedToday = habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
-  const categoryBorderColorClass = getCategoryTileColorClass(habit.category);
+  const handleToggleComplete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleComplete(habit.id, currentDate);
+  };
+  
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete(habit.id);
+  };
+  
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit(habit);
+  };
+  
+  const handleReschedule = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onReschedule(habit);
+  };
 
-  let streak = 0;
-  try {
-    const todayDate = parseISO(todayString); 
-    streak = calculateStreak(habit, todayDate);
-  } catch (e) {
-    console.error("Error calculating streak for habit item:", e);
-  }
+  const handleCardClick = () => {
+    setIsExpanded(!isExpanded);
+  };
 
   return (
-    <Card
-      onClick={() => {
-        onOpenDetailView(habit);
-      }}
+    <motion.div
+      layout
+      variants={cardVariants}
+      initial="initial"
+      animate={isCompleted ? "completed" : "initial"}
+      exit="deleted"
       className={cn(
-        "cursor-pointer p-3 transition-all duration-200 ease-in-out active:scale-[0.98] hover:scale-[1.02] rounded-lg flex flex-col justify-between min-h-[100px] sm:min-h-[110px]", 
-        isCompletedToday 
-          ? "opacity-75 bg-card shadow-sm" 
-          : `bg-card border-l-2 ${categoryBorderColorClass} shadow-md hover:shadow-lg`, 
+        "bg-card text-card-foreground rounded-2xl shadow-sm border-l-4 transition-all duration-300 ease-in-out cursor-pointer",
+        isCompleted ? "border-primary bg-primary/10" : "border-transparent",
+        "hover:shadow-md hover:border-primary/50" // Subtle hover effect
       )}
+      onClick={handleCardClick}
     >
-      <div> 
-        <div className="flex items-start space-x-2 mb-1">
-          <div className={cn(
-            "flex-shrink-0 w-7 h-7 flex items-center justify-center mt-0.5",
-            isCompletedToday ? "text-muted-foreground" : "text-primary" 
-          )}>
-            {getHabitTileIcon(habit)}
+      <div className="p-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className={cn("p-2 rounded-full", isCompleted ? "bg-primary/20" : "bg-secondary")}>
+            <HabitIcon className={cn("h-6 w-6", isCompleted ? "text-primary" : "text-muted-foreground")} />
           </div>
-          <h3 className={cn(
-            "text-sm font-semibold flex-grow min-w-0 pr-1 break-words",
-            isCompletedToday ? "line-through text-muted-foreground" : "text-primary"
-          )}>
-            {habit.name}
-          </h3>
+          <div className="flex flex-col">
+            <span className="font-semibold text-lg">{habit.name}</span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Flame className="h-4 w-4 text-orange-500" />
+              <span>{streak} day streak</span>
+            </div>
+          </div>
         </div>
-      </div>
-      
-      <div className="flex items-center justify-between mt-auto pt-1">
-        <div className={cn(
-            "flex items-center text-xs",
-            isCompletedToday ? "text-muted-foreground" : "text-muted-foreground" 
-          )}>
-          {streak > 0 && (
-            <>
-              <Flame className={cn("h-3.5 w-3.5 mr-0.5", streak > 0 ? (isCompletedToday ? "text-muted-foreground/70" : "text-orange-500") : "text-muted-foreground/50")} />
-              <span>{streak}</span>
-            </>
+        <button
+          onClick={handleToggleComplete}
+          className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ease-in-out",
+            isCompleted ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-primary/10"
           )}
-        </div>
-        <div>
-          {isCompletedToday ? (
-            <CheckCircle2 className="h-5 w-5 text-muted-foreground" /> 
-          ) : (
-            <Circle className="h-5 w-5 text-muted-foreground/60" />
-          )}
-        </div>
+          aria-label={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+        >
+          <Check className="h-6 w-6" />
+        </button>
       </div>
-    </Card>
+
+      {isExpanded && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="px-4 pb-4 pt-2 border-t border-border"
+        >
+          <p className="text-sm text-muted-foreground mb-3">{habit.description || 'No description provided.'}</p>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary">{habit.category}</Badge>
+            {habit.optimalTiming && <Badge variant="secondary">{habit.optimalTiming}</Badge>}
+            {habit.durationMinutes && <Badge variant="secondary">{habit.durationMinutes} min</Badge>}
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <button onClick={handleEdit} className="p-2 hover:bg-secondary rounded-full"><Edit className="h-4 w-4" /></button>
+            <button onClick={handleReschedule} className="p-2 hover:bg-secondary rounded-full"><CalendarPlus className="h-4 w-4" /></button>
+            <button onClick={handleDelete} className="p-2 hover:bg-destructive/10 text-destructive rounded-full"><Trash2 className="h-4 w-4" /></button>
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
   );
 };
 
 export default HabitItem;
-    
