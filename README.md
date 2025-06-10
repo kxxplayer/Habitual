@@ -110,7 +110,7 @@ When deploying to Vercel, pay close attention to the following for Google Sign-I
     *   **Add Vercel preview domains:** Vercel generates unique URLs for preview deployments. You might need to add a wildcard or common patterns if you use previews extensively, or add them as they are generated. Common patterns include:
         *   `your-project-name-git-your-branch-your-org.vercel.app`
         *   `your-project-name-uniquehash-your-org.vercel.app`
-    *   If Google Sign-In still fails, the popup window might show the exact URL that needs to be authorized.
+    *   If Google Sign-In still fails, the popup window might show the exact URL that needs to be authorized. Check the browser console for the logged hostname if you've enabled debug logging in the `handleGoogleSignIn` function.
 
 2.  **Environment Variables on Vercel:**
     *   Go to your Vercel Project Dashboard > Settings > Environment Variables.
@@ -130,7 +130,65 @@ When deploying to Vercel, pay close attention to the following for Google Sign-I
 
 If issues persist, check the browser console for specific error messages when attempting Google Sign-In on your Vercel deployment.
 
-## PWA Notes
+## PWA and App Store Publishing
 
-*   Place app icons (e.g., `icon-192x192.png`, `icon-512x512.png`) in the `/public/icons/` directory.
-*   Customize `public/manifest.json` and `theme-color` in `src/app/layout.tsx` as needed.
+Habitual is a Progressive Web App (PWA), which means it can be installed on devices directly from the browser and offers an app-like experience.
+
+### PWA Notes
+
+*   **Icons**: Ensure you have a comprehensive set of app icons in the `/public/icons/` directory. Key sizes include:
+    *   `icon-72x72.png`
+    *   `icon-96x96.png`
+    *   `icon-128x128.png`
+    *   `icon-144x144.png`
+    *   `icon-152x152.png`
+    *   `icon-192x192.png` (maskable recommended)
+    *   `icon-384x384.png`
+    *   `icon-512x512.png` (maskable recommended)
+    *   `apple-touch-icon.png` (typically 180x180 or 192x192)
+    *   `icon-16x16.png` and `icon-32x32.png` (for favicons)
+*   **Manifest**: The `public/manifest.json` file is configured with necessary PWA properties.
+*   **Service Worker**: A service worker (`public/sw.js`) is included for basic offline caching of the app shell and static assets. For more advanced caching, especially with Next.js, consider using a library like `next-pwa` which leverages Workbox.
+
+### Publishing to App Stores
+
+You can package your PWA for submission to app stores like Google Play (Android) and the Apple App Store (iOS). This usually involves wrapping your web app in a native shell.
+
+**General Steps & Tools:**
+
+1.  **Ensure PWA is Solid**:
+    *   Your PWA should be installable, work offline (at least the basic shell), be responsive, and perform well.
+    *   Test thoroughly using tools like Lighthouse in Chrome DevTools.
+
+2.  **Use a PWA Packaging Tool**:
+    *   **PWABuilder ([pwabuilder.com](https://www.pwabuilder.com/))**: This Microsoft-backed tool is excellent for packaging PWAs for various platforms, including:
+        *   **Android (Google Play Store)**: PWABuilder can generate a Trusted Web Activity (TWA) project, which is Google's recommended way to list high-quality PWAs in the Play Store.
+        *   **iOS (Apple App Store)**: PWABuilder can help create an Xcode project. However, Apple's guidelines are stricter, and your PWA might need to offer significant unique functionality beyond what a website can provide.
+        *   **Windows (Microsoft Store)**.
+    *   **Capacitor ([capacitorjs.com](https://capacitorjs.com/))**: An open-source project that allows you to build web apps that run natively on iOS, Android, and the Web. It provides more access to native device features if needed.
+    *   **Manually wrapping in a WebView**: This is possible but more complex and generally less feature-rich than using dedicated tools.
+
+**Android (Google Play Store) Specifics:**
+
+*   Generate an Android project using PWABuilder (TWA).
+*   You'll need Android Studio to build the `.apk` or `.aab` (Android App Bundle) file.
+*   Sign your app.
+*   Create a Google Play Developer account and submit your app.
+
+**iOS (Apple App Store) Specifics:**
+
+*   Apple's review process for PWAs can be more stringent. Your app needs to feel like a "real" app and not just a website in a container.
+*   Use PWABuilder or Capacitor to generate an Xcode project.
+*   You'll need a Mac with Xcode and an Apple Developer Program membership.
+*   Build and test your app on iOS devices/simulators.
+*   Submit to App Store Connect.
+*   Consider adding native-like navigation, offline capabilities, and potentially some native features (if using Capacitor) to improve chances of approval.
+
+**Important Considerations:**
+
+*   **Offline Experience**: A robust offline experience is crucial for app store approval.
+*   **Performance**: Ensure your PWA loads quickly and performs well.
+*   **App Store Guidelines**: Familiarize yourself with the specific guidelines of each app store (Google Play Store and Apple App Store).
+*   **Updates**: When you update your web app, users who installed it via an app store wrapper might not get the update immediately. The wrapper might need to be updated and resubmitted, or it might be configured to load the latest web content (common with TWAs).
+*   **`next-pwa`**: For a Next.js project, using the `next-pwa` package can simplify service worker generation and PWA configuration, integrating well with the Next.js build process using Workbox. If you adopt `next-pwa`, you would typically remove the manual service worker registration in `layout.tsx` and the `public/sw.js` file, as `next-pwa` handles this.
+```
