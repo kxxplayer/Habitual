@@ -332,17 +332,20 @@ const HabitualPageContent: React.FC = () => {
         durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
         durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
  specificTime: typeof h.specificTime === 'string' && h.specificTime.match(/^\d{2}:\d{2}$/) ? h.specificTime : undefined,
-        completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: { date?: string; time?: string; note?: string; status?: string; originalMissedDate?: string }): HabitCompletionLogEntry | null => {
-          if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
+        completionLog: (Array.isArray(h.completionLog) ? h.completionLog : [])
+ .map((log: { date?: string; time?: string; note?: string; status?: string; originalMissedDate?: string }): HabitCompletionLogEntry | undefined => {
+          if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return undefined;
           return {
             date: log.date,
             time: typeof log.time === 'string' && log.time.length > 0 ? log.time : 'N/A',
             note: typeof log.note === 'string' ? log.note : undefined,
-            status: ['completed', 'pending_makeup', 'skipped'].includes(log.status) ? log.status : 'completed',
+            status: ['completed', 'pending_makeup', 'skipped'].includes(log.status as string) ? log.status as 'completed' | 'pending_makeup' | 'skipped' : 'completed',
  originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
           };
-        }).filter((log: null): log is HabitCompletionLogEntry => log !== null).sort((a: { date: any; },b: { date: string; }) => b.date.localeCompare(a.date)),
-        reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
+        })
+ .filter((log: HabitCompletionLogEntry | undefined): log is HabitCompletionLogEntry => log !== undefined)
+ .sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)),
+ reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
         programId: typeof h.programId === 'string' ? h.programId : undefined,
         programName: typeof h.programName === 'string' ? h.programName : undefined,
       }));
@@ -747,9 +750,27 @@ const HabitualPageContent: React.FC = () => {
   }, [habits, selectedHabitForDetailView, isDetailViewDialogOpen, authUser, handleCloseDetailView, mounted, isLoadingData]);
 
 
-  const calendarDialogModifiers = React.useMemo(() => { return {}; }, []);
+  const calendarDialogModifiers = React.useMemo(() => {
+    const modifiers: Record<string, Date[]> = {
+      completed: [],
+      skipped: [],
+      pending_makeup: [],
+    };
+    habits.forEach(habit => {
+      habit.completionLog.forEach(log => {
+        const date = parseISO(log.date);
+        if (!isNaN(date.getTime())) {
+          if (log.status === 'completed') modifiers.completed.push(date);
+          else if (log.status === 'skipped') modifiers.skipped.push(date);
+          else if (log.status === 'pending_makeup') modifiers.pending_makeup.push(date);
+        }
+      });
+    });
+    return modifiers;
+  }, [habits]);
+
   const calendarDialogModifierStyles: Record<string, React.CSSProperties> = { };
-  const habitsForSelectedCalendarDate = React.useMemo(() => { return []; }, [selectedCalendarDate, habits, authUser]);
+  const habitsForSelectedCalendarDate = React.useMemo(() => { if (!selectedCalendarDate) return []; const selectedDateString = format(selectedCalendarDate, 'yyyy-MM-dd'); const selectedDayAbbr = dayIndexToWeekDayConstant[getDay(selectedCalendarDate)]; return habits.filter(h => h.daysOfWeek.includes(selectedDayAbbr) || h.completionLog.some(log => log.date === selectedDateString)); }, [selectedCalendarDate, habits]);
 
   const handleOpenGoalInputProgramDialog = () => setIsGoalInputProgramDialogOpen(true);
   
@@ -880,11 +901,18 @@ const HabitualPageContent: React.FC = () => {
                 )
               ) : (
                 <HabitList 
-                    habits={habits} 
-                    onOpenDetailView={handleOpenDetailView} 
-                    todayString={todayString} 
-                    todayAbbr={todayAbbr}
-                />
+                      habits={habits}
+                      onOpenDetailView={handleOpenDetailView}
+                      todayString={todayString}
+                      todayAbbr={todayAbbr} onToggleComplete={function (habitId: string, date: string): void {
+                        throw new Error('Function not implemented.');
+                      } } onDelete={function (habitId: string): void {
+                        throw new Error('Function not implemented.');
+                      } } onEdit={function (habit: Habit): void {
+                        throw new Error('Function not implemented.');
+                      } } onReschedule={function (habit: Habit): void {
+                        throw new Error('Function not implemented.');
+                      } }                />
               )}
             </main>
           </div>
@@ -938,7 +966,7 @@ const HabitualPageContent: React.FC = () => {
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
         <DialogContentOriginal className="sm:max-w-lg bg-card">
           <DialogHeaderOriginal><DialogTitleOriginal className="flex items-center"><CalendarDays className="mr-2 h-5 w-5 text-primary"/>Habit Calendar</DialogTitleOriginal><DialogDescriptionOriginal>View your habit activity.</DialogDescriptionOriginal></DialogHeaderOriginal>
-          <Calendar mode="single" selected={selectedCalendarDate} onSelect={setSelectedCalendarDate} month={selectedCalendarDate || undefined} onMonthChange={(month) => { if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) setSelectedCalendarDate(startOfDay(month)); }} modifiers={calendarDialogModifiers} modifiersStyles={calendarDialogModifierStyles} className="rounded-md border p-0 sm:p-2" />
+          <Calendar mode="single" selected={selectedCalendarDate} onSelect={setSelectedCalendarDate} month={selectedCalendarDate || undefined} onMonthChange={(month) => { if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) setSelectedCalendarDate(startOfDay(month)); }} modifiers={calendarDialogModifiers} modifiersStyles={calendarDialogModifierStyles} className="rounded-md border p-0 sm:p-2 mx-auto" />
           {selectedCalendarDate && ( <div className="mt-3 w-full"><h3 className="text-md font-semibold mb-1.5 text-center text-primary">Status for {format(selectedCalendarDate, 'MMMM d, yyyy')}</h3>{habitsForSelectedCalendarDate.length > 0 ? (<ScrollArea className="max-h-40"><ul className="space-y-1.5 text-sm pr-2">{habitsForSelectedCalendarDate.map(h => { const log = h.completionLog.find((l: { date: string; }) => l.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd')); const isSch = h.daysOfWeek.includes(dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)]); let statTxt="Scheduled"; let StatIcon=Circle; let iCol="text-orange-500"; if(log?.status==='completed'){statTxt=`Completed ${log.time||''}`; StatIcon=CheckCircle2;iCol="text-accent";}else if(log?.status==='pending_makeup'){statTxt=`Makeup for ${log.originalMissedDate||'earlier'}`; StatIcon=MakeupIcon;iCol="text-blue-500";}else if(log?.status==='skipped'){statTxt="Skipped";StatIcon=XCircle;iCol="text-muted-foreground";}else if(isSch && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !log){statTxt="Missed";StatIcon=XCircle;iCol="text-destructive";}else if(!isSch && !log){statTxt="Not Scheduled";StatIcon=Circle;iCol="text-muted-foreground/50";} return(<li key={h.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md text-xs"><span className="font-medium truncate pr-2">{h.name}</span><div className="flex items-center space-x-1"><StatIcon className={cn("h-3.5 w-3.5",iCol)}/><span>{statTxt}</span></div></li>);})}</ul></ScrollArea>) : (<p className="text-xs text-muted-foreground text-center py-2">No habits for this day.</p>)}</div>)}
           <DialogFooterOriginal className="mt-2"><DialogCloseOriginal asChild><Button type="button" variant="outline">Close</Button></DialogCloseOriginal></DialogFooterOriginal>
         </DialogContentOriginal>
