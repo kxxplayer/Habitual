@@ -129,7 +129,7 @@ const HabitualPageContent: React.FC = () => {
                                     originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
                                 };
                             })
-                            .filter((log): log is HabitCompletionLogEntry => log !== null)
+                            .filter((log: HabitCompletionLogEntry | undefined): log is HabitCompletionLogEntry => log !== undefined)
                             .sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)),
                         reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
                         programId: typeof h.programId === 'string' ? h.programId : undefined,
