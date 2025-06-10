@@ -5,20 +5,13 @@ import type { FC, ReactNode } from 'react';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useRouter } from 'next/navigation';
 
 interface AppPageLayoutProps {
   children: ReactNode;
-  title?: string;
-  titleIcon?: React.ElementType;
   onAddNew?: () => void;
 }
 
-const AppPageLayout: FC<AppPageLayoutProps> = ({ children, title, titleIcon: Icon, onAddNew }) => {
-  const router = useRouter();
-  
-  const handleAddNewClick = onAddNew || (() => router.push('/?action=addHabit'));
-
+const AppPageLayout: FC<AppPageLayoutProps> = ({ children, onAddNew }) => {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader />
@@ -29,7 +22,7 @@ const AppPageLayout: FC<AppPageLayoutProps> = ({ children, title, titleIcon: Ico
           </main>
         </ScrollArea>
       </div>
-      <BottomNavigationBar onAddNewHabitClick={handleAddNewClick} />
+      <BottomNavigationBar onAddNewHabitClick={onAddNew} />
     </div>
   );
 };
