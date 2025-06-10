@@ -1,17 +1,8 @@
-// Add this for debugging
-console.log("Firebase config check:", {
-    hasAuth: !!auth,
-    hasDb: !!db,
-    authConfig: auth?.app?.options,
-  });
-
-
 "use client";
 
-import * as React from 'react';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { NextPage } from 'next';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, setDoc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
