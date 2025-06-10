@@ -252,7 +252,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
 
         {(currentStep === 2 || isEditing) && (
           <form onSubmit={handleSubmit(onSubmitDialog)} className="flex flex-col flex-grow min-h-0">
-            <ScrollArea className="flex-grow min-h-0 px-2 -mx-2">
+            <div className="flex-grow overflow-y-auto px-4 -mx-4">
                 <div className="space-y-4 px-4 pb-4">
                   {!isEditing && (
                     <Button type="button" onClick={() => setCurrentStep(1)} variant="ghost" size="sm" className="text-xs text-muted-foreground mb-2 px-1">
@@ -318,10 +318,10 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                     <Controller name="description" control={control} render={({ field }) => <Textarea id="dialog-final-description" placeholder="Detailed description of the habit" {...field} className="bg-input/50 text-sm" rows={2}/>} />
                   </div>
                 </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4 shrink-0 px-4 pb-4">
+            </div>
+            <DialogFooter className="pt-4 shrink-0 px-4 pb-4 border-t">
               <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>Cancel</Button></DialogClose>
-              <Button type="submit" disabled={isSubmitting || isAISuggesting}>
+              <Button type="submit" form="habit-form" disabled={isSubmitting || isAISuggesting}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isEditing ? <Save className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />)}
                 {isEditing ? "Save Changes" : "Add This Habit"}
               </Button>
