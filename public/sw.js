@@ -17,9 +17,7 @@ const OPTIONAL_ASSETS_TO_CACHE = [
   '/icons/icon-128x128.png',
   '/icons/icon-144x144.png',
   '/icons/icon-152x152.png',
-  '/icons/icon-384x384.png',
-  '/icons/icon-16x16.png',
-  '/icons/icon-32x32.png',
+  '/icons/icon-384x384.png', // Consider if this exists or is needed
   '/icons/apple-touch-icon.png',
 ];
 
