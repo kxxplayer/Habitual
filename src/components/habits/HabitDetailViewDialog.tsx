@@ -15,7 +15,7 @@ import type { Habit, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
-import { getCurrentWeekDays, WeekDayInfo, calculateStreak } from '@/lib/dateUtils';
+import { getCurrentWeekDays, WeekDayInfo, calculateStreak, getDayAbbreviationFromDate } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 import type { ReflectionStarterInput, ReflectionStarterOutput } from '@/ai/flows/reflection-starter-flow';
 import AIReflectionPromptDialog from '@/components/popups/AIReflectionPromptDialog';
@@ -42,9 +42,11 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   onOpenRescheduleDialog, onToggleReminder, onOpenEditDialog, onOpenDeleteConfirm,
   onGetAIReflectionPrompt,
 }) => {
-  // ... (rest of the component's state and useEffects)
   const { toast } = useToast();
-  const [todayString, setTodayString] = React.useState('');
+  const todayString = React.useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const [currentDate, setCurrentDate] = React.useState<Date | null>(new Date());
+  
+  // ... (rest of the component's state and useEffects)
   
   const handleToggleTodayCompletion = (complete: boolean) => {
     if (!habit) return;

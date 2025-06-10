@@ -33,7 +33,6 @@ const HabitList: FC<HabitListProps> = ({
       <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
         <ListChecks className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
         <h3 className="text-xl font-semibold text-foreground">Loading...</h3>
-        <p className="text-muted-foreground">Determining today's tasks.</p>
       </div>
     );
   }
@@ -58,7 +57,25 @@ const HabitList: FC<HabitListProps> = ({
 
   const programGroupsArray = Object.values(groupedProgramHabits);
   
-  // ... (rest of the component logic)
+  if (habits.length === 0) {
+     return (
+      <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
+        <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
+        <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
+        <p className="text-sm text-muted-foreground">Tap the '+' button to add habits or create a program!</p>
+      </div>
+    );
+  }
+  
+  if (habitsRelevantToday.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
+        <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
+        <h3 className="text-lg font-semibold text-foreground">No Habits for Today</h3>
+        <p className="text-sm text-muted-foreground">Relax or check your other scheduled habits!</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col space-y-4">
@@ -71,7 +88,7 @@ const HabitList: FC<HabitListProps> = ({
           onOpenDetailView={onOpenDetailView}
           todayString={todayString}
           todayAbbr={todayAbbr}
- onToggleComplete={(habitId, date) => onToggleComplete(habitId, date, true)} // Assuming toggle means complete here, adjust if needed
+ onToggleComplete={(habitId, date) => onToggleComplete(habitId, date, true)} // Assuming toggle means complete from list
  onDelete={onDelete}
  onEdit={onEdit}
  onReschedule={onReschedule}

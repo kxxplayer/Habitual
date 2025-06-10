@@ -1,12 +1,15 @@
 "use client";
 
+// ==========================================================================
+// HABITUAL MAIN PAGE - Firestore Integration
+// ==========================================================================
 import * as React from 'react';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { NextPage } from 'next';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { auth, db } from '@/lib/firebase';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -22,7 +25,7 @@ import GoalInputProgramDialog from '@/components/programs/GoalInputProgramDialog
 import ProgramSuggestionDialog from '@/components/programs/ProgramSuggestionDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, EarnedBadge, CreateHabitFormData, SuggestedHabitForCommonList as CommonSuggestedHabitType } from '@/types';
+import type { Habit, AISuggestion as AISuggestionType, WeekDay, HabitCompletionLogEntry, HabitCategory, EarnedBadge, CreateHabitFormData, SuggestedHabitForCommonList as CommonSuggestedHabitType } from '@/types';
 import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm, SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID, THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
@@ -36,7 +39,7 @@ import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { useToast } from "@/hooks/use-toast";
 
 import { Loader2, ListChecks } from 'lucide-react';
-import { format, getDay } from 'date-fns';
+import { format, getDay, parseISO } from 'date-fns';
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const POINTS_PER_COMPLETION = 10;
@@ -58,6 +61,8 @@ const HabitualPageContent: React.FC = () => {
     const { toast } = useToast();
     const [authUser, setAuthUser] = React.useState<User | null>(null);
     const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
+    
+    // ... (All other state declarations)
     const [habits, setHabits] = useState<Habit[]>([]);
     const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
     const [totalPoints, setTotalPoints] = useState<number>(0);
@@ -66,21 +71,15 @@ const HabitualPageContent: React.FC = () => {
     const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
     const [initialFormDataForDialog, setInitialFormDataForDialog] = useState<Partial<CreateHabitFormData> | null>(null);
     const [createHabitDialogStep, setCreateHabitDialogStep] = useState(1);
-    const [isDailyQuestDialogOpen, setIsDailyQuestDialogOpen] = useState(false);
     const [selectedHabitForDetailView, setSelectedHabitForDetailView] = useState<Habit | null>(null);
     const [isDetailViewDialogOpen, setIsDetailViewDialogOpen] = useState(false);
-    const [isGoalInputProgramDialogOpen, setIsGoalInputProgramDialogOpen] = useState(false);
-    const [isProgramSuggestionLoading, setIsProgramSuggestionLoading] = useState(false);
-    const [programSuggestion, setProgramSuggestion] = useState<GenerateHabitProgramOutput | null>(null);
-    const [isProgramSuggestionDialogOpen, setIsProgramSuggestionDialogOpen] = useState(false);
-    const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = React.useState(false);
-    const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = React.useState<Habit | null>(null);
-    const [aiSuggestion, setAISuggestion] = React.useState<AISuggestionType | null>(null);
-    const [isReflectionDialogOpen, setIsReflectionDialogOpen] = React.useState(false);
-    const [reflectionDialogData, setReflectionDialogData] = React.useState<{ habitId: string; date: string; initialNote?: string; habitName: string; } | null>(null);
-    const [rescheduleDialogData, setRescheduleDialogData] = React.useState<{ habit: Habit; missedDate: string; } | null>(null);
-    const [isDeleteHabitConfirmOpen, setIsDeleteHabitConfirmOpen] = React.useState(false);
-    const [habitToDelete, setHabitToDelete] = React.useState<{ id: string; name: string } | null>(null);
+    const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = useState(false);
+    const [aiSuggestion, setAISuggestion] = useState<AISuggestionType | null>(null);
+    const [isReflectionDialogOpen, setIsReflectionDialogOpen] = useState(false);
+    const [reflectionDialogData, setReflectionDialogData] = useState<{ habitId: string; date: string; initialNote?: string; habitName: string; } | null>(null);
+    const [rescheduleDialogData, setRescheduleDialogData] = useState<{ habit: Habit; missedDate: string; } | null>(null);
+    const [isDeleteHabitConfirmOpen, setIsDeleteHabitConfirmOpen] = useState(false);
+    const [habitToDelete, setHabitToDelete] = useState<{ id: string; name: string } | null>(null);
     
     // ... (rest of state declarations)
 
@@ -106,8 +105,8 @@ const HabitualPageContent: React.FC = () => {
             setHabits(prev => prev.map(h => h.id === habitData.id ? { 
                 ...h, 
                 ...habitData,
-                durationHours: habitData.durationHours ?? undefined,
-                durationMinutes: habitData.durationMinutes ?? undefined,
+                durationHours: habitData.durationHours === null ? undefined : habitData.durationHours,
+                durationMinutes: habitData.durationMinutes === null ? undefined : habitData.durationMinutes,
             } as Habit : h));
             toast({ title: "Habit Updated", description: `"${habitData.name}" has been updated.`});
         } else {
@@ -118,8 +117,8 @@ const HabitualPageContent: React.FC = () => {
                 category: habitData.category,
                 daysOfWeek: habitData.daysOfWeek,
                 optimalTiming: habitData.optimalTiming,
-                durationHours: habitData.durationHours ?? undefined,
-                durationMinutes: habitData.durationMinutes ?? undefined,
+                durationHours: habitData.durationHours === null ? undefined : habitData.durationHours,
+                durationMinutes: habitData.durationMinutes === null ? undefined : habitData.durationMinutes,
                 specificTime: habitData.specificTime,
                 completionLog: [],
                 reminderEnabled: false,
@@ -177,7 +176,6 @@ const HabitualPageContent: React.FC = () => {
                 habitName: habit.name,
                 daysOfWeek: habit.daysOfWeek,
                 trackingData: `Completed ${habit.completionLog.length} times.`,
-                // Pass optional fields only if they exist
                 ...(habit.description && { habitDescription: habit.description }),
                 ...(habit.optimalTiming && { optimalTiming: habit.optimalTiming }),
                 ...(habit.durationHours && { durationHours: habit.durationHours }),
@@ -190,14 +188,40 @@ const HabitualPageContent: React.FC = () => {
         }
     };
 
-    // ... (rest of your handlers and component return)
+    // ... (rest of handlers) ...
+    const handleOpenDetailView = (habit: Habit) => { setSelectedHabitForDetailView(habit); setIsDetailViewDialogOpen(true); };
+    const handleCloseDetailView = useCallback(() => { setSelectedHabitForDetailView(null); setIsDetailViewDialogOpen(false); }, []);
+
+    if (isLoadingAuth || isLoadingData) {
+        return <LoadingFallback />;
+    }
     
     return (
         <AppPageLayout>
-            {/* Main content goes here */}
-            {/* You'll need to add the actual JSX for your page */}
-            {/* This is just a placeholder to satisfy the type requirement */}
-            <div>Your page content here</div>
+             <HabitList 
+                habits={habits}
+                onOpenDetailView={handleOpenDetailView}
+                todayString={todayString}
+                todayAbbr={todayAbbr}
+                onToggleComplete={handleToggleComplete}
+                onDelete={() => {}}
+                onEdit={() => {}}
+                onReschedule={() => {}}
+             />
+             <HabitDetailViewDialog
+                habit={selectedHabitForDetailView}
+                isOpen={isDetailViewDialogOpen}
+                onClose={handleCloseDetailView}
+                onToggleComplete={handleToggleComplete}
+                onGetAISuggestion={handleGetAISuggestion}
+                onOpenReflectionDialog={() => {}}
+                onOpenRescheduleDialog={() => {}}
+                onToggleReminder={() => {}}
+                onOpenEditDialog={() => {}}
+                onOpenDeleteConfirm={() => {}}
+                onGetAIReflectionPrompt={getReflectionStarter}
+            />
+             {/* Other dialogs... */}
         </AppPageLayout>
     );
 };
@@ -209,3 +233,4 @@ const HabitualPage: NextPage = () => (
 );
 
 export default HabitualPage;
+
