@@ -10,14 +10,10 @@ import { ListChecks } from 'lucide-react';
 interface HabitListProps {
   habits: Habit[];
   onOpenDetailView: (habit: Habit) => void;
-  // Note: These props are not passed down to HabitList's direct children anymore,
-  // but they are kept in the interface because the parent component (page.tsx)
-  // still needs to pass them to other dialogs. The props are unused here, but
-  // removing them from the interface would cause an error in page.tsx.
   onToggleComplete: (habitId: string, date: string) => void;
-  onDelete: (habitId: string) => void;
+  onDelete: (habitId: string, habitName: string) => void;
   onEdit: (habit: Habit) => void;
-  onReschedule: (habit: Habit) => void;
+  onReschedule: (habit: Habit, missedDate: string) => void;
   todayString: string;
   todayAbbr: WeekDay | '';
 }
@@ -25,6 +21,10 @@ interface HabitListProps {
 const HabitList: FC<HabitListProps> = ({ 
   habits, 
   onOpenDetailView, 
+  onToggleComplete, 
+  onDelete, 
+  onEdit, 
+  onReschedule, 
   todayString, 
   todayAbbr 
 }) => {
@@ -92,6 +92,10 @@ const HabitList: FC<HabitListProps> = ({
           onOpenDetailView={onOpenDetailView}
           todayString={todayString}
           todayAbbr={todayAbbr}
+          onToggleComplete={onToggleComplete}
+          onDelete={onDelete}
+          onEdit={onEdit}
+          onReschedule={onReschedule}
         />
       ))}
       {standaloneHabits.map((habit) => (

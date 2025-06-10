@@ -11,7 +11,6 @@ export interface HabitItemProps {
   todayString: string;
 }
 
-// A more representative icon getter function for the list view
 const getHabitListIcon = (habit: Habit): React.ReactNode => {
     const nameLower = habit.name.toLowerCase();
     if (nameLower.includes('sql') || nameLower.includes('code')) return <span className="text-lg">💻</span>;
@@ -70,3 +69,4 @@ const HabitItem: FC<HabitItemProps> = ({ habit, todayString }) => {
 };
 
 export default HabitItem;
+

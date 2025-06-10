@@ -16,6 +16,11 @@ interface ProgramHabitGroupProps {
   onOpenDetailView: (habit: Habit) => void;
   todayString: string;
   todayAbbr: WeekDay | '';
+  // Add the missing props that will be passed from HabitList
+  onToggleComplete: (habitId: string, date: string) => void;
+  onDelete: (habitId: string, habitName: string) => void;
+  onEdit: (habit: Habit) => void;
+  onReschedule: (habit: Habit, missedDate: string) => void;
 }
 
 const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
@@ -25,6 +30,11 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   onOpenDetailView,
   todayString,
   todayAbbr,
+  // Destructure the new props to use them
+  onToggleComplete,
+  onDelete,
+  onEdit,
+  onReschedule,
 }) => {
   const habitsScheduledToday = todayAbbr
     ? habitsInProgram.filter(habit => 
