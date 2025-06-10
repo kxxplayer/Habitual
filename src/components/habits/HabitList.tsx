@@ -1,11 +1,14 @@
+// src/components/habits/HabitList.tsx
+
 "use client";
 
 import type { FC } from 'react';
 import * as React from 'react'; 
 import HabitItem from './HabitItem';
-import ProgramHabitGroup from './ProgramHabitGroup';
+import ProgramHabitGroup from './ProgramHabitGroup'; // Import new component
 import type { Habit, WeekDay } from '@/types';
 import { ListChecks } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface HabitListProps {
   habits: Habit[];
@@ -28,11 +31,33 @@ const HabitList: FC<HabitListProps> = ({
   todayString, 
   todayAbbr 
 }) => {
+  // Wrapper functions to adapt to HabitItem's expected signatures where needed
+  const handleToggleCompleteWrapper = (habitId: string, date: string) => {
+    const habit = habits.find(h => h.id === habitId);
+    if (habit) {
+      const isCompleted = habit.completionLog.some(log => log.date === date && log.status === 'completed');
+      onToggleComplete(habitId, date, !isCompleted);
+    }
+  };
+
+  const handleDeleteWrapper = (habitId: string) => {
+    const habit = habits.find(h => h.id === habitId);
+    if (habit) {
+      onDelete(habitId, habit.name);
+    }
+  };
+
+  const handleRescheduleWrapper = (habit: Habit) => {
+    // Default to today for the missed date
+    onReschedule(habit, todayString);
+  };
+
   if (!todayAbbr) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
         <ListChecks className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
         <h3 className="text-xl font-semibold text-foreground">Loading...</h3>
+        <p className="text-muted-foreground">Determining today's tasks.</p>
       </div>
     );
   }
@@ -57,7 +82,11 @@ const HabitList: FC<HabitListProps> = ({
 
   const programGroupsArray = Object.values(groupedProgramHabits);
   
-  if (habits.length === 0) {
+  const noTasksAtAll = habits.length === 0;
+  const noTasksForToday = habits.length > 0 && habitsRelevantToday.length === 0;
+
+
+  if (noTasksAtAll) {
      return (
       <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
         <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
@@ -67,7 +96,7 @@ const HabitList: FC<HabitListProps> = ({
     );
   }
   
-  if (habitsRelevantToday.length === 0) {
+  if (noTasksForToday) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
         <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
@@ -78,7 +107,7 @@ const HabitList: FC<HabitListProps> = ({
   }
 
   return (
-    <div className="flex flex-col space-y-4">
+    <div className="flex flex-col space-y-3">
       {programGroupsArray.map((group) => (
         <ProgramHabitGroup
           key={group.id}
@@ -88,19 +117,24 @@ const HabitList: FC<HabitListProps> = ({
           onOpenDetailView={onOpenDetailView}
           todayString={todayString}
           todayAbbr={todayAbbr}
- onToggleComplete={(habitId, date) => onToggleComplete(habitId, date, true)} // Assuming toggle means complete from list
- onDelete={onDelete}
- onEdit={onEdit}
+ onToggleComplete={handleToggleCompleteWrapper} // Use wrapper
+ onDelete={handleDeleteWrapper} // Use wrapper
+ onEdit={onEdit} // Pass directly
  onReschedule={onReschedule}
         />
       ))}
       {standaloneHabits.map((habit) => (
-        <div onClick={() => onOpenDetailView(habit)} key={habit.id} className="cursor-pointer">
-            <HabitItem
-              habit={habit}
-              todayString={todayString}
-            />
-        </div>
+        <HabitItem
+          key={habit.id}
+          habit={habit}
+          onToggleComplete={handleToggleCompleteWrapper}
+          onDelete={handleDeleteWrapper}
+          onEdit={onEdit}
+          onReschedule={handleRescheduleWrapper}
+          onOpenDetailView={onOpenDetailView}
+          isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
+          currentDate={todayString}
+        />
       ))}
     </div>
   );
