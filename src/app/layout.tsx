@@ -1,4 +1,3 @@
-
 import type {Metadata, Viewport} from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -21,12 +20,9 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: "/icons/icon-192x192.png", // Default icon
-    shortcut: "/icons/icon-96x96.png", // For PWA shortcuts
-    apple: "/icons/apple-touch-icon.png", // Specific for Apple devices
-    other: [
-      { rel: 'icon', url: '/icons/icon-32x32.png', sizes: '32x32' },
-      { rel: 'icon', url: '/icons/icon-16x16.png', sizes: '16x16' },
-    ],
+    shortcut: "/icons/icon-192x192.png", // Use existing icon instead of missing icon-96x96
+    apple: "/icons/icon-192x192.png", // Use existing icon instead of missing apple-touch-icon
+    // Removed references to missing 16x16 and 32x32 icons
   },
   appleWebApp: {
     capable: true,
@@ -57,17 +53,14 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Habitual" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-config" content="/icons/browserconfig.xml" />
         <meta name="msapplication-TileColor" content="#3498db" />
         <meta name="msapplication-tap-highlight" content="no" />
         
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" /> 
-        <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png" /> 
-
-        <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
+        {/* Use only existing icons to prevent 404 errors */}
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
         
         {/* Preconnect to Firebase and Google Fonts if used directly often */}
         <link rel="preconnect" href="https://firestore.googleapis.com" />
