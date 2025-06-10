@@ -1,32 +1,23 @@
-// src/app/dashboard/page.tsx
-
 "use client";
 
 import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore'; 
+import { doc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import HabitOverview from '@/components/overview/HabitOverview';
-import type { Habit, HabitCategory, HabitCompletionLogEntry, WeekDay, CreateHabitFormData } from '@/types';
+import type { Habit, HabitCategory, HabitCompletionLogEntry, WeekDay, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm } from '@/types';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Loader2, LayoutDashboard } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 
-
-// Firestore constants
 const USER_DATA_COLLECTION = "users";
-const USER_APP_DATA_SUBCOLLECTION = "appData"; 
+const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
 
 const DashboardPage: NextPage = () => {
@@ -35,12 +26,9 @@ const DashboardPage: NextPage = () => {
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [habits, setHabits] = React.useState<Habit[]>([]);
+  const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
   const [totalPoints, setTotalPoints] = React.useState<number>(0);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
-  const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
-  const [createHabitDialogStep, setCreateHabitDialogStep] = React.useState(1);
-  const [editingHabitData, setEditingHabitData] = React.useState<Partial<CreateHabitFormData & { id: string }> | null>(null);
-
 
   React.useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -57,7 +45,7 @@ const DashboardPage: NextPage = () => {
 
   React.useEffect(() => {
     if (!authUser || isLoadingAuth) {
-      if (!authUser && !isLoadingAuth) { 
+      if (!authUser && !isLoadingAuth) {
         setIsLoadingData(false);
       }
       return;
@@ -69,7 +57,6 @@ const DashboardPage: NextPage = () => {
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-
         const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({ 
           id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
           name: String(h.name || 'Unnamed Habit'),
@@ -94,69 +81,27 @@ const DashboardPage: NextPage = () => {
             .filter((log: HabitCompletionLogEntry | null): log is HabitCompletionLogEntry => log !== null)
             .sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)),
           reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
+          programId: typeof h.programId === 'string' ? h.programId : undefined,
+          programName: typeof h.programName === 'string' ? h.programName : undefined,
         }));
+        
         setHabits(parsedHabits);
+        setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
         setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
       } else {
         setHabits([]);
+        setEarnedBadges([]);
         setTotalPoints(0);
       }
       setIsLoadingData(false);
     }, (error) => {
       console.error("Error fetching dashboard data from Firestore:", error);
       toast({ title: "Data Error", description: "Could not load dashboard data.", variant: "destructive" });
-      setHabits([]);
-      setTotalPoints(0);
       setIsLoadingData(false);
     });
 
     return () => unsubscribeFirestore();
   }, [authUser, isLoadingAuth, toast]);
-
-  const handleSaveNewHabit = async (newHabit: CreateHabitFormData) => {
-    if (!authUser) {
-      toast({ title: "Authentication Error", description: "You must be logged in to add a habit.", variant: "destructive" });
-      return;
-    }
-
-    setIsLoadingData(true); 
-
-    const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
-
-    try {
-      const habitToSave = {
-        id: newHabit.id || Date.now().toString() + Math.random().toString(36).substring(2, 7),
-        ...newHabit,
-        completionLog: [],
-      };
-
-      await updateDoc(userDocRef, {
-        habits: arrayUnion(habitToSave)
-      });
-
-      toast({ title: "Success", description: "Habit added successfully." });
-      setIsCreateHabitDialogOpen(false);
-      setCreateHabitDialogStep(1);
-
-    } catch (error) {
-      console.error("Error saving new habit to Firestore:", error);
-      toast({ title: "Save Error", description: "Could not save the habit. Please try again.", variant: "destructive" });
-    } finally {
-       setIsLoadingData(false);
-    }
-  };
-
-  const handleOpenCreateHabitDialog = () => {
-    setEditingHabitData(null);
-    setCreateHabitDialogStep(1);
-    setIsCreateHabitDialogOpen(true);
-  };
-
-  const handleOpenGoalProgramDialog = () => {
-    console.log("Open Goal Program Dialog");
-     setIsCreateHabitDialogOpen(false);
-  };
-
 
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
@@ -168,57 +113,21 @@ const DashboardPage: NextPage = () => {
   }
 
   if (!authUser) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
-        <p className="text-muted-foreground">Redirecting to login...</p>
-      </div>
-    );
+    return null; // The auth listener will redirect
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
-      <div className={cn(
-        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-sm h-[97vh] max-h-[97vh]",
-        "md:max-w-md",
-        "lg:max-w-lg"
-      )}>
-        <AppHeader />
-        <ScrollArea className="flex-grow min-h-0">
-          <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4 flex-grow">
-              <Card>
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <div className="flex items-center">
-                     <LayoutDashboard className="mr-2 h-5 w-5 text-primary" />
-                     <CardTitle className="text-xl font-bold text-primary">Dashboard</CardTitle>
-                  </div>
-                   <Button variant="outline" size="sm" onClick={handleOpenCreateHabitDialog}>
-                     <PlusCircle className="mr-1 h-4 w-4" /> Add Habit
-                   </Button>
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <HabitOverview habits={habits} totalPoints={totalPoints} />
-                </CardContent>
-              </Card>
-            </main>
-            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0 mt-auto">
-              <p>&copy; {new Date().getFullYear()} Habitual.</p>
-            </footer>
-          </div>
-        </ScrollArea>
-        <BottomNavigationBar onAddNewHabitClick={handleOpenCreateHabitDialog} />
-
-        <CreateHabitDialog
-           isOpen={isCreateHabitDialogOpen}
-           onClose={() => setIsCreateHabitDialogOpen(false)}
-           onSaveHabit={handleSaveNewHabit}
-           initialData={editingHabitData}
-           currentStep={createHabitDialogStep}
-           setCurrentStep={setCreateHabitDialogStep}
-           onOpenGoalProgramDialog={handleOpenGoalProgramDialog}
+    <div className="flex flex-col min-h-screen bg-background">
+      <AppHeader />
+      <main className="flex-grow">
+        <HabitOverview 
+          habits={habits} 
+          totalPoints={totalPoints} 
+          earnedBadges={earnedBadges}
+          getAISuggestion={getHabitSuggestion}
         />
-      </div>
+      </main>
+      <BottomNavigationBar onAddNewHabitClick={() => router.push('/?action=addHabit')} />
     </div>
   );
 };

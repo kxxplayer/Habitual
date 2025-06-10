@@ -140,59 +140,11 @@
   }
 }
 
-.sparkle-container {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sparkle {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  background-color: hsl(var(--accent));
-  border-radius: 50%;
-  opacity: 0;
-  pointer-events: none;
-  animation: sparkle-effect 0.8s ease-out forwards;
-}
-.sparkle-1 { top: -15%; left: 15%; animation-delay: 0s; --tx: -10px; --ty: -20px; }
-.sparkle-2 { top: 0%; right: 0%; animation-delay: 0.1s; --tx: 10px; --ty: -20px; }
-.sparkle-3 { top: 60%; left: -5%; animation-delay: 0.2s; --tx: -15px; --ty: 0px; }
-.sparkle-4 { bottom: -5%; right: 20%; animation-delay: 0.3s; --tx: 15px; --ty: 0px; }
-.sparkle-5 { top: 20%; left: 50%; transform: translateX(-50%); animation-delay: 0.05s; --tx: 0px; --ty: -25px; }
-.sparkle-6 { bottom: 15%; left: 30%; animation-delay: 0.15s; background-color: hsl(var(--primary)); --tx: 0px; --ty: 15px;}
-
+/* Existing animations ... */
 @keyframes sparkle-effect {
   0% { opacity: 0.5; transform: scale(0.3) translate(0px, 0px); }
   50% { opacity: 1; transform: scale(1.1) translate(var(--tx, 0px), var(--ty, -15px)); }
   100% { opacity: 0; transform: scale(0.5) translate(calc(var(--tx, 0px) * 2), calc(var(--ty, -15px) * 2)); }
-}
-
-.weekly-goal-animation-container {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 50;
-  overflow: hidden;
-}
-
-.weekly-goal-text {
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: hsl(var(--accent-foreground));
-  background-color: hsla(var(--accent), 0.85);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  box-shadow: 0 4px 15px hsla(var(--foreground), 0.1);
-  opacity: 0;
-  animation: weeklyGoalTextAppear 2.5s ease-out forwards;
-  margin-bottom: 0.5rem;
 }
 
 @keyframes weeklyGoalTextAppear {
@@ -208,18 +160,10 @@
   100% { box-shadow: 0 0 8px hsl(var(--accent)); }
 }
 
-.animate-pulse-glow-accent {
-  animation: pulse-glow-accent 0.8s ease-out forwards;
-}
-
 @keyframes button-pop-effect {
   0% { transform: scale(1); }
-  50% { transform: scale(1.05); } /* Reduced scale for subtlety */
+  50% { transform: scale(1.05); }
   100% { transform: scale(1); }
-}
-
-.animate-button-pop {
-  animation: button-pop-effect 0.4s ease-out forwards;
 }
 
 @keyframes wiggle-subtle {
@@ -227,6 +171,32 @@
   25% { transform: rotate(-5deg); }
   75% { transform: rotate(5deg); }
 }
+
+/* NEW Animation for Dashboard Cards */
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-card-fade-in {
+  animation: card-fade-in 0.5s ease-out forwards;
+  animation-fill-mode: backwards; /* Start animation from "from" state */
+}
+
+/* Previous animations continue... */
+.animate-pulse-glow-accent {
+  animation: pulse-glow-accent 0.8s ease-out forwards;
+}
+.animate-button-pop {
+  animation: button-pop-effect 0.4s ease-out forwards;
+}
 .animate-wiggle-subtle {
   animation: wiggle-subtle 0.5s ease-in-out forwards;
 }
+
