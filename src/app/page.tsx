@@ -201,7 +201,6 @@ const HomePage: NextPage = () => {
 
   useEffect(() => {
     setIsClientMounted(true);
-    console.log("PAGE.TSX: Content mounted. Initial state: isLoadingAuth=", isLoadingAuth, "isLoadingData=", isLoadingData);
   }, []);
 
   useEffect(() => {
@@ -219,7 +218,6 @@ const HomePage: NextPage = () => {
 
   // Function to directly open the Create Habit Dialog for a new habit
   const openCreateHabitDialogForNew = () => {
-    console.log("PAGE.TSX: Opening Create Habit Dialog for new habit (direct action).");
     setEditingHabit(null);
     setInitialFormDataForDialog(null);
     setCreateHabitDialogStep(1);
@@ -228,13 +226,10 @@ const HomePage: NextPage = () => {
 
   // Auth Effect
   useEffect(() => {
-    console.log(`PAGE.TSX: Auth effect running. mounted: ${mounted}`);
     const unsubscribeAuthMain = onAuthStateChanged(auth, (currentUserAuthMain) => {
       const currentUidAuthMain = currentUserAuthMain?.uid || null;
-      console.log(`PAGE.TSX: Auth state changed. New UID: ${currentUidAuthMain}, Previous UID: ${previousAuthUserUidRef.current}`);
 
       if (previousAuthUserUidRef.current && previousAuthUserUidRef.current !== currentUidAuthMain) {
-        console.log("PAGE.TSX: User changed. Resetting states.");
         setHabits([]);
         setEarnedBadges([]);
         setTotalPoints(0);
@@ -249,14 +244,10 @@ const HomePage: NextPage = () => {
       previousAuthUserUidRef.current = currentUidAuthMain;
 
       if (!currentUserAuthMain && mounted && window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
-        console.log("PAGE.TSX: No authUser, redirecting to login.");
         router.push('/auth/login');
-      } else if (currentUserAuthMain) {
-        console.log("PAGE.TSX: Auth user confirmed/set:", currentUserAuthMain.uid);
       }
     });
     return () => {
-      console.log("PAGE.TSX: Auth effect detaching.");
       unsubscribeAuthMain();
     };
   }, [router, mounted]);
@@ -271,11 +262,8 @@ const HomePage: NextPage = () => {
 
   // Data Loading Effect
   useEffect(() => {
-    console.log(`PAGE.TSX: Data loading effect. authUser: ${authUser?.uid}, mounted: ${mounted}, isLoadingData: ${isLoadingData}, firstDataLoadComplete: ${firstDataLoadCompleteRef.current}, commonSuggestionsFetched: ${commonSuggestionsFetched}`);
-
     if (!authUser || !mounted) {
       if (isLoadingData) {
-        console.log("PAGE.TSX: Data effect - No authUser or not mounted. Setting isLoadingData=false.");
         setIsLoadingData(false);
       }
       if (!authUser) firstDataLoadCompleteRef.current = false;
@@ -283,17 +271,12 @@ const HomePage: NextPage = () => {
     }
 
     if (!firstDataLoadCompleteRef.current && !isLoadingData) {
-      console.log("PAGE.TSX: Data effect - Conditions met to start loading. Setting isLoadingData=true.");
       setIsLoadingData(true);
     }
 
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
-    console.log(`PAGE.TSX: Subscribing to Firestore for user ${authUser.uid} at ${new Date().toISOString()}. Path: ${userDocRef.path}`);
-    console.log("PAGE.TSX: Firebase App Name (from db):", db.app.name);
-    console.log("PAGE.TSX: Firebase Project ID (from db options):", db.app.options.projectId);
 
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
-      console.log(`PAGE.TSX: Firestore snapshot received for user ${authUser.uid} at ${new Date().toISOString()}. Doc exists: ${docSnap.exists()}`);
       const data = docSnap.exists() ? docSnap.data() : {};
 
       const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({
@@ -326,15 +309,12 @@ const HomePage: NextPage = () => {
       setHabits(parsedHabits);
       setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
       setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
-      console.log(`PAGE.TSX: Habits set (${parsedHabits.length}), Badges set (${(Array.isArray(data.earnedBadges) ? data.earnedBadges : []).length}), Points set (${typeof data.totalPoints === 'number' ? data.totalPoints : 0})`);
 
       if (parsedHabits.length === 0 && !commonSuggestionsFetched && authUser) {
-        console.log("PAGE.TSX: No habits, fetching common suggestions.");
         setIsLoadingCommonSuggestions(true);
         getCommonHabitSuggestions({ count: 5 })
           .then(response => {
             setCommonHabitSuggestions(response?.suggestions || []);
-            console.log("PAGE.TSX: Common suggestions fetched:", response?.suggestions?.length || 0);
           })
           .catch(err => {
             setCommonHabitSuggestions([]);
@@ -351,7 +331,6 @@ const HomePage: NextPage = () => {
         if (!commonSuggestionsFetched) setCommonSuggestionsFetched(true);
       }
 
-      console.log("PAGE.TSX: Firestore snapshot processed. Setting isLoadingData=false, firstDataLoadComplete=true.");
       setIsLoadingData(false);
       firstDataLoadCompleteRef.current = true;
     }, (error) => {
@@ -364,7 +343,6 @@ const HomePage: NextPage = () => {
     });
 
     return () => {
-      console.log(`PAGE.TSX: Unsubscribing Firestore for user ${authUser?.uid} at ${new Date().toISOString()}`);
       unsubscribeFirestore();
     };
   }, [authUser, mounted, commonSuggestionsFetched, toast]);
@@ -390,7 +368,6 @@ const HomePage: NextPage = () => {
         lastUpdated: new Date().toISOString(),
       };
 
-      console.log(`PAGE.TSX: Debounced save triggered for user ${authUser.uid} at ${new Date().toLocaleTimeString()}`);
       setDoc(userDocRef, dataToSave, { merge: true })
         .then(() => { /* console.log("Data saved to Firestore after debounce") */ })
         .catch(error => {
@@ -434,7 +411,6 @@ const HomePage: NextPage = () => {
     if (!authUser || !mounted) return;
     const hasCreateHabitQueryParam = searchParams.get('createHabit') === 'true';
     if (hasCreateHabitQueryParam && !isCreateHabitDialogOpen && !isLoadingData) {
-      console.log("PAGE.TSX: createHabit=true detected in URL. Opening dialog.");
       setDialogTriggeredByUrl(true);
       openCreateHabitDialogForNew();
       const newUrl = window.location.pathname;
@@ -540,7 +516,6 @@ const HomePage: NextPage = () => {
     let pointsChangeToggleCompMain = 0;
     let justCompletedANewTaskToggleCompMain = false;
 
-    console.log(`PAGE.TSX: handleToggleComplete called for habit ${habitIdToggleCompMain} on date ${dateToggleCompMain}, completed: ${completedToggleCompMain}`);
     setHabits(prevHabits => {
       const newHabits = prevHabits.map(h => {
         if (h.id === habitIdToggleCompMain) {
@@ -550,12 +525,10 @@ const HomePage: NextPage = () => {
           const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
           if (completedToggleCompMain) {
-            console.log(`PAGE.TSX: Marking habit ${h.name} as completed on ${dateToggleCompMain}`);
             if (idx > -1) {
               if (newLog[idx].status !== 'completed') {
                 pointsChangeToggleCompMain = POINTS_PER_COMPLETION;
                 justCompletedANewTaskToggleCompMain = true;
-                console.log(`PAGE.TSX: Earned ${POINTS_PER_COMPLETION} points for completing ${h.name}.`);
               }
               newLog[idx] = { ...newLog[idx], status: 'completed', time, note: newLog[idx].note };
             } else {
@@ -564,7 +537,6 @@ const HomePage: NextPage = () => {
               newLog.push({ date: dateToggleCompMain, time, status: 'completed' });
             }
           } else {
-            console.log(`PAGE.TSX: Marking habit ${h.name} as incomplete/skipped on ${dateToggleCompMain}`);
             if (idx > -1) {
               const logEntry = newLog[idx];
               // Deduct points only if it was previously completed
@@ -579,7 +551,6 @@ const HomePage: NextPage = () => {
               }
             }
           }
-          console.log(`PAGE.TSX: Updated log for ${h.name}:`, newLog);
           const updatedHabit = { ...h, completionLog: newLog.sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)) };
           if (selectedHabitForDetailView && selectedHabitForDetailView.id === updatedHabit.id) {
             setSelectedHabitForDetailView(updatedHabit);
@@ -601,10 +572,18 @@ const HomePage: NextPage = () => {
       }
     }
     if (pointsChangeToggleCompMain !== 0) {
-      console.log(`PAGE.TSX: Changing total points by ${pointsChangeToggleCompMain}`);
       setTotalPoints(prev => Math.max(0, prev + pointsChangeToggleCompMain));
     }
   };
+  
+  const handleToggleCompleteWrapper = (habitId: string, date: string) => {
+    const habit = habits.find(h => h.id === habitId);
+    if (habit) {
+      const isCompleted = habit.completionLog.some(log => log.date === date && log.status === 'completed');
+      handleToggleComplete(habitId, date, !isCompleted);
+    }
+  };
+
 
   const handleToggleReminder = (habitIdReminderToggleMain: string, currentReminderStateReminderToggleMain: boolean) => {
     if (!authUser) return;
@@ -869,41 +848,50 @@ const HomePage: NextPage = () => {
         <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
             <main className="px-3 sm:px-4 pb-2 pt-4 flex-grow">
-              {habits.length === 0 && (
-                isLoadingCommonSuggestions ? (
-                  <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <p className="ml-2 text-muted-foreground">Loading suggestions...</p>
-                  </div>
-                ) : commonHabitSuggestions.length > 0 ? (
-                  <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
-                    <div className="px-2 pt-0">
-                      <h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
-                      <p className="text-xs text-muted-foreground mb-1.5">
-                        Start by picking a common habit. You can also tap the "+" button (below)
-                        to add your own custom habit or create a multi-habit program.
-                      </p>
-                    </div>
-                    <div className="p-1">
-                      <div className="flex flex-wrap gap-2 justify-center mb-2">
-                        {commonHabitSuggestions.map((sugg, idx) => (
-                          <Button key={idx} variant="outline" className="p-2.5 h-auto flex flex-col items-center justify-center space-y-0.5 min-w-[90px] text-center shadow-sm hover:shadow-md transition-shadow text-xs" onClick={() => handleCustomizeSuggestedHabit(sugg)}>
-                            <span className="font-medium">{sugg.name}</span>
-                            {sugg.category && <span className="text-primary/80 opacity-80">{sugg.category}</span>}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
-                    <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
-                    <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Tap the '+' button to add a habit or create a program!
+              {habits.length > 0 ? (
+                <HabitList
+                  habits={habits}
+                  onOpenDetailView={handleOpenDetailView}
+                  onToggleComplete={handleToggleCompleteWrapper}
+                  onDelete={handleOpenDeleteHabitConfirm}
+                  onEdit={handleOpenEditDialog}
+                  onReschedule={handleOpenRescheduleDialog}
+                  todayString={todayString}
+                  todayAbbr={todayAbbr}
+                />
+              ) : isLoadingCommonSuggestions ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <p className="ml-2 text-muted-foreground">Loading suggestions...</p>
+                </div>
+              ) : commonHabitSuggestions.length > 0 ? (
+                <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
+                  <div className="px-2 pt-0">
+                    <h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
+                    <p className="text-xs text-muted-foreground mb-1.5">
+                      Start by picking a common habit. You can also tap the "+" button (below)
+                      to add your own custom habit or create a multi-habit program.
                     </p>
                   </div>
-                )
+                  <div className="p-1">
+                    <div className="flex flex-wrap gap-2 justify-center mb-2">
+                      {commonHabitSuggestions.map((sugg, idx) => (
+                        <Button key={idx} variant="outline" className="p-2.5 h-auto flex flex-col items-center justify-center space-y-0.5 min-w-[90px] text-center shadow-sm hover:shadow-md transition-shadow text-xs" onClick={() => handleCustomizeSuggestedHabit(sugg)}>
+                          <span className="font-medium">{sugg.name}</span>
+                          {sugg.category && <span className="text-primary/80 opacity-80">{sugg.category}</span>}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
+                  <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Tap the '+' button to add a habit or create a program!
+                  </p>
+                </div>
               )}
             </main>
           </div>
