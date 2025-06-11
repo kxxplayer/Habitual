@@ -1,3 +1,4 @@
+// src/components/habits/HabitDetailViewDialog.tsx
 "use client";
 
 import * as React from 'react';
@@ -40,16 +41,25 @@ const getCategoryIcon = (category?: HabitCategory) => {
   const iconProps = { className: "h-4 w-4 text-muted-foreground" };
   switch (category) {
     case 'Health & Fitness': return <HeartPulse {...iconProps} />;
+    case 'Mindfulness': // Changed from 'Mental Well-being' to 'Mindfulness'
+      return <Brain {...iconProps} />;
+    case 'Personal Development':
+      return <SparklesIcon {...iconProps} />;
+    case 'Creative':
+      return <Paintbrush {...iconProps} />;
+    case 'Home & Environment':
+      return <HomeIconLucide {...iconProps} />;
+    case 'Finance':
+      return <Landmark {...iconProps} />;
+    case 'Social':
+      return <Users {...iconProps} />;
+    case 'Entertainment':
+      return <LifestyleIcon {...iconProps} />;
+    case 'Other':
+      return <ListChecks {...iconProps} />;
     case 'Work & Study': return <Briefcase {...iconProps} />;
-    case 'Personal Development': return <SparklesIcon {...iconProps} />;
-    case 'Mindfulness': return <Brain {...iconProps} />;
-    case 'Creative': return <Paintbrush {...iconProps} />;
-    case 'Home & Environment': return <HomeIconLucide {...iconProps} />;
-    case 'Finance': return <Landmark {...iconProps} />;
-    case 'Social': return <Users {...iconProps} />;
-    case 'Entertainment': return <LifestyleIcon {...iconProps} />;
-    case 'Other': return <ListChecks {...iconProps} />;
-    default: return <ListChecks {...iconProps} />;
+    default:
+      return <ListChecks {...iconProps} />;
   }
 };
 
@@ -182,7 +192,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                       "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow",
                       isCompletedToday
                         ? "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80 opacity-50"
                     )}
                   >
                     Mark as Done
@@ -194,7 +204,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                       "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow",
                       !isCompletedToday
                         ? "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80 opacity-50"
                     )}
                   >
                     Not Done?
