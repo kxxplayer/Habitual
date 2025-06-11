@@ -79,6 +79,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const [isAIReflectionDialogOpen, setIsAIReflectionDialogOpen] = React.useState(false);
   
   const today = startOfDay(new Date());
+  
   const isCompletedToday = habit?.completionLog.some(log => isSameDay(parseISO(log.date), today) && log.status === 'completed') ?? false;
 
   const [localCompleted, setLocalCompleted] = React.useState<boolean>(isCompletedToday);
@@ -204,10 +205,10 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                     disabled={choiceMadeThisSession}
                     className={cn(
                       "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow-md",
-                      "disabled:cursor-not-allowed disabled:opacity-60",
-                      localCompleted
-                        ? "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      "disabled:cursor-not-allowed",
+                      choiceMadeThisSession
+                        ? (localCompleted ? "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg opacity-70" : "bg-muted text-muted-foreground opacity-70")
+                        : "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg hover:opacity-90"
                     )}
                   >
                     Mark as Done
@@ -218,10 +219,10 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                     disabled={choiceMadeThisSession}
                     className={cn(
                       "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow-md",
-                      "disabled:cursor-not-allowed disabled:opacity-60",
-                      !localCompleted
-                        ? "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg"
-                        : "bg-muted text-muted-foreground"
+                      "disabled:cursor-not-allowed",
+                      choiceMadeThisSession
+                        ? (!localCompleted ? "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg opacity-70" : "bg-muted text-muted-foreground opacity-70")
+                        : "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg hover:opacity-90"
                     )}
                   >
                     Not Done?
