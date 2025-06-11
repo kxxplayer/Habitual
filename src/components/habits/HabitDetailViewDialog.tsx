@@ -86,6 +86,10 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
     onToggleComplete(habit.id, todayString, newState === true);
   };
 
+  const handleToggleDayCompletion = (dayStr: string, complete: boolean) => {
+    onToggleComplete(habit.id, dayStr, complete);
+  };
+
   const handleGetAndShowAIReflection = async () => {
     setIsAIReflectionLoading(true);
     setIsAIReflectionDialogOpen(true);
@@ -148,24 +152,20 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                   {weekDays.map(day => {
                     const logEntry = habit.completionLog.find(l => l.date === day.dateStr);
                     const isScheduled = habit.daysOfWeek.includes(day.dayAbbrFull);
-                    let status: 'completed' | 'missed' | 'pending' | 'none' = 'none';
-
-                    if (logEntry?.status === 'completed') status = 'completed';
-                    else if (isScheduled && day.isPast && !logEntry) status = 'missed';
-                    else if (isScheduled) status = 'pending';
+                    const isCompleted = logEntry?.status === 'completed';
 
                     return (
-                      <TooltipProvider key={day.dateStr}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className={cn("flex flex-col items-center gap-2", day.isToday && "font-bold")}>...
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{format(day.date, "MMM d")} - {status === 'completed' ? 'Completed' : status === 'missed' ? 'Missed' : isScheduled ? 'Scheduled' : 'Not Scheduled'}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <button
+                        key={day.dateStr}
+                        className={cn(
+                          "flex flex-col items-center px-2 py-1 rounded-md transition-all",
+                          isCompleted ? "bg-green-100 text-green-700" : "hover:bg-muted"
+                        )}
+                        onClick={() => handleToggleDayCompletion(day.dateStr, !isCompleted)}
+                      >
+                        <span className="text-xs font-medium">{day.dayAbbrShort}</span>
+                        {isCompleted ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <Circle className="h-5 w-5 text-muted-foreground" />}
+                      </button>
                     );
                   })}
                 </div>
