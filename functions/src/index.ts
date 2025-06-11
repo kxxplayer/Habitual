@@ -23,10 +23,13 @@ interface UserData {
 const TIMEZONE = "Asia/Kolkata";
 
 /**
- * A scheduled Cloud Function that runs every 5 minutes using the v2 syntax.
+ * A scheduled Cloud Function that runs every 3 hours using the v2 syntax.
  */
-export const sendHabitReminders = onSchedule("every 5 minutes", async (event) => {
-  logger.info("Checking for habit reminders...", {structuredData: true});
+export const sendHabitReminders = onSchedule({
+  schedule: "every 3 hours",
+  timeZone: "Asia/Kolkata",
+}, async () => {
+  logger.info("Checking for habit reminders...");
 
   // Get the current time in the specified timezone.
   const now = new Date();
@@ -41,7 +44,8 @@ export const sendHabitReminders = onSchedule("every 5 minutes", async (event) =>
     timeZone: TIMEZONE,
   }).format(now);
 
-  const usersSnapshot = await admin.firestore().collection("users").get();
+  const usersSnapshot = await admin.firestore()
+    .collection("users").get();
 
   usersSnapshot.forEach(async (userDoc) => {
     const userData = userDoc.data() as UserData;
@@ -80,6 +84,4 @@ export const sendHabitReminders = onSchedule("every 5 minutes", async (event) =>
       }
     }
   });
-
-  return null;
 });
