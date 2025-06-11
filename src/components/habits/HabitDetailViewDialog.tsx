@@ -99,10 +99,10 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const todayInfo = weekDays.find(d => d.isToday);
   const isScheduledToday = todayInfo && habit.daysOfWeek.includes(todayInfo.dayAbbrFull);
 
-  const handleSetCompletion = (isComplete: boolean) => {
-    if (localCompleted === isComplete) return;
-    setLocalCompleted(isComplete);
-    onToggleComplete(habit.id, todayString, isComplete);
+  const handleToggleCompletion = () => {
+    const newState = !localCompleted;
+    setLocalCompleted(newState);
+    onToggleComplete(habit.id, todayString, newState);
   };
 
   const handleGetAndShowAIReflection = async () => {
@@ -195,31 +195,19 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               </div>
 
               {isScheduledToday && (
-                <div className="grid grid-cols-2 gap-2">
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleSetCompletion(true)}
-                    className={cn(
-                      "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow-md",
-                      localCompleted
-                        ? "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    )}
-                  >
-                    Mark as Done
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleSetCompletion(false)}
-                    className={cn(
-                      "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow-md",
-                      !localCompleted
-                        ? "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    )}
-                  >
-                    Not Done?
-                  </motion.button>
+                 <div className="my-6">
+                    <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleToggleCompletion}
+                        className={cn(
+                            "w-full px-4 py-3 rounded-md font-semibold text-lg text-white transition-all duration-300 shadow-lg",
+                            localCompleted
+                                ? "bg-gradient-to-r from-pink-500 to-red-500 hover:opacity-90"
+                                : "bg-gradient-to-r from-green-400 to-blue-500 hover:opacity-90"
+                        )}
+                    >
+                        {localCompleted ? "Not Done?" : "Mark as Done"}
+                    </motion.button>
                 </div>
               )}
 
