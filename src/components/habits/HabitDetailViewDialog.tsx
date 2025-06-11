@@ -175,32 +175,33 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
 
               {isScheduledToday && (
                 <div className="grid grid-cols-2 gap-2">
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleToggleTodayCompletion(true)}
-                  className={cn(
-                    "w-full px-4 py-2 rounded-md font-medium transition-all duration-200",
-                    isCompletedToday
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                  )}
-                >
-                  Mark as Done
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleToggleTodayCompletion(false)}
-                  className={cn(
-                    "w-full px-4 py-2 rounded-md font-medium transition-all duration-200",
-                    !isCompletedToday
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                  )}
-                >
-                  Not Done?
-                </motion.button>
-              </div>
-            )}
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleToggleTodayCompletion(true)}
+                    className={cn(
+                      "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow",
+                      isCompletedToday
+                        ? "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    Mark as Done
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleToggleTodayCompletion(false)}
+                    className={cn(
+                      "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow",
+                      !isCompletedToday
+                        ? "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    Not Done?
+                  </motion.button>
+                </div>
+              )}
+
 
               
               <div className="mt-4 grid grid-cols-2 gap-2">
