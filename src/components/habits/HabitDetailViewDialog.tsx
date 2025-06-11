@@ -174,25 +174,34 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               </div>
 
               {isScheduledToday && (
-                 <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      onClick={() => handleToggleTodayCompletion(true)}
-                      variant={isCompletedToday ? 'outline' : 'default'}
-                      disabled={isCompletedToday}
-                      className="transition-all duration-200"
-                    >
-                      Mark as Done
-                    </Button>
-                    <Button
-                      onClick={() => handleToggleTodayCompletion(false)}
-                      variant={isCompletedToday ? 'default' : 'outline'}
-                      disabled={!isCompletedToday}
-                      className="transition-all duration-200"
-                    >
-                      Not Done?
-                    </Button>
-                  </div>
-              )}
+                <div className="grid grid-cols-2 gap-2">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleToggleTodayCompletion(true)}
+                  className={cn(
+                    "w-full px-4 py-2 rounded-md font-medium transition-all duration-200",
+                    isCompletedToday
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                  )}
+                >
+                  Mark as Done
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleToggleTodayCompletion(false)}
+                  className={cn(
+                    "w-full px-4 py-2 rounded-md font-medium transition-all duration-200",
+                    !isCompletedToday
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                  )}
+                >
+                  Not Done?
+                </motion.button>
+              </div>
+            )}
+
               
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <Button variant="outline" onClick={() => onGetAISuggestion(habit)}><Lightbulb className="mr-2 h-4 w-4" />AI Tip</Button>
