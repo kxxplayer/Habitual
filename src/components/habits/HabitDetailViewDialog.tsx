@@ -2,13 +2,14 @@
 
 import * as React from 'react';
 import type { FC } from 'react';
+import { motion } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Lightbulb, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CalendarX, CheckCircle2, Circle, Check, Bell, FilePenLine, StickyNote, Trash2, ChevronRightSquare, CalendarClock, CalendarDays, Edit3, Save, Wand2, PlusCircle, Hourglass, Clock, Brain, XCircle } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory } from '@/types';
@@ -69,11 +70,12 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const currentStreak = calculateStreak(habit, new Date());
   const weekDays = getCurrentWeekDays(new Date());
 
-  const isCompletedToday = habit.completionLog.some(log => log.date === todayString && log.status === 'completed');
+  const today = startOfDay(new Date());
+  const isCompletedToday = habit.completionLog.some(log => isSameDay(parseISO(log.date), today) && log.status === 'completed');
 
-  const handleToggleTodayCompletion = (complete: boolean) => {
+  const handleToggleTodayCompletion = () => {
     if (!habit) return;
-    onToggleComplete(habit.id, todayString, complete);
+    onToggleComplete(habit.id, todayString, !isCompletedToday);
   };
 
   const handleGetAndShowAIReflection = async () => {
@@ -116,7 +118,11 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-md bg-card rounded-lg shadow-xl p-0">
           <ScrollArea className="max-h-[90vh]">
-            <div className="p-6">
+            <motion.div
+              animate={{ opacity: isCompletedToday ? 0.7 : 1, filter: isCompletedToday ? 'grayscale(50%)' : 'grayscale(0%)' }}
+              transition={{ duration: 0.3 }}
+              className="p-6"
+            >
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold">{habit.name}</DialogTitle>
                 {habit.description && <DialogDescription>{habit.description}</DialogDescription>}
@@ -172,16 +178,16 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               </div>
 
               {isScheduledToday && (
-                <Button onClick={() => handleToggleTodayCompletion(!isCompletedToday)} size="lg" className="w-full">
-                  {isCompletedToday ? "Mark as Not Done" : "Mark as Done"}
+                <Button onClick={handleToggleTodayCompletion} size="lg" className="w-full">
+                  {isCompletedToday ? "Not done?" : "Mark as Done"}
                 </Button>
               )}
               
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={() => onGetAISuggestion(habit)}><Lightbulb className="mr-2" />AI Tip</Button>
-                <Button variant="outline" onClick={handleGetAndShowAIReflection}><MessageSquarePlus className="mr-2" />AI Reflection</Button>
+                <Button variant="outline" onClick={() => onGetAISuggestion(habit)}><Lightbulb className="mr-2 h-4 w-4" />AI Tip</Button>
+                <Button variant="outline" onClick={handleGetAndShowAIReflection}><MessageSquarePlus className="mr-2 h-4 w-4" />AI Reflection</Button>
               </div>
-            </div>
+            </motion.div>
           </ScrollArea>
           <DialogFooter className="p-3 border-t bg-muted/50 flex-row justify-between">
             <DialogClose asChild><Button variant="ghost">Close</Button></DialogClose>
@@ -190,11 +196,11 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                 <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onOpenEditDialog(habit)}><Edit3 className="mr-2" /> Edit Habit</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}><StickyNote className="mr-2" /> Add/Edit Note</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleShare}><CalendarPlus className="mr-2" /> Add to Calendar</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onOpenEditDialog(habit)}><Edit3 className="mr-2 h-4 w-4" /> Edit Habit</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}><StickyNote className="mr-2 h-4 w-4" /> Add/Edit Note</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShare}><CalendarPlus className="mr-2 h-4 w-4" /> Add to Calendar</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive" onClick={() => onOpenDeleteConfirm(habit.id, habit.name)}><Trash2 className="mr-2" /> Delete Habit</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive" onClick={() => onOpenDeleteConfirm(habit.id, habit.name)}><Trash2 className="mr-2 h-4 w-4" /> Delete Habit</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </DialogFooter>

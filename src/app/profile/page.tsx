@@ -1,20 +1,15 @@
-
 "use client";
 
 import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import AppHeader from '@/components/layout/AppHeader';
-import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import AppPageLayout from '@/components/layout/AppPageLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { Loader2, UserCircle2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
 
 const ProfilePage: NextPage = () => {
   const router = useRouter();
@@ -36,64 +31,50 @@ const ProfilePage: NextPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading profile...</p>
-      </div>
+      <AppPageLayout>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading profile...</p>
+        </div>
+      </AppPageLayout>
     );
   }
 
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4 text-center">
-         <p className="text-muted-foreground">Redirecting to login...</p>
-      </div>
+      <AppPageLayout>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
+          <p className="text-muted-foreground">Redirecting to login...</p>
+        </div>
+      </AppPageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
-       <div className={cn(
-        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-sm h-[97vh] max-h-[97vh]", 
-        "md:max-w-md",                    
-        "lg:max-w-lg"                    
-      )}>
-        <AppHeader />
-        <ScrollArea className="flex-grow min-h-0">
-          <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4 flex-grow">
-              <Card className="w-full">
-                <CardHeader className="space-y-1 text-center">
-                  <CardTitle className="text-2xl font-bold flex items-center justify-center">
-                    <UserCircle2 className="mr-2 h-6 w-6 text-primary" /> Your Profile
-                  </CardTitle>
-                  <CardDescription>View your account details.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">User Email (ID)</Label>
-                    <div id="email" className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                      {user.email}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Password</Label>
-                    <div className="rounded-md border border-dashed border-input bg-input/30 p-3 text-xs text-muted-foreground">
-                      For security reasons, your password cannot be displayed.
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </main>
-            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0 mt-auto">
-              <p>&copy; {new Date().getFullYear()} Habitual.</p>
-            </footer>
+    <AppPageLayout onAddNew={() => router.push('/?action=addHabit')}>
+      <Card className="w-full">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold flex items-center justify-center">
+            <UserCircle2 className="mr-2 h-6 w-6 text-primary" /> Your Profile
+          </CardTitle>
+          <CardDescription>View your account details.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium">User Email (ID)</Label>
+            <div id="email" className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+              {user.email}
+            </div>
           </div>
-        </ScrollArea>
-        <BottomNavigationBar />
-      </div>
-    </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Password</Label>
+            <div className="rounded-md border border-dashed border-input bg-input/30 p-3 text-xs text-muted-foreground">
+              For security reasons, your password cannot be displayed.
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </AppPageLayout>
   );
 };
 
