@@ -1,29 +1,21 @@
-// src/app/dashboard/page.tsx
-
 "use client";
 
 import * as React from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, arrayUnion, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import HabitOverview from '@/components/overview/HabitOverview';
-import type { Habit, HabitCategory, HabitCompletionLogEntry, WeekDay, CreateHabitFormData } from '@/types';
+import type { Habit, HabitCategory, HabitCompletionLogEntry, WeekDay, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm } from '@/types';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Loader2, LayoutDashboard } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
 
-// Firestore constants
 const USER_DATA_COLLECTION = "users";
 const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
@@ -34,11 +26,9 @@ const DashboardPage: NextPage = () => {
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [habits, setHabits] = React.useState<Habit[]>([]);
+  const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
   const [totalPoints, setTotalPoints] = React.useState<number>(0);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
-  const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
-  const [createHabitDialogStep, setCreateHabitDialogStep] = React.useState(1);
-  const [editingHabitData, setEditingHabitData] = React.useState<Partial<CreateHabitFormData & { id: string }> | null>(null);
 
   React.useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -67,108 +57,51 @@ const DashboardPage: NextPage = () => {
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-
-        const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({
+        const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({ 
           id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
           name: String(h.name || 'Unnamed Habit'),
           description: typeof h.description === 'string' ? h.description : undefined,
           category: HABIT_CATEGORIES.includes(h.category as HabitCategory) ? h.category : 'Other',
-          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any): d is WeekDay => weekDaysArrayForForm.includes(d as WeekDay)) : [],
+          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any): d is WeekDay => weekDaysArrayForForm.includes(d as WeekDay)) : [], 
           optimalTiming: typeof h.optimalTiming === 'string' ? h.optimalTiming : undefined,
           durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
           durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
           specificTime: typeof h.specificTime === 'string' ? h.specificTime : undefined,
-          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : []).map((log: any): HabitCompletionLogEntry | null => {
-            if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
-            return {
-              date: log.date,
-              time: typeof log.time === 'string' && log.time.length > 0 ? log.time : 'N/A',
-              note: typeof log.note === 'string' ? log.note : undefined,
-              status: ['completed', 'pending_makeup', 'skipped'].includes(log.status) ? log.status : 'completed',
-              originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
-            };
-          }).filter((log): log is HabitCompletionLogEntry => log !== null).sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)),
+          completionLog: (Array.isArray(h.completionLog) ? h.completionLog : [])
+            .map((log: Partial<HabitCompletionLogEntry>): HabitCompletionLogEntry | null => { // FIX 1: Added type to 'log'
+              if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
+              return {
+                date: log.date,
+                time: typeof log.time === 'string' && log.time.length > 0 ? log.time : 'N/A',
+                note: typeof log.note === 'string' ? log.note : undefined,
+                status: ['completed', 'pending_makeup', 'skipped'].includes(log.status as string) ? log.status as 'completed' | 'pending_makeup' | 'skipped' : 'completed',
+                originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
+              };
+            })
+            .filter((log: HabitCompletionLogEntry | null): log is HabitCompletionLogEntry => log !== null)
+            .sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)),
           reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
+          programId: typeof h.programId === 'string' ? h.programId : undefined,
+          programName: typeof h.programName === 'string' ? h.programName : undefined,
         }));
+        
         setHabits(parsedHabits);
+        setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
         setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
       } else {
-        // Document doesn't exist, set to defaults
         setHabits([]);
+        setEarnedBadges([]);
         setTotalPoints(0);
       }
       setIsLoadingData(false);
     }, (error) => {
       console.error("Error fetching dashboard data from Firestore:", error);
       toast({ title: "Data Error", description: "Could not load dashboard data.", variant: "destructive" });
-      setHabits([]);
-      setTotalPoints(0);
       setIsLoadingData(false);
     });
 
     return () => unsubscribeFirestore();
   }, [authUser, isLoadingAuth, toast]);
-
-  // Function to handle saving a new habit
-  const handleSaveNewHabit = async (newHabit: CreateHabitFormData) => {
-    if (!authUser) {
-      toast({ title: "Authentication Error", description: "You must be logged in to add a habit.", variant: "destructive" });
-      return;
-    }
-
-    setIsLoadingData(true);
-    const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
-
-    try {
-      // Assign a unique ID to the new habit if it doesn't have one
-      const habitToSave = {
-        id: newHabit.id || Date.now().toString() + Math.random().toString(36).substring(2, 7),
-        ...newHabit,
-        completionLog: [],
-      };
-
-      // Check if document exists
-      const docSnap = await getDoc(userDocRef);
-      
-      if (docSnap.exists()) {
-        // Document exists, use arrayUnion
-        await updateDoc(userDocRef, {
-          habits: arrayUnion(habitToSave)
-        });
-      } else {
-        // Document doesn't exist, create it with initial data
-        await setDoc(userDocRef, {
-          habits: [habitToSave],
-          totalPoints: 0,
-          earnedBadges: [],
-          lastUpdated: new Date().toISOString()
-        });
-      }
-
-      toast({ title: "Success", description: "Habit added successfully." });
-      setIsCreateHabitDialogOpen(false);
-      setCreateHabitDialogStep(1);
-
-    } catch (error) {
-      console.error("Error saving new habit to Firestore:", error);
-      toast({ title: "Save Error", description: "Could not save the habit. Please try again.", variant: "destructive" });
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
-
-  // Function to handle opening the Create Habit Dialog
-  const handleOpenCreateHabitDialog = () => {
-    setEditingHabitData(null);
-    setCreateHabitDialogStep(1);
-    setIsCreateHabitDialogOpen(true);
-  };
-
-  // Function to handle opening the Goal Program Dialog
-  const handleOpenGoalProgramDialog = () => {
-    console.log("Open Goal Program Dialog");
-    setIsCreateHabitDialogOpen(false);
-  };
 
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
@@ -180,58 +113,21 @@ const DashboardPage: NextPage = () => {
   }
 
   if (!authUser) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
-        <p className="text-muted-foreground">Redirecting to login...</p>
-      </div>
-    );
+    return null; // The auth listener will redirect
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
-      <div className={cn(
-        "bg-card/95 backdrop-blur-sm text-foreground shadow-xl rounded-xl flex flex-col mx-auto",
-        "w-full max-w-sm h-[97vh] max-h-[97vh]",
-        "md:max-w-md",
-        "lg:max-w-lg"
-      )}>
-        <AppHeader />
-        <ScrollArea className="flex-grow min-h-0">
-          <div className="flex flex-col min-h-full">
-            <main className="px-3 sm:px-4 py-4 flex-grow">
-              <Card>
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <div className="flex items-center">
-                    <LayoutDashboard className="mr-2 h-5 w-5 text-primary" />
-                    <CardTitle className="text-xl font-bold text-primary">Dashboard</CardTitle>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={handleOpenCreateHabitDialog}>
-                    <PlusCircle className="mr-1 h-4 w-4" /> Add Habit
-                  </Button>
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <HabitOverview habits={habits} totalPoints={totalPoints} />
-                </CardContent>
-              </Card>
-            </main>
-            <footer className="py-3 text-center text-xs text-muted-foreground border-t shrink-0 mt-auto">
-              <p>&copy; {new Date().getFullYear()} Habitual.</p>
-            </footer>
-          </div>
-        </ScrollArea>
-        <BottomNavigationBar />
-
-        {/* CreateHabitDialog */}
-        <CreateHabitDialog
-          isOpen={isCreateHabitDialogOpen}
-          onClose={() => setIsCreateHabitDialogOpen(false)}
-          onSaveHabit={handleSaveNewHabit}
-          initialData={editingHabitData}
-          currentStep={createHabitDialogStep}
-          setCurrentStep={setCreateHabitDialogStep}
-          onOpenGoalProgramDialog={handleOpenGoalProgramDialog}
+    <div className="flex flex-col min-h-screen bg-background">
+      <AppHeader />
+      <main className="flex-grow">
+        <HabitOverview 
+          habits={habits} 
+          totalPoints={totalPoints} 
+          earnedBadges={earnedBadges}
+          getAISuggestion={getHabitSuggestion}
         />
-      </div>
+      </main>
+      <BottomNavigationBar onAddNewHabitClick={() => router.push('/?action=addHabit')} />
     </div>
   );
 };

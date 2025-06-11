@@ -1,63 +1,33 @@
-"use client";
-
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { 
-  CheckCircle2, 
-  Circle, 
-  MoreVertical, 
-  Edit3, 
-  CalendarClock, 
-  Trash2,
-  Clock,
-  Tag,
-  Star
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { Habit, WeekDay } from '@/types';
+
+// Note: This component needs to be saved as src/components/habits/HabitItem.tsx
+// to replace the existing simplified version
 
 interface HabitItemProps {
-  habit: Habit;
+  habit: any;
   onToggleComplete: (habitId: string, date: string) => void;
   onDelete: (habitId: string) => void;
-  onEdit: (habit: Habit) => void;
-  onReschedule: (habit: Habit) => void;
-  onOpenDetailView?: (habit: Habit) => void;
+  onEdit: (habit: any) => void;
+  onReschedule: (habit: any) => void;
+  onOpenDetailView?: (habit: any) => void;
   isCompleted: boolean;
   currentDate: string;
 }
 
-const getCategoryIcon = (category?: string) => {
-  switch (category) {
-    case 'Health & Fitness':
-      return '💪';
-    case 'Work & Study':
-      return '💼';
-    case 'Personal Development':
-      return '🌱';
-    case 'Mindfulness':
-      return '🧘';
-    case 'Social':
-      return '👥';
-    case 'Creative':
-      return '🎨';
-    case 'Finance':
-      return '💰';
-    case 'Home & Environment':
-      return '🏡';
-    case 'Entertainment':
-      return '🎮';
-    default:
-      return '⭐';
-  }
+// Helper function to get habit icon
+const getHabitIcon = (habitName: string): string => {
+  const nameLower = habitName.toLowerCase();
+  if (nameLower.includes('gym') || nameLower.includes('workout')) return '🏋️';
+  if (nameLower.includes('sql') || nameLower.includes('code')) return '💻';
+  if (nameLower.includes('water') || nameLower.includes('drink')) return '💧';
+  if (nameLower.includes('walk') || nameLower.includes('run')) return '🚶';
+  if (nameLower.includes('read') || nameLower.includes('book')) return '📚';
+  if (nameLower.includes('meditate') || nameLower.includes('mindfulness')) return '🧘';
+  if (nameLower.includes('learn') || nameLower.includes('study')) return '📝';
+  if (nameLower.includes('sleep') || nameLower.includes('bed')) return '🛏️';
+  if (nameLower.includes('journal') || nameLower.includes('write')) return '✍️';
+  if (nameLower.includes('coding') || nameLower.includes('programming')) return '👨‍💻';
+  return '✨'; // Default icon
 };
 
 const HabitItem: React.FC<HabitItemProps> = ({
@@ -70,171 +40,261 @@ const HabitItem: React.FC<HabitItemProps> = ({
   isCompleted,
   currentDate,
 }) => {
+  const [showMenu, setShowMenu] = React.useState(false);
+
   const handleToggleComplete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onToggleComplete(habit.id, currentDate);
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDelete(habit.id);
-  };
-
-  const handleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEdit(habit);
-  };
-
-  const handleReschedule = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onReschedule(habit);
-  };
-
-  const handleCardClick = () => {
+  const handleOpenDetails = () => {
     if (onOpenDetailView) {
       onOpenDetailView(habit);
     }
   };
 
-  // Calculate streak
-  const calculateStreak = () => {
-    let streak = 0;
-    const sortedLogs = [...habit.completionLog]
-      .filter(log => log.status === 'completed')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    if (sortedLogs.length === 0) return 0;
-    
-    // Check if the most recent completion was today or yesterday
-    const today = new Date(currentDate);
-    const mostRecent = new Date(sortedLogs[0].date);
-    const dayDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (dayDiff > 1) return 0;
-    
-    // Count consecutive days
-    for (let i = 0; i < sortedLogs.length; i++) {
-      const logDate = new Date(sortedLogs[i].date);
-      const expectedDate = new Date(mostRecent);
-      expectedDate.setDate(expectedDate.getDate() - i);
-      
-      if (logDate.toDateString() === expectedDate.toDateString()) {
-        streak++;
-      } else {
-        break;
-      }
-    }
-    
-    return streak;
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(!showMenu);
   };
 
-  const streak = calculateStreak();
-  const hasSpecificTime = habit.specificTime && 
-    habit.specificTime.toLowerCase() !== 'anytime' && 
-    habit.specificTime.toLowerCase() !== 'flexible';
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    onEdit(habit);
+  };
+
+  const handleReschedule = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    onReschedule(habit);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    onDelete(habit.id);
+  };
+
+  // Close menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = () => setShowMenu(false);
+    if (showMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showMenu]);
 
   return (
-    <Card 
-      className={cn(
-        "p-4 cursor-pointer transition-all duration-200 hover:shadow-lg relative overflow-visible",
-        "border border-border bg-card hover:bg-accent/5",
-        isCompleted && "opacity-75 bg-accent/10"
-      )}
-      onClick={handleCardClick}
+    <div 
+      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${isCompleted ? 'opacity-75' : ''}`}
+      onClick={handleOpenDetails}
+      style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '12px',
+        padding: '16px',
+        marginBottom: '8px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        border: '1px solid #e5e7eb',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+      }}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
-          {/* Completion Status Icon */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+          {/* Habit Icon */}
+          <span style={{ fontSize: '24px' }}>{getHabitIcon(habit.name)}</span>
+          
+          {/* Habit Name */}
+          <span style={{
+            fontSize: '16px',
+            fontWeight: '500',
+            color: isCompleted ? '#9ca3af' : '#111827',
+            textDecoration: isCompleted ? 'line-through' : 'none'
+          }}>
+            {habit.name}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Completion Checkbox */}
           <button
             onClick={handleToggleComplete}
-            className={cn(
-              "transition-all duration-200 hover:scale-110",
-              isCompleted ? "text-accent" : "text-muted-foreground hover:text-primary"
-            )}
+            style={{
+              padding: '4px',
+              borderRadius: '50%',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background-color 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            aria-label={isCompleted ? "Mark as incomplete" : "Mark as complete"}
           >
             {isCompleted ? (
-              <CheckCircle2 className="h-6 w-6" />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" fill="#10b981" />
+                <path d="M8 12l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             ) : (
-              <Circle className="h-6 w-6" />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="#9ca3af" strokeWidth="2" />
+              </svg>
             )}
           </button>
 
-          {/* Habit Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{getCategoryIcon(habit.category)}</span>
-              <h3 className={cn(
-                "font-semibold text-base truncate",
-                isCompleted && "text-muted-foreground line-through"
-              )}>
-                {habit.name}
-              </h3>
-              {streak > 2 && (
-                <div className="flex items-center gap-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full">
-                  <Star className="h-3 w-3" />
-                  <span>{streak}</span>
-                </div>
-              )}
-            </div>
+          {/* More Options Menu */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={handleMenuClick}
+              style={{
+                padding: '6px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f3f4f6';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="5" r="1" fill="#6b7280" />
+                <circle cx="12" cy="12" r="1" fill="#6b7280" />
+                <circle cx="12" cy="19" r="1" fill="#6b7280" />
+              </svg>
+            </button>
 
-            {/* Additional Info */}
-            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-              {habit.category && (
-                <div className="flex items-center gap-1">
-                  <Tag className="h-3 w-3" />
-                  <span>{habit.category}</span>
-                </div>
-              )}
-              {hasSpecificTime && (
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  <span>{habit.specificTime}</span>
-                </div>
-              )}
-              {habit.durationMinutes && (
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  <span>{habit.durationMinutes}m</span>
-                </div>
-              )}
-            </div>
+            {/* Dropdown Menu */}
+            {showMenu && (
+              <div style={{
+                position: 'absolute',
+                right: 0,
+                top: '100%',
+                marginTop: '4px',
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                minWidth: '150px',
+                zIndex: 50
+              }}>
+                <button
+                  onClick={handleEdit}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    color: '#374151'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  Edit Habit
+                </button>
+                <button
+                  onClick={handleReschedule}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    color: '#374151'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  Reschedule
+                </button>
+                <div style={{ height: '1px', backgroundColor: '#e5e7eb', margin: '4px 0' }} />
+                <button
+                  onClick={handleDelete}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    color: '#ef4444'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#fef2f2';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  Delete Habit
+                </button>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Dropdown Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="h-4 w-4" />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={handleEdit}>
-              <Edit3 className="mr-2 h-4 w-4" />
-              <span>Edit Habit</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleReschedule}>
-              <CalendarClock className="mr-2 h-4 w-4" />
-              <span>Reschedule</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={handleDelete}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span>Delete</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
-    </Card>
+
+      {/* Optional: Add habit details like time or duration */}
+      {(habit.specificTime || habit.durationMinutes || habit.durationHours) && (
+        <div style={{ 
+          marginTop: '8px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px',
+          fontSize: '12px',
+          color: '#6b7280'
+        }}>
+          {habit.specificTime && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              🕐 {habit.specificTime}
+            </span>
+          )}
+          {(habit.durationHours || habit.durationMinutes) && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              ⏱️ {habit.durationHours ? `${habit.durationHours}h` : ''} 
+              {habit.durationMinutes ? `${habit.durationMinutes}m` : ''}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 

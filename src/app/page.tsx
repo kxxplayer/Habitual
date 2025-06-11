@@ -774,9 +774,9 @@ const HomePage: NextPage = () => {
     setIsGoalInputProgramDialogOpen(false);
     setIsProgramSuggestionLoading(true);
     try {
-        const result = await generateHabitProgramFromGoal({ 
-            goal: goal, 
-            durationWeeks: durationWeeks 
+        const programData = await generateHabitProgramFromGoal({
+            goal: "Your user's goal",
+            focusDuration: "The user's chosen duration"
           });
       setProgramSuggestion(result);
       setIsProgramSuggestionDialogOpen(true);

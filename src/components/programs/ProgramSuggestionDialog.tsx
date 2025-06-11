@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -16,15 +15,16 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { CheckSquare, Sparkles, Tag, CalendarDays as CalendarIcon, Clock, Hourglass, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIconLucide } from 'lucide-react';
-import type { GenerateHabitProgramOutput, SuggestedProgramHabit } from '@/types';
+import type { GenerateHabitProgramOutput, SuggestedProgramHabit } from '@/ai/flows/generate-habit-program-flow'; 
 import { HABIT_CATEGORIES, type HabitCategory, type WeekDay } from '@/types'; 
 import { cn } from '@/lib/utils';
 
-export interface ProgramSuggestionDialogProps {
+interface ProgramSuggestionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  programSuggestion: GenerateHabitProgramOutput;
-  onAddAllHabits: (habits: SuggestedProgramHabit[], programName: string) => void;
+  programSuggestion: GenerateHabitProgramOutput | null;
+  onAddProgramHabits: (habits: SuggestedProgramHabit[]) => void; 
+  isLoading?: boolean;
 }
 
 const getSuggestedHabitIcon = (habit: SuggestedProgramHabit): React.ReactNode => {
@@ -41,6 +41,7 @@ const getSuggestedHabitIcon = (habit: SuggestedProgramHabit): React.ReactNode =>
   if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="h-4 w-4 text-red-500" />;
 
   if (habit.category) {
+    // FIX: Corrected category names to match the HABIT_CATEGORIES type
     switch (habit.category) {
       case 'Health & Wellness': return <HeartPulse className="h-4 w-4 text-red-500" />;
       case 'Work/Study': return <Briefcase className="h-4 w-4 text-blue-600" />;
@@ -144,5 +145,3 @@ const ProgramSuggestionDialog: FC<ProgramSuggestionDialogProps> = ({
 };
 
 export default ProgramSuggestionDialog;
-
-    

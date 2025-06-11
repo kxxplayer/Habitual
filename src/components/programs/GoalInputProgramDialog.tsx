@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -19,10 +18,11 @@ import { Label } from '@/components/ui/label';
 import { WandSparkles, Send, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
-export interface GoalInputProgramDialogProps {
+interface GoalInputProgramDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onGenerateProgram: (goal: string, durationWeeks: number) => Promise<void>;
+  onSubmit: (goal: string, duration: string) => void;
+  isLoading?: boolean;
 }
 
 const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClose, onSubmit, isLoading }) => {
@@ -105,5 +105,3 @@ const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClo
 };
 
 export default GoalInputProgramDialog;
-
-    

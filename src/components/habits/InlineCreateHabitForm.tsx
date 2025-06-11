@@ -131,6 +131,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     setIsAISuggesting(true);
     try {
       // Corrected: Use the correct AI flow for creating from description
+      // In src/components/habits/InlineCreateHabitForm.tsx inside handleAISuggestDetails
       const result = await createHabitFromDescription({ description: currentDescription });
       setValue('name', result.habitName || '');
       
