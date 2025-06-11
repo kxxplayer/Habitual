@@ -153,19 +153,25 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                     const logEntry = habit.completionLog.find(l => l.date === day.dateStr);
                     const isScheduled = habit.daysOfWeek.includes(day.dayAbbrFull);
                     const isCompleted = logEntry?.status === 'completed';
+                    const isMissed = isScheduled && day.isPast && !logEntry;
 
                     return (
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
                         key={day.dateStr}
                         className={cn(
-                          "flex flex-col items-center px-2 py-1 rounded-md transition-all",
-                          isCompleted ? "bg-green-100 text-green-700" : "hover:bg-muted"
+                          "flex flex-col items-center px-2 py-1 rounded-md transition-all duration-200",
+                          isCompleted
+                            ? "bg-green-100 text-green-700"
+                            : isMissed
+                            ? "bg-red-100 text-red-700"
+                            : "hover:bg-muted"
                         )}
                         onClick={() => handleToggleDayCompletion(day.dateStr, !isCompleted)}
                       >
                         <span className="text-xs font-medium">{day.dayAbbrShort}</span>
                         {isCompleted ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <Circle className="h-5 w-5 text-muted-foreground" />}
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>
