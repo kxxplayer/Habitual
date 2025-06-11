@@ -1,3 +1,4 @@
+// src/app/page.tsx
 "use client";
 
 // ==========================================================================
@@ -158,16 +159,20 @@ const HomePage: NextPage = () => {
   const todayString = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const todayAbbr = useMemo(() => dayIndexToWeekDayConstant[getDay(new Date())], []);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const openCreateHabitDialogForNew = useCallback(() => {
     setEditingHabit(null);
     setInitialFormDataForDialog(null);
     setCreateHabitDialogStep(1);
     setIsCreateHabitDialogOpen(true);
   }, []);
+
+  useEffect(() => {
+    setMounted(true);
+    if (searchParams.get('action') === 'addHabit') {
+      openCreateHabitDialogForNew();
+      router.replace('/', { scroll: false });
+    }
+  }, [searchParams, openCreateHabitDialogForNew, router]);
 
   useEffect(() => {
     const unsubscribeAuthMain = onAuthStateChanged(auth, (currentUserAuthMain) => {
@@ -256,7 +261,7 @@ const HomePage: NextPage = () => {
           .finally(() => {
             setIsLoadingCommonSuggestions(false);
             setCommonSuggestionsFetched(true);
-            const dailyQuestKey = `<span class="math-inline">\{LS\_KEY\_PREFIX\_DAILY\_QUEST\}</span>{authUser.uid}`;
+            const dailyQuestKey = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`;
             // if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
           });
       } else if (parsedHabits.length > 0) {
@@ -629,8 +634,20 @@ const HomePage: NextPage = () => {
           onGetAIReflectionPrompt={handleGetAIReflectionPrompt}
         />
       )}
-      
-      <GoalInputProgramDialog
+      {/*
+      <DailyQuestDialog
+        isOpen={isDailyQuestDialogOpen}
+        onClose={() => {
+            if (authUser) {
+              localStorage.setItem(`${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`, 'seen');
+            }
+            setIsDailyQuestDialogOpen(false)
+          }
+        }
+        userName={authUser?.displayName || 'there'}
+      />
+      */}
+       <GoalInputProgramDialog
         isOpen={isGoalInputProgramDialogOpen}
         onClose={() => setIsGoalInputProgramDialogOpen(false)}
         onSubmit={handleGenerateProgram}
