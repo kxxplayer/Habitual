@@ -1,23 +1,38 @@
-// src/components/habits/HabitDetailViewDialog.tsx
 "use client";
 
 import * as React from 'react';
 import type { FC } from 'react';
 import { motion } from 'framer-motion';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogDescription, DialogFooter } from '../../components/ui/dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose,
+  DialogDescription, DialogFooter
+} from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "../../components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../components/ui/tooltip";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuTrigger, DropdownMenuSeparator
+} from "../../components/ui/dropdown-menu";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
+} from "../../components/ui/tooltip";
 import { Label } from '../../components/ui/label';
 import { ScrollArea } from '../../components/ui/scroll-area';
-import { Lightbulb, CalendarPlus, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CheckCircle2, Circle, XCircle, StickyNote, Trash2, Edit3, Brain } from 'lucide-react';
-import type { Habit, WeekDay, HabitCategory } from '../../types';
-import { HABIT_CATEGORIES } from '../../types';
+import {
+  Lightbulb, CalendarPlus, Flame, MoreHorizontal,
+  MessageSquarePlus, ListChecks, HeartPulse, Briefcase,
+  Paintbrush, Home as HomeIconLucide, Landmark, Users,
+  Smile as LifestyleIcon, Sparkles as SparklesIcon,
+  CheckCircle2, Circle, StickyNote, Trash2, Edit3, Brain
+} from 'lucide-react';
+import type { Habit, HabitCategory } from '../../types';
 import { generateICS, downloadICS } from '../../lib/calendarUtils';
 import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
 import { getCurrentWeekDays, calculateStreak } from '../../lib/dateUtils';
 import { cn } from '../../lib/utils';
-import type { ReflectionStarterInput, ReflectionStarterOutput } from '../../ai/flows/reflection-starter-flow';
+import type {
+  ReflectionStarterInput,
+  ReflectionStarterOutput
+} from '../../ai/flows/reflection-starter-flow';
 import AIReflectionPromptDialog from '../../components/popups/AIReflectionPromptDialog';
 import { useToast } from "../../hooks/use-toast";
 
@@ -86,10 +101,6 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
     onToggleComplete(habit.id, todayString, newState === true);
   };
 
-  const handleToggleDayCompletion = (dayStr: string, complete: boolean) => {
-    onToggleComplete(habit.id, dayStr, complete);
-  };
-
   const handleGetAndShowAIReflection = async () => {
     setIsAIReflectionLoading(true);
     setIsAIReflectionDialogOpen(true);
@@ -99,7 +110,9 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
         habitName: habit.name,
         habitCategory: habit.category,
         currentStreak: currentStreak,
-        recentCompletions: habit.completionLog.filter(log => log.status === 'completed' && weekDays.some(d => d.dateStr === log.date)).length,
+        recentCompletions: habit.completionLog.filter(log =>
+          log.status === 'completed' && weekDays.some(d => d.dateStr === log.date)
+        ).length,
         scheduledDaysInWeek: habit.daysOfWeek.length,
       };
       const result = await onGetAIReflectionPrompt(input);
@@ -156,8 +169,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                     const isMissed = isScheduled && day.isPast && !logEntry;
 
                     return (
-                      <motion.button
-                        whileTap={{ scale: 0.9 }}
+                      <div
                         key={day.dateStr}
                         className={cn(
                           "flex flex-col items-center px-2 py-1 rounded-md transition-all duration-200",
@@ -167,11 +179,12 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                             ? "bg-red-100 text-red-700"
                             : "hover:bg-muted"
                         )}
-                        onClick={() => handleToggleDayCompletion(day.dateStr, !isCompleted)}
                       >
                         <span className="text-xs font-medium">{day.dayAbbrShort}</span>
-                        {isCompleted ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <Circle className="h-5 w-5 text-muted-foreground" />}
-                      </motion.button>
+                        {isCompleted
+                          ? <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          : <Circle className="h-5 w-5 text-muted-foreground" />}
+                      </div>
                     );
                   })}
                 </div>
