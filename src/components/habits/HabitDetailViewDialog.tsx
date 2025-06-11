@@ -118,11 +118,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-md bg-card rounded-lg shadow-xl p-0">
           <ScrollArea className="max-h-[90vh]">
-            <motion.div
-              animate={{ opacity: isCompletedToday ? 0.7 : 1, filter: isCompletedToday ? 'grayscale(50%)' : 'grayscale(0%)' }}
-              transition={{ duration: 0.3 }}
-              className="p-6"
-            >
+            <div className="p-6">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold">{habit.name}</DialogTitle>
                 {habit.description && <DialogDescription>{habit.description}</DialogDescription>}
@@ -178,16 +174,23 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               </div>
 
               {isScheduledToday && (
-                <Button onClick={handleToggleTodayCompletion} size="lg" className="w-full">
-                  {isCompletedToday ? "Not done?" : "Mark as Done"}
-                </Button>
+                 <motion.div whileTap={{ scale: 0.98 }} className="w-full">
+                    <Button
+                      onClick={handleToggleTodayCompletion}
+                      size="lg"
+                      variant={isCompletedToday ? "outline" : "default"}
+                      className="w-full transition-colors duration-200"
+                    >
+                      {isCompletedToday ? "Not done?" : "Mark as Done"}
+                    </Button>
+                  </motion.div>
               )}
               
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <Button variant="outline" onClick={() => onGetAISuggestion(habit)}><Lightbulb className="mr-2 h-4 w-4" />AI Tip</Button>
                 <Button variant="outline" onClick={handleGetAndShowAIReflection}><MessageSquarePlus className="mr-2 h-4 w-4" />AI Reflection</Button>
               </div>
-            </motion.div>
+            </div>
           </ScrollArea>
           <DialogFooter className="p-3 border-t bg-muted/50 flex-row justify-between">
             <DialogClose asChild><Button variant="ghost">Close</Button></DialogClose>
