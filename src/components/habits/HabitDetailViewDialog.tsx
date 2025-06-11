@@ -83,13 +83,11 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const isCompletedToday = habit?.completionLog.some(log => isSameDay(parseISO(log.date), today) && log.status === 'completed') ?? false;
 
   const [localCompleted, setLocalCompleted] = React.useState<boolean>(isCompletedToday);
-  const [choiceMadeThisSession, setChoiceMadeThisSession] = React.useState(false);
 
   React.useEffect(() => {
     if (isOpen && habit) {
       const completedStatus = habit.completionLog.some(log => isSameDay(parseISO(log.date), today) && log.status === 'completed');
       setLocalCompleted(completedStatus);
-      setChoiceMadeThisSession(false); // Reset on open
     }
   }, [isOpen, habit, today]);
 
@@ -101,11 +99,10 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const todayInfo = weekDays.find(d => d.isToday);
   const isScheduledToday = todayInfo && habit.daysOfWeek.includes(todayInfo.dayAbbrFull);
 
-  const handleToggleTodayCompletion = (complete: boolean) => {
-    if (choiceMadeThisSession) return;
-    setLocalCompleted(complete);
-    onToggleComplete(habit.id, todayString, complete);
-    setChoiceMadeThisSession(true);
+  const handleSetCompletion = (isComplete: boolean) => {
+    if (localCompleted === isComplete) return;
+    setLocalCompleted(isComplete);
+    onToggleComplete(habit.id, todayString, isComplete);
   };
 
   const handleGetAndShowAIReflection = async () => {
@@ -200,29 +197,25 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               {isScheduledToday && (
                 <div className="grid grid-cols-2 gap-2">
                   <motion.button
-                    whileTap={{ scale: choiceMadeThisSession ? 1 : 0.95 }}
-                    onClick={() => handleToggleTodayCompletion(true)}
-                    disabled={choiceMadeThisSession}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleSetCompletion(true)}
                     className={cn(
                       "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow-md",
-                      "disabled:cursor-not-allowed",
-                      choiceMadeThisSession
-                        ? (localCompleted ? "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg opacity-70" : "bg-muted text-muted-foreground opacity-70")
-                        : "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg hover:opacity-90"
+                      localCompleted
+                        ? "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
                     )}
                   >
                     Mark as Done
                   </motion.button>
                   <motion.button
-                    whileTap={{ scale: choiceMadeThisSession ? 1 : 0.95 }}
-                    onClick={() => handleToggleTodayCompletion(false)}
-                    disabled={choiceMadeThisSession}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleSetCompletion(false)}
                     className={cn(
                       "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow-md",
-                      "disabled:cursor-not-allowed",
-                      choiceMadeThisSession
-                        ? (!localCompleted ? "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg opacity-70" : "bg-muted text-muted-foreground opacity-70")
-                        : "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg hover:opacity-90"
+                      !localCompleted
+                        ? "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
                     )}
                   >
                     Not Done?
