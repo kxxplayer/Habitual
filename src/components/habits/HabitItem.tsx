@@ -2,16 +2,18 @@ import React from 'react';
 
 // Note: This component needs to be saved as src/components/habits/HabitItem.tsx
 // to replace the existing simplified version
+import type { Habit } from '@/types'; // Import Habit type
 
 interface HabitItemProps {
-  habit: any;
+  habit: Habit; // Changed to Habit type
   onToggleComplete: (habitId: string, date: string) => void;
   onDelete: (habitId: string) => void;
-  onEdit: (habit: any) => void;
-  onReschedule: (habit: any) => void;
-  onOpenDetailView?: (habit: any) => void;
+  onEdit: (habit: Habit) => void;
+  onReschedule: (habit: Habit, missedDate: string) => void; // Updated to expect two arguments
+  onOpenDetailView?: (habit: Habit) => void;
   isCompleted: boolean;
   currentDate: string;
+  todayString: string; // Added todayString prop
 }
 
 // Helper function to get habit icon
@@ -39,6 +41,7 @@ const HabitItem: React.FC<HabitItemProps> = ({
   onOpenDetailView,
   isCompleted,
   currentDate,
+  todayString, // Destructure todayString
 }) => {
   const [showMenu, setShowMenu] = React.useState(false);
 
@@ -64,10 +67,10 @@ const HabitItem: React.FC<HabitItemProps> = ({
     onEdit(habit);
   };
 
-  const handleReschedule = (e: React.MouseEvent) => {
+  const handleRescheduleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
-    onReschedule(habit);
+    onReschedule(habit, todayString); // Pass both habit and todayString
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -86,7 +89,7 @@ const HabitItem: React.FC<HabitItemProps> = ({
   }, [showMenu]);
 
   return (
-    <div 
+    <div
       className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${isCompleted ? 'opacity-75' : ''}`}
       onClick={handleOpenDetails}
       style={{
@@ -112,7 +115,7 @@ const HabitItem: React.FC<HabitItemProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
           {/* Habit Icon */}
           <span style={{ fontSize: '24px' }}>{getHabitIcon(habit.name)}</span>
-          
+
           {/* Habit Name */}
           <span style={{
             fontSize: '16px',
@@ -223,7 +226,7 @@ const HabitItem: React.FC<HabitItemProps> = ({
                   Edit Habit
                 </button>
                 <button
-                  onClick={handleReschedule}
+                  onClick={handleRescheduleClick} // Use the local click handler
                   style={{
                     width: '100%',
                     padding: '8px 12px',
@@ -273,10 +276,10 @@ const HabitItem: React.FC<HabitItemProps> = ({
 
       {/* Optional: Add habit details like time or duration */}
       {(habit.specificTime || habit.durationMinutes || habit.durationHours) && (
-        <div style={{ 
-          marginTop: '8px', 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          marginTop: '8px',
+          display: 'flex',
+          alignItems: 'center',
           gap: '12px',
           fontSize: '12px',
           color: '#6b7280'
@@ -288,7 +291,7 @@ const HabitItem: React.FC<HabitItemProps> = ({
           )}
           {(habit.durationHours || habit.durationMinutes) && (
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              ⏱️ {habit.durationHours ? `${habit.durationHours}h` : ''} 
+              ⏱️ {habit.durationHours ? `${habit.durationHours}h` : ''}
               {habit.durationMinutes ? `${habit.durationMinutes}m` : ''}
             </span>
           )}

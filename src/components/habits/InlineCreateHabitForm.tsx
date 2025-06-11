@@ -130,8 +130,6 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     }
     setIsAISuggesting(true);
     try {
-      // Corrected: Use the correct AI flow for creating from description
-      // In src/components/habits/InlineCreateHabitForm.tsx inside handleAISuggestDetails
       const result = await createHabitFromDescription({ description: currentDescription });
       setValue('name', result.habitName || '');
       
@@ -176,9 +174,10 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       category: data.category,
       daysOfWeek: data.daysOfWeek,
       optimalTiming: data.optimalTiming,
-      durationHours: data.durationHours === null ? undefined : data.durationHours,
-      durationMinutes: data.durationMinutes === null ? undefined : data.durationMinutes,
+      durationHours: data.durationHours ?? undefined,
+      durationMinutes: data.durationMinutes ?? undefined,
       specificTime: data.specificTime,
+      reminderEnabled: false,
     });
     onCloseForm();
   };

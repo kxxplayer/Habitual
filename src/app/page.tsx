@@ -1,3 +1,4 @@
+// src/app/page.tsx
 "use client";
 
 // ==========================================================================
@@ -7,7 +8,6 @@ import * as React from 'react';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { NextPage } from 'next';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
@@ -27,17 +27,17 @@ import GoalInputProgramDialog from '@/components/programs/GoalInputProgramDialog
 import ProgramSuggestionDialog from '@/components/programs/ProgramSuggestionDialog';
 
 import { Calendar } from '@/components/ui/calendar';
-import type { 
-  Habit, 
-  AISuggestion as AISuggestionType, 
-  WeekDay, 
-  HabitCompletionLogEntry, 
-  HabitCategory, 
-  EarnedBadge, 
-  CreateHabitFormData, 
+import type {
+  Habit,
+  AISuggestion as AISuggestionType,
+  WeekDay,
+  HabitCompletionLogEntry,
+  HabitCategory,
+  EarnedBadge,
+  CreateHabitFormData,
   SuggestedHabitForCommonList as CommonSuggestedHabitType,
   SuggestedProgramHabit,
-  GenerateHabitProgramOutput 
+  GenerateHabitProgramOutput
 } from '@/types';
 import { HABIT_CATEGORIES, SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID, THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
 
@@ -180,7 +180,7 @@ const HomePage: NextPage = () => {
   const [habitToDelete, setHabitToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const [todayString, setTodayString] = useState('');
-  const [todayAbbr, setTodayAbbr] = useState<WeekDay | ''>('');
+  const [todayAbbr, setTodayAbbr] = useState<WeekDay | undefined>(undefined);
   const [allTodayTasksDone, setAllTodayTasksDone] = useState(false);
 
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = useState(false);
@@ -423,7 +423,7 @@ const HomePage: NextPage = () => {
 
   React.useEffect(() => {
     if (!authUser || !mounted || habits.length === 0) return;
-    const habitsScheduledToday = habits.filter(h => h.daysOfWeek.includes(todayAbbr));
+    const habitsScheduledToday = habits.filter(h => h.daysOfWeek.includes(todayAbbr as WeekDay));
     const completedToday = habitsScheduledToday.filter(h =>
       h.completionLog.some(log => log.date === todayString && log.status === 'completed')
     );
@@ -580,7 +580,7 @@ const HomePage: NextPage = () => {
             }
           }
           console.log(`PAGE.TSX: Updated log for ${h.name}:`, newLog);
-          const updatedHabit = { ...h, completionLog: newLog.sort((a, b) => b.date.localeCompare(a.date)) };
+          const updatedHabit = { ...h, completionLog: newLog.sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)) };
           if (selectedHabitForDetailView && selectedHabitForDetailView.id === updatedHabit.id) {
             setSelectedHabitForDetailView(updatedHabit);
           }
@@ -643,12 +643,14 @@ const HomePage: NextPage = () => {
     try {
         const aiResponse = await getHabitSuggestion({
             habitName: habitGetAISuggestionMain.name,
-            completionData: habitGetAISuggestionMain.completionLog.map(log => ({
-              date: log.date,
-              completed: log.status === 'completed'
-            })),
-            preferredTime: habitGetAISuggestionMain.optimalTiming || habitGetAISuggestionMain.specificTime || 'Not specified',
-            currentStreakLength: 0
+            // Format completionLog into a string for trackingData
+            trackingData: `Completions: ${habitGetAISuggestionMain.completionLog.length > 0 ? habitGetAISuggestionMain.completionLog.map(log => `${log.date} (${log.status})`).join(', ') : 'None'}. Notes: ${habitGetAISuggestionMain.completionLog.map(log => log.note).filter(Boolean).join('; ')}`,
+            daysOfWeek: habitGetAISuggestionMain.daysOfWeek,
+            optimalTiming: habitGetAISuggestionMain.optimalTiming || habitGetAISuggestionMain.specificTime || undefined,
+            durationHours: habitGetAISuggestionMain.durationHours,
+            durationMinutes: habitGetAISuggestionMain.durationMinutes,
+            specificTime: habitGetAISuggestionMain.specificTime,
+            habitDescription: habitGetAISuggestionMain.description,
           });
       setAISuggestion({ suggestionText: aiResponse.suggestion, isLoading: false, error: null });
     } catch (error) {
@@ -680,7 +682,7 @@ const HomePage: NextPage = () => {
         } else {
           updatedLog.push({ date: dateSaveNoteMain, time: 'N/A', note: noteSaveNoteMain, status: 'skipped' });
         }
-        const updatedHabit = { ...h, completionLog: updatedLog.sort((a, b) => b.date.localeCompare(a.date)) };
+        const updatedHabit = { ...h, completionLog: updatedLog.sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)) };
         if (selectedHabitForDetailView && selectedHabitForDetailView.id === updatedHabit.id) {
           setSelectedHabitForDetailView(updatedHabit);
         }
@@ -715,7 +717,7 @@ const HomePage: NextPage = () => {
             originalMissedDate: originalMissedDateSaveRescheduledMain
           });
         }
-        const updatedHabit = { ...h, completionLog: updatedLog.sort((a, b) => b.date.localeCompare(a.date)) };
+        const updatedHabit = { ...h, completionLog: updatedLog.sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)) };
         if (selectedHabitForDetailView && selectedHabitForDetailView.id === updatedHabit.id) {
           setSelectedHabitForDetailView(updatedHabit);
         }
@@ -723,7 +725,7 @@ const HomePage: NextPage = () => {
       }
       return h;
     }));
-    toast({ title: "Habit Rescheduled", description: `Rescheduled to ${format(parseISO(newDateSaveRescheduledMain), 'MMMM d, yyyy')}` });
+    toast({ title: "Habit Rescheduled", description: `Rescheduled to ${format(parseISO(newDateSaveRescheduledMain), 'MMMM d,PPPP')}` });
   };
 
   const handleSaveMarkAsSkipped = (habitIdMarkSkippedMain: string, dateMarkSkippedMain: string) => {
@@ -737,7 +739,7 @@ const HomePage: NextPage = () => {
         } else {
           updatedLog.push({ date: dateMarkSkippedMain, time: 'N/A', status: 'skipped' });
         }
-        const updatedHabit = { ...h, completionLog: updatedLog.sort((a, b) => b.date.localeCompare(a.date)) };
+        const updatedHabit = { ...h, completionLog: updatedLog.sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)) };
         if (selectedHabitForDetailView && selectedHabitForDetailView.id === updatedHabit.id) {
           setSelectedHabitForDetailView(updatedHabit);
         }
@@ -769,16 +771,20 @@ const HomePage: NextPage = () => {
     setIsGoalInputProgramDialogOpen(true);
   };
 
-  const handleGenerateProgram = async (goal: string, durationWeeks: number) => {
+  const handleGenerateProgram = async (goal: string, duration: string) => {
     if (!authUser) return;
     setIsGoalInputProgramDialogOpen(false);
     setIsProgramSuggestionLoading(true);
     try {
         const programData = await generateHabitProgramFromGoal({
-            goal: "Your user's goal",
-            focusDuration: "The user's chosen duration"
+            goal: goal,
+            focusDuration: duration
           });
-      setProgramSuggestion(result);
+      setProgramSuggestion({
+          ...programData,
+          goal: goal,
+          focusDuration: duration
+      });
       setIsProgramSuggestionDialogOpen(true);
     } catch (error) {
       console.error("Error generating program:", error);
@@ -796,7 +802,7 @@ const HomePage: NextPage = () => {
       name: sh.name,
       description: sh.description || undefined,
       category: sh.category || 'Other',
-      daysOfWeek: sh.daysOfWeek || [],
+      daysOfWeek: sh.daysOfWeek,
       optimalTiming: sh.optimalTiming || undefined,
       durationHours: sh.durationHours ?? undefined,
       durationMinutes: sh.durationMinutes ?? undefined,
@@ -894,21 +900,10 @@ const HomePage: NextPage = () => {
                     <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
                     <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
                     <p className="text-sm text-muted-foreground">
-                      Tap the "+" button to add a habit or create a program!
+                      Tap the '+' button to add a habit or create a program!
                     </p>
                   </div>
                 )
-              ) : (
-                <HabitList
-                  habits={habits}
-                  onOpenDetailView={handleOpenDetailView}
-                  todayString={todayString}
-                  todayAbbr={todayAbbr}
-                  onToggleComplete={handleToggleComplete}
-                  onDelete={handleOpenDeleteHabitConfirm}
-                  onEdit={handleOpenEditDialog}
-                  onReschedule={handleOpenRescheduleDialog}
-                />
               )}
             </main>
           </div>
@@ -1018,7 +1013,7 @@ const HomePage: NextPage = () => {
       <GoalInputProgramDialog
         isOpen={isGoalInputProgramDialogOpen}
         onClose={() => setIsGoalInputProgramDialogOpen(false)}
-        onGenerateProgram={handleGenerateProgram}
+        onSubmit={handleGenerateProgram}
       />
       {programSuggestion && (
         <ProgramSuggestionDialog
@@ -1028,7 +1023,7 @@ const HomePage: NextPage = () => {
             setProgramSuggestion(null);
           }}
           programSuggestion={programSuggestion}
-          onAddAllHabits={handleAddProgramHabits}
+          onAddProgramHabits={handleAddProgramHabits}
         />
       )}
     </div>

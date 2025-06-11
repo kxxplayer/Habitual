@@ -1,8 +1,9 @@
+// src/types/index.ts
 // src/types/index.ts - Complete type definitions to fix all errors
 
 export const HABIT_CATEGORIES = [
   'Health & Fitness',
-  'Work & Study', 
+  'Work & Study',
   'Personal Development',
   'Mindfulness',
   'Social',
@@ -81,7 +82,7 @@ export interface SuggestedProgramHabit {
   name: string;
   description?: string;
   category?: HabitCategory;
-  daysOfWeek?: WeekDay[];
+  daysOfWeek: WeekDay[]; // Changed to non-optional as per AI flow output
   optimalTiming?: string;
   durationHours?: number;
   durationMinutes?: number;
@@ -119,12 +120,14 @@ export interface DailyQuestDialogProps {
 export interface GoalInputProgramDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onGenerateProgram: (goal: string, durationWeeks: number) => Promise<void>;
+  onSubmit: (goal: string, duration: string) => void; // Changed from onGenerateProgram and durationWeeks: number
+  isLoading?: boolean; // Added isLoading prop
 }
 
 export interface ProgramSuggestionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  programSuggestion: GenerateHabitProgramOutput;
-  onAddAllHabits: (habits: SuggestedProgramHabit[], programName: string) => void;
+  programSuggestion: GenerateHabitProgramOutput | null; // Changed to allow null
+  onAddProgramHabits: (habits: SuggestedProgramHabit[], programName: string) => void;
+  isLoading?: boolean;
 }

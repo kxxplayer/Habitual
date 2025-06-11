@@ -1,3 +1,4 @@
+// src/components/programs/ProgramSuggestionDialog.tsx
 "use client";
 
 import * as React from 'react';
@@ -14,16 +15,16 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { CheckSquare, Sparkles, Tag, CalendarDays as CalendarIcon, Clock, Hourglass, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIconLucide } from 'lucide-react';
-import type { GenerateHabitProgramOutput, SuggestedProgramHabit } from '@/ai/flows/generate-habit-program-flow'; 
-import { HABIT_CATEGORIES, type HabitCategory, type WeekDay } from '@/types'; 
+import { CheckSquare, Sparkles, Tag, CalendarDays as CalendarIcon, Clock, Hourglass, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIconLucide, Brain } from 'lucide-react';
+import type { GenerateHabitProgramOutput, SuggestedProgramHabit } from '@/ai/flows/generate-habit-program-flow';
+import { HABIT_CATEGORIES, type HabitCategory, type WeekDay } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface ProgramSuggestionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   programSuggestion: GenerateHabitProgramOutput | null;
-  onAddProgramHabits: (habits: SuggestedProgramHabit[]) => void; 
+  onAddProgramHabits: (habits: SuggestedProgramHabit[], programName: string) => void;
   isLoading?: boolean;
 }
 
@@ -41,16 +42,17 @@ const getSuggestedHabitIcon = (habit: SuggestedProgramHabit): React.ReactNode =>
   if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <HeartPulse className="h-4 w-4 text-red-500" />;
 
   if (habit.category) {
-    // FIX: Corrected category names to match the HABIT_CATEGORIES type
     switch (habit.category) {
-      case 'Health & Wellness': return <HeartPulse className="h-4 w-4 text-red-500" />;
-      case 'Work/Study': return <Briefcase className="h-4 w-4 text-blue-600" />;
+      case 'Health & Fitness': return <HeartPulse className="h-4 w-4 text-red-500" />;
+      case 'Work & Study': return <Briefcase className="h-4 w-4 text-blue-600" />;
       case 'Creative': return <Paintbrush className="h-4 w-4 text-orange-500" />;
-      case 'Chores': return <HomeIconLucide className="h-4 w-4 text-green-600" />;
+      case 'Home & Environment': return <HomeIconLucide className="h-4 w-4 text-green-600" />;
       case 'Finance': return <Landmark className="h-4 w-4 text-indigo-500" />;
       case 'Social': return <Users className="h-4 w-4 text-pink-500" />;
-      case 'Personal Growth': return <SparklesIconLucide className="h-4 w-4 text-yellow-500" />;
-      case 'Lifestyle': return <LifestyleIcon className="h-4 w-4 text-teal-500" />;
+      case 'Personal Development': return <SparklesIconLucide className="h-4 w-4 text-yellow-500" />;
+      case 'Entertainment': return <LifestyleIcon className="h-4 w-4 text-teal-500" />;
+      case 'Mindfulness': return <Brain className="h-4 w-4 text-purple-400" />;
+      case 'Other': return <ListChecks className="h-4 w-4 text-muted-foreground" />;
       default: return <ListChecks className="h-4 w-4 text-muted-foreground" />;
     }
   }
@@ -70,12 +72,12 @@ const ProgramSuggestionDialog: FC<ProgramSuggestionDialogProps> = ({
   }
 
   const handleAddAll = () => {
-    if (programSuggestion && programSuggestion.suggestedHabits) {
-      onAddProgramHabits(programSuggestion.suggestedHabits);
+    if (programSuggestion && programSuggestion.suggestedHabits && programSuggestion.programName) {
+      onAddProgramHabits(programSuggestion.suggestedHabits, programSuggestion.programName);
     }
     onClose();
   };
-  
+
   const formatDays = (days: WeekDay[] | undefined) => {
     if (!days || days.length === 0) return 'Not specified';
     if (days.length === 7) return 'Daily';

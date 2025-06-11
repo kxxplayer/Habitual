@@ -1,3 +1,5 @@
+// src/components/habits/ProgramHabitGroup.tsx
+
 "use client";
 
 import * as React from 'react';
@@ -15,11 +17,11 @@ interface ProgramHabitGroupProps {
   habitsInProgram: Habit[];
   onOpenDetailView: (habit: Habit) => void;
   todayString: string;
-  todayAbbr: WeekDay | '';
+  todayAbbr: WeekDay | undefined;
   onToggleComplete: (habitId: string, date: string) => void;
-  onDelete: (habitId: string) => void; // FIX: Changed signature to match what HabitItem expects
+  onDelete: (habitId: string) => void;
   onEdit: (habit: Habit) => void;
-  onReschedule: (habit: Habit) => void; // FIX: Changed signature to match what HabitItem expects
+  onReschedule: (habit: Habit, missedDate: string) => void; // Updated to expect two arguments
 }
 
 const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
@@ -35,8 +37,8 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   onReschedule,
 }) => {
   const habitsScheduledToday = todayAbbr
-    ? habitsInProgram.filter(habit => 
-        habit.daysOfWeek.includes(todayAbbr) || 
+    ? habitsInProgram.filter(habit =>
+        habit.daysOfWeek.includes(todayAbbr) ||
         habit.completionLog.some(log => log.date === todayString && log.status === 'pending_makeup')
       )
     : [];
@@ -49,7 +51,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   const progressPercentToday = habitsScheduledToday.length > 0 ? (completedTodayCount / habitsScheduledToday.length) * 100 : 0;
 
   if (habitsInProgram.length === 0) {
-    return null; 
+    return null;
   }
 
   return (
@@ -59,14 +61,14 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
           <div className="flex flex-col w-full space-y-1.5">
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center space-x-3">
-                <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} /> 
+                <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} />
                 <span className={cn("font-semibold text-lg text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
                   {programName}
                 </span>
               </div>
               <div className="flex items-center space-x-1.5 text-xs">
-                {allProgramTasksForTodayCompleted ? 
-                  <CheckCircle2 className="h-4 w-4 text-accent" /> : 
+                {allProgramTasksForTodayCompleted ?
+                  <CheckCircle2 className="h-4 w-4 text-accent" /> :
                   <Circle className={cn("h-3.5 w-3.5", habitsScheduledToday.length > 0 ? "text-orange-500" : "text-muted-foreground/60")} />
                 }
                 {habitsScheduledToday.length > 0 ? (
@@ -79,9 +81,9 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
               </div>
             </div>
             {habitsScheduledToday.length > 0 && (
-              <Progress 
-                value={progressPercentToday} 
-                className="h-1.5 w-full mt-1" 
+              <Progress
+                value={progressPercentToday}
+                className="h-1.5 w-full mt-1"
                 indicatorClassName={allProgramTasksForTodayCompleted ? "bg-accent" : "bg-primary"}
               />
             )}
@@ -94,11 +96,11 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
                 <div onClick={() => onOpenDetailView(habit)} key={habit.id} className="cursor-pointer">
                   <HabitItem
                     habit={habit}
-                    todayString={todayString}
+                    todayString={todayString} // Pass todayString here
                     onToggleComplete={onToggleComplete}
                     onDelete={onDelete}
                     onEdit={onEdit}
-                    onReschedule={onReschedule}
+                    onReschedule={() => onReschedule(habit, todayString)}
                     onOpenDetailView={onOpenDetailView}
                     isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
                     currentDate={todayString}
