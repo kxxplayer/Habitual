@@ -60,7 +60,7 @@ const SettingsPage: NextPage = () => {
   }
 
   return (
-    <AppPageLayout>
+    <AppPageLayout onAddNew={() => router.push('/?action=addHabit')}>
         <div className="flex items-center mb-6">
             <SettingsIcon className="mr-3 h-8 w-8 text-primary" />
             <div>

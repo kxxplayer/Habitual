@@ -105,7 +105,7 @@ const AchievementsPage: NextPage = () => {
   }
 
   return (
-    <AppPageLayout>
+    <AppPageLayout onAddNew={() => router.push('/?action=addHabit')}>
         <div className="flex items-center mb-6">
             <Trophy className="mr-3 h-8 w-8 text-yellow-500" />
             <div>
