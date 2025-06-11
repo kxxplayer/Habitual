@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { FC } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose,
   DialogDescription, DialogFooter
@@ -197,16 +197,27 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               {isScheduledToday && (
                  <div className="my-6">
                     <motion.button
-                        whileTap={{ scale: 0.95 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={handleToggleCompletion}
                         className={cn(
-                            "w-full px-4 py-3 rounded-md font-semibold text-lg text-white transition-all duration-300 shadow-lg",
+                            "w-full px-4 py-3 rounded-lg font-semibold text-lg text-white transition-all duration-300 ease-in-out shadow-lg transform-gpu",
                             localCompleted
                                 ? "bg-gradient-to-r from-pink-500 to-red-500 hover:opacity-90"
                                 : "bg-gradient-to-r from-green-400 to-blue-500 hover:opacity-90"
                         )}
                     >
-                        {localCompleted ? "Not Done?" : "Mark as Done"}
+                      <AnimatePresence mode="wait" initial={false}>
+                        <motion.span
+                            key={localCompleted ? "not-done-text" : "done-text"}
+                            initial={{ y: -10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 10, opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="block"
+                        >
+                            {localCompleted ? "Not Done?" : "Mark as Done"}
+                        </motion.span>
+                      </AnimatePresence>
                     </motion.button>
                 </div>
               )}
