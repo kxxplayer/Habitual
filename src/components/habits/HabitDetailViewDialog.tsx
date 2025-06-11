@@ -77,28 +77,34 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const [isAIReflectionLoading, setIsAIReflectionLoading] = React.useState(false);
   const [aiReflectionPrompt, setAiReflectionPrompt] = React.useState<string | null>(null);
   const [isAIReflectionDialogOpen, setIsAIReflectionDialogOpen] = React.useState(false);
-  const [localCompleted, setLocalCompleted] = React.useState<boolean | null>(null);
+  
+  const today = startOfDay(new Date());
+  const isCompletedToday = habit?.completionLog.some(log => isSameDay(parseISO(log.date), today) && log.status === 'completed') ?? false;
+
+  const [localCompleted, setLocalCompleted] = React.useState<boolean>(isCompletedToday);
+  const [choiceMadeThisSession, setChoiceMadeThisSession] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && habit) {
+      const completedStatus = habit.completionLog.some(log => isSameDay(parseISO(log.date), today) && log.status === 'completed');
+      setLocalCompleted(completedStatus);
+      setChoiceMadeThisSession(false); // Reset on open
+    }
+  }, [isOpen, habit, today]);
 
   if (!isOpen || !habit) return null;
 
   const currentStreak = calculateStreak(habit, new Date());
   const weekDays = getCurrentWeekDays(new Date());
-  const today = startOfDay(new Date());
-  const isCompletedToday = habit.completionLog.some(log => isSameDay(parseISO(log.date), today) && log.status === 'completed');
-
-  React.useEffect(() => {
-    if (isOpen) {
-      setLocalCompleted(isCompletedToday);
-    }
-  }, [isOpen, isCompletedToday]);
 
   const todayInfo = weekDays.find(d => d.isToday);
   const isScheduledToday = todayInfo && habit.daysOfWeek.includes(todayInfo.dayAbbrFull);
 
   const handleToggleTodayCompletion = (complete: boolean) => {
-    const newState = localCompleted === complete ? null : complete;
-    setLocalCompleted(newState);
-    onToggleComplete(habit.id, todayString, newState === true);
+    if (choiceMadeThisSession) return;
+    setLocalCompleted(complete);
+    onToggleComplete(habit.id, todayString, complete);
+    setChoiceMadeThisSession(true);
   };
 
   const handleGetAndShowAIReflection = async () => {
@@ -193,11 +199,13 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               {isScheduledToday && (
                 <div className="grid grid-cols-2 gap-2">
                   <motion.button
-                    whileTap={{ scale: 0.95 }}
+                    whileTap={{ scale: choiceMadeThisSession ? 1 : 0.95 }}
                     onClick={() => handleToggleTodayCompletion(true)}
+                    disabled={choiceMadeThisSession}
                     className={cn(
                       "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow-md",
-                      localCompleted === true
+                      "disabled:cursor-not-allowed disabled:opacity-60",
+                      localCompleted
                         ? "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg"
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
                     )}
@@ -205,13 +213,15 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                     Mark as Done
                   </motion.button>
                   <motion.button
-                    whileTap={{ scale: 0.95 }}
+                    whileTap={{ scale: choiceMadeThisSession ? 1 : 0.95 }}
                     onClick={() => handleToggleTodayCompletion(false)}
+                    disabled={choiceMadeThisSession}
                     className={cn(
                       "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow-md",
-                      localCompleted === false
+                      "disabled:cursor-not-allowed disabled:opacity-60",
+                      !localCompleted
                         ? "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        : "bg-muted text-muted-foreground"
                     )}
                   >
                     Not Done?
