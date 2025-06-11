@@ -101,7 +101,6 @@ const HabitList: FC<HabitListProps> = ({
           onOpenDetailView={onOpenDetailView}
           isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
           currentDate={todayString}
-          todayString={todayString}
         />
       ))}
     </div>
