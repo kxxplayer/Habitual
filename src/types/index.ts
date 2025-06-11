@@ -1,20 +1,31 @@
-
-export interface HabitCompletionLogEntry {
-  date: string; // 'YYYY-MM-DD'
-  time: string; // 'HH:MM', can be 'N/A' for skipped/pending
-  note?: string;
-  status?: 'completed' | 'pending_makeup' | 'skipped';
-  originalMissedDate?: string; // 'YYYY-MM-DD'
-}
-
-export const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-export type WeekDay = typeof weekDays[number];
+// src/types/index.ts - Complete type definitions to fix all errors
 
 export const HABIT_CATEGORIES = [
-  "Lifestyle", "Work/Study", "Health & Wellness", "Creative",
-  "Chores", "Finance", "Social", "Personal Growth", "Other",
+  'Health & Fitness',
+  'Work & Study', 
+  'Personal Development',
+  'Mindfulness',
+  'Social',
+  'Creative',
+  'Finance',
+  'Home & Environment',
+  'Entertainment',
+  'Other'
 ] as const;
+
 export type HabitCategory = typeof HABIT_CATEGORIES[number];
+
+export type WeekDay = 'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat';
+
+export const weekDays: readonly WeekDay[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+export interface HabitCompletionLogEntry {
+  date: string;
+  time: string;
+  note?: string;
+  status: 'completed' | 'pending_makeup' | 'skipped';
+  originalMissedDate?: string;
+}
 
 export interface Habit {
   id: string;
@@ -25,24 +36,17 @@ export interface Habit {
   optimalTiming?: string;
   durationHours?: number;
   durationMinutes?: number;
-  specificTime?: string; // HH:mm format
+  specificTime?: string;
   completionLog: HabitCompletionLogEntry[];
-  reminderEnabled?: boolean;
-  programId?: string; // Added to group habits by program
-  programName?: string; // Added to display program name
-}
-
-export interface AISuggestion {
-  habitId: string;
-  suggestionText: string;
-  isLoading: boolean;
-  error?: string | null;
+  reminderEnabled: boolean;
+  programId?: string;
+  programName?: string;
 }
 
 export interface CreateHabitFormData {
   id?: string;
-  description?: string;
   name: string;
+  description?: string;
   category?: HabitCategory;
   daysOfWeek: WeekDay[];
   optimalTiming?: string;
@@ -51,22 +55,76 @@ export interface CreateHabitFormData {
   specificTime?: string;
 }
 
-export const SEVEN_DAY_STREAK_BADGE_ID = "sevenDayStreak";
-export const THIRTY_DAY_STREAK_BADGE_ID = "thirtyDayStreak";
-export const FIRST_HABIT_COMPLETED_BADGE_ID = "firstHabitCompleted";
-export const THREE_DAY_SQL_STREAK_BADGE_ID = "threeDaySqlStreak";
-
 export interface EarnedBadge {
   id: string;
   name: string;
   description: string;
-  dateAchieved: string; // 'YYYY-MM-DD'
-  icon?: string;
+  earnedDate: string;
 }
 
-export interface SuggestedHabitForCommonList { 
+export interface AISuggestion {
+  suggestionText: string;
+  isLoading: boolean;
+  error: string | null;
+  habitId?: string;
+}
+
+export interface SuggestedHabitForCommonList {
   name: string;
+  description?: string;
   category?: HabitCategory;
+  defaultOptimalTiming?: string;
+  estimatedMinutes?: number;
 }
 
-    
+export interface SuggestedProgramHabit {
+  name: string;
+  description?: string;
+  category?: HabitCategory;
+  daysOfWeek?: WeekDay[];
+  optimalTiming?: string;
+  durationHours?: number;
+  durationMinutes?: number;
+  specificTime?: string;
+}
+
+export interface GenerateHabitProgramOutput {
+  programName: string;
+  suggestedHabits: SuggestedProgramHabit[];
+  goal: string;
+  focusDuration: string;
+  durationWeeks?: number;
+}
+
+// Badge IDs
+export const FIRST_HABIT_COMPLETED_BADGE_ID = 'first-habit-completed';
+export const SEVEN_DAY_STREAK_BADGE_ID = '7-day-streak';
+export const THIRTY_DAY_STREAK_BADGE_ID = '30-day-streak';
+export const THREE_DAY_SQL_STREAK_BADGE_ID = '3-day-sql-streak';
+
+// Component Props Interfaces
+export interface HabitOverviewProps {
+  habits: Habit[];
+  totalPoints: number;
+  earnedBadges?: EarnedBadge[];
+  getAISuggestion?: (habit: Habit) => Promise<void>;
+}
+
+export interface DailyQuestDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  userName: string;
+}
+
+export interface GoalInputProgramDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onGenerateProgram: (goal: string, durationWeeks: number) => Promise<void>;
+}
+
+export interface ProgramSuggestionDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  programSuggestion: GenerateHabitProgramOutput;
+  onAddAllHabits: (habits: SuggestedProgramHabit[], programName: string) => void;
+}

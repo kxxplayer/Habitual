@@ -11,9 +11,9 @@ interface AISuggestionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   habitName: string;
-  suggestion: string | null;
+  suggestion: string;
   isLoading: boolean;
-  error?: string | null;
+  error: string | null;
 }
 
 const AISuggestionDialog: FC<AISuggestionDialogProps> = ({ isOpen, onClose, habitName, suggestion, isLoading, error }) => {

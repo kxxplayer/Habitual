@@ -19,11 +19,10 @@ import { Label } from '@/components/ui/label';
 import { WandSparkles, Send, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
-interface GoalInputProgramDialogProps {
+export interface GoalInputProgramDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (goal: string, duration: string) => void;
-  isLoading?: boolean;
+  onGenerateProgram: (goal: string, durationWeeks: number) => Promise<void>;
 }
 
 const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClose, onSubmit, isLoading }) => {

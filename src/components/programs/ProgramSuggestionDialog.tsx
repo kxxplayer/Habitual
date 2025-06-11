@@ -16,16 +16,15 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { CheckSquare, Sparkles, Tag, CalendarDays as CalendarIcon, Clock, Hourglass, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIconLucide } from 'lucide-react';
-import type { GenerateHabitProgramOutput, SuggestedProgramHabit } from '@/ai/flows/generate-habit-program-flow'; 
+import type { GenerateHabitProgramOutput, SuggestedProgramHabit } from '@/types';
 import { HABIT_CATEGORIES, type HabitCategory, type WeekDay } from '@/types'; 
 import { cn } from '@/lib/utils';
 
-interface ProgramSuggestionDialogProps {
+export interface ProgramSuggestionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  programSuggestion: GenerateHabitProgramOutput | null;
-  onAddProgramHabits: (habits: SuggestedProgramHabit[]) => void; 
-  isLoading?: boolean;
+  programSuggestion: GenerateHabitProgramOutput;
+  onAddAllHabits: (habits: SuggestedProgramHabit[], programName: string) => void;
 }
 
 const getSuggestedHabitIcon = (habit: SuggestedProgramHabit): React.ReactNode => {

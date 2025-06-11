@@ -13,9 +13,10 @@ import {
 } from '@/components/ui/dialog';
 import { Lightbulb, ChevronRight } from 'lucide-react'; // Changed icon to Lightbulb
 
-interface DailyQuestDialogProps {
+export interface DailyQuestDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  userName: string;
 }
 
 const DailyQuestDialog: React.FC<DailyQuestDialogProps> = ({ isOpen, onClose }) => {
