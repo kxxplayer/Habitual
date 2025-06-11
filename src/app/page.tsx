@@ -1,4 +1,3 @@
-// src/app/page.tsx
 "use client";
 
 // ==========================================================================
@@ -367,9 +366,7 @@ const HomePage: NextPage = () => {
         return h;
       });
     });
-    if (completed && habitName) {
-        getMotivationalQuote({ habitName }).then(res => toast({ title: "Way to go!", description: res.quote }));
-    }
+
     if (pointsChange !== 0) {
       setTotalPoints(prev => Math.max(0, prev + pointsChange));
     }

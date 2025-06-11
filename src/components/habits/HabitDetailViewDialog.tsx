@@ -73,9 +73,9 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const today = startOfDay(new Date());
   const isCompletedToday = habit.completionLog.some(log => isSameDay(parseISO(log.date), today) && log.status === 'completed');
 
-  const handleToggleTodayCompletion = () => {
+  const handleToggleTodayCompletion = (complete: boolean) => {
     if (!habit) return;
-    onToggleComplete(habit.id, todayString, !isCompletedToday);
+    onToggleComplete(habit.id, todayString, complete);
   };
 
   const handleGetAndShowAIReflection = async () => {
@@ -174,16 +174,24 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               </div>
 
               {isScheduledToday && (
-                 <motion.div whileTap={{ scale: 0.98 }} className="w-full">
+                 <div className="grid grid-cols-2 gap-2">
                     <Button
-                      onClick={handleToggleTodayCompletion}
-                      size="lg"
-                      variant={isCompletedToday ? "outline" : "default"}
-                      className="w-full transition-colors duration-200"
+                      onClick={() => handleToggleTodayCompletion(true)}
+                      variant={isCompletedToday ? 'outline' : 'default'}
+                      disabled={isCompletedToday}
+                      className="transition-all duration-200"
                     >
-                      {isCompletedToday ? "Not done?" : "Mark as Done"}
+                      Mark as Done
                     </Button>
-                  </motion.div>
+                    <Button
+                      onClick={() => handleToggleTodayCompletion(false)}
+                      variant={isCompletedToday ? 'default' : 'outline'}
+                      disabled={!isCompletedToday}
+                      className="transition-all duration-200"
+                    >
+                      Not Done?
+                    </Button>
+                  </div>
               )}
               
               <div className="mt-4 grid grid-cols-2 gap-2">
