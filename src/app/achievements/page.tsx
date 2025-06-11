@@ -1,4 +1,3 @@
-// src/app/achievements/page.tsx
 "use client";
 import * as React from 'react';
 import type { NextPage } from 'next';
@@ -106,6 +105,7 @@ const AchievementsPage: NextPage = () => {
 
   return (
     <AppPageLayout onAddNew={() => router.push('/?action=addHabit')}>
+      <div className="animate-card-fade-in">
         <div className="flex items-center mb-6">
             <Trophy className="mr-3 h-8 w-8 text-yellow-500" />
             <div>
@@ -141,6 +141,7 @@ const AchievementsPage: NextPage = () => {
               )}
             </CardContent>
         </Card>
+      </div>
     </AppPageLayout>
   );
 };

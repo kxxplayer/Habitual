@@ -198,7 +198,7 @@ const CalendarPage: NextPage = () => {
 
   return (
     <AppPageLayout onAddNew={() => router.push('/?action=addHabit')}>
-      <Card>
+      <Card className="animate-card-fade-in">
         <CardHeader className="pb-3">
           <CardTitle className="text-xl font-bold text-primary flex items-center">
             <CalendarDays className="mr-2 h-5 w-5" /> Habit Calendar

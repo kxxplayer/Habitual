@@ -261,7 +261,7 @@ const HomePage: NextPage = () => {
           .finally(() => {
             setIsLoadingCommonSuggestions(false);
             setCommonSuggestionsFetched(true);
-            const dailyQuestKey = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`;
+            const dailyQuestKey = `<span class="math-inline">\{LS\_KEY\_PREFIX\_DAILY\_QUEST\}</span>{authUser.uid}`;
             // if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
           });
       } else if (parsedHabits.length > 0) {
@@ -521,50 +521,52 @@ const HomePage: NextPage = () => {
   return (
     <>
       <AppPageLayout onAddNew={openCreateHabitDialogForNew}>
-        {habits.length > 0 ? (
-          <HabitList
-            habits={habits}
-            onOpenDetailView={handleOpenDetailView}
-            onToggleComplete={(habitId, date) => handleToggleComplete(habitId, date, !habits.find(h => h.id === habitId)?.completionLog.some(l => l.date === date && l.status === 'completed'))}
-            onDelete={handleDeleteHabit}
-            onEdit={handleOpenEditDialog}
-            onReschedule={handleOpenRescheduleDialog}
-            todayString={todayString}
-            todayAbbr={todayAbbr}
-          />
-        ) : isLoadingCommonSuggestions ? (
-          <div className="flex items-center justify-center py-6">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <p className="ml-2 text-muted-foreground">Loading suggestions...</p>
-          </div>
-        ) : commonHabitSuggestions.length > 0 ? (
-          <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
-            <div className="px-2 pt-0">
-              <h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
-              <p className="text-xs text-muted-foreground mb-1.5">
-                Start by picking a common habit or tap the "+" button to create your own.
-              </p>
+        <div className="animate-card-fade-in">
+          {habits.length > 0 ? (
+            <HabitList
+              habits={habits}
+              onOpenDetailView={handleOpenDetailView}
+              onToggleComplete={(habitId, date) => handleToggleComplete(habitId, date, !habits.find(h => h.id === habitId)?.completionLog.some(l => l.date === date && l.status === 'completed'))}
+              onDelete={handleDeleteHabit}
+              onEdit={handleOpenEditDialog}
+              onReschedule={handleOpenRescheduleDialog}
+              todayString={todayString}
+              todayAbbr={todayAbbr}
+            />
+          ) : isLoadingCommonSuggestions ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <p className="ml-2 text-muted-foreground">Loading suggestions...</p>
             </div>
-            <div className="p-1">
-              <div className="flex flex-wrap gap-2 justify-center mb-2">
-                {commonHabitSuggestions.map((sugg, idx) => (
-                  <Button key={idx} variant="outline" className="p-2.5 h-auto flex flex-col items-center justify-center space-y-0.5 min-w-[90px] text-center shadow-sm hover:shadow-md transition-shadow text-xs" onClick={() => handleCustomizeSuggestedHabit(sugg)}>
-                    <span className="font-medium">{sugg.name}</span>
-                    {sugg.category && <span className="text-primary/80 opacity-80">{sugg.category}</span>}
-                  </Button>
-                ))}
+          ) : commonHabitSuggestions.length > 0 ? (
+            <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
+              <div className="px-2 pt-0">
+                <h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
+                <p className="text-xs text-muted-foreground mb-1.5">
+                  Start by picking a common habit or tap the "+" button to create your own.
+                </p>
+              </div>
+              <div className="p-1">
+                <div className="flex flex-wrap gap-2 justify-center mb-2">
+                  {commonHabitSuggestions.map((sugg, idx) => (
+                    <Button key={idx} variant="outline" className="p-2.5 h-auto flex flex-col items-center justify-center space-y-0.5 min-w-[90px] text-center shadow-sm hover:shadow-md transition-shadow text-xs" onClick={() => handleCustomizeSuggestedHabit(sugg)}>
+                      <span className="font-medium">{sugg.name}</span>
+                      {sugg.category && <span className="text-primary/80 opacity-80">{sugg.category}</span>}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
-            <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
-            <p className="text-sm text-muted-foreground">
-              Tap the '+' button to add a habit or create a program!
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
+              <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
+              <h3 className="text-lg font-semibold text-foreground">No Habits Yet</h3>
+              <p className="text-sm text-muted-foreground">
+                Tap the '+' button to add a habit or create a program!
+              </p>
+            </div>
+          )}
+        </div>
       </AppPageLayout>
 
       <CreateHabitDialog
@@ -639,7 +641,7 @@ const HomePage: NextPage = () => {
         isOpen={isDailyQuestDialogOpen}
         onClose={() => {
             if (authUser) {
-              localStorage.setItem(`${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`, 'seen');
+              localStorage.setItem(`<span class="math-inline">\{LS\_KEY\_PREFIX\_DAILY\_QUEST\}</span>{authUser.uid}`, 'seen');
             }
             setIsDailyQuestDialogOpen(false)
           }

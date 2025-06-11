@@ -52,7 +52,7 @@ const ProfilePage: NextPage = () => {
 
   return (
     <AppPageLayout onAddNew={() => router.push('/?action=addHabit')}>
-      <Card className="w-full">
+      <Card className="w-full animate-card-fade-in">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold flex items-center justify-center">
             <UserCircle2 className="mr-2 h-6 w-6 text-primary" /> Your Profile
