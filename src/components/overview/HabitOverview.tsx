@@ -240,8 +240,8 @@ const TrendsCard: FC<Pick<HabitOverviewProps, 'habits'>> = React.memo(({ habits 
   return (
       <DashboardCard title="Last 7 Days" icon={BarChart3} style={{ animationDelay: '300ms' }}>
           <ChartContainer config={chartConfig} className="h-[150px] w-full">
-              <BarChart accessibilityLayer data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: -10 }}>
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
+              <BarChart accessibilityLayer data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} fontSize={11} interval={0} />
                   <YAxis tickLine={false} axisLine={false} tickMargin={8} allowDecimals={false} />
                   <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                   <Bar dataKey="Scheduled" fill="var(--color-Scheduled)" radius={[4, 4, 0, 0]} />

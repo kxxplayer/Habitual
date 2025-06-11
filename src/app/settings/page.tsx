@@ -9,10 +9,11 @@ import { signOut, type User, onAuthStateChanged } from 'firebase/auth';
 import AppPageLayout from '@/components/layout/AppPageLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Loader2, UserCircle, CalendarDays, Palette, BellRing, Settings as SettingsIcon, LogOut } from 'lucide-react'; 
+import { Loader2, UserCircle, CalendarDays, Palette, BellRing, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { requestNotificationPermission } from '@/lib/notification-manager'; // Import the new function
 
 const SettingsPage: NextPage = () => {
   const router = useRouter();
@@ -41,7 +42,7 @@ const SettingsPage: NextPage = () => {
     } catch (error: any) {
       console.error("Sign Out Failed:", error.message || "Could not sign out.");
     } finally {
-      setIsSigningOut(false); 
+      setIsSigningOut(false);
     }
   };
 
@@ -61,63 +62,68 @@ const SettingsPage: NextPage = () => {
 
   return (
     <AppPageLayout onAddNew={() => router.push('/?action=addHabit')}>
-        <div className="flex items-center mb-6">
-            <SettingsIcon className="mr-3 h-8 w-8 text-primary" />
-            <div>
-                <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-                <p className="text-muted-foreground">Manage preferences and account.</p>
+      <div className="flex items-center mb-6">
+        <SettingsIcon className="mr-3 h-8 w-8 text-primary" />
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+          <p className="text-muted-foreground">Manage preferences and account.</p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <Card className="animate-card-fade-in" style={{ animationDelay: '100ms' }}>
+          <CardHeader>
+            <CardTitle className="text-lg">Account</CardTitle>
+            <CardDescription>Manage your profile and linked data.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {accountSettingsItems.map((item) => (
+              <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
+                <Button variant="outline" className="w-full justify-start text-base py-6">
+                  <item.icon className="mr-3 h-5 w-5" />
+                  {item.label}
+                </Button>
+              </Link>
+            ))}
+            <Separator className="my-4" />
+            <Button onClick={handleSignOut} variant="destructive" className="w-full text-base py-6" disabled={isSigningOut}>
+              {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-card-fade-in" style={{ animationDelay: '200ms' }}>
+          <CardHeader>
+            <CardTitle className="text-lg">App Preferences</CardTitle>
+            <CardDescription>Customize the look and feel of Habitual.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 border rounded-lg flex items-center justify-between">
+              <div className="flex items-center">
+                <Palette className="mr-3 h-5 w-5 text-muted-foreground" />
+                <Label className="text-base font-medium">App Theme</Label>
+              </div>
+              <ThemeToggleButton />
             </div>
-        </div>
-
-        <div className="space-y-6">
-            <Card className="animate-card-fade-in" style={{ animationDelay: '100ms' }}>
-                <CardHeader>
-                    <CardTitle className="text-lg">Account</CardTitle>
-                    <CardDescription>Manage your profile and linked data.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {accountSettingsItems.map((item) => (
-                        <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
-                            <Button variant="outline" className="w-full justify-start text-base py-6">
-                                <item.icon className="mr-3 h-5 w-5" />
-                                {item.label}
-                            </Button>
-                        </Link>
-                    ))}
-                    <Separator className="my-4" />
-                    <Button onClick={handleSignOut} variant="destructive" className="w-full text-base py-6" disabled={isSigningOut}>
-                        {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
-                        Sign Out
-                    </Button>
-                </CardContent>
-            </Card>
-
-            <Card className="animate-card-fade-in" style={{ animationDelay: '200ms' }}>
-                <CardHeader>
-                    <CardTitle className="text-lg">App Preferences</CardTitle>
-                    <CardDescription>Customize the look and feel of Habitual.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="p-4 border rounded-lg flex items-center justify-between">
-                        <div className="flex items-center">
-                            <Palette className="mr-3 h-5 w-5 text-muted-foreground" />
-                            <Label className="text-base font-medium">App Theme</Label>
-                        </div>
-                        <ThemeToggleButton />
-                    </div>
-                     <div className="p-4 border rounded-lg">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                               <BellRing className="mr-3 h-5 w-5 text-muted-foreground" />
-                               <Label className="text-base font-medium">Reminders</Label>
-                            </div>
-                            <Button size="sm" variant="outline" disabled>Manage</Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2 pl-8">Habit-specific reminders are coming soon!</p>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <BellRing className="mr-3 h-5 w-5 text-muted-foreground" />
+                  <Label className="text-base font-medium">Reminders</Label>
+                </div>
+                {/* Updated Button to Enable Notifications */}
+                <Button size="sm" variant="outline" onClick={requestNotificationPermission}>
+                  Enable Notifications
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 pl-8">
+                Click "Enable" to receive reminders for your tasks. You may need to grant permission in your browser.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </AppPageLayout>
   );
 };

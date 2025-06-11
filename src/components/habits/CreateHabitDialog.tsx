@@ -20,8 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, ChevronRight, Brain, FilePenLine } from 'lucide-react';
+import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, Brain, FilePenLine } from 'lucide-react';
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import type { CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -186,66 +185,69 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
         </DialogHeader>
 
         {currentStep === 1 && !isEditing && (
-          <div className="px-6 py-4 flex-grow grid md:grid-cols-2 gap-6 items-start">
-            {/* AI Suggestion Card */}
-            <div className="flex flex-col h-full p-6 rounded-lg border-2 border-primary bg-primary/5">
-              <div className="flex items-center gap-3 mb-2">
-                <Wand2 className="h-8 w-8 text-primary" />
-                <h3 className="text-lg font-semibold text-primary">Start with AI</h3>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4 flex-grow">
-                Simply describe your goal, and let our AI suggest the details for you. It's the fastest way to get started.
-              </p>
-              <div className="space-y-2">
-                <Label htmlFor="dialog-ai-description" className="text-xs font-medium">Your Goal or Habit Idea</Label>
-                <Controller name="description" control={control} render={({ field }) => 
-                  <Textarea 
-                    id="dialog-ai-description" 
-                    placeholder="e.g., Run 3 times a week, Learn to play guitar" 
-                    {...field} 
-                    className="bg-background text-sm" 
-                    rows={2}
-                  />
-                } />
-              </div>
-              <Button 
-                type="button" 
-                onClick={handleAISuggestDetails} 
-                disabled={isAISuggesting || !habitDescriptionForAI?.trim()} 
-                className="w-full mt-4"
-              >
-                {isAISuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                Suggest Details
-              </Button>
-            </div>
-            
-            {/* Manual and Program Options */}
-            <div className="flex flex-col gap-4">
-               <button 
-                onClick={() => setCurrentStep(2)}
-                className="text-left p-4 rounded-lg border bg-card hover:bg-muted/50 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <FilePenLine className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                  <div>
-                    <h4 className="font-semibold text-foreground">Fill Manually</h4>
-                    <p className="text-sm text-muted-foreground">Craft your new habit from scratch.</p>
-                  </div>
+          // This container makes the content scrollable on small screens
+          <div className="flex-grow min-h-0 overflow-y-auto">
+            <div className="p-6 grid md:grid-cols-2 gap-6 items-start">
+              {/* AI Suggestion Card */}
+              <div className="flex flex-col h-full p-6 rounded-lg border-2 border-primary bg-primary/5">
+                <div className="flex items-center gap-3 mb-2">
+                  <Wand2 className="h-8 w-8 text-primary" />
+                  <h3 className="text-lg font-semibold text-primary">Start with AI</h3>
                 </div>
-              </button>
+                <p className="text-sm text-muted-foreground mb-4 flex-grow">
+                  Simply describe your goal, and let our AI suggest the details for you. It's the fastest way to get started.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="dialog-ai-description" className="text-xs font-medium">Your Goal or Habit Idea</Label>
+                  <Controller name="description" control={control} render={({ field }) =>
+                    <Textarea
+                      id="dialog-ai-description"
+                      placeholder="e.g., Run 3 times a week, Learn to play guitar"
+                      {...field}
+                      className="bg-background text-sm"
+                      rows={2}
+                    />
+                  } />
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleAISuggestDetails}
+                  disabled={isAISuggesting || !habitDescriptionForAI?.trim()}
+                  className="w-full mt-4"
+                >
+                  {isAISuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                  Suggest Details
+                </Button>
+              </div>
 
-              <button 
-                onClick={handleOpenProgramDialog}
-                className="text-left p-4 rounded-lg border bg-card hover:bg-muted/50 transition-all group"
-              >
-                 <div className="flex items-center gap-3">
-                  <Brain className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                  <div>
-                    <h4 className="font-semibold text-foreground">Create a Program</h4>
-                    <p className="text-sm text-muted-foreground">Get a set of habits for a larger goal.</p>
+              {/* Manual and Program Options */}
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  className="text-left p-4 rounded-lg border bg-card hover:bg-muted/50 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <FilePenLine className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <div>
+                      <h4 className="font-semibold text-foreground">Fill Manually</h4>
+                      <p className="text-sm text-muted-foreground">Craft your new habit from scratch.</p>
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+
+                <button
+                  onClick={handleOpenProgramDialog}
+                  className="text-left p-4 rounded-lg border bg-card hover:bg-muted/50 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <Brain className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <div>
+                      <h4 className="font-semibold text-foreground">Create a Program</h4>
+                      <p className="text-sm text-muted-foreground">Get a set of habits for a larger goal.</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -253,71 +255,71 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
         {(currentStep === 2 || isEditing) && (
           <form onSubmit={handleSubmit(onSubmitDialog)} className="flex flex-col flex-grow min-h-0">
             <div className="flex-grow overflow-y-auto px-4 -mx-4">
-                <div className="space-y-4 px-4 pb-4">
-                  {!isEditing && (
-                    <Button type="button" onClick={() => setCurrentStep(1)} variant="ghost" size="sm" className="text-xs text-muted-foreground mb-2 px-1">
-                      &larr; Back to Creation Options
-                    </Button>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label htmlFor="dialog-habit-name" className="text-sm font-medium">Name</Label>
-                      <Controller name="name" control={control} render={({ field }) => <Input id="dialog-habit-name" placeholder="e.g., Read a chapter" {...field} className="bg-input/50 text-sm"/>} />
-                      {errors.name && <p className="text-xs text-destructive pt-1">{errors.name.message}</p>}
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="dialog-habit-category" className="text-sm font-medium flex items-center"><Tag className="mr-1.5 h-4 w-4 text-muted-foreground" />Category</Label>
-                      <Controller name="category" control={control} render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value || "Other"}>
-                            <SelectTrigger id="dialog-habit-category" className="bg-input/50 text-sm"><SelectValue placeholder="Select category" /></SelectTrigger>
-                            <SelectContent>{HABIT_CATEGORIES.map(cat => <SelectItem key={cat} value={cat} className="text-sm">{cat}</SelectItem>)}</SelectContent>
-                          </Select> )} />
-                      {errors.category && <p className="text-xs text-destructive pt-1">{errors.category.message}</p>}
-                    </div>
+              <div className="space-y-4 px-4 pb-4">
+                {!isEditing && (
+                  <Button type="button" onClick={() => setCurrentStep(1)} variant="ghost" size="sm" className="text-xs text-muted-foreground mb-2 px-1">
+                    &larr; Back to Creation Options
+                  </Button>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="dialog-habit-name" className="text-sm font-medium">Name</Label>
+                    <Controller name="name" control={control} render={({ field }) => <Input id="dialog-habit-name" placeholder="e.g., Read a chapter" {...field} className="bg-input/50 text-sm" />} />
+                    {errors.name && <p className="text-xs text-destructive pt-1">{errors.name.message}</p>}
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium">Days of the Week</Label>
-                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-1 p-1.5 border rounded-md bg-input/20">
-                      {weekDaysArray.map(day => (
-                        <Controller key={day} name="daysOfWeek" control={control} render={({ field }) => (
-                          <div className="flex items-center space-x-1 p-1 rounded-md hover:bg-accent/10">
-                            <Checkbox id={`dialog-day-${day}`} checked={field.value?.includes(day)}
-                              onCheckedChange={checked => field.onChange(checked ? [...(field.value || []), day].sort((a, b) => weekDaysArray.indexOf(a) - weekDaysArray.indexOf(b)) : (field.value || []).filter(d => d !== day))}
-                              className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground h-4 w-4" />
-                            <Label htmlFor={`dialog-day-${day}`} className="text-xs font-normal cursor-pointer select-none">{day}</Label>
-                          </div> )} /> ))}
-                    </div>
-                    {errors.daysOfWeek && <p className="text-xs text-destructive pt-1">{errors.daysOfWeek.message}</p>}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label className="text-sm font-medium flex items-center"><Hourglass className="mr-1.5 h-4 w-4 text-muted-foreground" />Duration (Optional)</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div> <Label htmlFor="dialog-duration-hours" className="text-xs text-muted-foreground">Hours</Label>
-                          <Controller name="durationHours" control={control} render={({ field }) => <Input id="dialog-duration-hours" type="number" placeholder="Hr" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm" min="0"/>} />
-                          {errors.durationHours && <p className="text-xs text-destructive pt-1">{errors.durationHours.message}</p>}
-                        </div>
-                        <div> <Label htmlFor="dialog-duration-minutes" className="text-xs text-muted-foreground">Minutes</Label>
-                          <Controller name="durationMinutes" control={control} render={({ field }) => <Input id="dialog-duration-minutes" type="number" placeholder="Min" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm" min="0" max="59"/>} />
-                          {errors.durationMinutes && <p className="text-xs text-destructive pt-1">{errors.durationMinutes.message}</p>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="dialog-habit-specificTime" className="text-sm font-medium flex items-center"><Clock className="mr-1.5 h-4 w-4 text-muted-foreground" />Specific Time (Optional)</Label>
-                      <Controller name="specificTime" control={control} render={({ field }) => <Input id="dialog-habit-specificTime" type="time" {...field} className="bg-input/50 w-full text-sm"/>} />
-                      {errors.specificTime && <p className="text-xs text-destructive pt-1">{errors.specificTime.message}</p>}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="dialog-habit-optimalTiming" className="text-sm font-medium flex items-center"><CalendarClock className="mr-1.5 h-4 w-4 text-muted-foreground" />Optimal General Timing (Optional)</Label>
-                    <Controller name="optimalTiming" control={control} render={({ field }) => <Input id="dialog-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50 text-sm"/>} />
-                  </div>
-                  <div className={cn("space-y-1", isEditing ? "" : "hidden")}>
-                    <Label htmlFor="dialog-final-description" className="text-sm font-medium">Description (Optional)</Label>
-                    <Controller name="description" control={control} render={({ field }) => <Textarea id="dialog-final-description" placeholder="Detailed description of the habit" {...field} className="bg-input/50 text-sm" rows={2}/>} />
+                    <Label htmlFor="dialog-habit-category" className="text-sm font-medium flex items-center"><Tag className="mr-1.5 h-4 w-4 text-muted-foreground" />Category</Label>
+                    <Controller name="category" control={control} render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value || "Other"}>
+                        <SelectTrigger id="dialog-habit-category" className="bg-input/50 text-sm"><SelectValue placeholder="Select category" /></SelectTrigger>
+                        <SelectContent>{HABIT_CATEGORIES.map(cat => <SelectItem key={cat} value={cat} className="text-sm">{cat}</SelectItem>)}</SelectContent>
+                      </Select>)} />
+                    {errors.category && <p className="text-xs text-destructive pt-1">{errors.category.message}</p>}
                   </div>
                 </div>
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">Days of the Week</Label>
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-1 p-1.5 border rounded-md bg-input/20">
+                    {weekDaysArray.map(day => (
+                      <Controller key={day} name="daysOfWeek" control={control} render={({ field }) => (
+                        <div className="flex items-center space-x-1 p-1 rounded-md hover:bg-accent/10">
+                          <Checkbox id={`dialog-day-${day}`} checked={field.value?.includes(day)}
+                            onCheckedChange={checked => field.onChange(checked ? [...(field.value || []), day].sort((a, b) => weekDaysArray.indexOf(a) - weekDaysArray.indexOf(b)) : (field.value || []).filter(d => d !== day))}
+                            className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground h-4 w-4" />
+                          <Label htmlFor={`dialog-day-${day}`} className="text-xs font-normal cursor-pointer select-none">{day}</Label>
+                        </div>)} />))}
+                  </div>
+                  {errors.daysOfWeek && <p className="text-xs text-destructive pt-1">{errors.daysOfWeek.message}</p>}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium flex items-center"><Hourglass className="mr-1.5 h-4 w-4 text-muted-foreground" />Duration (Optional)</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div> <Label htmlFor="dialog-duration-hours" className="text-xs text-muted-foreground">Hours</Label>
+                        <Controller name="durationHours" control={control} render={({ field }) => <Input id="dialog-duration-hours" type="number" placeholder="Hr" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm" min="0" />} />
+                        {errors.durationHours && <p className="text-xs text-destructive pt-1">{errors.durationHours.message}</p>}
+                      </div>
+                      <div> <Label htmlFor="dialog-duration-minutes" className="text-xs text-muted-foreground">Minutes</Label>
+                        <Controller name="durationMinutes" control={control} render={({ field }) => <Input id="dialog-duration-minutes" type="number" placeholder="Min" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm" min="0" max="59" />} />
+                        {errors.durationMinutes && <p className="text-xs text-destructive pt-1">{errors.durationMinutes.message}</p>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="dialog-habit-specificTime" className="text-sm font-medium flex items-center"><Clock className="mr-1.5 h-4 w-4 text-muted-foreground" />Specific Time (Optional)</Label>
+                    <Controller name="specificTime" control={control} render={({ field }) => <Input id="dialog-habit-specificTime" type="time" {...field} className="bg-input/50 w-full text-sm" />} />
+                    {errors.specificTime && <p className="text-xs text-destructive pt-1">{errors.specificTime.message}</p>}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="dialog-habit-optimalTiming" className="text-sm font-medium flex items-center"><CalendarClock className="mr-1.5 h-4 w-4 text-muted-foreground" />Optimal General Timing (Optional)</Label>
+                  <Controller name="optimalTiming" control={control} render={({ field }) => <Input id="dialog-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50 text-sm" />} />
+                </div>
+                <div className={cn("space-y-1", isEditing ? "" : "hidden")}>
+                  <Label htmlFor="dialog-final-description" className="text-sm font-medium">Description (Optional)</Label>
+                  <Controller name="description" control={control} render={({ field }) => <Textarea id="dialog-final-description" placeholder="Detailed description of the habit" {...field} className="bg-input/50 text-sm" rows={2} />} />
+                </div>
+              </div>
             </div>
             <DialogFooter className="pt-4 shrink-0 px-4 pb-4 border-t">
               <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>Cancel</Button></DialogClose>
