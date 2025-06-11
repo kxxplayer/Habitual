@@ -12,12 +12,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Switch } from "@/components/ui/switch";
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Lightbulb, CalendarPlus, Share2, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CalendarX, CheckCircle2, Circle, Check, Bell, FilePenLine, StickyNote, Trash2, ChevronRightSquare, CalendarClock, CalendarDays, Edit3, Save, Wand2, PlusCircle, Hourglass, Clock, Brain, XCircle } from 'lucide-react';
+import { Lightbulb, CalendarPlus, Flame, MoreHorizontal, MessageSquarePlus, Tag, ListChecks, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIcon, CheckCircle2, Circle, XCircle, Bell, FilePenLine, StickyNote, Trash2, CalendarClock, Edit3, Brain } from 'lucide-react';
 import type { Habit, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { generateICS, downloadICS } from '@/lib/calendarUtils';
 import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
-import { getCurrentWeekDays, WeekDayInfo, calculateStreak, getDayAbbreviationFromDate } from '@/lib/dateUtils';
+import { getCurrentWeekDays, calculateStreak } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 import type { ReflectionStarterInput, ReflectionStarterOutput } from '@/ai/flows/reflection-starter-flow';
 import AIReflectionPromptDialog from '@/components/popups/AIReflectionPromptDialog';
@@ -37,29 +37,21 @@ interface HabitDetailViewDialogProps {
   onGetAIReflectionPrompt: (input: ReflectionStarterInput) => Promise<ReflectionStarterOutput>;
 }
 
+// Helper function to get category icons based on the provided HABIT_CATEGORIES
 const getCategoryIcon = (category?: HabitCategory) => {
   const iconProps = { className: "h-4 w-4 text-muted-foreground" };
   switch (category) {
     case 'Health & Fitness': return <HeartPulse {...iconProps} />;
-    case 'Mindfulness': // Changed from 'Mental Well-being' to 'Mindfulness'
-      return <Brain {...iconProps} />;
-    case 'Personal Development':
-      return <SparklesIcon {...iconProps} />;
-    case 'Creative':
-      return <Paintbrush {...iconProps} />;
-    case 'Home & Environment':
-      return <HomeIconLucide {...iconProps} />;
-    case 'Finance':
-      return <Landmark {...iconProps} />;
-    case 'Social':
-      return <Users {...iconProps} />;
-    case 'Entertainment':
-      return <LifestyleIcon {...iconProps} />;
-    case 'Other':
-      return <ListChecks {...iconProps} />;
     case 'Work & Study': return <Briefcase {...iconProps} />;
-    default:
-      return <ListChecks {...iconProps} />;
+    case 'Personal Development': return <SparklesIcon {...iconProps} />;
+    case 'Mindfulness': return <Brain {...iconProps} />;
+    case 'Creative': return <Paintbrush {...iconProps} />;
+    case 'Home & Environment': return <HomeIconLucide {...iconProps} />;
+    case 'Finance': return <Landmark {...iconProps} />;
+    case 'Social': return <Users {...iconProps} />;
+    case 'Entertainment': return <LifestyleIcon {...iconProps} />;
+    case 'Other': return <ListChecks {...iconProps} />;
+    default: return <ListChecks {...iconProps} />;
   }
 };
 
@@ -75,40 +67,62 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
   const [aiReflectionPrompt, setAiReflectionPrompt] = React.useState<string | null>(null);
   const [isAIReflectionDialogOpen, setIsAIReflectionDialogOpen] = React.useState(false);
 
+  // If dialog is not open or habit is null, don't render
   if (!isOpen || !habit) return null;
 
+  // Calculate current streak and get week days for progress display
   const currentStreak = calculateStreak(habit, new Date());
   const weekDays = getCurrentWeekDays(new Date());
 
+  // Determine if the habit is completed today
   const today = startOfDay(new Date());
   const isCompletedToday = habit.completionLog.some(log => isSameDay(parseISO(log.date), today) && log.status === 'completed');
 
+  // Determine if the habit is scheduled for today
+  const todayInfo = weekDays.find(d => d.isToday);
+  const isScheduledToday = todayInfo && habit.daysOfWeek.includes(todayInfo.dayAbbrFull);
+
+  /**
+   * Handles toggling the completion status for today.
+   * This function will update the habit's completion log and trigger a re-render.
+   * @param complete - Boolean indicating whether to mark as complete (true) or not complete (false).
+   */
   const handleToggleTodayCompletion = (complete: boolean) => {
     if (!habit) return;
+    // Call the parent's onToggleComplete with the desired new state
     onToggleComplete(habit.id, todayString, complete);
   };
 
+  /**
+   * Fetches and displays an AI-generated reflection prompt.
+   */
   const handleGetAndShowAIReflection = async () => {
     setIsAIReflectionLoading(true);
     setIsAIReflectionDialogOpen(true);
-    setAiReflectionPrompt(null);
+    setAiReflectionPrompt(null); // Clear previous prompt
     try {
       const input: ReflectionStarterInput = {
         habitName: habit.name,
         habitCategory: habit.category,
         currentStreak: currentStreak,
+        // Assuming completionLog has enough data to calculate recent completions
+        recentCompletions: habit.completionLog.filter(log => log.status === 'completed' && weekDays.some(d => d.dateStr === log.date)).length,
+        scheduledDaysInWeek: habit.daysOfWeek.length,
       };
       const result = await onGetAIReflectionPrompt(input);
       setAiReflectionPrompt(result.prompt);
     } catch (error) {
       console.error("Failed to get AI reflection prompt:", error);
       toast({ title: "AI Error", description: "Could not generate a reflection prompt.", variant: "destructive" });
-      setIsAIReflectionDialogOpen(false);
+      setIsAIReflectionDialogOpen(false); // Close dialog on error
     } finally {
       setIsAIReflectionLoading(false);
     }
   };
 
+  /**
+   * Generates and downloads an ICS file for the habit.
+   */
   const handleShare = () => {
     try {
       const icsContent = generateICS(habit);
@@ -119,9 +133,6 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
       toast({ title: "Error", description: "Could not generate calendar event.", variant: "destructive" });
     }
   };
-
-  const todayInfo = weekDays.find(d => d.isToday);
-  const isScheduledToday = todayInfo && habit.daysOfWeek.includes(todayInfo.dayAbbrFull);
 
   return (
     <>
@@ -149,17 +160,20 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                 <Label className="text-xs text-muted-foreground">This Week's Progress</Label>
                 <div className="mt-2 flex justify-between gap-1">
                   {weekDays.map(day => {
+                    // Find completion log for the specific day, if it exists
                     const logEntry = habit.completionLog.find(l => l.date === day.dateStr);
+                    // Check if the habit is scheduled for this specific day of the week
                     const isScheduled = habit.daysOfWeek.includes(day.dayAbbrFull);
                     let status: 'completed' | 'missed' | 'pending' | 'none' = 'none';
 
                     if (logEntry?.status === 'completed') {
                       status = 'completed';
-                    } else if (isScheduled && day.isPast && !logEntry) {
+                    } else if (isScheduled && day.isPast && !logEntry) { // If scheduled, in the past, and no log entry implies missed
                       status = 'missed';
-                    } else if (isScheduled) {
+                    } else if (isScheduled) { // If scheduled and not yet completed/missed
                       status = 'pending';
                     }
+                    // 'none' if not scheduled and no log entry
 
                     return (
                       <TooltipProvider key={day.dateStr}>
@@ -170,7 +184,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                               {status === 'completed' ? <CheckCircle2 className="h-6 w-6 text-accent" /> :
                                status === 'missed' ? <XCircle className="h-6 w-6 text-destructive" /> :
                                status === 'pending' ? <Circle className={cn("h-6 w-6", day.isToday ? "text-primary" : "text-muted-foreground/30")} /> :
-                               <div className="h-6 w-6" />}
+                               <div className="h-6 w-6" />} {/* Placeholder for unscheduled/unlogged days */}
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -183,13 +197,15 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                 </div>
               </div>
 
+              {/* Action Buttons: Mark as Done / Not Done? */}
               {isScheduledToday && (
                 <div className="grid grid-cols-2 gap-2">
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handleToggleTodayCompletion(true)}
                     className={cn(
-                      "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow",
+                      "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow-md",
+                      // If habit is completed today, apply green gradient. Otherwise, apply greyed out style.
                       isCompletedToday
                         ? "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg"
                         : "bg-muted text-muted-foreground hover:bg-muted/80 opacity-50"
@@ -201,7 +217,8 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handleToggleTodayCompletion(false)}
                     className={cn(
-                      "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow",
+                      "w-full px-4 py-2 rounded-md font-medium transition-all duration-300 shadow-md",
+                      // If habit is NOT completed today, apply red gradient. Otherwise, apply greyed out style.
                       !isCompletedToday
                         ? "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg"
                         : "bg-muted text-muted-foreground hover:bg-muted/80 opacity-50"
@@ -212,32 +229,47 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                 </div>
               )}
 
-
-              
+              {/* AI & Reflection Buttons */}
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={() => onGetAISuggestion(habit)}><Lightbulb className="mr-2 h-4 w-4" />AI Tip</Button>
-                <Button variant="outline" onClick={handleGetAndShowAIReflection}><MessageSquarePlus className="mr-2 h-4 w-4" />AI Reflection</Button>
+                <Button variant="outline" onClick={() => onGetAISuggestion(habit)}>
+                  <Lightbulb className="mr-2 h-4 w-4" />AI Tip
+                </Button>
+                <Button variant="outline" onClick={handleGetAndShowAIReflection}>
+                  <MessageSquarePlus className="mr-2 h-4 w-4" />AI Reflection
+                </Button>
               </div>
             </div>
           </ScrollArea>
+          {/* Dialog Footer with Close and More Options */}
           <DialogFooter className="p-3 border-t bg-muted/50 flex-row justify-between">
-            <DialogClose asChild><Button variant="ghost">Close</Button></DialogClose>
+            <DialogClose asChild>
+              <Button variant="ghost">Close</Button>
+            </DialogClose>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onOpenEditDialog(habit)}><Edit3 className="mr-2 h-4 w-4" /> Edit Habit</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}><StickyNote className="mr-2 h-4 w-4" /> Add/Edit Note</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleShare}><CalendarPlus className="mr-2 h-4 w-4" /> Add to Calendar</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onOpenEditDialog(habit)}>
+                  <Edit3 className="mr-2 h-4 w-4" /> Edit Habit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onOpenReflectionDialog(habit.id, todayString, habit.name)}>
+                  <StickyNote className="mr-2 h-4 w-4" /> Add/Edit Note
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShare}>
+                  <CalendarPlus className="mr-2 h-4 w-4" /> Add to Calendar
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive" onClick={() => onOpenDeleteConfirm(habit.id, habit.name)}><Trash2 className="mr-2 h-4 w-4" /> Delete Habit</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive" onClick={() => onOpenDeleteConfirm(habit.id, habit.name)}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Habit
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* AI Reflection Dialog */}
       <AIReflectionPromptDialog
         isOpen={isAIReflectionDialogOpen}
         onClose={() => setIsAIReflectionDialogOpen(false)}
