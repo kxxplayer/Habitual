@@ -7,7 +7,7 @@ import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
-import HabitOverview from '@/components/overview/HabitOverview';
+import dynamic from 'next/dynamic';
 import type { Habit, HabitCategory, HabitCompletionLogEntry, WeekDay, EarnedBadge } from '@/types';
 import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm } from '@/types';
 import AppHeader from '@/components/layout/AppHeader';
@@ -15,7 +15,17 @@ import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
-
+const HabitOverview = dynamic(
+  () => import('@/components/overview/HabitOverview'),
+  { 
+    ssr: false, // Set to false if the component is client-side only
+    loading: () => (
+      <div className="flex justify-center items-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    ),
+  }
+);
 const USER_DATA_COLLECTION = "users";
 const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
