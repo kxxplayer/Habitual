@@ -321,7 +321,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
             </div>
             <DialogFooter className="pt-4 shrink-0 px-4 pb-4 border-t">
               <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>Cancel</Button></DialogClose>
-              <Button type="submit" form="habit-form" disabled={isSubmitting || isAISuggesting}>
+              <Button type="submit" disabled={isSubmitting || isAISuggesting}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isEditing ? <Save className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />)}
                 {isEditing ? "Save Changes" : "Add This Habit"}
               </Button>

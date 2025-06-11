@@ -1,4 +1,3 @@
-// src/app/page.tsx
 "use client";
 
 // ==========================================================================
@@ -257,8 +256,8 @@ const HomePage: NextPage = () => {
           .finally(() => {
             setIsLoadingCommonSuggestions(false);
             setCommonSuggestionsFetched(true);
-            const dailyQuestKey = `${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`;
-            if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
+            const dailyQuestKey = `<span class="math-inline">\{LS\_KEY\_PREFIX\_DAILY\_QUEST\}</span>{authUser.uid}`;
+            // if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
           });
       } else if (parsedHabits.length > 0) {
         if (!commonSuggestionsFetched) setCommonSuggestionsFetched(true);
@@ -630,18 +629,8 @@ const HomePage: NextPage = () => {
           onGetAIReflectionPrompt={handleGetAIReflectionPrompt}
         />
       )}
-      <DailyQuestDialog
-        isOpen={isDailyQuestDialogOpen}
-        onClose={() => {
-            if (authUser) {
-              localStorage.setItem(`${LS_KEY_PREFIX_DAILY_QUEST}${authUser.uid}`, 'seen');
-            }
-            setIsDailyQuestDialogOpen(false)
-          }
-        }
-        userName={authUser?.displayName || 'there'}
-      />
-       <GoalInputProgramDialog
+      
+      <GoalInputProgramDialog
         isOpen={isGoalInputProgramDialogOpen}
         onClose={() => setIsGoalInputProgramDialogOpen(false)}
         onSubmit={handleGenerateProgram}
