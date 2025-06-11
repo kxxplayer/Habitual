@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { FC } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose,
   DialogDescription, DialogFooter
@@ -195,25 +195,27 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               </div>
 
               {isScheduledToday && (
-                <div className="my-6">
-                    <motion.div
-                        key={localCompleted ? 'done' : 'not-done'}
-                        initial={{ scale: 0.95, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                <div className="my-6 h-12">
+                  <AnimatePresence mode="wait">
+                    <motion.button
+                      key={localCompleted ? 'done' : 'not-done'}
+                      onClick={handleToggleCompletion}
+                      initial={{ y: 15, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -15, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className={cn(
+                        "w-full h-full px-4 py-3 rounded-lg font-semibold text-lg text-white shadow-lg",
+                        "inline-flex items-center justify-center", // For centering text
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        localCompleted
+                            ? "bg-gradient-to-r from-pink-500 to-red-500"
+                            : "bg-gradient-to-r from-green-400 to-blue-500"
+                      )}
                     >
-                        <Button
-                            onClick={handleToggleCompletion}
-                            className={cn(
-                                "w-full px-4 py-3 rounded-lg font-semibold text-lg text-white shadow-lg",
-                                localCompleted
-                                    ? "bg-gradient-to-r from-pink-500 to-red-500"
-                                    : "bg-gradient-to-r from-green-400 to-blue-500"
-                            )}
-                        >
-                            {localCompleted ? "Not Done?" : "Mark as Done"}
-                        </Button>
-                    </motion.div>
+                      {localCompleted ? "Not Done?" : "Mark as Done"}
+                    </motion.button>
+                  </AnimatePresence>
                 </div>
               )}
 
