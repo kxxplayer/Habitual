@@ -3,15 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-// src/app/layout.tsx
 
-<head>
-  {/* Other head tags... */}
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-  <link rel="preconnect" href="https://firestore.googleapis.com" />
-  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
-</head>
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -55,8 +47,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* All icon <link> tags are now handled by the metadata object above. */}
-        {/* Do NOT add any manual <link rel="icon"> or <link rel="apple-touch-icon"> tags here. */}
+        {/* Preconnect to external domains for performance */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://firestore.googleapis.com" />
+        <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
+        {/* All icon <link> tags are handled by the metadata object above */}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider
