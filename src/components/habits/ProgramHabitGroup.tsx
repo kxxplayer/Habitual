@@ -21,7 +21,7 @@ interface ProgramHabitGroupProps {
   onToggleComplete: (habitId: string, date: string) => void;
   onDelete: (habitId: string) => void;
   onEdit: (habit: Habit) => void;
-  onReschedule: (habit: Habit, missedDate: string) => void; // Updated to expect two arguments
+  onReschedule: (habit: Habit, missedDate: string) => void;
 }
 
 const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
@@ -90,13 +90,14 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
           </div>
         </AccordionTrigger>
         <AccordionContent className="bg-muted/20 border-t border-border">
-          <div className="p-2 sm:p-3 space-y-2">
+          {/* FIX: Changed padding here to be more consistent with the header */}
+          <div className="px-4 pb-3 pt-2 space-y-2">
             {habitsScheduledToday.length > 0 ? (
               habitsScheduledToday.map(habit => (
                 <div onClick={() => onOpenDetailView(habit)} key={habit.id} className="cursor-pointer">
                   <HabitItem
                     habit={habit}
-                    todayString={todayString} // Pass todayString here
+                    todayString={todayString}
                     onToggleComplete={onToggleComplete}
                     onDelete={onDelete}
                     onEdit={onEdit}

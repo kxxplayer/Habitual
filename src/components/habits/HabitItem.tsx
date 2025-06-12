@@ -28,6 +28,7 @@ interface HabitItemProps {
   habit: Habit;
   isCompleted: boolean;
   currentDate: string;
+  todayString: string;
   onToggleComplete: (habitId: string, date: string) => void;
   onDelete: (habitId: string) => void;
   onEdit: (habit: Habit) => void;
