@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "public", 
+    "public": "public",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -8,7 +8,19 @@
     ],
     "rewrites": [
       {
-        "source": "**", 
+        "source": "/_next/static/**",
+        "destination": "/_next/static/**"
+      },
+      {
+        "source": "/favicon.ico",
+        "destination": "/favicon.ico"
+      },
+      {
+        "source": "/manifest.json",
+        "destination": "/manifest.json"
+      },
+      {
+        "source": "**",
         "function": "nextjsApp"
       }
     ]
