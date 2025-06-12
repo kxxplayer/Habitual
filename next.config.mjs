@@ -1,17 +1,19 @@
+// next.config.mjs
+import nextBundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzer = nextBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // ... your existing next config
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Explicitly set the page extensions
-  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
-  experimental: {
-    // The 'typedRoutes' option has been removed to ensure compatibility with Turbopack.
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

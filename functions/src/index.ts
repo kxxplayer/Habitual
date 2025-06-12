@@ -1,90 +1,87 @@
-// functions/src/index.ts
-import { onRequest } from "firebase-functions/v2/https";
-import { initializeApp } from "firebase-admin/app";
-// Import the nextjsApp from the separate file
-import { nextjsApp } from "./nextapp";
+import {onSchedule} from "firebase-functions/v2/scheduler";
+import * as admin from "firebase-admin";
+import * as logger from "firebase-functions/logger";
 
-// Initialize Firebase Admin
-initializeApp();
+// Initialize the Firebase Admin SDK to interact with Firebase services
+admin.initializeApp();
+
+// Define a data structure for our Habit, matching what's in Firestore.
+interface Habit {
+  id: string;
+  name: string;
+  specificTime?: string; // e.g., "14:30"
+  daysOfWeek: string[]; // e.g., ["Mon", "Wed", "Fri"]
+  reminderEnabled: boolean;
+}
+
+// Define the structure for a user's data document.
+interface UserData {
+  habits: Habit[];
+  fcmTokens?: string[]; // Array of notification tokens for the user's devices
+}
+
+const TIMEZONE = "Asia/Kolkata";
 
 /**
- * Health check function.
- * Responds with basic health status and environment variable presence.
+ * A scheduled Cloud Function that runs every 3 hours using the v2 syntax.
  */
-export const healthCheck = onRequest({ cors: true }, async (req, res) => {
-  res.json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-    env_check: {
-      google_api_key: process.env.GOOGLE_API_KEY ? "Present" : "Missing",
-      google_cloud_project: process.env.GOOGLE_CLOUD_PROJECT ?
-        "Present" : "Missing",
-    },
-  });
-});
+export const sendHabitReminders = onSchedule({
+  schedule: "every 3 hours",
+  timeZone: "Asia/Kolkata",
+}, async () => {
+  logger.info("Checking for habit reminders...");
 
-/**
- * Motivational quote function.
- * Returns a random motivational quote.
- */
-export const motivationalQuote = onRequest(
-  { cors: true },
-  async (req, res) => {
-    try {
-      const quotes = [
-        "Every small step counts. Keep building momentum!",
-        "Consistency beats perfection every time.",
-        "Your habits shape your future. Choose wisely!",
-        "Progress, not perfection, is the goal.",
-        "One day at a time, one habit at a time.",
-      ];
+  // Get the current time in the specified timezone.
+  const now = new Date();
+  const currentDay = new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    timeZone: TIMEZONE,
+  }).format(now);
+  const currentTime = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: TIMEZONE,
+  }).format(now);
 
-      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+  const usersSnapshot = await admin.firestore()
+    .collection("users").get();
 
-      res.json({ quote: randomQuote });
-    } catch (error) {
-      console.error("Error generating quote:", error);
-      res.status(500).json({ error: "Failed to generate quote" });
+  usersSnapshot.forEach(async (userDoc) => {
+    const userData = userDoc.data() as UserData;
+    const {habits, fcmTokens} = userData;
+
+    if (!habits?.length || !fcmTokens?.length) {
+      return;
     }
-  },
-);
 
-/**
- * Habit creation function.
- * Processes a habit description and returns a structured habit object.
- */
-export const habitCreation = onRequest(
-  { cors: true },
-  async (req, res) => {
-    try {
-      if (req.method !== "POST") {
-        res.status(405).json({ error: "Method not allowed" });
-        return;
-      }
+    const dueHabits = habits.filter((habit) => {
+      const isScheduled = habit.daysOfWeek.includes(currentDay);
+      const isTime = habit.specificTime === currentTime;
+      const isEnabled = habit.reminderEnabled !== false;
+      return isScheduled && isTime && isEnabled;
+    });
 
-      const { description } = req.body;
+    if (dueHabits.length > 0) {
+      const habitNames = dueHabits.map((h) => h.name).join(", ");
+      logger.info(
+        `Sending reminder to user ${userDoc.id} for: ${habitNames}`,
+      );
 
-      if (!description) {
-        res.status(400).json({ error: "Description is required" });
-        return;
-      }
-
-      const result = {
-        habit: {
-          title: "Generated Habit",
-          description: description,
-          category: "Personal Growth",
-          frequency: "daily",
+      const message = {
+        notification: {
+          title: "Habit Reminder!",
+          body: `It's time for: ${habitNames}`,
         },
+        tokens: fcmTokens,
       };
 
-      res.json(result);
-    } catch (error) {
-      console.error("Error in habitCreation:", error);
-      res.status(500).json({ error: "Failed to create habit" });
+      try {
+        await admin.messaging().sendEachForMulticast(message);
+        logger.info("Successfully sent message to user:", userDoc.id);
+      } catch (error) {
+        logger.error("Error sending message to user:", userDoc.id, error);
+      }
     }
-  },
-);
-
-// Re-export the Next.js app serving function
-export { nextjsApp };
+  });
+});
