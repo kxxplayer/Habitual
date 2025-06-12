@@ -1,87 +1,79 @@
-import {onSchedule} from "firebase-functions/v2/scheduler";
-import * as admin from "firebase-admin";
-import * as logger from "firebase-functions/logger";
+import {onRequest} from "firebase-functions/v2/https";
+import {initializeApp} from "firebase-admin/app";
 
-// Initialize the Firebase Admin SDK to interact with Firebase services
-admin.initializeApp();
+// Initialize Firebase Admin
+initializeApp();
 
-// Define a data structure for our Habit, matching what's in Firestore.
-interface Habit {
-  id: string;
-  name: string;
-  specificTime?: string; // e.g., "14:30"
-  daysOfWeek: string[]; // e.g., ["Mon", "Wed", "Fri"]
-  reminderEnabled: boolean;
-}
-
-// Define the structure for a user's data document.
-interface UserData {
-  habits: Habit[];
-  fcmTokens?: string[]; // Array of notification tokens for the user's devices
-}
-
-const TIMEZONE = "Asia/Kolkata";
-
-/**
- * A scheduled Cloud Function that runs every 3 hours using the v2 syntax.
- */
-export const sendHabitReminders = onSchedule({
-  schedule: "every 3 hours",
-  timeZone: "Asia/Kolkata",
-}, async () => {
-  logger.info("Checking for habit reminders...");
-
-  // Get the current time in the specified timezone.
-  const now = new Date();
-  const currentDay = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    timeZone: TIMEZONE,
-  }).format(now);
-  const currentTime = new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: TIMEZONE,
-  }).format(now);
-
-  const usersSnapshot = await admin.firestore()
-    .collection("users").get();
-
-  usersSnapshot.forEach(async (userDoc) => {
-    const userData = userDoc.data() as UserData;
-    const {habits, fcmTokens} = userData;
-
-    if (!habits?.length || !fcmTokens?.length) {
-      return;
-    }
-
-    const dueHabits = habits.filter((habit) => {
-      const isScheduled = habit.daysOfWeek.includes(currentDay);
-      const isTime = habit.specificTime === currentTime;
-      const isEnabled = habit.reminderEnabled !== false;
-      return isScheduled && isTime && isEnabled;
-    });
-
-    if (dueHabits.length > 0) {
-      const habitNames = dueHabits.map((h) => h.name).join(", ");
-      logger.info(
-        `Sending reminder to user ${userDoc.id} for: ${habitNames}`,
-      );
-
-      const message = {
-        notification: {
-          title: "Habit Reminder!",
-          body: `It's time for: ${habitNames}`,
-        },
-        tokens: fcmTokens,
-      };
-
-      try {
-        await admin.messaging().sendEachForMulticast(message);
-        logger.info("Successfully sent message to user:", userDoc.id);
-      } catch (error) {
-        logger.error("Error sending message to user:", userDoc.id, error);
-      }
-    }
+// Simple health check function
+export const healthCheck = onRequest({cors: true}, async (req, res) => {
+  res.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    env_check: {
+      google_api_key: process.env.GOOGLE_API_KEY ? "Present" : "Missing",
+      google_cloud_project: process.env.GOOGLE_CLOUD_PROJECT ?
+        "Present" : "Missing",
+    },
   });
 });
+
+// Simple motivational quote function without Genkit for now
+export const motivationalQuote = onRequest(
+  {cors: true},
+  async (req, res) => {
+    try {
+      // For now, return a static motivational quote
+      // You can integrate with Google AI API directly later
+      const quotes = [
+        "Every small step counts. Keep building momentum!",
+        "Consistency beats perfection every time.",
+        "Your habits shape your future. Choose wisely!",
+        "Progress, not perfection, is the goal.",
+        "One day at a time, one habit at a time.",
+      ];
+
+      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+
+      res.json({quote: randomQuote});
+    } catch (error) {
+      console.error("Error generating quote:", error);
+      res.status(500).json({error: "Failed to generate quote"});
+    }
+  }
+);
+
+// Simple habit creation function without Genkit for now
+export const habitCreation = onRequest(
+  {cors: true},
+  async (req, res) => {
+    try {
+      if (req.method !== "POST") {
+        res.status(405).json({error: "Method not allowed"});
+        return;
+      }
+
+      const {description} = req.body;
+
+      if (!description) {
+        res.status(400).json({error: "Description is required"});
+        return;
+      }
+
+      // For now, return a simple structured response
+      // You can integrate with Google AI API directly later
+      const result = {
+        habit: {
+          title: "Generated Habit",
+          description: description,
+          category: "Personal Growth",
+          frequency: "daily",
+        },
+      };
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error in habitCreation:", error);
+      res.status(500).json({error: "Failed to create habit"});
+    }
+  }
+);

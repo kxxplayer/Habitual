@@ -15,16 +15,18 @@ const withPWA = withPWAInit({
 });
 // ---------------------------------
 
+// next.config.mjs
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // ... your existing next config
+  output: 'export', // <-- ADD THIS LINE
   typescript: {
-    ignoreBuildErrors: true, //
+    ignoreBuildErrors: true,
   },
   eslint: {
-    ignoreDuringBuilds: true, //
+    ignoreDuringBuilds: true,
   },
 };
 
-// Wrap your config with both withPWA and withBundleAnalyzer
-export default withBundleAnalyzer(withPWA(nextConfig));
+export default nextConfig; // Adjust if you use plugins like PWA/BundleAnalyzer

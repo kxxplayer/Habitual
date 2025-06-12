@@ -22,38 +22,50 @@ export const getDayAbbreviationFromDate = (date: Date): WeekDay => {
 
 export const calculateStreak = (habit: Habit, referenceDate: Date = new Date()): number => {
   if (!habit.daysOfWeek || habit.daysOfWeek.length === 0) return 0;
+  if (!habit.completionLog || habit.completionLog.length === 0) return 0;
 
   const completionLogMap = new Map(habit.completionLog.map(log => [log.date, log.status]));
   let currentStreak = 0;
   let tempDate = startOfDay(new Date(referenceDate));
+  let foundFirstScheduledDay = false;
 
-  for (let i = 0; i < 365 * 2; i++) {
+  // Only look back for a reasonable time period (e.g., 365 days)
+  for (let i = 0; i < 365; i++) {
     const dateStr = format(tempDate, 'yyyy-MM-dd');
     const dayOfWeek = dayIndexToWeekDay[getDay(tempDate)];
     const status = completionLogMap.get(dateStr);
 
     if (habit.daysOfWeek.includes(dayOfWeek)) {
-      if (status === 'completed' || status === undefined) { // Undefined for backward compatibility
+      foundFirstScheduledDay = true;
+      
+      if (status === 'completed') {
         currentStreak++;
+      } else if (status === 'pending_makeup') {
+        // Pending makeup doesn't break the streak but doesn't count
+        // Continue checking previous days
       } else {
-        // Scheduled but not completed, or explicitly skipped/pending_makeup
-        // If it's today (i=0) and not completed, the streak is 0 unless it's a future habit or not yet acted upon.
-        // The current logic breaks streak if a scheduled day in the past was not 'completed'.
-        // For today, if it's scheduled and not 'completed', it means the streak is broken *unless* it's the very first day being checked.
-        if (i === 0 && format(tempDate, 'yyyy-MM-dd') === format(startOfDay(referenceDate), 'yyyy-MM-dd')) {
-            if (status !== 'completed' && status !== undefined) { // Not completed today
-                 return 0; // Streak effectively becomes 0 as today wasn't completed
-            }
-        } else { // Past scheduled day not completed
-            break;
+        // This includes 'skipped', undefined, or any other status
+        // If it's today and not yet acted upon, give benefit of doubt
+        if (i === 0 && !status) {
+          // Today is scheduled but not yet marked - don't break streak yet
+          // But also don't count it
+          tempDate = subDays(tempDate, 1);
+          continue;
         }
+        // Scheduled day that wasn't completed - streak is broken
+        break;
       }
     } else if (status === 'completed' && habit.completionLog.find(l => l.date === dateStr)?.originalMissedDate) {
-        // A completed makeup day for a non-scheduled day.
-        currentStreak++;
+      // A makeup day - completed on a non-scheduled day
+      currentStreak++;
     }
+    
     tempDate = subDays(tempDate, 1);
   }
+  
+  // If we never found a scheduled day, return 0
+  if (!foundFirstScheduledDay) return 0;
+  
   return currentStreak;
 };
 
