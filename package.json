@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "deploy:firebase": "npm run build && cp -r ./.next ./functions/.next && firebase deploy --only functions,hosting"
   },
   "dependencies": {
     "@genkit-ai/firebase": "^1.8.0",

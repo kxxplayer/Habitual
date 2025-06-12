@@ -1,11 +1,17 @@
-import {onRequest} from "firebase-functions/v2/https";
-import {initializeApp} from "firebase-admin/app";
+// functions/src/index.ts
+import { onRequest } from "firebase-functions/v2/https";
+import { initializeApp } from "firebase-admin/app";
+// Import the nextjsApp from the separate file
+import { nextjsApp } from "./nextapp";
 
 // Initialize Firebase Admin
 initializeApp();
 
-// Simple health check function
-export const healthCheck = onRequest({cors: true}, async (req, res) => {
+/**
+ * Health check function.
+ * Responds with basic health status and environment variable presence.
+ */
+export const healthCheck = onRequest({ cors: true }, async (req, res) => {
   res.json({
     status: "healthy",
     timestamp: new Date().toISOString(),
@@ -17,13 +23,14 @@ export const healthCheck = onRequest({cors: true}, async (req, res) => {
   });
 });
 
-// Simple motivational quote function without Genkit for now
+/**
+ * Motivational quote function.
+ * Returns a random motivational quote.
+ */
 export const motivationalQuote = onRequest(
-  {cors: true},
+  { cors: true },
   async (req, res) => {
     try {
-      // For now, return a static motivational quote
-      // You can integrate with Google AI API directly later
       const quotes = [
         "Every small step counts. Keep building momentum!",
         "Consistency beats perfection every time.",
@@ -34,33 +41,34 @@ export const motivationalQuote = onRequest(
 
       const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-      res.json({quote: randomQuote});
+      res.json({ quote: randomQuote });
     } catch (error) {
       console.error("Error generating quote:", error);
-      res.status(500).json({error: "Failed to generate quote"});
+      res.status(500).json({ error: "Failed to generate quote" });
     }
-  }
+  },
 );
 
-// Simple habit creation function without Genkit for now
+/**
+ * Habit creation function.
+ * Processes a habit description and returns a structured habit object.
+ */
 export const habitCreation = onRequest(
-  {cors: true},
+  { cors: true },
   async (req, res) => {
     try {
       if (req.method !== "POST") {
-        res.status(405).json({error: "Method not allowed"});
+        res.status(405).json({ error: "Method not allowed" });
         return;
       }
 
-      const {description} = req.body;
+      const { description } = req.body;
 
       if (!description) {
-        res.status(400).json({error: "Description is required"});
+        res.status(400).json({ error: "Description is required" });
         return;
       }
 
-      // For now, return a simple structured response
-      // You can integrate with Google AI API directly later
       const result = {
         habit: {
           title: "Generated Habit",
@@ -73,7 +81,10 @@ export const habitCreation = onRequest(
       res.json(result);
     } catch (error) {
       console.error("Error in habitCreation:", error);
-      res.status(500).json({error: "Failed to create habit"});
+      res.status(500).json({ error: "Failed to create habit" });
     }
-  }
+  },
 );
+
+// Re-export the Next.js app serving function
+export { nextjsApp };
