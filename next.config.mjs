@@ -1,15 +1,14 @@
 // next.config.mjs
+
 import nextBundleAnalyzer from '@next/bundle-analyzer';
 import withPWAInit from 'next-pwa';
 
 const isDev = process.env.NODE_ENV === 'development';
 
-// Bundle Analyzer configuration
 const withBundleAnalyzer = nextBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
-// PWA configuration
 const withPWA = withPWAInit({
   dest: 'public',
   disable: isDev,
@@ -19,6 +18,7 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // The 'output: export' line has been REMOVED.
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
@@ -28,7 +28,7 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: '2mb', // Or your desired limit
+      bodySizeLimit: '2mb',
     },
   },
 };
