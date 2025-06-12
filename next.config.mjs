@@ -12,52 +12,25 @@ const withBundleAnalyzer = nextBundleAnalyzer({
 // PWA configuration
 const withPWA = withPWAInit({
   dest: 'public',
+  disable: isDev,
   register: true,
   skipWaiting: true,
-  disable: isDev, // Disable PWA in development mode
 });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Remove 'output: export' - it's incompatible with PWA
-  // If you need static export, you'll have to choose between PWA or static export
-  
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
-  
-  // Development settings
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
-  
-  // Allowed dev origins from your TypeScript config
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Access-Control-Allow-Origin',
-            value: process.env.NODE_ENV === 'development' 
-              ? 'https://9000-firebase-studio-1747227899807.cluster-iktsryn7xnhpexlu6255bftka4.cloudworkstations.dev https://3000-firebase-studio-1747227899807.cluster-iktsryn7xnhpexlu6255bftka4.cloudworkstations.dev'
-              : '',
-          },
-        ],
-      },
-    ];
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb', // Or your desired limit
+    },
   },
 };
 
-// Apply both PWA and Bundle Analyzer plugins
-export default withBundleAnalyzer(withPWA(nextConfig));
+export default withPWA(withBundleAnalyzer(nextConfig));
