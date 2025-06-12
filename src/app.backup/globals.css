@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 1rem;
+  }
+
+  /* Enhanced Theme: Calm Blue (More Vibrant) */
+  .theme-calm-blue {
+    --background: 210 40% 98%;
+    --foreground: 210 20% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 20%;
+    --primary: 190 60% 45%; /* Brighter, more saturated Teal/Blue */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 210 10% 40%;
+    --muted: 210 40% 90%;
+    --muted-foreground: 210 10% 55%;
+    --accent: 145 65% 55%; /* More vibrant Green */
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --destructive-soft-background: 0 100% 65%;
+    --destructive-soft-foreground: 0 0% 98%;
+    --destructive-soft-hover-background: 0 100% 60%;
+    --border: 210 20% 88%;
+    --input: 210 30% 96%;
+    --ring: 190 60% 45%;
+    --chart-1: 190 60% 45%;
+    --chart-2: 145 65% 55%;
+    --chart-3: 220 60% 70%;
+    --chart-4: 45 70% 75%;
+    --chart-5: 280 60% 75%;
+  }
+
+  /* Other themes remain as they were... */
+  .theme-vibrant-purple {
+    --background: 248 30% 12%;
+    --foreground: 220 15% 95%;
+    --card: 248 30% 18%;
+    --card-foreground: 220 15% 95%;
+    --popover: 248 30% 15%;
+    --popover-foreground: 220 15% 95%;
+    --primary: 30 90% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 248 25% 22%;
+    --secondary-foreground: 220 10% 80%;
+    --muted: 248 25% 10%;
+    --muted-foreground: 220 10% 60%;
+    --accent: 145 58% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --destructive-soft-background: 0 100% 65%;
+    --destructive-soft-foreground: 0 0% 98%;
+    --destructive-soft-hover-background: 0 100% 60%;
+    --border: 248 25% 25%;
+    --input: 248 25% 25%;
+    --ring: 30 90% 60%;
+    --chart-1: 30 90% 60%;
+    --chart-2: 145 58% 45%;
+    --chart-3: 210 70% 65%;
+    --chart-4: 50 80% 60%;
+    --chart-5: 290 70% 70%;
+  }
+
+  .theme-forest-green {
+    --background: 90 30% 96%;
+    --foreground: 120 25% 15%;
+    --card: 100 20% 98%;
+    --card-foreground: 120 25% 15%;
+    --popover: 100 20% 98%;
+    --popover-foreground: 120 25% 15%;
+    --primary: 130 45% 40%;
+    --primary-foreground: 90 30% 96%;
+    --secondary: 110 25% 92%;
+    --secondary-foreground: 120 20% 30%;
+    --muted: 110 25% 88%;
+    --muted-foreground: 120 20% 45%;
+    --accent: 90 55% 50%;
+    --accent-foreground: 120 25% 15%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --destructive-soft-background: 0 100% 65%;
+    --destructive-soft-foreground: 0 0% 98%;
+    --destructive-soft-hover-background: 0 100% 60%;
+    --border: 100 20% 85%;
+    --input: 100 20% 85%;
+    --ring: 130 45% 40%;
+    --chart-1: 130 45% 40%;
+    --chart-2: 90 55% 50%;
+    --chart-3: 150 50% 55%;
+    --chart-4: 60 60% 50%;
+    --chart-5: 35 40% 50%;
+  }
+
+  .theme-sunset-orange {
+    --background: 35 100% 97%;
+    --foreground: 25 50% 20%;
+    --card: 30 100% 98%;
+    --card-foreground: 25 50% 20%;
+    --popover: 30 100% 98%;
+    --popover-foreground: 25 50% 20%;
+    --primary: 25 85% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 80% 92%;
+    --secondary-foreground: 25 40% 30%;
+    --muted: 30 80% 88%;
+    --muted-foreground: 25 40% 45%;
+    --accent: 10 70% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --destructive-soft-background: 0 100% 65%;
+    --destructive-soft-foreground: 0 0% 98%;
+    --destructive-soft-hover-background: 0 100% 60%;
+    --border: 28 70% 85%;
+    --input: 28 70% 85%;
+    --ring: 25 85% 55%;
+    --chart-1: 25 85% 55%;
+    --chart-2: 10 70% 50%;
+    --chart-3: 40 90% 60%;
+    --chart-4: 0 80% 60%;
+    --chart-5: 180 50% 55%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-image: linear-gradient(to bottom, hsl(var(--secondary)) 0%, hsl(var(--background)) 20%);
+    letter-spacing: 0.01em;
+    line-height: 1.6;
+  }
+}
+
+/* Existing animations ... */
+@keyframes sparkle-effect {
+  0% { opacity: 0.5; transform: scale(0.3) translate(0px, 0px); }
+  50% { opacity: 1; transform: scale(1.1) translate(var(--tx, 0px), var(--ty, -15px)); }
+  100% { opacity: 0; transform: scale(0.5) translate(calc(var(--tx, 0px) * 2), calc(var(--ty, -15px) * 2)); }
+}
+
+@keyframes weeklyGoalTextAppear {
+  0% { transform: scale(0.3) translateY(20px); opacity: 0; }
+  20% { transform: scale(1.1) translateY(0); opacity: 1; }
+  80% { transform: scale(1) translateY(0); opacity: 1; }
+  100% { transform: scale(0.5) translateY(-20px); opacity: 0; }
+}
+
+@keyframes pulse-glow-accent {
+  0% { box-shadow: 0 0 6px hsl(var(--accent)); }
+  50% { box-shadow: 0 0 14px 3px hsl(var(--accent)); }
+  100% { box-shadow: 0 0 8px hsl(var(--accent)); }
+}
+
+@keyframes button-pop-effect {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes wiggle-subtle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+/* NEW Animation for Dashboard Cards */
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-card-fade-in {
+  animation: card-fade-in 0.5s ease-out forwards;
+  animation-fill-mode: backwards; /* Start animation from "from" state */
+}
+
+/* Previous animations continue... */
+.animate-pulse-glow-accent {
+  animation: pulse-glow-accent 0.8s ease-out forwards;
+}
+.animate-button-pop {
+  animation: button-pop-effect 0.4s ease-out forwards;
+}
+.animate-wiggle-subtle {
+  animation: wiggle-subtle 0.5s ease-in-out forwards;
+}
+

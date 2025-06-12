@@ -1,3 +1,5 @@
+// next.config.mjs
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -7,10 +9,10 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Explicitly set the page extensions
-  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
   experimental: {
-    // The 'typedRoutes' option has been removed to ensure compatibility with Turbopack.
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
   },
 };
 

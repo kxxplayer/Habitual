@@ -12,6 +12,10 @@
         "destination": "/_next/static/**"
       },
       {
+        "source": "/sw.js",
+        "destination": "/sw.js"
+      },
+      {
         "source": "/favicon.ico",
         "destination": "/favicon.ico"
       },
