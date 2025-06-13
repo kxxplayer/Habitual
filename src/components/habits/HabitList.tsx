@@ -74,7 +74,7 @@ const HabitList: FC<HabitListProps> = ({
   }
 
   return (
-    <div className="flex flex-col space-y-3">
+    <div className="flex flex-col space-y-4">
       {programGroupsArray.map((group) => (
         <ProgramHabitGroup
           key={group.id}
@@ -90,19 +90,23 @@ const HabitList: FC<HabitListProps> = ({
           onReschedule={onReschedule}
         />
       ))}
-      {standaloneHabits.map((habit) => (
-        <HabitItem
-          key={habit.id}
-          habit={habit}
-          onToggleComplete={onToggleComplete}
-          onDelete={onDelete}
-          onEdit={onEdit}
-          onReschedule={onReschedule}
-          onOpenDetailView={onOpenDetailView}
-          isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
-          currentDate={todayString}
-        />
-      ))}
+      {/* Container changed to a responsive grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {standaloneHabits.map((habit) => (
+          <HabitItem
+            key={habit.id}
+            habit={habit}
+            onToggleComplete={onToggleComplete}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onReschedule={onReschedule}
+            onOpenDetailView={onOpenDetailView}
+            isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
+            currentDate={todayString}
+            todayString={todayString} // Pass todayString here
+          />
+        ))}
+      </div>
     </div>
   );
 };

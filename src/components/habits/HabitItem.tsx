@@ -59,83 +59,70 @@ const HabitItem: React.FC<HabitItemProps> = ({
   onReschedule,
   onOpenDetailView,
 }) => {
-  const handleCardClick = () => {
-    onOpenDetailView(habit);
+  
+  const handleCompletionClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    onToggleComplete(habit.id, currentDate);
   };
 
   return (
     <Card
-      onClick={handleCardClick}
+      onClick={() => onOpenDetailView(habit)}
       className={cn(
-        "cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/40 active:scale-[0.98]",
-        isCompleted ? "bg-muted/60" : "bg-card"
+        "cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/50 flex flex-col h-full",
+        isCompleted ? "bg-muted/70" : "bg-card"
       )}
     >
-      <div className="p-3 flex items-center gap-3">
-        {/* Completion Toggle Button */}
-        <motion.button
-          whileTap={{ scale: 0.85 }}
-          className={cn(
-            "h-9 w-9 rounded-full flex items-center justify-center transition-colors duration-200",
-            isCompleted ? "bg-muted text-muted-foreground" : "bg-background text-muted-foreground/50",
-            "hover:bg-muted focus:outline-none"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleComplete(habit.id, currentDate);
-          }}
-          aria-label={isCompleted ? "Mark as incomplete" : "Mark as complete"}
-        >
-          {isCompleted ? (
-            <CheckCircle2 className="h-6 w-6" />
-          ) : (
-            <Circle className="h-6 w-6" />
-          )}
-        </motion.button>
-
-        {/* Habit Name and Icon */}
-        <div className="flex-grow flex items-center gap-3 truncate">
-          <span className="text-2xl">{getHabitIcon(habit.name)}</span>
-          <div className="truncate">
-            <p className={cn("font-medium truncate", isCompleted && "line-through text-muted-foreground")}>
+      <div className="p-4 flex flex-col h-full gap-2">
+        {/* Top section with name and options */}
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">{getHabitIcon(habit.name)}</span>
+            <p className={cn("font-semibold text-base", isCompleted && "line-through text-muted-foreground")}>
               {habit.name}
             </p>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 -mr-2 -mt-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">More options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={() => onOpenDetailView(habit)}><Eye className="mr-2 h-4 w-4" />View Details</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(habit)}><Edit className="mr-2 h-4 w-4" />Edit Habit</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onReschedule(habit, currentDate)}><CalendarClock className="mr-2 h-4 w-4" />Reschedule</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive" onClick={() => onDelete(habit.id)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* More Options Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="h-4 w-4" />
-              <span className="sr-only">More options</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem onClick={() => onOpenDetailView(habit)}>
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEdit(habit)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Habit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onReschedule(habit, currentDate)}>
-              <CalendarClock className="mr-2 h-4 w-4" />
-              Reschedule
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(habit.id)}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Spacer to push button to the bottom */}
+        <div className="flex-grow" />
+
+        {/* Rounded Completion Button */}
+        <Button
+          onClick={handleCompletionClick}
+          variant={isCompleted ? "secondary" : "outline"}
+          className="w-full transition-all duration-150 ease-in-out active:scale-[0.97]"
+          size="lg"
+        >
+          {isCompleted ? (
+            <CheckCircle2 className="mr-2 h-5 w-5" />
+          ) : (
+            <Circle className="mr-2 h-5 w-5" />
+          )}
+          <span className="font-semibold">
+            {isCompleted ? 'Completed' : 'Mark as Done'}
+          </span>
+        </Button>
       </div>
     </Card>
   );
