@@ -1,111 +1,121 @@
+// src/components/habits/ProgramHabitGroup.tsx
+
 "use client";
 
 import * as React from 'react';
-import { useState, useEffect, FC } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-  DialogClose,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { WandSparkles, Send, Loader2 } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+import type { FC } from 'react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import HabitItem from './HabitItem';
+import type { Habit, WeekDay } from '@/types';
+import { Target, CheckCircle2, Circle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
-interface GoalInputProgramDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (goal: string, duration: string) => void;
-  isLoading?: boolean;
+interface ProgramHabitGroupProps {
+  programId: string;
+  programName: string;
+  habitsInProgram: Habit[];
+  onOpenDetailView: (habit: Habit) => void;
+  todayString: string;
+  todayAbbr: WeekDay | undefined;
+  onToggleComplete: (habitId: string, date: string) => void;
+  onDelete: (habitId: string) => void;
+  onEdit: (habit: Habit) => void;
+  onReschedule: (habit: Habit, missedDate: string) => void;
 }
 
-// FIX: Changed from a const arrow function to a standard function declaration
-// for better build-tool compatibility.
-export default function GoalInputProgramDialog({ 
-  isOpen, 
-  onClose, 
-  onSubmit, 
-  isLoading 
-}: GoalInputProgramDialogProps) {
-  const [goal, setGoal] = useState('');
-  const [duration, setDuration] = useState('');
-  const { toast } = useToast();
+const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
+  programId,
+  programName,
+  habitsInProgram,
+  onOpenDetailView,
+  todayString,
+  todayAbbr,
+  onToggleComplete,
+  onDelete,
+  onEdit,
+  onReschedule,
+}) => {
+  const habitsScheduledToday = todayAbbr
+    ? habitsInProgram.filter(habit =>
+        habit.daysOfWeek.includes(todayAbbr) ||
+        habit.completionLog.some(log => log.date === todayString && log.status === 'pending_makeup')
+      )
+    : [];
 
-  const handleSubmit = () => {
-    if (goal.trim() && duration.trim()) {
-      onSubmit(goal, duration);
-    } else {
-      toast({
-        title: "Input Missing",
-        description: "Please provide both a goal and a duration.",
-        variant: "destructive",
-      });
-    }
-  };
+  const completedTodayCount = habitsScheduledToday.filter(habit =>
+    habit.completionLog.some(log => log.date === todayString && log.status === 'completed')
+  ).length;
 
-  useEffect(() => {
-    if (isOpen) {
-      setGoal('');
-      setDuration('');
-    }
-  }, [isOpen]);
+  const allProgramTasksForTodayCompleted = habitsScheduledToday.length > 0 && completedTodayCount === habitsScheduledToday.length;
+  const progressPercentToday = habitsScheduledToday.length > 0 ? (completedTodayCount / habitsScheduledToday.length) * 100 : 0;
+
+  if (habitsInProgram.length === 0) {
+    return null;
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[480px] bg-card rounded-lg shadow-xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold flex items-center">
-            <WandSparkles className="mr-2 h-5 w-5 text-primary" /> Create Habit Program from Goal
-          </DialogTitle>
-          <DialogDescription>
-            Tell us your goal and how long you want to focus. We'll suggest a habit program.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4 px-1 space-y-4">
-          <div>
-            <Label htmlFor="program-goal" className="text-sm font-medium">
-              What is your primary goal?
-            </Label>
-            <Input
-              id="program-goal"
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              placeholder="e.g., Reduce weight, Learn Python, Read more books"
-              className="bg-input/50"
-              disabled={isLoading}
-            />
+    <Accordion type="single" collapsible className="w-full" defaultValue={`program-${programId}`}>
+      <AccordionItem value={`program-${programId}`} className="border border-primary/20 rounded-lg shadow-md overflow-hidden bg-card/80">
+        <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 transition-colors w-full">
+          <div className="flex flex-col w-full space-y-1.5">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center space-x-3">
+                <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} />
+                <span className={cn("font-semibold text-lg text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
+                  {programName}
+                </span>
+              </div>
+              <div className="flex items-center space-x-1.5 text-xs">
+                {allProgramTasksForTodayCompleted ?
+                  <CheckCircle2 className="h-4 w-4 text-accent" /> :
+                  <Circle className={cn("h-3.5 w-3.5", habitsScheduledToday.length > 0 ? "text-orange-500" : "text-muted-foreground/60")} />
+                }
+                {habitsScheduledToday.length > 0 ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-700/30 dark:text-amber-200">
+                    {`${completedTodayCount}/${habitsScheduledToday.length} today`}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">No tasks today</span>
+                )}
+              </div>
+            </div>
+            {habitsScheduledToday.length > 0 && (
+              <Progress
+                value={progressPercentToday}
+                className="h-1.5 w-full mt-1"
+                indicatorClassName={allProgramTasksForTodayCompleted ? "bg-accent" : "bg-primary"}
+              />
+            )}
           </div>
-          <div>
-            <Label htmlFor="program-duration" className="text-sm font-medium">
-              Focus duration for this program?
-            </Label>
-            <Input
-              id="program-duration"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              placeholder="e.g., 3 months, 6 weeks, 1 month"
-              className="bg-input/50"
-              disabled={isLoading}
-            />
+        </AccordionTrigger>
+        <AccordionContent className="bg-muted/20 border-t border-border">
+          {/* FIX: Changed padding here to be more consistent with the header */}
+          <div className="px-4 pb-3 pt-2 space-y-2">
+            {habitsScheduledToday.length > 0 ? (
+              habitsScheduledToday.map(habit => (
+                <div onClick={() => onOpenDetailView(habit)} key={habit.id} className="cursor-pointer">
+                  <HabitItem
+                    habit={habit}
+                    todayString={todayString}
+                    onToggleComplete={onToggleComplete}
+                    onDelete={onDelete}
+                    onEdit={onEdit}
+                    onReschedule={() => onReschedule(habit, todayString)}
+                    onOpenDetailView={onOpenDetailView}
+                    isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
+                    currentDate={todayString}
+                  />
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-2">No habits in this program scheduled for today.</p>
+            )}
           </div>
-        </div>
-        <DialogFooter className="pt-4">
-          <DialogClose asChild>
-            <Button type="button" variant="outline" disabled={isLoading} onClick={onClose}>
-              Cancel
-            </Button>
-          </DialogClose>
-          <Button onClick={handleSubmit} disabled={isLoading || !goal.trim() || !duration.trim()}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-            {isLoading ? 'Generating...' : 'Get Program Suggestion'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 };
+
+export default ProgramHabitGroup;

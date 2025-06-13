@@ -326,8 +326,8 @@ const HomePage: NextPage = () => {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
         ...habitData,
         description: habitData.description || '',
- durationHours: habitData.durationHours ?? undefined,
- durationMinutes: habitData.durationMinutes ?? undefined,
+        durationHours: typeof habitData.durationHours === 'number' ? habitData.durationHours : undefined,
+        durationMinutes: typeof habitData.durationMinutes === 'number' ? habitData.durationMinutes : undefined,
         completionLog: [],
         reminderEnabled: false,
       };

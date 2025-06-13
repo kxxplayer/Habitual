@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "habitual-ucw41"
-  }
+    "default": "habitual-ucw41",
+    "staging": "habitual-ucw41"
+  },
+  "targets": {},
+  "etags": {}
 }

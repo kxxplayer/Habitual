@@ -5,6 +5,7 @@ import { Loader2, UserCircle2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 export default function ProfileLoading() {
@@ -16,7 +17,7 @@ export default function ProfileLoading() {
         "md:max-w-md lg:max-w-lg"
       )}>
         <AppHeader />
-        <div className="flex-grow overflow-auto">
+        <ScrollArea className="flex-grow min-h-0">
           <div className="flex flex-col min-h-full">
             <main className="px-3 sm:px-4 py-4 flex-grow">
               <Card className="w-full">
@@ -36,7 +37,7 @@ export default function ProfileLoading() {
               <p>&copy; {new Date().getFullYear()} Habitual.</p>
             </footer>
           </div>
-          </div>
+        </ScrollArea>
         <BottomNavigationBar />
       </div>
     </div>
