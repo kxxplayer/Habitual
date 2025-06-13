@@ -18,7 +18,6 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Label } from "../ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { Input } from "../ui/input";
 import {
   Select,
   SelectContent,
@@ -43,7 +42,8 @@ interface InlineCreateHabitFormProps {
   isProgram?: boolean;
 }
 
-export function InlineCreateHabitForm({
+// FIX: Changed from a named export to a default export
+export default function InlineCreateHabitForm({
   onCreate,
   onCancel,
   isProgram = false,
@@ -69,17 +69,11 @@ export function InlineCreateHabitForm({
   const handleCreateWithAI = async () => {
     setIsCreating(true);
     try {
-      // Placeholder for AI logic
       console.log("Creating habit with AI:", habitDescription);
-      // This would call your AI flow
-      // const result = await createHabitFromDescription(habitDescription);
-      // onCreate(result);
       toast({
         title: "Habit created with AI!",
         description: "Your new habit has been added.",
       });
-      // You would call the onCreate prop with the AI-generated habit data.
-      // For now, we'll just log it.
       onCreate({ description: habitDescription, isAI: true });
     } catch (error) {
       toast({
