@@ -42,7 +42,6 @@ interface InlineCreateHabitFormProps {
   isProgram?: boolean;
 }
 
-// FIX: Changed from a named export to a default export
 export default function InlineCreateHabitForm({
   onCreate,
   onCancel,
@@ -154,6 +153,7 @@ export default function InlineCreateHabitForm({
                     defaultValue={field.value}
                   >
                     <FormControl>
+                      {/* FIX: Corrected closing tag */}
                       <SelectTrigger>
                         <SelectValue placeholder="Select how often" />
                       </SelectTrigger>

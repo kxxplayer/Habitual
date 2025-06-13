@@ -10,11 +10,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { InlineCreateHabitForm } from "./InlineCreateHabitForm";
+import InlineCreateHabitForm from "./InlineCreateHabitForm";
 import GoalInputProgramDialog from "../programs/GoalInputProgramDialog";
 import { Habit } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
+interface ManualHabitData {
+  description: string;
+  frequency: string;
+  timeOfDay: string;
+}
+
+interface AiHabitData {
+  description: string;
+  isAI: boolean;
+}
 
 interface Props {
   open: boolean;
@@ -62,8 +72,9 @@ export function CreateHabitDialog({
         );
       case "manual":
         return (
+          // FIX: Added the required onCancel prop
           <InlineCreateHabitForm
-            onCreate={(data) => {
+            onCreate={(data: ManualHabitData | AiHabitData) => {
               onCreateHabit(data as any);
               onOpenChange(false);
             }}
@@ -71,19 +82,17 @@ export function CreateHabitDialog({
           />
         );
       case "program":
-        // FIX: Pass the correct props to GoalInputProgramDialog
         return (
           <GoalInputProgramDialog
             isOpen={true}
             onClose={() => setCreationMode("description")}
             onSubmit={(goal, duration) => {
               console.log("Program Goal:", goal, "Duration:", duration);
-              // Here you would handle the AI program generation
               toast({
                 title: "Generating Program...",
                 description: "Your new habit program is being created.",
               });
-              onOpenChange(false); // Close the main dialog
+              onOpenChange(false);
             }}
           />
         );
@@ -91,6 +100,7 @@ export function CreateHabitDialog({
   };
 
   return (
+    // FIX: Corrected onOpen to open and ensured matching braces
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>{renderContent()}</DialogContent>
     </Dialog>
