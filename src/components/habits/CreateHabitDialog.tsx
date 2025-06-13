@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, Brain, FilePenLine } from 'lucide-react';
+import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, Brain, FilePenLine, Target } from 'lucide-react';
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import type { CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -81,6 +81,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   onOpenGoalProgramDialog
 }) => {
   const [isAISuggesting, setIsAISuggesting] = useState(false);
+  const [creationMode, setCreationMode] = useState<'ai' | 'manual' | null>(null);
   const { toast } = useToast();
   const { control, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = useForm<CreateHabitFormData>({
     resolver: zodResolver(createHabitFormSchema),
@@ -115,7 +116,10 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
 
       } else {
         reset(defaultVals);
-        if (!isEditing) setCurrentStep(1);
+        if (!isEditing) {
+            setCurrentStep(1);
+            setCreationMode(null);
+        }
       }
     }
     setIsAISuggesting(false);
@@ -150,7 +154,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
       } else {
         setValue('specificTime', result.specificTime || '');
       }
-      setCurrentStep(2);
+      setCurrentStep(3);
     } catch (error) {
       console.error("AI Suggestion Error:", error);
       toast({ title: "AI Suggestion Failed", description: "Could not get AI suggestions. Please fill manually or try again.", variant: "destructive" });
@@ -179,87 +183,168 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
           </DialogTitle>
           {!isEditing && (
             <DialogDescription>
-              {currentStep === 1 ? "Choose how you'd like to start." : "Refine the details for your new habit."}
+                {currentStep === 1 ? "Choose how you'd like to start." :
+                currentStep === 2 && creationMode === null ? "How would you like to create your habit?" :
+                currentStep === 2 && creationMode === 'ai' ? "Describe your habit and let AI help." :
+                "Refine the details for your new habit."}
             </DialogDescription>
           )}
         </DialogHeader>
 
         {currentStep === 1 && !isEditing && (
-          // This container makes the content scrollable on small screens
-          <div className="flex-grow min-h-0 overflow-y-auto">
+        <div className="flex-grow min-h-0 overflow-y-auto">
             <div className="p-6 grid md:grid-cols-2 gap-6 items-start">
-              {/* AI Suggestion Card */}
-              <div className="flex flex-col h-full p-6 rounded-lg border-2 border-primary bg-primary/5">
+            {/* Fill Manually Card - Modified */}
+            <div
+                className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
+                onClick={() => {
+                setCurrentStep(2);
+                setCreationMode(null); // Reset creation mode
+                }}
+            >
                 <div className="flex items-center gap-3 mb-2">
-                  <Wand2 className="h-8 w-8 text-primary" />
-                  <h3 className="text-lg font-semibold text-primary">Start with AI</h3>
+                <Edit3 className="h-8 w-8 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">Fill Manually</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-4 flex-grow">
-                  Simply describe your goal, and let our AI suggest the details for you. It's the fastest way to get started.
+                <p className="text-sm text-muted-foreground flex-grow">
+                Craft your new habit from scratch - with or without AI assistance.
                 </p>
-                <div className="space-y-2">
-                  <Label htmlFor="dialog-ai-description" className="text-xs font-medium">Your Goal or Habit Idea</Label>
-                  <Controller name="description" control={control} render={({ field }) =>
-                    <Textarea
-                      id="dialog-ai-description"
-                      placeholder="e.g., Run 3 times a week, Learn to play guitar"
-                      {...field}
-                      className="bg-background text-sm"
-                      rows={2}
-                    />
-                  } />
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleAISuggestDetails}
-                  disabled={isAISuggesting || !habitDescriptionForAI?.trim()}
-                  className="w-full mt-4"
-                >
-                  {isAISuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                  Suggest Details
-                </Button>
-              </div>
-
-              {/* Manual and Program Options */}
-              <div className="flex flex-col gap-4">
-                <button
-                  onClick={() => setCurrentStep(2)}
-                  className="text-left p-4 rounded-lg border bg-card hover:bg-muted/50 transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <FilePenLine className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                    <div>
-                      <h4 className="font-semibold text-foreground">Fill Manually</h4>
-                      <p className="text-sm text-muted-foreground">Craft your new habit from scratch.</p>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={handleOpenProgramDialog}
-                  className="text-left p-4 rounded-lg border bg-card hover:bg-muted/50 transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <Brain className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                    <div>
-                      <h4 className="font-semibold text-foreground">Create a Program</h4>
-                      <p className="text-sm text-muted-foreground">Get a set of habits for a larger goal.</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
             </div>
-          </div>
+
+            {/* Create a Program Card */}
+            <div
+                className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
+                onClick={handleOpenProgramDialog}
+            >
+                <div className="flex items-center gap-3 mb-2">
+                <Target className="h-8 w-8 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">Create a Program</h3>
+                </div>
+                <p className="text-sm text-muted-foreground flex-grow">
+                Get a set of habits for a larger goal.
+                </p>
+            </div>
+            </div>
+        </div>
         )}
 
-        {(currentStep === 2 || isEditing) && (
+        {currentStep === 2 && !isEditing && creationMode === null && (
+        <div className="flex-grow min-h-0 overflow-y-auto">
+            <div className="p-6 grid md:grid-cols-2 gap-6 items-start">
+            {/* AI Assistance Option */}
+            <div
+                className="flex flex-col h-full p-6 rounded-lg border-2 border-primary bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer"
+                onClick={() => setCreationMode('ai')}
+            >
+                <div className="flex items-center gap-3 mb-2">
+                <Wand2 className="h-8 w-8 text-primary" />
+                <h3 className="text-lg font-semibold text-primary">Use AI Assistant</h3>
+                </div>
+                <p className="text-sm text-muted-foreground flex-grow">
+                Describe your goal and let AI suggest the details for you. It's the fastest way to get started.
+                </p>
+            </div>
+
+            {/* Manual Creation Option */}
+            <div
+                className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
+                onClick={() => {
+                setCreationMode('manual');
+                setCurrentStep(3);
+                }}
+            >
+                <div className="flex items-center gap-3 mb-2">
+                <Edit3 className="h-8 w-8 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">Create Manually</h3>
+                </div>
+                <p className="text-sm text-muted-foreground flex-grow">
+                Fill in all the details yourself without AI assistance.
+                </p>
+            </div>
+            </div>
+        </div>
+        )}
+
+        {currentStep === 2 && !isEditing && creationMode === 'ai' && (
+        <div className="flex-grow min-h-0 overflow-y-auto">
+            <div className="p-6">
+            <div className="max-w-md mx-auto space-y-4">
+                <div className="space-y-2">
+                <Label htmlFor="dialog-ai-description" className="text-sm font-medium">
+                    Describe your habit goal
+                </Label>
+                <Controller
+                    name="description"
+                    control={control}
+                    render={({ field }) =>
+                    <Textarea
+                        id="dialog-ai-description"
+                        placeholder="e.g., Run 3 times a week, Learn to play guitar, Read before bed"
+                        {...field}
+                        className="bg-background text-sm"
+                        rows={4}
+                    />
+                    }
+                />
+                <p className="text-xs text-muted-foreground">
+                    Be specific about what you want to achieve and AI will suggest the best schedule and details.
+                </p>
+                </div>
+
+                <div className="flex gap-3">
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setCreationMode(null)}
+                    className="flex-1"
+                >
+                    Back
+                </Button>
+                <Button
+                    type="button"
+                    onClick={handleAISuggestDetails}
+                    disabled={isAISuggesting || !habitDescriptionForAI?.trim()}
+                    className="flex-1"
+                >
+                    {isAISuggesting ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                    </>
+                    ) : (
+                    <>
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        Generate Details
+                    </>
+                    )}
+                </Button>
+                </div>
+            </div>
+            </div>
+        </div>
+        )}
+
+
+        {(currentStep === 3 || (currentStep === 2 && isEditing)) && (
           <form onSubmit={handleSubmit(onSubmitDialog)} className="flex flex-col flex-grow min-h-0">
             <div className="flex-grow overflow-y-auto px-4 -mx-4">
               <div className="space-y-4 px-4 pb-4">
                 {!isEditing && (
-                  <Button type="button" onClick={() => setCurrentStep(1)} variant="ghost" size="sm" className="text-xs text-muted-foreground mb-2 px-1">
-                    &larr; Back to Creation Options
-                  </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground mb-2 px-1"
+                        onClick={() => {
+                            if (creationMode === 'ai') {
+                                setCurrentStep(2);
+                            } else {
+                                setCurrentStep(2);
+                                setCreationMode(null);
+                            }
+                        }}>
+                        &larr; Back
+                    </Button>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
