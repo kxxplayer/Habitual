@@ -1,15 +1,28 @@
-// src/components/habits/HabitItem.tsx
 "use client";
 
 import * as React from 'react';
+import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { CheckCircle2, Circle, MoreVertical, Edit, Trash2, CalendarClock, Eye } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+import {
+  CheckCircle2,
+  Circle,
+  MoreVertical,
+  Edit,
+  Trash2,
+  CalendarClock,
+  Eye
+} from 'lucide-react';
 import type { Habit } from '@/types';
 import { cn } from '@/lib/utils';
 
-// Helper function to get a more modern icon based on keywords
 const getHabitIcon = (habitName: string): string => {
   const nameLower = habitName.toLowerCase();
   if (nameLower.includes('gym') || nameLower.includes('workout') || nameLower.includes('fitness')) return '🏋️';
@@ -60,10 +73,13 @@ const HabitItem: React.FC<HabitItemProps> = ({
     >
       <div className="p-3 flex items-center gap-3">
         {/* Completion Toggle Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 rounded-full transition-all duration-150 ease-in-out hover:bg-muted active:scale-90"
+        <motion.button
+          whileTap={{ scale: 0.85 }}
+          className={cn(
+            "h-9 w-9 rounded-full flex items-center justify-center transition-colors duration-200",
+            isCompleted ? "bg-muted text-muted-foreground" : "bg-background text-muted-foreground/50",
+            "hover:bg-muted focus:outline-none"
+          )}
           onClick={(e) => {
             e.stopPropagation();
             onToggleComplete(habit.id, currentDate);
@@ -71,11 +87,11 @@ const HabitItem: React.FC<HabitItemProps> = ({
           aria-label={isCompleted ? "Mark as incomplete" : "Mark as complete"}
         >
           {isCompleted ? (
-            <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
+            <CheckCircle2 className="h-6 w-6" />
           ) : (
-            <Circle className="h-6 w-6 text-muted-foreground/50" />
+            <Circle className="h-6 w-6" />
           )}
-        </Button>
+        </motion.button>
 
         {/* Habit Name and Icon */}
         <div className="flex-grow flex items-center gap-3 truncate">
