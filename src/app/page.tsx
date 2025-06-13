@@ -119,7 +119,6 @@ const HomePage: NextPage = () => {
   const [totalPoints, setTotalPoints] = useState<number>(0);
 
   const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = useState(false);
-  const [createHabitDialogStep, setCreateHabitDialogStep] = useState(1);
   const [initialFormDataForDialog, setInitialFormDataForDialog] = useState<Partial<CreateHabitFormData> | null>(null);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [isDailyQuestDialogOpen, setIsDailyQuestDialogOpen] = useState(false);
@@ -161,7 +160,6 @@ const HomePage: NextPage = () => {
   const openCreateHabitDialogForNew = useCallback(() => {
     setEditingHabit(null);
     setInitialFormDataForDialog(null);
-    setCreateHabitDialogStep(1);
     setIsCreateHabitDialogOpen(true);
   }, []);
 
@@ -255,13 +253,10 @@ const HomePage: NextPage = () => {
           .then(response => setCommonHabitSuggestions(response?.suggestions || []))
           .catch(err => {
             console.error("Failed to load common habit suggestions:", err);
-            toast({ title: "AI Error", description: "Could not load suggestions.", variant: "destructive" });
           })
           .finally(() => {
             setIsLoadingCommonSuggestions(false);
             setCommonSuggestionsFetched(true);
-            const dailyQuestKey = `<span class="math-inline">\{LS\_KEY\_PREFIX\_DAILY\_QUEST\}</span>{authUser.uid}`;
-            // if (typeof window !== 'undefined' && !localStorage.getItem(dailyQuestKey)) setIsDailyQuestDialogOpen(true);
           });
       } else if (parsedHabits.length > 0) {
         if (!commonSuggestionsFetched) setCommonSuggestionsFetched(true);
@@ -270,11 +265,10 @@ const HomePage: NextPage = () => {
       firstDataLoadCompleteRef.current = true;
     }, (error) => {
       console.error("Firestore snapshot error:", error);
-      toast({ title: "Database Error", description: "Could not load your data.", variant: "destructive" });
       setIsLoadingData(false);
     });
     return () => unsubscribeFirestore();
-  }, [authUser, mounted, commonSuggestionsFetched, toast]);
+  }, [authUser, mounted, commonSuggestionsFetched]);
   
   useEffect(() => {
     if (!authUser || !mounted || !firstDataLoadCompleteRef.current || isLoadingData) {
@@ -293,13 +287,12 @@ const HomePage: NextPage = () => {
       };
       setDoc(userDocRef, dataToSave, { merge: true }).catch(error => {
         console.error("Error saving data:", error);
-        toast({ title: "Save Error", description: "Could not save your changes.", variant: "destructive" });
       });
     }, DEBOUNCE_SAVE_DELAY_MS);
     return () => {
       if (debounceSaveTimeoutRef.current) clearTimeout(debounceSaveTimeoutRef.current);
     };
-  }, [habits, earnedBadges, totalPoints, authUser, mounted, toast, isLoadingData]);
+  }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData]);
 
   useEffect(() => {
     if (isLoadingData || !mounted || !firstDataLoadCompleteRef.current) return;
@@ -309,18 +302,16 @@ const HomePage: NextPage = () => {
       newlyEarnedBadges.forEach(newBadge => {
         if (!earnedBadges.some(eb => eb.id === newBadge.id)) {
           updatedBadges.push(newBadge);
-          toast({ title: "Badge Earned!", description: `You earned the "${newBadge.name}" badge!` });
         }
       });
       setEarnedBadges(updatedBadges);
     }
-  }, [habits, earnedBadges, isLoadingData, mounted, toast]);
+  }, [habits, earnedBadges, isLoadingData, mounted]);
 
   const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
     const isEditing = habitData.id && habits.some(h => h.id === habitData.id);
     if (isEditing) {
       setHabits(prev => prev.map(h => h.id === habitData.id ? { ...h, ...habitData, description: habitData.description || '' } as Habit : h));
-      toast({ title: "Habit Updated", description: `"${habitData.name}" has been updated.` });
     } else {
       const newHabit: Habit = {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
@@ -333,7 +324,6 @@ const HomePage: NextPage = () => {
       };
       setHabits(prev => [...prev, newHabit]);
       if (commonHabitSuggestions.length > 0) setCommonHabitSuggestions([]);
-      toast({ title: "Habit Added", description: `"${newHabit.name}" has been added.` });
     }
     setIsCreateHabitDialogOpen(false);
   };
@@ -383,7 +373,6 @@ const HomePage: NextPage = () => {
   const handleConfirmDeleteHabit = () => {
     if (habitToDelete) {
       setHabits(prev => prev.filter(h => h.id !== habitToDelete.id));
-      toast({ title: "Habit Deleted", description: `"${habitToDelete.name}" has been removed.` });
       setIsDeleteHabitConfirmOpen(false);
       setHabitToDelete(null);
     }
@@ -392,7 +381,6 @@ const HomePage: NextPage = () => {
   const handleOpenEditDialog = (habit: Habit) => {
     setEditingHabit(habit);
     setInitialFormDataForDialog(habit);
-    setCreateHabitDialogStep(2);
     setIsCreateHabitDialogOpen(true);
   };
 
@@ -477,7 +465,7 @@ const HomePage: NextPage = () => {
       });
       setIsProgramSuggestionDialogOpen(true);
     } catch (e) {
-      toast({ title: "Error", description: "Failed to generate program.", variant: "destructive" });
+      // toast({ title: "Error", description: "Failed to generate program.", variant: "destructive" });
     } finally {
       setIsProgramSuggestionLoading(false);
     }
@@ -496,7 +484,6 @@ const HomePage: NextPage = () => {
     }));
     setHabits(prev => [...prev, ...newHabits]);
     setIsProgramSuggestionDialogOpen(false);
-    toast({ title: "Program Added!", description: `"${programName}" and its habits are now on your list.` });
   };
   
   const handleCustomizeSuggestedHabit = (sugg: CommonSuggestedHabitType) => {
@@ -506,7 +493,6 @@ const HomePage: NextPage = () => {
       category: sugg.category || 'Other',
       daysOfWeek: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     });
-    setCreateHabitDialogStep(2);
     setIsCreateHabitDialogOpen(true);
   };
   
@@ -571,8 +557,6 @@ const HomePage: NextPage = () => {
         onClose={() => setIsCreateHabitDialogOpen(false)}
         onSaveHabit={handleSaveHabit}
         initialData={initialFormDataForDialog}
-        currentStep={createHabitDialogStep}
-        setCurrentStep={setCreateHabitDialogStep}
         onOpenGoalProgramDialog={handleOpenGoalInputProgramDialog}
       />
       {aiSuggestion && (

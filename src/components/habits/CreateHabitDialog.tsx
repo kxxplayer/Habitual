@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, Brain, FilePenLine, Target } from 'lucide-react';
+import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, FilePenLine, Target } from 'lucide-react';
 import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import type { CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
@@ -33,8 +33,6 @@ interface CreateHabitDialogProps {
   onClose: () => void;
   onSaveHabit: (habit: CreateHabitFormData & { id?: string }) => void;
   initialData?: Partial<CreateHabitFormData> | null;
-  currentStep: number;
-  setCurrentStep: (step: number) => void;
   onOpenGoalProgramDialog: () => void;
 }
 
@@ -52,17 +50,16 @@ const createHabitFormSchema = z.object({
   specificTime: z.string().optional().refine(val => val === '' || val === undefined || /^\d{2}:\d{2}$/.test(val), {
     message: "Time should be in HH:mm format or empty",
   }),
-}).refine(data => data.durationHours || data.durationMinutes || (!data.durationHours && !data.durationMinutes), {});
-
+});
 
 const dayMapFullToAbbr: { [key: string]: WeekDay } = {
-  "sunday": "Sun", "sun": "Sun", "sunday,": "Sun", "sun,": "Sun", "sundays": "Sun",
-  "monday": "Mon", "mon": "Mon", "monday,": "Mon", "mon,": "Mon", "mondays": "Mon",
-  "tuesday": "Tue", "tue": "Tue", "tuesday,": "Tue", "tue,": "Tue", "tuesdays": "Tue",
-  "wednesday": "Wed", "wed": "Wed", "wednesday,": "Wed", "wed,": "Wed", "wednesdays": "Wed",
-  "thursday": "Thu", "thu": "Thu", "thursday,": "Thu", "thu,": "Thu", "thursdays": "Thu",
-  "friday": "Fri", "fri": "Fri", "friday,": "Fri", "fri,": "Fri", "fridays": "Fri",
-  "saturday": "Sat", "sat": "Sat", "saturday,": "Sat", "sat,": "Sat", "saturdays": "Sat",
+  "sunday": "Sun", "sun": "Sun", "sundays": "Sun",
+  "monday": "Mon", "mon": "Mon", "mondays": "Mon",
+  "tuesday": "Tue", "tue": "Tue", "tuesdays": "Tue",
+  "wednesday": "Wed", "wed": "Wed", "wednesdays": "Wed",
+  "thursday": "Thu", "thu": "Thu", "thursdays": "Thu",
+  "friday": "Fri", "fri": "Fri", "fridays": "Fri",
+  "saturday": "Sat", "sat": "Sat", "saturdays": "Sat",
 };
 
 const normalizeDay = (day: string): WeekDay | undefined => {
@@ -76,12 +73,10 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   onClose,
   onSaveHabit,
   initialData,
-  currentStep,
-  setCurrentStep,
   onOpenGoalProgramDialog
 }) => {
+  const [currentStep, setCurrentStep] = useState(1);
   const [isAISuggesting, setIsAISuggesting] = useState(false);
-  const [creationMode, setCreationMode] = useState<'ai' | 'manual' | null>(null);
   const { toast } = useToast();
   const { control, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = useForm<CreateHabitFormData>({
     resolver: zodResolver(createHabitFormSchema),
@@ -95,11 +90,11 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   const isEditing = !!(initialData && initialData.id);
 
   useEffect(() => {
+    const defaultVals = {
+      id: undefined, description: '', name: '', category: 'Other' as HabitCategory, daysOfWeek: [] as WeekDay[],
+      optimalTiming: '', durationHours: null, durationMinutes: null, specificTime: '',
+    };
     if (isOpen) {
-      const defaultVals = {
-        id: undefined, description: '', name: '', category: 'Other' as HabitCategory, daysOfWeek: [] as WeekDay[],
-        optimalTiming: '', durationHours: null, durationMinutes: null, specificTime: '',
-      };
       if (initialData) {
         reset({
           id: initialData.id,
@@ -112,18 +107,13 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
           durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
           specificTime: initialData.specificTime || '',
         });
-         if (isEditing) setCurrentStep(2);
-
+        setCurrentStep(2); // Go directly to form for editing
       } else {
         reset(defaultVals);
-        if (!isEditing) {
-            setCurrentStep(1);
-            setCreationMode(null);
-        }
+        setCurrentStep(1); // Start at the choice screen for new habits
       }
     }
-    setIsAISuggesting(false);
-  }, [isOpen, initialData, reset, isEditing, setCurrentStep]);
+  }, [isOpen, initialData, reset]);
 
   const handleAISuggestDetails = async () => {
     if (!habitDescriptionForAI || habitDescriptionForAI.trim() === "") {
@@ -133,28 +123,19 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
     setIsAISuggesting(true);
     try {
       const result = await createHabitFromDescription({ description: habitDescriptionForAI });
-
-      setValue('name', result.habitName || '');
+      setValue('name', result.habitName || '', { shouldValidate: true });
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
         setValue('category', result.category as HabitCategory);
-      } else if (result.category) {
-        setValue('category', 'Other');
       }
-
-      const suggestedDays = Array.isArray(result.daysOfWeek) ? result.daysOfWeek.map(day => normalizeDay(day as string)).filter((d): d is WeekDay => d !== undefined) : [];
-      setValue('daysOfWeek', suggestedDays);
+      const suggestedDays = Array.isArray(result.daysOfWeek) ? result.daysOfWeek.map(day => normalizeDay(day as string)).filter((d): d is WeekDay => !!d) : [];
+      setValue('daysOfWeek', suggestedDays, { shouldValidate: true });
       setValue('optimalTiming', result.optimalTiming || '');
       setValue('durationHours', result.durationHours ?? null);
       setValue('durationMinutes', result.durationMinutes ?? null);
-
       if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) {
         setValue('specificTime', result.specificTime);
-      } else if (result.specificTime && (result.specificTime.toLowerCase() === "anytime" || result.specificTime.toLowerCase() === "flexible") ) {
-         setValue('specificTime', '');
-      } else {
-        setValue('specificTime', result.specificTime || '');
       }
-      setCurrentStep(3);
+      toast({ title: "Details Filled!", description: "Review the suggested details and adjust as needed." });
     } catch (error) {
       console.error("AI Suggestion Error:", error);
       toast({ title: "AI Suggestion Failed", description: "Could not get AI suggestions. Please fill manually or try again.", variant: "destructive" });
@@ -164,8 +145,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   };
 
   const onSubmitDialog = (data: CreateHabitFormData) => {
-    const dataToSave = isEditing && initialData?.id ? { ...data, id: initialData.id } : data;
-    onSaveHabit(dataToSave);
+    onSaveHabit({ ...data, id: initialData?.id });
   };
   
   const handleOpenProgramDialog = () => {
@@ -181,170 +161,79 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
             {isEditing ? <Edit3 className="mr-3 h-6 w-6" /> : <PlusCircle className="mr-3 h-6 w-6" />}
             {isEditing ? "Edit Habit" : "Create a New Habit"}
           </DialogTitle>
-          {!isEditing && (
-            <DialogDescription>
-                {currentStep === 1 ? "Choose how you'd like to start." :
-                currentStep === 2 && creationMode === null ? "How would you like to create your habit?" :
-                currentStep === 2 && creationMode === 'ai' ? "Describe your habit and let AI help." :
-                "Refine the details for your new habit."}
-            </DialogDescription>
-          )}
+          <DialogDescription>
+            {isEditing ? "Modify the details of your habit." : (currentStep === 1 ? "Choose how you'd like to start." : "Describe your goal for AI help, or fill the form below.")}
+          </DialogDescription>
         </DialogHeader>
 
+        {/* Step 1: Choice Screen */}
         {currentStep === 1 && !isEditing && (
-        <div className="flex-grow min-h-0 overflow-y-auto">
+          <div className="flex-grow min-h-0 overflow-y-auto">
             <div className="p-6 grid md:grid-cols-2 gap-6 items-start">
-            {/* Fill Manually Card - Modified */}
-            <div
-                className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
-                onClick={() => {
-                setCurrentStep(2);
-                setCreationMode(null); // Reset creation mode
-                }}
-            >
-                <div className="flex items-center gap-3 mb-2">
-                <Edit3 className="h-8 w-8 text-muted-foreground" />
-                <h3 className="text-lg font-semibold">Fill Manually</h3>
-                </div>
-                <p className="text-sm text-muted-foreground flex-grow">
-                Craft your new habit from scratch - with or without AI assistance.
-                </p>
+              <div
+                  className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
+                  onClick={() => setCurrentStep(2)}
+              >
+                  <div className="flex items-center gap-3 mb-2">
+                      <FilePenLine className="h-8 w-8 text-muted-foreground" />
+                      <h3 className="text-lg font-semibold">Create a Single Habit</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground flex-grow">
+                    Define one habit at a time, with or without AI assistance.
+                  </p>
+              </div>
+              <div
+                  className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
+                  onClick={handleOpenProgramDialog}
+              >
+                  <div className="flex items-center gap-3 mb-2">
+                      <Target className="h-8 w-8 text-muted-foreground" />
+                      <h3 className="text-lg font-semibold">Create a Program</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground flex-grow">
+                    Get a set of related habits for a larger goal.
+                  </p>
+              </div>
             </div>
-
-            {/* Create a Program Card */}
-            <div
-                className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
-                onClick={handleOpenProgramDialog}
-            >
-                <div className="flex items-center gap-3 mb-2">
-                <Target className="h-8 w-8 text-muted-foreground" />
-                <h3 className="text-lg font-semibold">Create a Program</h3>
-                </div>
-                <p className="text-sm text-muted-foreground flex-grow">
-                Get a set of habits for a larger goal.
-                </p>
-            </div>
-            </div>
-        </div>
+          </div>
         )}
 
-        {currentStep === 2 && !isEditing && creationMode === null && (
-        <div className="flex-grow min-h-0 overflow-y-auto">
-            <div className="p-6 grid md:grid-cols-2 gap-6 items-start">
-            {/* AI Assistance Option */}
-            <div
-                className="flex flex-col h-full p-6 rounded-lg border-2 border-primary bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer"
-                onClick={() => setCreationMode('ai')}
-            >
-                <div className="flex items-center gap-3 mb-2">
-                <Wand2 className="h-8 w-8 text-primary" />
-                <h3 className="text-lg font-semibold text-primary">Use AI Assistant</h3>
-                </div>
-                <p className="text-sm text-muted-foreground flex-grow">
-                Describe your goal and let AI suggest the details for you. It's the fastest way to get started.
-                </p>
-            </div>
-
-            {/* Manual Creation Option */}
-            <div
-                className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
-                onClick={() => {
-                setCreationMode('manual');
-                setCurrentStep(3);
-                }}
-            >
-                <div className="flex items-center gap-3 mb-2">
-                <Edit3 className="h-8 w-8 text-muted-foreground" />
-                <h3 className="text-lg font-semibold">Create Manually</h3>
-                </div>
-                <p className="text-sm text-muted-foreground flex-grow">
-                Fill in all the details yourself without AI assistance.
-                </p>
-            </div>
-            </div>
-        </div>
-        )}
-
-        {currentStep === 2 && !isEditing && creationMode === 'ai' && (
-        <div className="flex-grow min-h-0 overflow-y-auto">
-            <div className="p-6">
-            <div className="max-w-md mx-auto space-y-4">
-                <div className="space-y-2">
-                <Label htmlFor="dialog-ai-description" className="text-sm font-medium">
-                    Describe your habit goal
-                </Label>
-                <Controller
-                    name="description"
-                    control={control}
-                    render={({ field }) =>
-                    <Textarea
+        {/* Step 2: Unified Form */}
+        {currentStep === 2 && (
+          <form onSubmit={handleSubmit(onSubmitDialog)} className="flex flex-col flex-grow min-h-0">
+            <div className="flex-grow overflow-y-auto px-6">
+              {!isEditing && (
+                <Button type="button" onClick={() => setCurrentStep(1)} variant="ghost" size="sm" className="text-xs text-muted-foreground mb-4 -ml-3">
+                  &larr; Back to Creation Options
+                </Button>
+              )}
+              <div className="space-y-4">
+                {!isEditing && (
+                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 space-y-3">
+                    <Label htmlFor="dialog-ai-description" className="font-semibold flex items-center gap-2">
+                      <Wand2 className="h-5 w-5 text-primary"/>
+                      Start with AI (Optional)
+                    </Label>
+                    <Controller name="description" control={control} render={({ field }) => (
+                      <Textarea
                         id="dialog-ai-description"
-                        placeholder="e.g., Run 3 times a week, Learn to play guitar, Read before bed"
+                        placeholder="e.g., 'Run 3 times a week' or 'Learn to play guitar'"
                         {...field}
                         className="bg-background text-sm"
-                        rows={4}
-                    />
-                    }
-                />
-                <p className="text-xs text-muted-foreground">
-                    Be specific about what you want to achieve and AI will suggest the best schedule and details.
-                </p>
-                </div>
-
-                <div className="flex gap-3">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setCreationMode(null)}
-                    className="flex-1"
-                >
-                    Back
-                </Button>
-                <Button
-                    type="button"
-                    onClick={handleAISuggestDetails}
-                    disabled={isAISuggesting || !habitDescriptionForAI?.trim()}
-                    className="flex-1"
-                >
-                    {isAISuggesting ? (
-                    <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                    </>
-                    ) : (
-                    <>
-                        <Wand2 className="mr-2 h-4 w-4" />
-                        Generate Details
-                    </>
-                    )}
-                </Button>
-                </div>
-            </div>
-            </div>
-        </div>
-        )}
-
-
-        {(currentStep === 3 || (currentStep === 2 && isEditing)) && (
-          <form onSubmit={handleSubmit(onSubmitDialog)} className="flex flex-col flex-grow min-h-0">
-            <div className="flex-grow overflow-y-auto px-4 -mx-4">
-              <div className="space-y-4 px-4 pb-4">
-                {!isEditing && (
+                        rows={2}
+                      />
+                    )} />
                     <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs text-muted-foreground mb-2 px-1"
-                        onClick={() => {
-                            if (creationMode === 'ai') {
-                                setCurrentStep(2);
-                            } else {
-                                setCurrentStep(2);
-                                setCreationMode(null);
-                            }
-                        }}>
-                        &larr; Back
+                      type="button"
+                      onClick={handleAISuggestDetails}
+                      disabled={isAISuggesting || !habitDescriptionForAI?.trim()}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isAISuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                      Suggest Details
                     </Button>
+                  </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -359,7 +248,6 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                         <SelectTrigger id="dialog-habit-category" className="bg-input/50 text-sm"><SelectValue placeholder="Select category" /></SelectTrigger>
                         <SelectContent>{HABIT_CATEGORIES.map(cat => <SelectItem key={cat} value={cat} className="text-sm">{cat}</SelectItem>)}</SelectContent>
                       </Select>)} />
-                    {errors.category && <p className="text-xs text-destructive pt-1">{errors.category.message}</p>}
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -382,11 +270,9 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                     <div className="grid grid-cols-2 gap-2">
                       <div> <Label htmlFor="dialog-duration-hours" className="text-xs text-muted-foreground">Hours</Label>
                         <Controller name="durationHours" control={control} render={({ field }) => <Input id="dialog-duration-hours" type="number" placeholder="Hr" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm" min="0" />} />
-                        {errors.durationHours && <p className="text-xs text-destructive pt-1">{errors.durationHours.message}</p>}
                       </div>
                       <div> <Label htmlFor="dialog-duration-minutes" className="text-xs text-muted-foreground">Minutes</Label>
                         <Controller name="durationMinutes" control={control} render={({ field }) => <Input id="dialog-duration-minutes" type="number" placeholder="Min" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm" min="0" max="59" />} />
-                        {errors.durationMinutes && <p className="text-xs text-destructive pt-1">{errors.durationMinutes.message}</p>}
                       </div>
                     </div>
                   </div>
@@ -396,21 +282,17 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                     {errors.specificTime && <p className="text-xs text-destructive pt-1">{errors.specificTime.message}</p>}
                   </div>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 pb-4">
                   <Label htmlFor="dialog-habit-optimalTiming" className="text-sm font-medium flex items-center"><CalendarClock className="mr-1.5 h-4 w-4 text-muted-foreground" />Optimal General Timing (Optional)</Label>
                   <Controller name="optimalTiming" control={control} render={({ field }) => <Input id="dialog-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50 text-sm" />} />
                 </div>
-                <div className={cn("space-y-1", isEditing ? "" : "hidden")}>
-                  <Label htmlFor="dialog-final-description" className="text-sm font-medium">Description (Optional)</Label>
-                  <Controller name="description" control={control} render={({ field }) => <Textarea id="dialog-final-description" placeholder="Detailed description of the habit" {...field} className="bg-input/50 text-sm" rows={2} />} />
-                </div>
               </div>
             </div>
-            <DialogFooter className="pt-4 shrink-0 px-4 pb-4 border-t">
+            <DialogFooter className="p-6 pt-4 shrink-0 border-t">
               <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>Cancel</Button></DialogClose>
               <Button type="submit" disabled={isSubmitting || isAISuggesting}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isEditing ? <Save className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />)}
-                {isEditing ? "Save Changes" : "Add This Habit"}
+                {isEditing ? "Save Changes" : "Add Habit"}
               </Button>
             </DialogFooter>
           </form>
@@ -419,4 +301,5 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
     </Dialog>
   );
 };
+
 export default CreateHabitDialog;
