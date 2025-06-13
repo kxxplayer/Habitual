@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Label } from "../ui/label";
+// FIX: Standardized all UI imports to use the '@' path alias
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import {
@@ -24,7 +25,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
+} from "@/components/ui/select";
 
 const formSchema = z.object({
   description: z.string().min(1, {
@@ -153,7 +154,6 @@ export default function InlineCreateHabitForm({
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      {/* FIX: Corrected closing tag */}
                       <SelectTrigger>
                         <SelectValue placeholder="Select how often" />
                       </SelectTrigger>
