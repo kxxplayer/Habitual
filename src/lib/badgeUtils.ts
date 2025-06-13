@@ -1,8 +1,9 @@
+// src/lib/badgeUtils.ts
 
 "use client";
 
 import type { Habit, EarnedBadge } from '@/types';
-import { SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID, THREE_DAY_SQL_STREAK_BADGE_ID } from '@/types';
+import { SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID } from '@/types';
 import { calculateStreak } from '@/lib/dateUtils';
 import { format } from 'date-fns';
 
@@ -36,21 +37,7 @@ const badgeDefinitions: BadgeDefinition[] = [
     icon: "🌟",
     condition: (habits) => habits.some(habit => calculateStreak(habit) >= 30),
   },
-  {
-    id: THREE_DAY_SQL_STREAK_BADGE_ID,
-    name: "3-Day SQL Pro! 💻",
-    description: "Practiced SQL for 3 consecutive scheduled days.",
-    icon: "💻",
-    condition: (habits) =>
-      habits.some(habit =>
-        habit.name.toLowerCase().includes("sql") && calculateStreak(habit) >= 3
-      ),
-  },
 ];
-
-// src/lib/badgeUtils.ts
-
-// ... other code ...
 
 export function checkAndAwardBadges(habits: Habit[], existingBadges: EarnedBadge[]): EarnedBadge[] {
   const newlyEarnedBadges: EarnedBadge[] = [];
@@ -63,7 +50,7 @@ export function checkAndAwardBadges(habits: Habit[], existingBadges: EarnedBadge
         id: definition.id,
         name: definition.name,
         description: definition.description,
-        earnedDate: today, // FIX: Changed property from 'dateAchieved' to 'earnedDate'
+        earnedDate: today,
         icon: definition.icon,
       });
     }
