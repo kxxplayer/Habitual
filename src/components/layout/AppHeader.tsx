@@ -17,7 +17,7 @@ const AppHeader: FC = () => {
         <div className="flex items-center">
           {/* SVG checkmark removed */}
           <h1 className="text-lg font-semibold text-primary ml-1.5"> {/* Slightly larger font, added ml for alignment */}
-            Habitual
+            GroviaHabits
           </h1>
         </div>
         {/* Calendar Link and ThemeToggleButton removed from here */}

@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
 // This metadata object is the single source of truth for your app's icons.
 // Next.js will automatically generate the correct <link> tags from this.
 export const metadata: Metadata = {
-  title: 'Habitual',
+  title: 'GroviaHabits',
   description: 'Improve your habits, one day at a time.',
   manifest: '/manifest.json',
   icons: {
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default", 
-    title: "Habitual",
+    title: "GroviaHabits",
   },
 };
 
