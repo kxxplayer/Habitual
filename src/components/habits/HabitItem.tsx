@@ -63,7 +63,7 @@ const HabitItem: React.FC<HabitItemProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-full"
+          className="h-9 w-9 rounded-full transition-all duration-150 ease-in-out hover:bg-muted active:scale-90"
           onClick={(e) => {
             e.stopPropagation();
             onToggleComplete(habit.id, currentDate);
@@ -71,7 +71,7 @@ const HabitItem: React.FC<HabitItemProps> = ({
           aria-label={isCompleted ? "Mark as incomplete" : "Mark as complete"}
         >
           {isCompleted ? (
-            <CheckCircle2 className="h-6 w-6 text-accent" />
+            <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
           ) : (
             <Circle className="h-6 w-6 text-muted-foreground/50" />
           )}
