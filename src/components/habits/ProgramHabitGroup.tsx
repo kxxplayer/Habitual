@@ -1,134 +1,120 @@
+// src/components/habits/ProgramHabitGroup.tsx
+
 "use client";
 
 import * as React from 'react';
 import type { FC } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Brain, Loader2 } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import HabitItem from './HabitItem';
+import type { Habit, WeekDay } from '@/types';
+import { Target, CheckCircle2, Circle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
-interface GoalInputProgramDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (goal: string, duration: string) => void;
-  isLoading?: boolean;
+interface ProgramHabitGroupProps {
+  programId: string;
+  programName: string;
+  habitsInProgram: Habit[];
+  onOpenDetailView: (habit: Habit) => void;
+  todayString: string;
+  todayAbbr: WeekDay | undefined;
+  onToggleComplete: (habitId: string, date: string) => void;
+  onDelete: (habitId: string) => void;
+  onEdit: (habit: Habit) => void;
+  onReschedule: (habit: Habit, missedDate: string) => void;
 }
 
-const formSchema = z.object({
-  goal: z.string().min(10, { message: "Please describe your goal in at least 10 characters." }),
-  duration: z.string({ required_error: "Please select a duration." }),
-});
+const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
+  programId,
+  programName,
+  habitsInProgram,
+  onOpenDetailView,
+  todayString,
+  todayAbbr,
+  onToggleComplete,
+  onDelete,
+  onEdit,
+  onReschedule,
+}) => {
+  const habitsScheduledToday = todayAbbr
+    ? habitsInProgram.filter(habit =>
+        habit.daysOfWeek.includes(todayAbbr) ||
+        habit.completionLog.some(log => log.date === todayString && log.status === 'pending_makeup')
+      )
+    : [];
 
-type FormData = z.infer<typeof formSchema>;
+  const completedTodayCount = habitsScheduledToday.filter(habit =>
+    habit.completionLog.some(log => log.date === todayString && log.status === 'completed')
+  ).length;
 
-const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClose, onSubmit, isLoading }) => {
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      goal: "",
-      duration: "4 weeks",
-    },
-  });
+  const allProgramTasksForTodayCompleted = habitsScheduledToday.length > 0 && completedTodayCount === habitsScheduledToday.length;
+  const progressPercentToday = habitsScheduledToday.length > 0 ? (completedTodayCount / habitsScheduledToday.length) * 100 : 0;
 
-  const handleFormSubmit = (data: FormData) => {
-    onSubmit(data.goal, data.duration);
-  };
+  if (habitsScheduledToday.length === 0) {
+    return null;
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      {/* FIX: Dialog layout updated to support scrolling on mobile */}
-      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
-        <DialogHeader className="px-6 pt-6">
-          <DialogTitle className="flex items-center text-2xl">
-            <Brain className="mr-3 h-6 w-6 text-primary" />
-            Create a New Habit Program
-          </DialogTitle>
-          <DialogDescription className="pt-1">
-            Describe your main objective, and our AI will generate a structured habit program to help you achieve it.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col flex-grow min-h-0">
-          {/* FIX: This content area is now scrollable when it overflows */}
-          <div className="flex-grow overflow-y-auto px-6 py-4 space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="goal-input" className="text-base font-semibold">
-                What is your primary goal?
-              </Label>
-              <Controller
-                name="goal"
-                control={control}
-                render={({ field }) => (
-                  <Textarea
-                    id="goal-input"
-                    placeholder="e.g., 'Learn to play the guitar', 'Get in shape for a marathon', or 'Become a better public speaker'"
-                    className="min-h-[100px] text-base"
-                    {...field}
-                    // FIX: Removed autoFocus that caused keyboard to pop-up
-                  />
+    <Accordion type="single" collapsible className="w-full" defaultValue={`program-${programId}`}>
+      <AccordionItem value={`program-${programId}`} className="border border-primary/20 rounded-lg shadow-md overflow-hidden bg-card/80">
+        <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 transition-colors w-full">
+          <div className="flex flex-col w-full space-y-1.5">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center space-x-3">
+                <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} />
+                <span className={cn("font-semibold text-lg text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
+                  {programName}
+                </span>
+              </div>
+              <div className="flex items-center space-x-1.5 text-xs">
+                {allProgramTasksForTodayCompleted ?
+                  <CheckCircle2 className="h-4 w-4 text-accent" /> :
+                  <Circle className={cn("h-3.5 w-3.5", habitsScheduledToday.length > 0 ? "text-orange-500" : "text-muted-foreground/60")} />
+                }
+                {habitsScheduledToday.length > 0 ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-700/30 dark:text-amber-200">
+                    {`${completedTodayCount}/${habitsScheduledToday.length} today`}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">No tasks today</span>
                 )}
-              />
-              {errors.goal && <p className="text-sm text-destructive">{errors.goal.message}</p>}
+              </div>
             </div>
-
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">
-                How long do you want to focus on this goal?
-              </Label>
-              <Controller
-                name="duration"
-                control={control}
-                render={({ field }) => (
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="flex flex-col space-y-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="2 weeks" id="d-2w" />
-                      <Label htmlFor="d-2w">2 Weeks (Quick Start)</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="4 weeks" id="d-4w" />
-                      <Label htmlFor="d-4w">4 Weeks (Standard)</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="8 weeks" id="d-8w" />
-                      <Label htmlFor="d-8w">8 Weeks (Deep Dive)</Label>
-                    </div>
-                  </RadioGroup>
-                )}
+            {habitsScheduledToday.length > 0 && (
+              <Progress
+                value={progressPercentToday}
+                className="h-1.5 w-full mt-1"
+                indicatorClassName={allProgramTasksForTodayCompleted ? "bg-accent" : "bg-primary"}
               />
-              {errors.duration && <p className="text-sm text-destructive">{errors.duration.message}</p>}
-            </div>
+            )}
           </div>
-          <DialogFooter className="px-6 pb-6 pt-4 border-t">
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Generate Program
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </AccordionTrigger>
+        <AccordionContent className="bg-muted/20 border-t border-border">
+          {/* Container updated to a responsive grid */}
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {habitsScheduledToday.length > 0 ? (
+              habitsScheduledToday.map(habit => (
+                <HabitItem
+                  key={habit.id}
+                  habit={habit}
+                  todayString={todayString}
+                  onToggleComplete={onToggleComplete}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                  onReschedule={() => onReschedule(habit, todayString)}
+                  onOpenDetailView={onOpenDetailView}
+                  isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
+                  currentDate={todayString}
+                />
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-2 col-span-full">No habits in this program scheduled for today.</p>
+            )}
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 };
 
-export default GoalInputProgramDialog;
+export default ProgramHabitGroup;
