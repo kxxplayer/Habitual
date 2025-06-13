@@ -3,10 +3,12 @@
 "use client";
 
 import type { Habit, EarnedBadge } from '@/types';
+// Make sure to import all necessary badge IDs
 import { SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID } from '@/types';
 import { calculateStreak } from '@/lib/dateUtils';
 import { format } from 'date-fns';
 
+// This interface should be here or imported if it's defined elsewhere
 interface BadgeDefinition {
   id: string;
   name: string;
@@ -15,7 +17,8 @@ interface BadgeDefinition {
   condition: (habits: Habit[], existingBadges: EarnedBadge[]) => boolean;
 }
 
-const badgeDefinitions: BadgeDefinition[] = [
+// FIX: Export the badgeDefinitions array so it can be used on the achievements page
+export const badgeDefinitions: BadgeDefinition[] = [
   {
     id: FIRST_HABIT_COMPLETED_BADGE_ID,
     name: "First Step! ✅",
