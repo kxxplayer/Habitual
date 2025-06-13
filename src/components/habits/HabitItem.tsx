@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from 'react';
+import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +11,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { motion } from "framer-motion";
 import {
   CheckCircle2,
   Circle,
@@ -74,27 +74,25 @@ const HabitItem: React.FC<HabitItemProps> = ({
       <div className="p-3 flex items-center gap-3">
         {/* Completion Toggle Button */}
         <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => {
-            onToggleComplete(habit.id, currentDate); // your toggle logic
-          }}
+          whileTap={{ scale: 0.85 }}
           className={cn(
-            "w-full rounded-md text-white font-semibold py-2 px-4 transition-colors duration-200",
-            isCompleted
-              ? "bg-muted text-muted-foreground cursor-default"
-              : "bg-gradient-to-r from-green-400 to-blue-500 hover:opacity-90"
+            "h-9 w-9 rounded-full flex items-center justify-center transition-colors duration-200",
+            isCompleted ? "bg-muted text-muted-foreground" : "bg-background text-muted-foreground/50",
+            "hover:bg-muted focus:outline-none"
           )}
-          disabled={isCompleted}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleComplete(habit.id, currentDate);
+          }}
+          aria-label={isCompleted ? "Mark as incomplete" : "Mark as complete"}
         >
           {isCompleted ? (
-            <div className="flex items-center justify-center gap-2">
-              <CheckCircle2 className="h-5 w-5" />
-              Completed
-            </div>
+            <CheckCircle2 className="h-6 w-6" />
           ) : (
-            "Mark as Done"
+            <Circle className="h-6 w-6" />
           )}
         </motion.button>
+
         {/* Habit Name and Icon */}
         <div className="flex-grow flex items-center gap-3 truncate">
           <span className="text-2xl">{getHabitIcon(habit.name)}</span>
