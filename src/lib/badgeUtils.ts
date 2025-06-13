@@ -48,6 +48,10 @@ const badgeDefinitions: BadgeDefinition[] = [
   },
 ];
 
+// src/lib/badgeUtils.ts
+
+// ... other code ...
+
 export function checkAndAwardBadges(habits: Habit[], existingBadges: EarnedBadge[]): EarnedBadge[] {
   const newlyEarnedBadges: EarnedBadge[] = [];
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -59,7 +63,7 @@ export function checkAndAwardBadges(habits: Habit[], existingBadges: EarnedBadge
         id: definition.id,
         name: definition.name,
         description: definition.description,
-        dateAchieved: today,
+        earnedDate: today, // FIX: Changed property from 'dateAchieved' to 'earnedDate'
         icon: definition.icon,
       });
     }

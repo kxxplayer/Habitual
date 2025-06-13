@@ -50,7 +50,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   const allProgramTasksForTodayCompleted = habitsScheduledToday.length > 0 && completedTodayCount === habitsScheduledToday.length;
   const progressPercentToday = habitsScheduledToday.length > 0 ? (completedTodayCount / habitsScheduledToday.length) * 100 : 0;
 
-  if (habitsInProgram.length === 0) {
+  if (habitsScheduledToday.length === 0) {
     return null;
   }
 
@@ -90,26 +90,25 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
           </div>
         </AccordionTrigger>
         <AccordionContent className="bg-muted/20 border-t border-border">
-          {/* FIX: Changed padding here to be more consistent with the header */}
-          <div className="px-4 pb-3 pt-2 space-y-2">
+          {/* Container updated to a responsive grid */}
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {habitsScheduledToday.length > 0 ? (
               habitsScheduledToday.map(habit => (
-                <div onClick={() => onOpenDetailView(habit)} key={habit.id} className="cursor-pointer">
-                  <HabitItem
-                    habit={habit}
-                    todayString={todayString}
-                    onToggleComplete={onToggleComplete}
-                    onDelete={onDelete}
-                    onEdit={onEdit}
-                    onReschedule={() => onReschedule(habit, todayString)}
-                    onOpenDetailView={onOpenDetailView}
-                    isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
-                    currentDate={todayString}
-                  />
-                </div>
+                <HabitItem
+                  key={habit.id}
+                  habit={habit}
+                  todayString={todayString}
+                  onToggleComplete={onToggleComplete}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                  onReschedule={() => onReschedule(habit, todayString)}
+                  onOpenDetailView={onOpenDetailView}
+                  isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
+                  currentDate={todayString}
+                />
               ))
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-2">No habits in this program scheduled for today.</p>
+              <p className="text-sm text-muted-foreground text-center py-2 col-span-full">No habits in this program scheduled for today.</p>
             )}
           </div>
         </AccordionContent>

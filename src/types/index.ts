@@ -44,6 +44,10 @@ export interface Habit {
   programName?: string;
 }
 
+// src/types/index.ts
+
+// ... other code ...
+
 export interface CreateHabitFormData {
   id?: string;
   name: string;
@@ -61,6 +65,7 @@ export interface EarnedBadge {
   name: string;
   description: string;
   earnedDate: string;
+  icon?: string; // FIX: Added optional icon property to match created objects
 }
 
 export interface AISuggestion {
