@@ -6,7 +6,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar as CalendarSkeleton } from '@/components/ui/calendar'; // Use actual calendar for skeleton shape
 import { cn } from '@/lib/utils';
 
 export default function CalendarLoading() {
