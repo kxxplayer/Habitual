@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "module": "NodeNext",
+    "skipLibCheck": true,
     "esModuleInterop": true,
     "moduleResolution": "nodenext",
     "noImplicitReturns": true,
