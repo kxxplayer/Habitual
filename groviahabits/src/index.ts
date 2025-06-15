@@ -1,14 +1,11 @@
 // groviahabits/src/index.ts
 
-import { initializeApp } from "firebase-admin/app";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-// FIX: `runFlow` is the new way to run a flow, imported from '@genkit-ai/flow'.
-import { runFlow } from "@genkit-ai/flow";
+import {initializeApp} from "firebase-admin/app";
+import {onCall, HttpsError} from "firebase-functions/v2/https";
 
-// This import should now work correctly.
-import { habitCreationFlow } from "./flows/habit-creation-from-description";
+// Genkit imports have been removed from the top level to speed up startup.
 
-// Initialize Firebase Admin SDK. Genkit initialization is no longer needed here.
+// Initialize Firebase Admin SDK.
 initializeApp();
 
 // Define the HTTPS Callable Function
@@ -19,22 +16,27 @@ export const generateHabit = onCall(async (request) => {
     console.error("Invalid argument received:", request.data);
     throw new HttpsError(
       "invalid-argument",
-      "The function must be called with a `description` string."
+      "The function must be called with a `description` string.",
     );
   }
 
   console.log(`Received description: ${description}`);
 
   try {
-    // FIX: Use `runFlow` to execute the flow.
+    const {runFlow} = await import("@genkit-ai/flow");
+    // FIX: Add the .js extension to the import path.
+    const {habitCreationFlow} = await import(
+      "./flows/habit-creation-from-description.js"
+    );
+
     const result = await runFlow(habitCreationFlow, description);
     console.log("Successfully generated habit:", result);
-    return { result };
+    return {result};
   } catch (error) {
     console.error("Error running Genkit flow:", error);
     throw new HttpsError(
       "internal",
-      "An error occurred while generating the habit."
+      "An error occurred while generating the habit.",
     );
   }
 });

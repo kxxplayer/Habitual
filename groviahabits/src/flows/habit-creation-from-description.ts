@@ -1,10 +1,10 @@
 // groviahabits/src/flows/habit-creation-from-description.ts
 
-import { z } from "zod";
-import { defineFlow } from "@genkit-ai/flow";
-import { generate } from "@genkit-ai/ai";
+import {z} from "zod";
+import {defineFlow} from "@genkit-ai/flow";
+import {generate} from "@genkit-ai/ai";
 // FIX: The model for this library version is named `geminiPro`.
-import { geminiPro } from "@genkit-ai/vertexai";
+import {geminiPro} from "@genkit-ai/vertexai";
 
 // Define the shape of your AI's output using Zod
 const HabitSchema = z.object({

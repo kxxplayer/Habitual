@@ -29,7 +29,7 @@ export const generateICS = (habit: Habit): string => {
   let eventStartDate: Date;
   let eventEndDate: Date | undefined;
   let isAllDay = false;
-  let baseDate = setSeconds(setMilliseconds(new Date(), 0), 0);
+  const baseDate = setSeconds(setMilliseconds(new Date(), 0), 0);
 
   if (habit.specificTime && habit.specificTime.toLowerCase() !== 'anytime' && habit.specificTime.toLowerCase() !== 'flexible' && /^\d{2}:\d{2}$/.test(habit.specificTime)) {
     try {
