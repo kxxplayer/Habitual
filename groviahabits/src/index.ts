@@ -40,3 +40,25 @@ export const generateHabit = onCall(async (request) => {
     );
   }
 });
+export const getCommonHabitSuggestions = onCall(async (request) => {
+  const category = request.data.category; // Expect a category from the client
+
+  if (!category || typeof category !== "string") {
+    throw new HttpsError(
+      "invalid-argument",
+      "The function must be called with a `category` string."
+    );
+  }
+
+  try {
+    const {runFlow} = await import("@genkit-ai/flow");
+    const {commonHabitSuggestionsFlow} = await import(
+      "./flows/common-habit-suggestions-flow.js"
+    );
+    const result = await runFlow(commonHabitSuggestionsFlow, category);
+    return {result};
+  } catch (error) {
+    console.error("Error running suggestions flow:", error);
+    throw new HttpsError("internal", "An error occurred while getting suggestions.");
+  }
+});
