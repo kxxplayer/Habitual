@@ -136,3 +136,20 @@ export interface ProgramSuggestionDialogProps {
   onAddProgramHabits: (habits: SuggestedProgramHabit[], programName: string) => void;
   isLoading?: boolean;
 }
+// ADD THESE THREE TYPE DEFINITIONS TO THE BOTTOM OF YOUR TYPES FILE
+
+export type CommonSuggestedHabitType = {
+  name: string;
+  category?: HabitCategory;
+  description?: string;
+};
+
+export type ReflectionStarterInput = {
+  habitName: string;
+  date: string;
+  note?: string;
+};
+
+export type ReflectionStarterOutput = {
+  reflectionPrompt: string;
+};

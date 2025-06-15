@@ -8,6 +8,9 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { NextPage } from 'next';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// ADDED: Imports for Firebase Functions
+import { getFunctions, httpsCallable } from 'firebase/functions';
+
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
@@ -32,17 +35,15 @@ import type {
   HabitCategory,
   EarnedBadge,
   CreateHabitFormData,
-  SuggestedHabitForCommonList as CommonSuggestedHabitType,
+  CommonSuggestedHabitType,
   SuggestedProgramHabit,
-  GenerateHabitProgramOutput
+  GenerateHabitProgramOutput,
+  ReflectionStarterInput,
+  ReflectionStarterOutput
 } from '@/types';
 import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm } from '@/types';
 
-import { getHabitSuggestion } from '@/ai/flows/habit-suggestion';
-import { getMotivationalQuote } from '@/ai/flows/motivational-quote-flow';
-import { getCommonHabitSuggestions } from '@/ai/flows/common-habit-suggestions-flow';
-import { generateHabitProgramFromGoal } from '@/ai/flows/generate-habit-program-flow';
-import { getReflectionStarter, type ReflectionStarterInput, type ReflectionStarterOutput } from '@/ai/flows/reflection-starter-flow';
+// REMOVED: All imports from '@/ai/flows/...' have been deleted.
 
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { useToast } from "@/hooks/use-toast";
@@ -66,13 +67,19 @@ import { format, getDay } from 'date-fns';
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const POINTS_PER_COMPLETION = 10;
-
 const USER_DATA_COLLECTION = "users";
 const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
-
 const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
 const DEBOUNCE_SAVE_DELAY_MS = 2500;
+
+// ADDED: Create references to your Cloud Functions
+const functions = getFunctions();
+const getCommonHabitSuggestionsCallable = httpsCallable(functions, 'getCommonHabitSuggestions');
+const getHabitSuggestionCallable = httpsCallable(functions, 'getHabitSuggestion');
+const generateHabitProgramFromGoalCallable = httpsCallable(functions, 'generateHabitProgramFromGoal');
+const getReflectionStarterCallable = httpsCallable(functions, 'getReflectionStarter');
+// Note: You would also create a callable for getMotivationalQuote if you use it.
 
 function sanitizeForFirestore<T>(data: T): T {
   if (data === null || typeof data !== 'object') {
@@ -117,35 +124,27 @@ const HomePage: NextPage = () => {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
   const [totalPoints, setTotalPoints] = useState<number>(0);
-
   const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = useState(false);
   const [initialFormDataForDialog, setInitialFormDataForDialog] = useState<Partial<CreateHabitFormData> | null>(null);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [isDailyQuestDialogOpen, setIsDailyQuestDialogOpen] = useState(false);
-
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = useState<Habit | null>(null);
   const [aiSuggestion, setAISuggestion] = useState<AISuggestionType | null>(null);
   const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = useState(false);
-
   const [isReflectionDialogOpen, setIsReflectionDialogOpen] = useState(false);
   const [reflectionDialogData, setReflectionDialogData] = useState<{
     habitId: string; date: string; habitName: string; initialNote?: string;
   } | null>(null);
-
   const [rescheduleDialogData, setRescheduleDialogData] = useState<{
     habit: Habit; missedDate: string;
   } | null>(null);
-
   const [commonHabitSuggestions, setCommonHabitSuggestions] = useState<CommonSuggestedHabitType[]>([]);
   const [isLoadingCommonSuggestions, setIsLoadingCommonSuggestions] = useState(false);
   const [commonSuggestionsFetched, setCommonSuggestionsFetched] = useState(false);
-
   const [isDeleteHabitConfirmOpen, setIsDeleteHabitConfirmOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<{ id: string; name: string } | null>(null);
-
   const [selectedHabitForDetailView, setSelectedHabitForDetailView] = useState<Habit | null>(null);
   const [isDetailViewDialogOpen, setIsDetailViewDialogOpen] = useState(false);
-
   const [isGoalInputProgramDialogOpen, setIsGoalInputProgramDialogOpen] = useState(false);
   const [isProgramSuggestionLoading, setIsProgramSuggestionLoading] = useState(false);
   const [programSuggestion, setProgramSuggestion] = useState<GenerateHabitProgramOutput | null>(null);
@@ -222,21 +221,6 @@ const HomePage: NextPage = () => {
               originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
             };
           })
-          .map((log: unknown): HabitCompletionLogEntry | undefined => {
-            const typedLog = log as Partial<HabitCompletionLogEntry & { status?: string; originalMissedDate?: string }>;
-            if (typeof typedLog.date !== 'string' || !typedLog.date.match(/^\d{4}-\d{2}-\d{2}$/)) return undefined;
-            return {
-              date: typedLog.date,
-              time: typeof typedLog.time === 'string' && typedLog.time.length > 0 ? typedLog.time : 'N/A',
-              note: typeof typedLog.note === 'string' ? typedLog.note : undefined,
-              status: ['completed', 'pending_makeup', 'skipped'].includes(typedLog.status || '')
-                ? (typedLog.status as 'completed' | 'pending_makeup' | 'skipped')
-                : 'completed',
-              originalMissedDate: typeof typedLog.originalMissedDate === 'string' && typedLog.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/)
-                ? typedLog.originalMissedDate
-                : undefined,
-            };
-          })
           .filter((log: HabitCompletionLogEntry | undefined): log is HabitCompletionLogEntry => log !== undefined)
           .sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)),
         reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
@@ -247,10 +231,14 @@ const HomePage: NextPage = () => {
       setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
       setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
 
+      // MODIFIED: Call to getCommonHabitSuggestions now uses the callable function.
       if (parsedHabits.length === 0 && !commonSuggestionsFetched && authUser) {
         setIsLoadingCommonSuggestions(true);
-        getCommonHabitSuggestions({ count: 5 })
-          .then(response => setCommonHabitSuggestions(response?.suggestions || []))
+        getCommonHabitSuggestionsCallable({ category: 'General' }) // Pass a default category
+          .then(response => {
+            const data = response.data as { result: { suggestions: CommonSuggestedHabitType[] } };
+            setCommonHabitSuggestions(data.result?.suggestions || []);
+          })
           .catch(err => {
             console.error("Failed to load common habit suggestions:", err);
           })
@@ -269,7 +257,8 @@ const HomePage: NextPage = () => {
     });
     return () => unsubscribeFirestore();
   }, [authUser, mounted, commonSuggestionsFetched]);
-  
+
+  // ... (the rest of your useEffects remain largely the same) ...
   useEffect(() => {
     if (!authUser || !mounted || !firstDataLoadCompleteRef.current || isLoadingData) {
       return;
@@ -390,16 +379,24 @@ const HomePage: NextPage = () => {
   };
   
   const handleOpenRescheduleDialog = (habit: Habit, missedDate: string) => setRescheduleDialogData({ habit, missedDate });
-  const handleGetAIReflectionPrompt = async (input: ReflectionStarterInput) => getReflectionStarter(input);
+  
+  // MODIFIED: This now calls the Firebase Function
+  const handleGetAIReflectionPrompt = async (input: ReflectionStarterInput): Promise<ReflectionStarterOutput> => {
+    const response = await getReflectionStarterCallable(input);
+    return response.data as ReflectionStarterOutput;
+  };
+
   const onOpenReflectionDialog = (habitId: string, date: string, habitName: string) => {
     const habit = habits.find(h => h.id === habitId);
     const initialNote = habit?.completionLog.find(l => l.date === date)?.note;
     setReflectionDialogData({ habitId, date, habitName, initialNote });
     setIsReflectionDialogOpen(true);
   };
+  
   const onToggleReminder = (habitId: string, enabled: boolean) => {
     setHabits(prev => prev.map(h => h.id === habitId ? {...h, reminderEnabled: enabled} : h));
   };
+  
   const handleSaveReflectionNote = (note: string) => {
     if (reflectionDialogData) {
       const { habitId, date } = reflectionDialogData;
@@ -436,36 +433,41 @@ const HomePage: NextPage = () => {
     }
   };
 
+  // MODIFIED: This now calls the Firebase Function
   const handleGetAISuggestion = async (habit: Habit) => {
     setIsAISuggestionDialogOpen(true);
     setAISuggestion({ suggestionText: '', isLoading: true, error: null, habitId: habit.id });
     try {
-      const res = await getHabitSuggestion({
+      const response = await getHabitSuggestionCallable({
         habitName: habit.name,
         trackingData: `Completions: ${habit.completionLog.length}`,
         daysOfWeek: habit.daysOfWeek,
       });
-      setAISuggestion({ suggestionText: res.suggestion, isLoading: false, error: null, habitId: habit.id });
+      const data = response.data as { suggestion: string };
+      setAISuggestion({ suggestionText: data.suggestion, isLoading: false, error: null, habitId: habit.id });
     } catch (e) {
       setAISuggestion({ suggestionText: '', isLoading: false, error: 'Could not get suggestion.', habitId: habit.id });
     }
   };
   
   const handleOpenGoalInputProgramDialog = () => setIsGoalInputProgramDialogOpen(true);
+  
+  // MODIFIED: This now calls the Firebase Function
   const handleGenerateProgram = async (goal: string, duration: string) => {
     setIsGoalInputProgramDialogOpen(false);
     setIsProgramSuggestionLoading(true);
     try {
-      const res = await generateHabitProgramFromGoal({ goal, focusDuration: duration });
+      const response = await generateHabitProgramFromGoalCallable({ goal, focusDuration: duration });
+      const data = response.data as GenerateHabitProgramOutput;
       setProgramSuggestion({
         goal,
         focusDuration: duration,
-        programName: res.programName,
-        suggestedHabits: res.suggestedHabits,
+        programName: data.programName,
+        suggestedHabits: data.suggestedHabits,
       });
       setIsProgramSuggestionDialogOpen(true);
     } catch (e) {
-      // toast({ title: "Error", description: "Failed to generate program.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to generate program.", variant: "destructive" });
     } finally {
       setIsProgramSuggestionLoading(false);
     }
@@ -496,11 +498,11 @@ const HomePage: NextPage = () => {
     setIsCreateHabitDialogOpen(true);
   };
   
-
   if (!mounted || isLoadingAuth || (!firstDataLoadCompleteRef.current && isLoadingData)) {
     return <LoadingFallback />;
   }
 
+  // ... (Your JSX remains the same) ...
   return (
     <>
       <AppPageLayout onAddNew={openCreateHabitDialogForNew}>
@@ -617,34 +619,21 @@ const HomePage: NextPage = () => {
           onGetAIReflectionPrompt={handleGetAIReflectionPrompt}
         />
       )}
-      {/*
-      <DailyQuestDialog
-        isOpen={isDailyQuestDialogOpen}
-        onClose={() => {
-            if (authUser) {
-              localStorage.setItem(`<span class="math-inline">\{LS\_KEY\_PREFIX\_DAILY\_QUEST\}</span>{authUser.uid}`, 'seen');
-            }
-            setIsDailyQuestDialogOpen(false)
-          }
-        }
-        userName={authUser?.displayName || 'there'}
-      />
-      */}
-       <GoalInputProgramDialog
-        isOpen={isGoalInputProgramDialogOpen}
-        onClose={() => setIsGoalInputProgramDialogOpen(false)}
-        onSubmit={handleGenerateProgram}
-        isLoading={isProgramSuggestionLoading}
-      />
-      {programSuggestion && (
-        <ProgramSuggestionDialog
-          isOpen={isProgramSuggestionDialogOpen}
-          onClose={() => setIsProgramSuggestionDialogOpen(false)}
-          programSuggestion={programSuggestion}
-          onAddProgramHabits={handleAddProgramHabits}
-          isLoading={isProgramSuggestionLoading}
-        />
-      )}
+      <GoalInputProgramDialog
+       isOpen={isGoalInputProgramDialogOpen}
+       onClose={() => setIsGoalInputProgramDialogOpen(false)}
+       onSubmit={handleGenerateProgram}
+       isLoading={isProgramSuggestionLoading}
+     />
+     {programSuggestion && (
+       <ProgramSuggestionDialog
+         isOpen={isProgramSuggestionDialogOpen}
+         onClose={() => setIsProgramSuggestionDialogOpen(false)}
+         programSuggestion={programSuggestion}
+         onAddProgramHabits={handleAddProgramHabits}
+         isLoading={isProgramSuggestionLoading}
+       />
+     )}
     </>
   );
 };
