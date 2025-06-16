@@ -39,7 +39,7 @@ interface CreateHabitDialogProps {
 
 const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
-const createHabitFormSchema = z.object({ // FIX 2: Use z.object
+const createHabitFormSchema = z.object({
   id: z.string().optional(),
   description: z.string().optional(),
   name: z.string().min(1, "Habit name is required."),
@@ -48,7 +48,8 @@ const createHabitFormSchema = z.object({ // FIX 2: Use z.object
   optimalTiming: z.string().optional(),
   durationHours: z.coerce.number().min(0).optional().nullable(),
   durationMinutes: z.coerce.number().min(0).max(59).optional().nullable(),
-  specificTime: z.string().optional().refine((val: string) => val === '' || val === undefined || /^\d{2}:\d{2}$/.test(val), {
+  // FIX: The type for 'val' is now correctly set to 'string | undefined'
+  specificTime: z.string().optional().refine((val: string | undefined) => !val || /^\d{2}:\d{2}$/.test(val), {
     message: "Time should be in HH:mm format or empty",
   }),
 });
