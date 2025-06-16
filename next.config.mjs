@@ -17,7 +17,7 @@ const withBundleAnalyzer = nextBundleAnalyzer({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Add this line to enable static export
-  output: 'export',
+  //output: 'export',
 
   // Your existing configurations from both files
   typescript: {
