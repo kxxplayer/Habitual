@@ -71,19 +71,29 @@ const DEBOUNCE_SAVE_DELAY_MS = 2500;
 // Helper function to call Genkit flows
 async function callGenkitFlow<I, O>(flowName: string, input: I): Promise<O> {
   try {
-    console.log(`Calling ${flowName} with input:`, input);
+    console.log(`[${flowName}] Starting request with input:`, input);
+    
+    // Validate that input is not undefined or null
+    if (input === undefined || input === null) {
+      throw new Error(`Input cannot be ${input === undefined ? 'undefined' : 'null'}`);
+    }
+    
+    const requestBody = JSON.stringify(input);
+    console.log(`[${flowName}] Request body:`, requestBody);
     
     const res = await fetch(`/api/${flowName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(input), // Ensure input is properly serialized
+      body: requestBody,
     });
+
+    console.log(`[${flowName}] Response status:`, res.status, res.statusText);
 
     if (!res.ok) {
       const errorText = await res.text();
-      console.error(`Error calling ${flowName}:`, {
+      console.error(`[${flowName}] Error response:`, {
         status: res.status,
         statusText: res.statusText,
         body: errorText
@@ -92,10 +102,10 @@ async function callGenkitFlow<I, O>(flowName: string, input: I): Promise<O> {
     }
 
     const result = await res.json();
-    console.log(`${flowName} result:`, result);
+    console.log(`[${flowName}] Success result:`, result);
     return result;
   } catch (error) {
-    console.error(`Error calling ${flowName}:`, error);
+    console.error(`[${flowName}] Request failed:`, error);
     throw error;
   }
 }
@@ -470,11 +480,13 @@ const HomePage: NextPage = () => {
   const handleOpenGoalInputProgramDialog = () => setIsGoalInputProgramDialogOpen(true);
   
   const handleGenerateProgram = async (goal: string, duration: string) => {
+    console.log('handleGenerateProgram called with:', { goal, duration });
+    
     setIsGoalInputProgramDialogOpen(false);
     setIsProgramSuggestionLoading(true);
     
     try {
-      // Validate inputs before sending
+      // Validate inputs
       if (!goal || goal.trim() === '') {
         throw new Error('Goal is required');
       }
@@ -482,12 +494,19 @@ const HomePage: NextPage = () => {
         throw new Error('Focus duration is required');
       }
   
-      console.log('Generating program with:', { goal, focusDuration: duration });
-      
-      const data = await callGenkitFlow<any, GenerateHabitProgramOutput>('generateHabitProgramFromGoal', { 
+      const requestData = { 
         goal: goal.trim(), 
         focusDuration: duration.trim() 
-      });
+      };
+      
+      console.log('Sending request data:', requestData);
+      
+      const data = await callGenkitFlow<typeof requestData, GenerateHabitProgramOutput>(
+        'generateHabitProgramFromGoal', 
+        requestData
+      );
+      
+      console.log('Received program data:', data);
       
       const validHabits = (data.suggestedHabits || []).filter(
         (h): h is SuggestedProgramHabit => HABIT_CATEGORIES.includes(h.category as HabitCategory)
@@ -504,7 +523,7 @@ const HomePage: NextPage = () => {
       console.error('Failed to generate program:', e);
       toast({ 
         title: "Error", 
-        description: e instanceof Error ? e.message : "Failed to generate program.",
+        description: e instanceof Error ? e.message : "Failed to generate program. Please try again.",
         variant: "destructive"
       });
     } finally {

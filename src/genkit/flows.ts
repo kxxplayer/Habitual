@@ -60,16 +60,26 @@ export const generateHabit = ai.defineFlow(
         throw new Error('Description is required');
       }
 
-      const prompt = `Based on the user's goal: "${description}", generate a structured habit.
-      
+      const prompt = `Based on the user's goal: "${description}", generate a structured habit that directly relates to this goal.
+
+      If the goal mentions:
+      - SQL, coding, programming, development: Create a study/practice habit with "Work & Study" category
+      - Exercise, fitness, running, gym: Create a fitness habit with "Health & Fitness" category  
+      - Reading, books, learning: Create a learning habit with appropriate category
+      - Guitar, music, art, creative: Create a creative habit with "Creative" category
+
       Respond with a JSON object containing:
-      - habitName: a clear, actionable habit name
-      - category: one of [${HabitCategorySchema.options.join(', ')}]
-      - daysOfWeek: array of days like ['Mon', 'Wed', 'Fri']
+      - habitName: a clear, actionable habit name that DIRECTLY relates to "${description}"
+      - category: one of [${HabitCategorySchema.options.join(', ')}] that best fits the goal
+      - daysOfWeek: array of days like ['Mon', 'Wed', 'Fri'] (choose appropriate frequency)
       - optimalTiming: 'morning', 'afternoon', 'evening', or 'anytime'
-      - durationHours: number of hours (optional)
-      - durationMinutes: number of minutes (optional)
+      - durationHours: number of hours (optional, for longer activities)
+      - durationMinutes: number of minutes (15-60 minutes for most habits)
       - specificTime: specific time like '07:00' (optional)
+      
+      Make the habit name specific and actionable. For example:
+      - For "SQL 5 days a week" → "Practice SQL Queries" not "Practice Daily Habit"
+      - For "learn guitar" → "Practice Guitar" not "Practice Daily Habit"
       
       Respond ONLY with valid JSON.`;
 

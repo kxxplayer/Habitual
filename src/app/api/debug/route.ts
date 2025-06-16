@@ -1,4 +1,4 @@
-// Create a new file: src/app/api/debug/route.ts
+// Create: src/app/api/debug/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
 
