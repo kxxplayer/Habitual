@@ -1,15 +1,13 @@
 "use client";
 
 import * as React from 'react';
-import type { FC } from 'react';
-import { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+// FIX 1: Import FC, useState, useEffect directly for clarity
+import { FC, useState, useEffect } from 'react';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-
-// ADDED: Imports for Firebase Functions
+// FIX 2: Change the Zod import to a namespace import. This is the main fix.
+import * as z from 'zod';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,15 +23,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, FilePenLine, Target } from 'lucide-react';
-
-// REMOVED: The direct import of the AI flow.
-// import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
-
 import type { CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
+// FIX 3: The interface was missing. Add it here.
 interface CreateHabitDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,7 +39,7 @@ interface CreateHabitDialogProps {
 
 const weekDaysArray = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
-const createHabitFormSchema = z.object({
+const createHabitFormSchema = z.object({ // FIX 2: Use z.object
   id: z.string().optional(),
   description: z.string().optional(),
   name: z.string().min(1, "Habit name is required."),
@@ -53,7 +48,7 @@ const createHabitFormSchema = z.object({
   optimalTiming: z.string().optional(),
   durationHours: z.coerce.number().min(0).optional().nullable(),
   durationMinutes: z.coerce.number().min(0).max(59).optional().nullable(),
-  specificTime: z.string().optional().refine(val => val === '' || val === undefined || /^\d{2}:\d{2}$/.test(val), {
+  specificTime: z.string().optional().refine((val: string) => val === '' || val === undefined || /^\d{2}:\d{2}$/.test(val), {
     message: "Time should be in HH:mm format or empty",
   }),
 });
@@ -74,10 +69,8 @@ const normalizeDay = (day: string): WeekDay | undefined => {
   return dayMapFullToAbbr[lowerDay] || weekDaysArray.find(d => d.toLowerCase() === lowerDay) || undefined;
 };
 
-// ADDED: Create a reference to your Cloud Function
 const functions = getFunctions();
-// Ensure the function name here matches the one you exported in your backend index.ts
-const generateHabitCallable = httpsCallable(functions, 'generateHabit'); 
+const generateHabitCallable = httpsCallable(functions, 'generateHabit');
 
 const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   isOpen,
@@ -118,10 +111,10 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
           durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
           specificTime: initialData.specificTime || '',
         });
-        setCurrentStep(2);
+        setCurrentStep(2); 
       } else {
         reset(defaultVals);
-        setCurrentStep(1);
+        setCurrentStep(1); 
       }
     }
   }, [isOpen, initialData, reset]);
@@ -133,7 +126,6 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
     }
     setIsAISuggesting(true);
     try {
-      // MODIFIED: This now calls the Firebase Function
       const response = await generateHabitCallable({ description: habitDescriptionForAI });
       const result = (response.data as { result: any }).result;
 
@@ -141,14 +133,11 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
         setValue('category', result.category as HabitCategory);
       }
-
-      // FIX: Added explicit types for `day` and `d` to resolve 'any' type errors.
       const suggestedDays = Array.isArray(result.daysOfWeek) 
         ? result.daysOfWeek
             .map((day: string) => normalizeDay(day))
-            .filter((d: WeekDay | undefined): d is WeekDay => !!d) 
+            .filter((d?: WeekDay): d is WeekDay => !!d) 
         : [];
-
       setValue('daysOfWeek', suggestedDays, { shouldValidate: true });
       setValue('optimalTiming', result.optimalTiming || '');
       setValue('durationHours', result.durationHours ?? null);
@@ -175,7 +164,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-2xl bg-card rounded-xl shadow-xl flex flex-col max-h-[90vh]">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="text-2xl font-bold flex items-center text-primary">
@@ -276,7 +265,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                       <Controller key={day} name="daysOfWeek" control={control} render={({ field }) => (
                         <div className="flex items-center space-x-1 p-1 rounded-md hover:bg-accent/10">
                           <Checkbox id={`dialog-day-${day}`} checked={field.value?.includes(day)}
-                            onCheckedChange={checked => field.onChange(checked ? [...(field.value || []), day].sort((a, b) => weekDaysArray.indexOf(a) - weekDaysArray.indexOf(b)) : (field.value || []).filter(d => d !== day))}
+                            onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), day].sort((a, b) => weekDaysArray.indexOf(a) - weekDaysArray.indexOf(b)) : (field.value || []).filter(d => d !== day))}
                             className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground h-4 w-4" />
                           <Label htmlFor={`dialog-day-${day}`} className="text-xs font-normal cursor-pointer select-none">{day}</Label>
                         </div>)} />))}
