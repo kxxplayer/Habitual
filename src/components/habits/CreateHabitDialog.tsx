@@ -6,6 +6,10 @@ import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+
+// ADDED: Imports for Firebase Functions
+import { getFunctions, httpsCallable } from 'firebase/functions';
+
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,11 +25,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, FilePenLine, Target } from 'lucide-react';
-import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
+
+// REMOVED: The direct import of the AI flow.
+// import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
+
 import type { CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 
 interface CreateHabitDialogProps {
@@ -68,6 +74,11 @@ const normalizeDay = (day: string): WeekDay | undefined => {
   return dayMapFullToAbbr[lowerDay] || weekDaysArray.find(d => d.toLowerCase() === lowerDay) || undefined;
 };
 
+// ADDED: Create a reference to your Cloud Function
+const functions = getFunctions();
+// Ensure the function name here matches the one you exported in your backend index.ts
+const generateHabitCallable = httpsCallable(functions, 'generateHabit'); 
+
 const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   isOpen,
   onClose,
@@ -107,10 +118,10 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
           durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
           specificTime: initialData.specificTime || '',
         });
-        setCurrentStep(2); // Go directly to form for editing
+        setCurrentStep(2);
       } else {
         reset(defaultVals);
-        setCurrentStep(1); // Start at the choice screen for new habits
+        setCurrentStep(1);
       }
     }
   }, [isOpen, initialData, reset]);
@@ -122,12 +133,22 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
     }
     setIsAISuggesting(true);
     try {
-      const result = await createHabitFromDescription({ description: habitDescriptionForAI });
+      // MODIFIED: This now calls the Firebase Function
+      const response = await generateHabitCallable({ description: habitDescriptionForAI });
+      const result = (response.data as { result: any }).result;
+
       setValue('name', result.habitName || '', { shouldValidate: true });
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
         setValue('category', result.category as HabitCategory);
       }
-      const suggestedDays = Array.isArray(result.daysOfWeek) ? result.daysOfWeek.map(day => normalizeDay(day as string)).filter((d): d is WeekDay => !!d) : [];
+
+      // FIX: Added explicit types for `day` and `d` to resolve 'any' type errors.
+      const suggestedDays = Array.isArray(result.daysOfWeek) 
+        ? result.daysOfWeek
+            .map((day: string) => normalizeDay(day))
+            .filter((d: WeekDay | undefined): d is WeekDay => !!d) 
+        : [];
+
       setValue('daysOfWeek', suggestedDays, { shouldValidate: true });
       setValue('optimalTiming', result.optimalTiming || '');
       setValue('durationHours', result.durationHours ?? null);
@@ -166,13 +187,12 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Step 1: Choice Screen */}
         {currentStep === 1 && !isEditing && (
           <div className="flex-grow min-h-0 overflow-y-auto">
             <div className="p-6 grid md:grid-cols-2 gap-6 items-start">
               <div
-                  className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
-                  onClick={() => setCurrentStep(2)}
+                className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
+                onClick={() => setCurrentStep(2)}
               >
                   <div className="flex items-center gap-3 mb-2">
                       <FilePenLine className="h-8 w-8 text-muted-foreground" />
@@ -183,8 +203,8 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                   </p>
               </div>
               <div
-                  className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
-                  onClick={handleOpenProgramDialog}
+                className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
+                onClick={handleOpenProgramDialog}
               >
                   <div className="flex items-center gap-3 mb-2">
                       <Target className="h-8 w-8 text-muted-foreground" />
@@ -198,7 +218,6 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
           </div>
         )}
 
-        {/* Step 2: Unified Form */}
         {currentStep === 2 && (
           <form onSubmit={handleSubmit(onSubmitDialog)} className="flex flex-col flex-grow min-h-0">
             <div className="flex-grow overflow-y-auto px-6">

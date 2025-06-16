@@ -29,7 +29,8 @@ export const generateHabit = onCall(async (request) => {
       "./flows/habit-creation-from-description.js"
     );
 
-    const result = await runFlow(habitCreationFlow, description);
+    // CORRECT
+    const result = await runFlow(habitCreationFlow, {description});
     console.log("Successfully generated habit:", result);
     return {result};
   } catch (error) {
