@@ -1,6 +1,7 @@
-// src/lib/genkit-client.ts
+// src/lib/genkit-service.ts
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/genkit';
+// Since we're using relative URLs, the API will work both in development and production
+const API_URL = '/api/genkit';
 
 export interface GenerateHabitInput {
   description: string;
@@ -64,25 +65,31 @@ async function callGenkitFlow<TInput, TOutput>(
   flowName: string,
   input: TInput
 ): Promise<TOutput> {
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      flow: flowName,
-      input,
-    }),
-  });
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        flow: flowName,
+        input,
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`Failed to call ${flowName}: ${response.statusText}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to call ${flowName}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error calling ${flowName}:`, error);
+    throw error;
   }
-
-  return response.json();
 }
 
-export const genkitClient = {
+export const genkitService = {
   generateHabit: (input: GenerateHabitInput) =>
     callGenkitFlow<GenerateHabitInput, GenerateHabitOutput>('generateHabit', input),
 
@@ -98,20 +105,3 @@ export const genkitClient = {
   getCommonHabitSuggestions: (input: GetCommonHabitSuggestionsInput) =>
     callGenkitFlow<GetCommonHabitSuggestionsInput, GetCommonHabitSuggestionsOutput>('getCommonHabitSuggestions', input),
 };
-
-// Example usage in a React component:
-/*
-import { genkitClient } from '@/lib/genkit-client';
-
-// In your component:
-const generateHabit = async () => {
-  try {
-    const result = await genkitClient.generateHabit({
-      description: "I want to start reading more books"
-    });
-    console.log('Generated habit:', result);
-  } catch (error) {
-    console.error('Error generating habit:', error);
-  }
-};
-*/

@@ -8,9 +8,6 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { NextPage } from 'next';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-// ADDED: Imports for Firebase Functions
-import { getFunctions, httpsCallable } from 'firebase/functions';
-
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
@@ -43,8 +40,6 @@ import type {
 } from '@/types';
 import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm } from '@/types';
 
-// REMOVED: All imports from '@/ai/flows/...' have been deleted.
-
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
 import { useToast } from "@/hooks/use-toast";
 
@@ -73,13 +68,25 @@ const USER_MAIN_DOC_ID = "main";
 const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
 const DEBOUNCE_SAVE_DELAY_MS = 2500;
 
-// ADDED: Create references to your Cloud Functions
-const functions = getFunctions();
-const getCommonHabitSuggestionsCallable = httpsCallable(functions, 'getCommonHabitSuggestions');
-const getHabitSuggestionCallable = httpsCallable(functions, 'getHabitSuggestion');
-const generateHabitProgramFromGoalCallable = httpsCallable(functions, 'generateHabitProgramFromGoal');
-const getReflectionStarterCallable = httpsCallable(functions, 'getReflectionStarter');
-// Note: You would also create a callable for getMotivationalQuote if you use it.
+// Helper function to call Genkit flows
+async function callGenkitFlow<I, O>(flowName: string, input: I): Promise<O> {
+  const res = await fetch(`/api/genkit/${flowName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text();
+    console.error(`Error calling ${flowName}:`, errorBody);
+    throw new Error(`Failed to call flow ${flowName}`);
+  }
+
+  const jsonResponse = await res.json();
+  return jsonResponse.result || jsonResponse;
+}
 
 function sanitizeForFirestore<T>(data: T): T {
   if (data === null || typeof data !== 'object') {
@@ -231,15 +238,17 @@ const HomePage: NextPage = () => {
       setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
       setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
 
-      // MODIFIED: Call to getCommonHabitSuggestions now uses the callable function.
+      // Call to getCommonHabitSuggestions
       if (parsedHabits.length === 0 && !commonSuggestionsFetched && authUser) {
         setIsLoadingCommonSuggestions(true);
-        getCommonHabitSuggestionsCallable({ category: 'General' }) // Pass a default category
-          .then(response => {
-            const data = response.data as { result: { suggestions: CommonSuggestedHabitType[] } };
-            setCommonHabitSuggestions(data.result?.suggestions || []);
+        callGenkitFlow<{ category: string }, { suggestions: { name: string; category: string }[] }>('getCommonHabitSuggestions', { category: 'General' })
+          .then((response) => {
+            const validSuggestions = (response.suggestions || []).filter(
+              (s): s is CommonSuggestedHabitType => HABIT_CATEGORIES.includes(s.category as HabitCategory)
+            );
+            setCommonHabitSuggestions(validSuggestions);
           })
-          .catch(err => {
+          .catch((err) => {
             console.error("Failed to load common habit suggestions:", err);
           })
           .finally(() => {
@@ -258,7 +267,6 @@ const HomePage: NextPage = () => {
     return () => unsubscribeFirestore();
   }, [authUser, mounted, commonSuggestionsFetched]);
 
-  // ... (the rest of your useEffects remain largely the same) ...
   useEffect(() => {
     if (!authUser || !mounted || !firstDataLoadCompleteRef.current || isLoadingData) {
       return;
@@ -380,10 +388,9 @@ const HomePage: NextPage = () => {
   
   const handleOpenRescheduleDialog = (habit: Habit, missedDate: string) => setRescheduleDialogData({ habit, missedDate });
   
-  // MODIFIED: This now calls the Firebase Function
   const handleGetAIReflectionPrompt = async (input: ReflectionStarterInput): Promise<ReflectionStarterOutput> => {
-    const response = await getReflectionStarterCallable(input);
-    return response.data as ReflectionStarterOutput;
+    const response = await callGenkitFlow<ReflectionStarterInput, ReflectionStarterOutput>('getReflectionStarter', input);
+    return response;
   };
 
   const onOpenReflectionDialog = (habitId: string, date: string, habitName: string) => {
@@ -433,18 +440,16 @@ const HomePage: NextPage = () => {
     }
   };
 
-  // MODIFIED: This now calls the Firebase Function
   const handleGetAISuggestion = async (habit: Habit) => {
     setIsAISuggestionDialogOpen(true);
     setAISuggestion({ suggestionText: '', isLoading: true, error: null, habitId: habit.id });
     try {
-      const response = await getHabitSuggestionCallable({
+      const response = await callGenkitFlow<any, { suggestion: string }>('getHabitSuggestion',{
         habitName: habit.name,
         trackingData: `Completions: ${habit.completionLog.length}`,
         daysOfWeek: habit.daysOfWeek,
       });
-      const data = response.data as { suggestion: string };
-      setAISuggestion({ suggestionText: data.suggestion, isLoading: false, error: null, habitId: habit.id });
+      setAISuggestion({ suggestionText: response.suggestion, isLoading: false, error: null, habitId: habit.id });
     } catch (e) {
       setAISuggestion({ suggestionText: '', isLoading: false, error: 'Could not get suggestion.', habitId: habit.id });
     }
@@ -452,18 +457,24 @@ const HomePage: NextPage = () => {
   
   const handleOpenGoalInputProgramDialog = () => setIsGoalInputProgramDialogOpen(true);
   
-  // MODIFIED: This now calls the Firebase Function
   const handleGenerateProgram = async (goal: string, duration: string) => {
     setIsGoalInputProgramDialogOpen(false);
     setIsProgramSuggestionLoading(true);
     try {
-      const response = await generateHabitProgramFromGoalCallable({ goal, focusDuration: duration });
-      const data = response.data as GenerateHabitProgramOutput;
+      const data = await callGenkitFlow<any, GenerateHabitProgramOutput>('generateHabitProgramFromGoal', { 
+        goal, 
+        focusDuration: duration 
+      });
+      
+      const validHabits = (data.suggestedHabits || []).filter(
+        (h): h is SuggestedProgramHabit => HABIT_CATEGORIES.includes(h.category as HabitCategory)
+      );
+
       setProgramSuggestion({
         goal,
         focusDuration: duration,
         programName: data.programName,
-        suggestedHabits: data.suggestedHabits,
+        suggestedHabits: validHabits,
       });
       setIsProgramSuggestionDialogOpen(true);
     } catch (e) {
@@ -502,7 +513,6 @@ const HomePage: NextPage = () => {
     return <LoadingFallback />;
   }
 
-  // ... (Your JSX remains the same) ...
   return (
     <>
       <AppPageLayout onAddNew={openCreateHabitDialogForNew}>

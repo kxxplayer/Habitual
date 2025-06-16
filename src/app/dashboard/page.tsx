@@ -5,8 +5,7 @@ import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
 
 // ADDED: Imports for Firebase Functions
-import { getFunctions, httpsCallable } from 'firebase/functions';
-
+import { genkitService } from '@/lib/genkit-service';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
@@ -36,9 +35,6 @@ const USER_DATA_COLLECTION = "users";
 const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
 
-// ADDED: Create a reference to your Cloud Function
-const functions = getFunctions();
-const getHabitSuggestionCallable = httpsCallable(functions, 'getHabitSuggestion');
 
 const DashboardPage: NextPage = () => {
   const router = useRouter();
@@ -126,18 +122,16 @@ const DashboardPage: NextPage = () => {
   // ADDED: Wrapper function to call the cloud function.
   const handleGetAISuggestion = async (habit: Habit) => {
     try {
-      const response = await getHabitSuggestionCallable({
+      const data = await genkitService.getHabitSuggestion({
         habitName: habit.name,
         trackingData: `Completions: ${habit.completionLog.length}`,
         daysOfWeek: habit.daysOfWeek,
       });
-      const data = response.data as { suggestion: string };
-      // You might want to display this suggestion in a toast or dialog
       toast({ title: "AI Suggestion", description: data.suggestion });
       return data;
     } catch (e) {
       toast({ title: "Error", description: "Could not get AI suggestion.", variant: "destructive" });
-      throw e; // Re-throw error so the calling component knows it failed
+      throw e;
     }
   };
 

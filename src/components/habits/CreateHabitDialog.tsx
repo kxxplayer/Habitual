@@ -7,7 +7,7 @@ import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 // FIX 2: Change the Zod import to a namespace import. This is the main fix.
 import * as z from 'zod';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { genkitService } from '@/lib/genkit-service';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -70,8 +70,6 @@ const normalizeDay = (day: string): WeekDay | undefined => {
   return dayMapFullToAbbr[lowerDay] || weekDaysArray.find(d => d.toLowerCase() === lowerDay) || undefined;
 };
 
-const functions = getFunctions();
-const generateHabitCallable = httpsCallable(functions, 'generateHabit');
 
 const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   isOpen,
@@ -127,8 +125,8 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
     }
     setIsAISuggesting(true);
     try {
-      const response = await generateHabitCallable({ description: habitDescriptionForAI });
-      const result = (response.data as { result: any }).result;
+      const result = await genkitService.generateHabit({ description: habitDescriptionForAI });
+
 
       setValue('name', result.habitName || '', { shouldValidate: true });
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
