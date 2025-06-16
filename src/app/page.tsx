@@ -70,7 +70,7 @@ const DEBOUNCE_SAVE_DELAY_MS = 2500;
 
 // Helper function to call Genkit flows
 async function callGenkitFlow<I, O>(flowName: string, input: I): Promise<O> {
-  const res = await fetch(`/api/genkit/${flowName}`, {
+  const res = await fetch(`/api/${flowName}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -84,8 +84,7 @@ async function callGenkitFlow<I, O>(flowName: string, input: I): Promise<O> {
     throw new Error(`Failed to call flow ${flowName}`);
   }
 
-  const jsonResponse = await res.json();
-  return jsonResponse.result || jsonResponse;
+  return await res.json();
 }
 
 function sanitizeForFirestore<T>(data: T): T {

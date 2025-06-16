@@ -1,7 +1,12 @@
 // src/lib/genkit-service.ts
-
-// Since we're using relative URLs, the API will work both in development and production
-const API_URL = '/api/genkit';
+import { runFlow } from '@genkit-ai/next/client';
+import type {
+  generateHabit,
+  getHabitSuggestion,
+  generateHabitProgramFromGoal,
+  getReflectionStarter,
+  getCommonHabitSuggestions
+} from '@/genkit/flows';
 
 export interface GenerateHabitInput {
   description: string;
@@ -47,7 +52,7 @@ export interface GetReflectionStarterInput {
 }
 
 export interface GetReflectionStarterOutput {
-  prompt: string;
+  reflectionPrompt: string;
 }
 
 export interface GetCommonHabitSuggestionsInput {
@@ -61,47 +66,39 @@ export interface GetCommonHabitSuggestionsOutput {
   }>;
 }
 
-async function callGenkitFlow<TInput, TOutput>(
-  flowName: string,
-  input: TInput
-): Promise<TOutput> {
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        flow: flowName,
-        input,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Failed to call ${flowName}: ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`Error calling ${flowName}:`, error);
-    throw error;
-  }
-}
-
 export const genkitService = {
-  generateHabit: (input: GenerateHabitInput) =>
-    callGenkitFlow<GenerateHabitInput, GenerateHabitOutput>('generateHabit', input),
+  generateHabit: async (input: GenerateHabitInput): Promise<GenerateHabitOutput> => {
+    return await runFlow<typeof generateHabit>({
+      url: '/api/generateHabit',
+      input,
+    });
+  },
 
-  getHabitSuggestion: (input: GetHabitSuggestionInput) =>
-    callGenkitFlow<GetHabitSuggestionInput, GetHabitSuggestionOutput>('getHabitSuggestion', input),
+  getHabitSuggestion: async (input: GetHabitSuggestionInput): Promise<GetHabitSuggestionOutput> => {
+    return await runFlow<typeof getHabitSuggestion>({
+      url: '/api/getHabitSuggestion',
+      input,
+    });
+  },
 
-  generateHabitProgramFromGoal: (input: GenerateHabitProgramInput) =>
-    callGenkitFlow<GenerateHabitProgramInput, GenerateHabitProgramOutput>('generateHabitProgramFromGoal', input),
+  generateHabitProgramFromGoal: async (input: GenerateHabitProgramInput): Promise<GenerateHabitProgramOutput> => {
+    return await runFlow<typeof generateHabitProgramFromGoal>({
+      url: '/api/generateHabitProgramFromGoal',
+      input,
+    });
+  },
 
-  getReflectionStarter: (input: GetReflectionStarterInput) =>
-    callGenkitFlow<GetReflectionStarterInput, GetReflectionStarterOutput>('getReflectionStarter', input),
+  getReflectionStarter: async (input: GetReflectionStarterInput): Promise<GetReflectionStarterOutput> => {
+    return await runFlow<typeof getReflectionStarter>({
+      url: '/api/getReflectionStarter',
+      input,
+    });
+  },
 
-  getCommonHabitSuggestions: (input: GetCommonHabitSuggestionsInput) =>
-    callGenkitFlow<GetCommonHabitSuggestionsInput, GetCommonHabitSuggestionsOutput>('getCommonHabitSuggestions', input),
+  getCommonHabitSuggestions: async (input: GetCommonHabitSuggestionsInput): Promise<GetCommonHabitSuggestionsOutput> => {
+    return await runFlow<typeof getCommonHabitSuggestions>({
+      url: '/api/getCommonHabitSuggestions',
+      input,
+    });
+  },
 };
