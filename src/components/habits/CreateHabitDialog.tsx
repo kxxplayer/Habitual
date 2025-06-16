@@ -123,31 +123,64 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
       toast({ title: "Input Missing", description: "Please describe your habit first.", variant: "destructive" });
       return;
     }
+    
     setIsAISuggesting(true);
     try {
-      const result = await genkitService.generateHabit({ description: habitDescriptionForAI });
-
-
-      setValue('name', result.habitName || '', { shouldValidate: true });
+      console.log('Requesting AI suggestion for:', habitDescriptionForAI);
+      
+      const result = await genkitService.generateHabit({ 
+        description: habitDescriptionForAI.trim() 
+      });
+  
+      console.log('AI suggestion result:', result);
+  
+      // Set form values with validation
+      if (result.habitName) {
+        setValue('name', result.habitName, { shouldValidate: true });
+      }
+      
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
         setValue('category', result.category as HabitCategory);
       }
+      
+      // Handle days of week with proper validation
       const suggestedDays = Array.isArray(result.daysOfWeek) 
         ? result.daysOfWeek
             .map((day: string) => normalizeDay(day))
             .filter((d?: WeekDay): d is WeekDay => !!d) 
         : [];
-      setValue('daysOfWeek', suggestedDays, { shouldValidate: true });
-      setValue('optimalTiming', result.optimalTiming || '');
-      setValue('durationHours', result.durationHours ?? null);
-      setValue('durationMinutes', result.durationMinutes ?? null);
+      
+      if (suggestedDays.length > 0) {
+        setValue('daysOfWeek', suggestedDays, { shouldValidate: true });
+      }
+      
+      if (result.optimalTiming) {
+        setValue('optimalTiming', result.optimalTiming);
+      }
+      
+      if (typeof result.durationHours === 'number') {
+        setValue('durationHours', result.durationHours);
+      }
+      
+      if (typeof result.durationMinutes === 'number') {
+        setValue('durationMinutes', result.durationMinutes);
+      }
+      
       if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) {
         setValue('specificTime', result.specificTime);
       }
-      toast({ title: "Details Filled!", description: "Review the suggested details and adjust as needed." });
+  
+      toast({ 
+        title: "Details Filled!", 
+        description: "Review the suggested details and adjust as needed." 
+      });
     } catch (error) {
       console.error("AI Suggestion Error:", error);
-      toast({ title: "AI Suggestion Failed", description: "Could not get AI suggestions. Please fill manually or try again.", variant: "destructive" });
+      toast({ 
+        title: "AI Suggestion Failed", 
+        description: error instanceof Error ? error.message : "Could not get AI suggestions. Please fill manually or try again.",
+        variant: "destructive" 
+      });
     } finally {
       setIsAISuggesting(false);
     }

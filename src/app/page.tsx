@@ -70,21 +70,34 @@ const DEBOUNCE_SAVE_DELAY_MS = 2500;
 
 // Helper function to call Genkit flows
 async function callGenkitFlow<I, O>(flowName: string, input: I): Promise<O> {
-  const res = await fetch(`/api/${flowName}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(input),
-  });
+  try {
+    console.log(`Calling ${flowName} with input:`, input);
+    
+    const res = await fetch(`/api/${flowName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input), // Ensure input is properly serialized
+    });
 
-  if (!res.ok) {
-    const errorBody = await res.text();
-    console.error(`Error calling ${flowName}:`, errorBody);
-    throw new Error(`Failed to call flow ${flowName}`);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`Error calling ${flowName}:`, {
+        status: res.status,
+        statusText: res.statusText,
+        body: errorText
+      });
+      throw new Error(`Server returned: ${res.status}: ${errorText}`);
+    }
+
+    const result = await res.json();
+    console.log(`${flowName} result:`, result);
+    return result;
+  } catch (error) {
+    console.error(`Error calling ${flowName}:`, error);
+    throw error;
   }
-
-  return await res.json();
 }
 
 function sanitizeForFirestore<T>(data: T): T {
@@ -459,16 +472,27 @@ const HomePage: NextPage = () => {
   const handleGenerateProgram = async (goal: string, duration: string) => {
     setIsGoalInputProgramDialogOpen(false);
     setIsProgramSuggestionLoading(true);
+    
     try {
+      // Validate inputs before sending
+      if (!goal || goal.trim() === '') {
+        throw new Error('Goal is required');
+      }
+      if (!duration || duration.trim() === '') {
+        throw new Error('Focus duration is required');
+      }
+  
+      console.log('Generating program with:', { goal, focusDuration: duration });
+      
       const data = await callGenkitFlow<any, GenerateHabitProgramOutput>('generateHabitProgramFromGoal', { 
-        goal, 
-        focusDuration: duration 
+        goal: goal.trim(), 
+        focusDuration: duration.trim() 
       });
       
       const validHabits = (data.suggestedHabits || []).filter(
         (h): h is SuggestedProgramHabit => HABIT_CATEGORIES.includes(h.category as HabitCategory)
       );
-
+  
       setProgramSuggestion({
         goal,
         focusDuration: duration,
@@ -477,7 +501,12 @@ const HomePage: NextPage = () => {
       });
       setIsProgramSuggestionDialogOpen(true);
     } catch (e) {
-      toast({ title: "Error", description: "Failed to generate program.", variant: "destructive" });
+      console.error('Failed to generate program:', e);
+      toast({ 
+        title: "Error", 
+        description: e instanceof Error ? e.message : "Failed to generate program.",
+        variant: "destructive"
+      });
     } finally {
       setIsProgramSuggestionLoading(false);
     }
