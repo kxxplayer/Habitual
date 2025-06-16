@@ -4,9 +4,13 @@
 
 import type { Habit, EarnedBadge } from '@/types';
 // Make sure to import all necessary badge IDs
-import { SEVEN_DAY_STREAK_BADGE_ID, THIRTY_DAY_STREAK_BADGE_ID, FIRST_HABIT_COMPLETED_BADGE_ID } from '@/types';
 import { calculateStreak } from '@/lib/dateUtils';
 import { format } from 'date-fns';
+import {
+  FIRST_HABIT_COMPLETED_BADGE_ID,
+  SEVEN_DAY_STREAK_BADGE_ID,
+  THIRTY_DAY_STREAK_BADGE_ID,
+} from '@/types';
 
 // This interface should be here or imported if it's defined elsewhere
 interface BadgeDefinition {

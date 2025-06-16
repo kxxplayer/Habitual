@@ -16,10 +16,6 @@ const withBundleAnalyzer = nextBundleAnalyzer({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Add this line to enable static export
-  //output: 'export',
-
-  // Your existing configurations from both files
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -27,7 +23,6 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    // This makes sure your images work in the exported app
     unoptimized: true,
     remotePatterns: [
       {
@@ -38,11 +33,24 @@ const nextConfig = {
       },
     ],
   },
-  // This is a development-only setting and can be kept
   allowedDevOrigins: [
     'https://9000-firebase-studio-1747227899807.cluster-iktsryn7xnhpexlu6255bftka4.cloudworkstations.dev',
     'https://3000-firebase-studio-1747227899807.cluster-iktsryn7xnhpexlu6255bftka4.cloudworkstations.dev',
   ],
+  // ✅ Add this to prevent missing Jaeger module error
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      '@opentelemetry/exporter-jaeger': false,
+    };
+  
+    config.module.rules.push({
+      test: /node_modules[\\/]handlebars[\\/]/,
+      parser: { requireEnsure: false },
+    });
+  
+    return config;
+  }  
 };
 
 // Wrap the final config with both plugins

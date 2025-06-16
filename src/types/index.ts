@@ -1,5 +1,4 @@
 // src/types/index.ts
-// src/types/index.ts - Complete type definitions to fix all errors
 
 export const HABIT_CATEGORIES = [
   'Health & Fitness',
@@ -15,7 +14,6 @@ export const HABIT_CATEGORIES = [
 ] as const;
 
 export type HabitCategory = typeof HABIT_CATEGORIES[number];
-
 export type WeekDay = 'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat';
 
 export const weekDays: readonly WeekDay[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -44,10 +42,6 @@ export interface Habit {
   programName?: string;
 }
 
-// src/types/index.ts
-
-// ... other code ...
-
 export interface CreateHabitFormData {
   id?: string;
   name: string;
@@ -65,7 +59,7 @@ export interface EarnedBadge {
   name: string;
   description: string;
   earnedDate: string;
-  icon?: string; // FIX: Added optional icon property to match created objects
+  icon?: string;
 }
 
 export interface AISuggestion {
@@ -75,19 +69,17 @@ export interface AISuggestion {
   habitId?: string;
 }
 
-export interface SuggestedHabitForCommonList {
+export interface CommonSuggestedHabitType {
   name: string;
+  category: HabitCategory;
   description?: string;
-  category?: HabitCategory;
-  defaultOptimalTiming?: string;
-  estimatedMinutes?: number;
 }
 
 export interface SuggestedProgramHabit {
   name: string;
   description?: string;
   category?: HabitCategory;
-  daysOfWeek: WeekDay[]; // Changed to non-optional as per AI flow output
+  daysOfWeek: WeekDay[];
   optimalTiming?: string;
   durationHours?: number;
   durationMinutes?: number;
@@ -98,58 +90,21 @@ export interface GenerateHabitProgramOutput {
   programName: string;
   suggestedHabits: SuggestedProgramHabit[];
   goal: string;
-  focusDuration: string;
-  durationWeeks?: number;
 }
 
-// Badge IDs
-export const FIRST_HABIT_COMPLETED_BADGE_ID = 'first-habit-completed';
-export const SEVEN_DAY_STREAK_BADGE_ID = '7-day-streak';
-export const THIRTY_DAY_STREAK_BADGE_ID = '30-day-streak';
-export const THREE_DAY_SQL_STREAK_BADGE_ID = '3-day-sql-streak';
-
-// Component Props Interfaces
-export interface HabitOverviewProps {
-  habits: Habit[];
-  totalPoints: number;
-  earnedBadges?: EarnedBadge[];
-  getAISuggestion?: (habit: Habit) => Promise<void>;
-}
-
-export interface DailyQuestDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  userName: string;
-}
-
-export interface GoalInputProgramDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (goal: string, duration: string) => void; // Changed from onGenerateProgram and durationWeeks: number
-  isLoading?: boolean; // Added isLoading prop
-}
-
-export interface ProgramSuggestionDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  programSuggestion: GenerateHabitProgramOutput | null; // Changed to allow null
-  onAddProgramHabits: (habits: SuggestedProgramHabit[], programName: string) => void;
-  isLoading?: boolean;
-}
-// ADD THESE THREE TYPE DEFINITIONS TO THE BOTTOM OF YOUR TYPES FILE
-
-export type CommonSuggestedHabitType = {
-  name: string;
-  category?: HabitCategory;
-  description?: string;
-};
-
-export type ReflectionStarterInput = {
+export interface ReflectionStarterInput {
   habitName: string;
-  date: string;
-  note?: string;
-};
+}
 
-export type ReflectionStarterOutput = {
+export interface ReflectionStarterOutput {
   reflectionPrompt: string;
-};
+}
+export interface GenerateHabitProgramOutput {
+  programName: string;
+  suggestedHabits: SuggestedProgramHabit[];
+  goal: string;
+  focusDuration?: string; // ✅ Add this to fix TS error at line 475
+}
+export const FIRST_HABIT_COMPLETED_BADGE_ID = 'firstHabit';
+export const SEVEN_DAY_STREAK_BADGE_ID = 'sevenDayStreak';
+export const THIRTY_DAY_STREAK_BADGE_ID = 'thirtyDayStreak';
