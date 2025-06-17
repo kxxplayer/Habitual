@@ -467,14 +467,27 @@ const HomePage: NextPage = () => {
     setIsAISuggestionDialogOpen(true);
     setAISuggestion({ suggestionText: '', isLoading: true, error: null, habitId: habit.id });
     try {
-      const response = await callGenkitFlow<any, { suggestion: string }>('getHabitSuggestion',{
+      // Use genkitService instead of callGenkitFlow
+      const response = await genkitService.getHabitSuggestion({
         habitName: habit.name,
         trackingData: `Completions: ${habit.completionLog.length}`,
         daysOfWeek: habit.daysOfWeek,
       });
-      setAISuggestion({ suggestionText: response.suggestion, isLoading: false, error: null, habitId: habit.id });
+      
+      setAISuggestion({ 
+        suggestionText: response.suggestion, 
+        isLoading: false, 
+        error: null, 
+        habitId: habit.id 
+      });
     } catch (e) {
-      setAISuggestion({ suggestionText: '', isLoading: false, error: 'Could not get suggestion.', habitId: habit.id });
+      console.error('Failed to get AI suggestion:', e);
+      setAISuggestion({ 
+        suggestionText: '', 
+        isLoading: false, 
+        error: e instanceof Error ? e.message : 'Could not get suggestion.', 
+        habitId: habit.id 
+      });
     }
   };
   
