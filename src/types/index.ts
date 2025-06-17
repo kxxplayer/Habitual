@@ -90,6 +90,7 @@ export interface GenerateHabitProgramOutput {
   programName: string;
   suggestedHabits: SuggestedProgramHabit[];
   goal: string;
+  focusDuration?: string;
 }
 
 export interface ReflectionStarterInput {
