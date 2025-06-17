@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build", 
+    "dev": "next dev",
+    "dev:turbo": "next dev --turbopack",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "genkit:dev": "genkit start",
-    "genkit:watch": "genkit start --watch"
+    "clean": "rm -rf .next && rm -rf node_modules/.cache",
+    "dev:clean": "npm run clean && npm run dev"
   },
   "dependencies": {
     "@genkit-ai/core": "^1.12.0",
