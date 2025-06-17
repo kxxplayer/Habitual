@@ -68,7 +68,6 @@ const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
 const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
 const DEBOUNCE_SAVE_DELAY_MS = 500;
-const isSavingRef = React.useRef(false);
 // Helper function to call Genkit flows
 async function callGenkitFlow<I, O>(flowName: string, input: I): Promise<O> {
   try {
@@ -162,6 +161,7 @@ const HomePage: NextPage = () => {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [mounted, setMounted] = useState(false);
   const previousAuthUserUidRef = useRef<string | null>(null);
+  const isSavingRef = React.useRef(false);
 
   const [habits, setHabits] = useState<Habit[]>([]);
   const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
