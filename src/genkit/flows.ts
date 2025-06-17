@@ -42,12 +42,10 @@ const normalizeDay = (day: string): WeekDay | undefined => {
   return dayMapFullToAbbr[lowerDay] || (WeekDaySchema.options as readonly string[]).includes(day) ? day as WeekDay : undefined;
 };
 
-// Flow to generate a single habit from a description
 export const generateHabit = ai.defineFlow(
   {
     name: 'generateHabit',
     inputSchema: z.object({ description: z.string() }),
-    // FIX: Added .nullable() to all optional fields to allow the AI to return null
     outputSchema: z.object({
       habitName: z.string(),
       category: HabitCategorySchema,
@@ -62,12 +60,19 @@ export const generateHabit = ai.defineFlow(
     if (!description || description.trim() === '') {
       throw new Error('Description is required');
     }
+
     const prompt = `
       You are a machine that strictly converts user text into a JSON object.
       Your ONLY output must be the JSON. Do not add explanations or markdown.
-      The JSON keys MUST be exactly: \`habitName\`, \`category\`, \`daysOfWeek\`, \`optimalTiming\`, \`durationHours\`, \`durationMinutes\`, \`specificTime\`.
-      If a value is not present in the user text, set it to null.
+
+      **CRITICAL RULES:**
+      - The JSON keys MUST be exactly: \`habitName\`, \`category\`, \`daysOfWeek\`, \`optimalTiming\`, \`durationHours\`, \`durationMinutes\`, \`specificTime\`.
+      - \`category\`: MUST be one of these values: [${HabitCategorySchema.options.join(', ')}]. If unsure, you MUST default to "Other". The category field cannot be null.
+      - \`daysOfWeek\`: MUST be an array of these exact 3-letter abbreviations: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].
+      - For optional fields (\`optimalTiming\`, etc.), if the value is not present, set it to null.
+
       User text: "${description}"
+
       Your JSON Output:`;
 
     const { text } = await ai.generate({ model, prompt });
@@ -85,12 +90,10 @@ export const generateHabit = ai.defineFlow(
   }
 );
 
-// Flow to generate a full habit program from a user's goal
 export const generateHabitProgramFromGoal = ai.defineFlow(
   {
     name: 'generateHabitProgramFromGoal',
     inputSchema: z.object({ goal: z.string(), focusDuration: z.string() }),
-    // FIX: Added .nullable() to all optional fields within the suggestedHabits array
     outputSchema: z.object({
       programName: z.string(),
       suggestedHabits: z.array(z.object({
@@ -113,10 +116,14 @@ export const generateHabitProgramFromGoal = ai.defineFlow(
       You are a machine that creates a JSON habit program. Your ONLY output must be the JSON.
       **Goal:** ${goal}
       **Duration:** ${focusDuration}
-      **Instructions:** Create a \`programName\` and a \`suggestedHabits\` array of 3-5 habits.
-      Each habit MUST have: \`name\`, \`description\`, \`category\`, \`daysOfWeek\`.
-      Optional keys per habit: \`optimalTiming\`, \`durationHours\`, \`durationMinutes\`. If a value isn't known, set it to null.
-      \`category\` MUST be from: [${HabitCategorySchema.options.join(', ')}].
+
+      **CRITICAL RULES:**
+      1. Create a \`programName\` and a \`suggestedHabits\` array of 3-5 habits.
+      2. Each habit MUST have keys: \`name\`, \`description\`, \`category\`, \`daysOfWeek\`.
+      3. Optional keys per habit: \`optimalTiming\`, \`durationHours\`, \`durationMinutes\`. If a value isn't known, set it to null.
+      4. \`category\` MUST be from: [${HabitCategorySchema.options.join(', ')}]. If unsure, you MUST default to "Other". The category field cannot be null.
+      5. \`daysOfWeek\` MUST be an array of these exact 3-letter abbreviations: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].
+
       Your JSON Output:`;
 
     const { text } = await ai.generate({ model, prompt });
