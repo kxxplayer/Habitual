@@ -381,29 +381,40 @@ const HomePage: NextPage = () => {
             title: "Habit Updated!",
             description: `"${habitData.name}" has been saved.`,
         });
-    } else {
+      } else {
         const newHabit: Habit = {
-            id: `h_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            name: habitData.name,
-            description: habitData.description || '',
-            category: habitData.category,
-            daysOfWeek: habitData.daysOfWeek,
-            optimalTiming: habitData.optimalTiming,
-            durationHours: habitData.durationHours ?? undefined,
-            durationMinutes: habitData.durationMinutes ?? undefined,
-            specificTime: habitData.specificTime,
-            completionLog: [],
-            reminderEnabled: false,
+          id: `h_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          name: habitData.name,
+          description: habitData.description || '',
+          category: habitData.category,
+          daysOfWeek: habitData.daysOfWeek,
+          optimalTiming: habitData.optimalTiming,
+          durationHours: habitData.durationHours ?? undefined,
+          durationMinutes: habitData.durationMinutes ?? undefined,
+          specificTime: habitData.specificTime,
+          completionLog: [],
+          reminderEnabled: false,
         };
-        setHabits(prev => [...prev, newHabit]);
+      
+        const updatedHabits = [...habits, newHabit];
+        setHabits(updatedHabits); // update local state
+      
+        const userDocRef = doc(db, USER_DATA_COLLECTION, authUser!.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
+        await setDoc(userDocRef, {
+          habits: sanitizeForFirestore(updatedHabits),
+          lastUpdated: new Date().toISOString(),
+        }, { merge: true });
+      
         toast({
-            title: "Habit Created!",
-            description: `"${newHabit.name}" has been added to your habits.`,
+          title: "Habit Created!",
+          description: `"${newHabit.name}" has been added to your habits.`,
         });
+      
         if (commonHabitSuggestions.length > 0) {
-            setCommonHabitSuggestions([]);
+          setCommonHabitSuggestions([]);
         }
-    }
+      }
+      
     setIsCreateHabitDialogOpen(false);
 };
 
@@ -617,7 +628,7 @@ const HomePage: NextPage = () => {
   
   const handleAddProgramHabits = async (habitsToAdd: SuggestedProgramHabit[], programName: string) => {
     if (!authUser) return;
-
+  
     const programId = `prog_${Date.now()}`;
     const newHabits: Habit[] = habitsToAdd.map((sh, index) => ({
       id: `h_${Date.now()}_${index}`,
@@ -634,26 +645,21 @@ const HomePage: NextPage = () => {
       programId,
       programName,
     }));
-
-    setHabits(prev => [...prev, ...newHabits]);
+  
+    const updatedHabits = [...habits, ...newHabits];
+    setHabits(updatedHabits);
     setIsProgramSuggestionDialogOpen(false);
-
+  
     try {
       const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
-      const snapshot = await getDoc(userDocRef);
-      const existingData = snapshot.exists() ? snapshot.data() : {};
-
-      const updatedHabits = Array.isArray(existingData.habits) ? [...existingData.habits, ...newHabits] : [...newHabits];
-
       await setDoc(userDocRef, {
-        ...existingData,
         habits: sanitizeForFirestore(updatedHabits),
         lastUpdated: new Date().toISOString(),
       }, { merge: true });
-
+  
       toast({
         title: "Program Added!",
-        description: `"${programName}" has been added with ${newHabits.length} habits.`,
+        description: `\"${programName}\" has been added with ${newHabits.length} habits.`,
       });
     } catch (error) {
       console.error("Failed to write program habits:", error);
@@ -664,7 +670,7 @@ const HomePage: NextPage = () => {
       });
     }
   };
-
+  
   
   const handleCustomizeSuggestedHabit = (sugg: CommonSuggestedHabitType) => {
     setInitialFormDataForDialog({
