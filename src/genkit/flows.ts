@@ -61,51 +61,28 @@ export const generateHabit = ai.defineFlow(
       }
 
       // IMPROVED: Much more specific and detailed prompt
-      const prompt = `You are a habit formation expert. Analyze the user's input carefully and create a SPECIFIC habit based on what they actually wrote.
+      const prompt = `You are a habit creation assistant.
+Given a free-form habit description, extract:
+- A concise habit name
+- One of the predefined categories: [${HabitCategorySchema.options.join(', ')}]
+- Days of the week involved (e.g. "weekends" → ["Sat", "Sun"])
+- Duration in hours and minutes
+- Optimal general timing (e.g. "morning", "afternoon", "evening")
+- A specific time if clearly mentioned
 
-User's exact input: "${description}"
-
-IMPORTANT: Base your response DIRECTLY on what the user typed. For example:
-- If they say "learn guitar" → "Practice Guitar"
-- If they say "practice guitar on weekends" → Include weekend days only
-- If they say "master python" → "Practice Python Programming"
-- If they say "sql practice" → "Practice SQL Exercises"
-
-Category mapping (choose the MOST appropriate):
-- guitar, music, piano, singing, art, drawing → "Creative"
-- python, sql, coding, programming, study → "Work & Study"
-- exercise, run, gym, yoga, workout → "Health & Fitness"
-- meditate, journal, mindfulness → "Mindfulness"
-- read, learn (non-coding) → "Personal Development"
-
-Frequency rules:
-- "daily" or no frequency mentioned → ["Mon", "Tue", "Wed", "Thu", "Fri"]
-- "every day" → ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-- "weekends" → ["Sat", "Sun"]
-- "3 times a week" → ["Mon", "Wed", "Fri"]
-- "5 days" → ["Mon", "Tue", "Wed", "Thu", "Fri"]
-
-Duration suggestions:
-- Guitar/Music practice → 30 minutes
-- Coding/Programming → 45-60 minutes
-- Exercise → 30-45 minutes
-- Reading → 30 minutes
-- Meditation → 15-20 minutes
-
-Timing suggestions:
-- Exercise/Workout → "morning"
-- Creative activities → "evening"
-- Study/Work → "morning" or "afternoon"
-- Meditation → "morning" or "evening"
-
-Respond with ONLY valid JSON. Example:
+Respond strictly in JSON with the fields:
 {
-  "habitName": "Practice Guitar",
-  "category": "Creative",
-  "daysOfWeek": ["Mon", "Wed", "Fri"],
-  "optimalTiming": "evening",
-  "durationMinutes": 30
-}`;
+  habitName: string,
+  category: HabitCategory,
+  daysOfWeek: WeekDay[],
+  optimalTiming?: string,
+  durationHours?: number,
+  durationMinutes?: number,
+  specificTime?: string
+}
+
+Input: "${description}"
+`;
 
       console.log('🤖 Sending prompt to AI...');
       const { text } = await ai.generate({
@@ -236,42 +213,15 @@ export const generateHabitProgramFromGoal = ai.defineFlow(
     console.log('🤖 GenerateHabitProgramFromGoal called with:', { goal, focusDuration });
     
     try {
-      const prompt = `You are a habit formation expert creating a comprehensive program.
-
-User's exact goal: "${goal}"
-Time frame: ${focusDuration}
-
-Create a program with 2-4 specific habits that directly address the user's goal.
-
-IMPORTANT: Base everything on the user's EXACT input:
-- If they say "master python" → Create Python-specific habits
-- If they say "learn guitar" → Create guitar-specific habits
-- If they say "get fit" → Create fitness-specific habits
-
-Example for "master python" over "6 months":
-{
-  "programName": "Python Mastery Program",
-  "suggestedHabits": [
-    {
-      "name": "Daily Python Coding Practice",
-      "description": "Write Python code for at least 1 hour focusing on core concepts",
-      "category": "Work & Study",
-      "daysOfWeek": ["Mon", "Tue", "Wed", "Thu", "Fri"]
-    },
-    {
-      "name": "Python Problem Solving",
-      "description": "Solve 2-3 LeetCode or HackerRank problems in Python",
-      "category": "Work & Study",
-      "daysOfWeek": ["Mon", "Wed", "Fri"]
-    },
-    {
-      "name": "Build Python Projects",
-      "description": "Work on a personal Python project to apply your skills",
-      "category": "Work & Study",
-      "daysOfWeek": ["Sat", "Sun"]
-    }
-  ]
-}
+      const prompt = `You are an AI habit coach.
+Given a goal, return a detailed habit program with:
+- Program name
+- 3 to 5 habit entries with:
+  - name
+  - category from this list: ${HabitCategorySchema.options.join(', ')}
+  - which weekdays it's done
+  - general timing (optional)
+  - estimated duration in minutes (optional)
 
 Categories: ${HabitCategorySchema.options.map(cat => `"${cat}"`).join(', ')}
 Valid days: ${WeekDaySchema.options.map(day => `"${day}"`).join(', ')}
