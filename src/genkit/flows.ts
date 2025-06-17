@@ -1,17 +1,15 @@
-// src/genkit/flows.ts
+// src/genkit/flows.ts - COMPLETELY UPDATED VERSION
+
 import { googleAI } from '@genkit-ai/googleai';
 import { genkit, z } from 'genkit';
 
 // Validate environment variables at startup
 if (!process.env.GOOGLE_API_KEY) {
+  console.error('❌ GOOGLE_API_KEY environment variable is required');
   throw new Error('GOOGLE_API_KEY environment variable is required');
 }
 
-if (!process.env.GOOGLE_CLOUD_PROJECT) {
-  console.warn('GOOGLE_CLOUD_PROJECT environment variable is not set');
-}
-
-console.log('Initializing Genkit with Google AI...');
+console.log('✅ Initializing Genkit with Google AI...');
 
 // Initialize Genkit with Google AI plugin
 const ai = genkit({
@@ -22,7 +20,7 @@ const ai = genkit({
   ],
 });
 
-console.log('Genkit initialized successfully');
+console.log('✅ Genkit initialized successfully');
 
 // Get the Gemini model
 const model = googleAI.model('gemini-1.5-flash');
@@ -38,7 +36,7 @@ const HabitCategorySchema = z.enum([
 type WeekDay = z.infer<typeof WeekDaySchema>;
 type HabitCategory = z.infer<typeof HabitCategorySchema>;
 
-// Define flows using the new API
+// IMPROVED: Enhanced generateHabit flow with much better prompts
 export const generateHabit = ai.defineFlow(
   {
     name: 'generateHabit',
@@ -54,46 +52,65 @@ export const generateHabit = ai.defineFlow(
     }),
   },
   async ({ description }) => {
+    console.log('🤖 GenerateHabit called with:', description);
+    
     try {
       // Validate input
       if (!description || description.trim() === '') {
         throw new Error('Description is required');
       }
 
-      const prompt = `Based on the user's goal: "${description}", generate a structured habit that directly relates to this goal.
+      // IMPROVED: Much more specific and detailed prompt
+      const prompt = `You are a habit formation expert. Based on the user's goal: "${description}", create a specific, actionable habit.
 
-      If the goal mentions:
-      - SQL, coding, programming, development: Create a study/practice habit with "Work & Study" category
-      - Exercise, fitness, running, gym: Create a fitness habit with "Health & Fitness" category  
-      - Reading, books, learning: Create a learning habit with appropriate category
-      - Guitar, music, art, creative: Create a creative habit with "Creative" category
+EXAMPLES:
+- Input: "learn guitar" → Output: {"habitName": "Practice Guitar", "category": "Creative", "daysOfWeek": ["Mon", "Wed", "Fri"], "optimalTiming": "evening", "durationMinutes": 30}
+- Input: "sql questions 5 days a week" → Output: {"habitName": "Practice SQL Problems", "category": "Work & Study", "daysOfWeek": ["Mon", "Tue", "Wed", "Thu", "Fri"], "optimalTiming": "morning", "durationMinutes": 45}
+- Input: "exercise daily" → Output: {"habitName": "Daily Workout", "category": "Health & Fitness", "daysOfWeek": ["Mon", "Tue", "Wed", "Thu", "Fri"], "optimalTiming": "morning", "durationMinutes": 30}
 
-      Respond with a JSON object containing:
-      - habitName: a clear, actionable habit name that DIRECTLY relates to "${description}"
-      - category: one of [${HabitCategorySchema.options.join(', ')}] that best fits the goal
-      - daysOfWeek: array of days like ['Mon', 'Wed', 'Fri'] (choose appropriate frequency)
-      - optimalTiming: 'morning', 'afternoon', 'evening', or 'anytime'
-      - durationHours: number of hours (optional, for longer activities)
-      - durationMinutes: number of minutes (15-60 minutes for most habits)
-      - specificTime: specific time like '07:00' (optional)
-      
-      Make the habit name specific and actionable. For example:
-      - For "SQL 5 days a week" → "Practice SQL Queries" not "Practice Daily Habit"
-      - For "learn guitar" → "Practice Guitar" not "Practice Daily Habit"
-      
-      Respond ONLY with valid JSON.`;
+RULES:
+1. Make habitName specific and actionable (e.g., "Practice Guitar" not "Daily Habit")
+2. Choose the most appropriate category from: ${HabitCategorySchema.options.map(cat => `"${cat}"`).join(', ')}
+3. Set realistic frequency based on the goal (daily, every other day, weekdays only, etc.)
+4. Suggest appropriate duration (15-60 minutes for most activities)
+5. Pick optimal timing: "morning", "afternoon", "evening", or "anytime"
 
+For "${description}":
+- If it mentions "guitar", "music", "art", "drawing" → category: "Creative"
+- If it mentions "sql", "coding", "study", "learn", "practice" (academic) → category: "Work & Study"  
+- If it mentions "exercise", "run", "gym", "fitness" → category: "Health & Fitness"
+- If it mentions "meditate", "mindfulness", "journal" → category: "Mindfulness"
+- If it mentions "read", "book" → category: "Personal Development"
+
+Respond with ONLY valid JSON matching this exact format:
+{
+  "habitName": "Specific Action Name",
+  "category": "Appropriate Category",
+  "daysOfWeek": ["Mon", "Wed", "Fri"],
+  "optimalTiming": "morning",
+  "durationMinutes": 30
+}`;
+
+      console.log('🤖 Sending prompt to AI...');
       const { text } = await ai.generate({
         model,
         prompt,
       });
 
+      console.log('🤖 AI Response:', text);
+
       // Parse and validate the response
-      const parsed = JSON.parse(text);
+      let parsed;
+      try {
+        parsed = JSON.parse(text);
+      } catch (parseError) {
+        console.error('❌ Failed to parse AI response as JSON:', text);
+        throw new Error('AI returned invalid JSON');
+      }
       
-      // Ensure the response has required fields
-      return {
-        habitName: parsed.habitName || 'New Habit',
+      // Validate and ensure the response has required fields
+      const result = {
+        habitName: parsed.habitName || `Practice ${description}`,
         category: (HabitCategorySchema.options.includes(parsed.category) ? parsed.category : 'Other') as HabitCategory,
         daysOfWeek: Array.isArray(parsed.daysOfWeek) 
           ? parsed.daysOfWeek.filter((day: any) => WeekDaySchema.options.includes(day)) as WeekDay[]
@@ -103,19 +120,20 @@ export const generateHabit = ai.defineFlow(
         durationMinutes: typeof parsed.durationMinutes === 'number' ? parsed.durationMinutes : undefined,
         specificTime: parsed.specificTime || undefined,
       };
+
+      console.log('✅ GenerateHabit result:', result);
+      return result;
     } catch (error) {
-      console.error('Failed to generate habit:', error);
-      // Return a fallback response instead of throwing
-      return {
-        habitName: 'Practice Daily Habit',
-        category: 'Other' as HabitCategory,
-        daysOfWeek: ['Mon', 'Wed', 'Fri'] as WeekDay[],
-        optimalTiming: 'anytime',
-      };
+      console.error('❌ GenerateHabit error:', error);
+      // Return a fallback based on the input description instead of generic
+      const fallback = createIntelligentFallback(description);
+      console.log('🔄 Using intelligent fallback:', fallback);
+      return fallback;
     }
   }
 );
 
+// IMPROVED: Enhanced getHabitSuggestion flow
 export const getHabitSuggestion = ai.defineFlow(
   {
     name: 'getHabitSuggestion',
@@ -129,26 +147,38 @@ export const getHabitSuggestion = ai.defineFlow(
     }),
   },
   async ({ habitName, trackingData, daysOfWeek }) => {
+    console.log('🤖 GetHabitSuggestion called for:', habitName);
+    
     try {
-      const prompt = `Give a short, encouraging, and actionable tip for the habit "${habitName}". 
-      The user's recent tracking data is: ${trackingData}. 
-      The habit is scheduled on: ${daysOfWeek.join(', ')}.
-      
-      Provide a 1-2 sentence motivational tip.`;
+      const prompt = `You are a motivational habit coach. Give a specific, encouraging tip for the habit "${habitName}".
+
+Current progress: ${trackingData}
+Scheduled days: ${daysOfWeek.join(', ')}
+
+EXAMPLES:
+- For "Practice Guitar": "Try learning one new chord this week, then practice switching between it and chords you already know."
+- For "Practice SQL": "Focus on mastering JOIN statements this week - they're the foundation of complex queries."
+- For "Daily Workout": "Start each session with 5 minutes of light stretching to prevent injury and improve performance."
+
+Give ONE specific, actionable tip (1-2 sentences) that helps them improve or stay motivated with "${habitName}".`;
 
       const { text } = await ai.generate({
         model,
         prompt,
       });
 
+      console.log('✅ GetHabitSuggestion result:', text);
       return { suggestion: text };
     } catch (error) {
-      console.error('Failed to get habit suggestion:', error);
-      return { suggestion: 'Keep up the great work! Consistency is key to building lasting habits.' };
+      console.error('❌ GetHabitSuggestion error:', error);
+      return { 
+        suggestion: `Keep building momentum with ${habitName}! Consistency beats perfection - even small steps count.` 
+      };
     }
   }
 );
 
+// IMPROVED: Enhanced generateHabitProgramFromGoal flow
 export const generateHabitProgramFromGoal = ai.defineFlow(
   {
     name: 'generateHabitProgramFromGoal',
@@ -167,6 +197,8 @@ export const generateHabitProgramFromGoal = ai.defineFlow(
     }),
   },
   async ({ goal, focusDuration }) => {
+    console.log('🤖 GenerateHabitProgramFromGoal called:', { goal, focusDuration });
+    
     try {
       // Validate input
       if (!goal || goal.trim() === '') {
@@ -176,24 +208,58 @@ export const generateHabitProgramFromGoal = ai.defineFlow(
         throw new Error('Focus duration is required');
       }
 
-      const prompt = `Based on the user's goal "${goal}" and a focus duration of "${focusDuration}", create a habit program.
-      
-      Respond with a JSON object containing:
-      - programName: a catchy program name
-      - suggestedHabits: array of 3-5 habits, each with:
-        - name: habit name
-        - description: brief description
-        - category: one of [${HabitCategorySchema.options.join(', ')}]
-        - daysOfWeek: array of days
-      
-      Respond ONLY with valid JSON.`;
+      const prompt = `Create a comprehensive habit program for the goal: "${goal}" over "${focusDuration}".
 
+Generate 3-4 specific habits that build toward this goal. Each habit should be:
+- Specific and actionable
+- Appropriate for the timeframe
+- Complementary to each other
+
+EXAMPLE for "Learn Python Programming" / "3 months":
+{
+  "programName": "Python Mastery Program",
+  "suggestedHabits": [
+    {
+      "name": "Daily Python Practice",
+      "description": "Code for 30 minutes focusing on fundamentals",
+      "category": "Work & Study",
+      "daysOfWeek": ["Mon", "Tue", "Wed", "Thu", "Fri"]
+    },
+    {
+      "name": "Algorithm Problem Solving",
+      "description": "Solve 2-3 coding problems on platforms like LeetCode",
+      "category": "Work & Study", 
+      "daysOfWeek": ["Mon", "Wed", "Fri"]
+    },
+    {
+      "name": "Build Personal Project",
+      "description": "Work on a real Python project to apply skills",
+      "category": "Work & Study",
+      "daysOfWeek": ["Sat", "Sun"]
+    }
+  ]
+}
+
+Categories available: ${HabitCategorySchema.options.map(cat => `"${cat}"`).join(', ')}
+Days format: ${WeekDaySchema.options.map(day => `"${day}"`).join(', ')}
+
+For goal "${goal}" over "${focusDuration}", respond with ONLY valid JSON:`;
+
+      console.log('🤖 Sending program prompt to AI...');
       const { text } = await ai.generate({
         model,
         prompt,
       });
 
-      const parsed = JSON.parse(text);
+      console.log('🤖 AI Program Response:', text);
+
+      let parsed;
+      try {
+        parsed = JSON.parse(text);
+      } catch (parseError) {
+        console.error('❌ Failed to parse program response as JSON:', text);
+        throw new Error('AI returned invalid JSON for program');
+      }
       
       // Validate and sanitize the response
       const validatedHabits = (parsed.suggestedHabits || []).map((habit: any) => ({
@@ -205,28 +271,24 @@ export const generateHabitProgramFromGoal = ai.defineFlow(
           : ['Mon', 'Wed', 'Fri'] as WeekDay[]
       }));
 
-      return {
-        programName: parsed.programName || 'Personal Development Program',
+      const result = {
+        programName: parsed.programName || `${goal} Program`,
         suggestedHabits: validatedHabits.slice(0, 5) // Limit to 5 habits
       };
+
+      console.log('✅ GenerateHabitProgramFromGoal result:', result);
+      return result;
     } catch (error) {
-      console.error('Failed to generate habit program:', error);
-      // Return a fallback response
-      return {
-        programName: 'Personal Development Program',
-        suggestedHabits: [
-          {
-            name: 'Morning Reflection',
-            description: 'Take 5 minutes each morning to reflect on your goals',
-            category: 'Personal Development' as HabitCategory,
-            daysOfWeek: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] as WeekDay[]
-          }
-        ]
-      };
+      console.error('❌ GenerateHabitProgramFromGoal error:', error);
+      // Return an intelligent fallback based on the goal
+      const fallback = createProgramFallback(goal, focusDuration);
+      console.log('🔄 Using program fallback:', fallback);
+      return fallback;
     }
   }
 );
 
+// Keep the other flows as they were
 export const getReflectionStarter = ai.defineFlow(
   {
     name: 'getReflectionStarter',
@@ -239,9 +301,9 @@ export const getReflectionStarter = ai.defineFlow(
   },
   async ({ habitName }) => {
     try {
-      const prompt = `Generate a short, insightful reflection prompt for someone tracking the habit: "${habitName}".
+      const prompt = `Generate a thoughtful reflection question for someone tracking the habit: "${habitName}".
       
-      Create a thought-provoking question that helps them reflect on their progress and feelings.`;
+      Create a question that helps them reflect on their progress and feelings.`;
 
       const { text } = await ai.generate({
         model,
@@ -304,3 +366,138 @@ export const getCommonHabitSuggestions = ai.defineFlow(
     }
   }
 );
+
+// HELPER FUNCTIONS for intelligent fallbacks
+
+function createIntelligentFallback(description: string): {
+  habitName: string;
+  category: HabitCategory;
+  daysOfWeek: WeekDay[];
+  optimalTiming: string;
+  durationHours?: number;
+  durationMinutes?: number;
+  specificTime?: string;
+} {
+  const desc = description.toLowerCase();
+  
+  // Analyze the description to create intelligent defaults
+  let habitName = 'Practice Daily Habit';
+  let category: HabitCategory = 'Other';
+  let daysOfWeek: WeekDay[] = ['Mon', 'Wed', 'Fri'];
+  let optimalTiming = 'anytime';
+  let durationMinutes = 30;
+
+  // Guitar/Music related
+  if (desc.includes('guitar') || desc.includes('music') || desc.includes('piano')) {
+    habitName = desc.includes('guitar') ? 'Practice Guitar' : 'Practice Music';
+    category = 'Creative';
+    optimalTiming = 'evening';
+    durationMinutes = 30;
+  }
+  // SQL/Coding related  
+  else if (desc.includes('sql') || desc.includes('code') || desc.includes('programming')) {
+    habitName = desc.includes('sql') ? 'Practice SQL Problems' : 'Practice Coding';
+    category = 'Work & Study';
+    optimalTiming = 'morning';
+    durationMinutes = 45;
+    if (desc.includes('5 days') || desc.includes('weekday')) {
+      daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    }
+  }
+  // Exercise related
+  else if (desc.includes('exercise') || desc.includes('workout') || desc.includes('gym') || desc.includes('run')) {
+    habitName = 'Daily Exercise';
+    category = 'Health & Fitness';
+    optimalTiming = 'morning';
+    durationMinutes = 30;
+    daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  }
+  // Reading related
+  else if (desc.includes('read') || desc.includes('book')) {
+    habitName = 'Daily Reading';
+    category = 'Personal Development';
+    optimalTiming = 'evening';
+    durationMinutes = 20;
+    daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  }
+  // Study/Learn related
+  else if (desc.includes('study') || desc.includes('learn')) {
+    habitName = `Study ${description}`;
+    category = 'Work & Study';
+    optimalTiming = 'morning';
+    durationMinutes = 45;
+  }
+
+  return {
+    habitName,
+    category,
+    daysOfWeek,
+    optimalTiming,
+    durationMinutes
+  };
+}
+
+function createProgramFallback(goal: string, focusDuration: string): {
+  programName: string;
+  suggestedHabits: Array<{
+    name: string;
+    description: string;
+    category: HabitCategory;
+    daysOfWeek: WeekDay[];
+  }>;
+} {
+  const goalLower = goal.toLowerCase();
+  
+  if (goalLower.includes('guitar') || goalLower.includes('music')) {
+    return {
+      programName: 'Guitar Mastery Program',
+      suggestedHabits: [
+        {
+          name: 'Practice Guitar Chords',
+          description: 'Focus on basic chord progressions and transitions',
+          category: 'Creative',
+          daysOfWeek: ['Mon', 'Wed', 'Fri']
+        },
+        {
+          name: 'Learn New Songs',
+          description: 'Practice playing complete songs to build repertoire',
+          category: 'Creative',
+          daysOfWeek: ['Tue', 'Thu']
+        }
+      ]
+    };
+  }
+  
+  if (goalLower.includes('fitness') || goalLower.includes('exercise')) {
+    return {
+      programName: 'Fitness Journey Program',
+      suggestedHabits: [
+        {
+          name: 'Cardio Workout',
+          description: 'Running, cycling, or other cardiovascular exercise',
+          category: 'Health & Fitness',
+          daysOfWeek: ['Mon', 'Wed', 'Fri']
+        },
+        {
+          name: 'Strength Training',
+          description: 'Weight lifting or bodyweight exercises',
+          category: 'Health & Fitness',
+          daysOfWeek: ['Tue', 'Thu']
+        }
+      ]
+    };
+  }
+
+  // Default fallback
+  return {
+    programName: `${goal} Development Program`,
+    suggestedHabits: [
+      {
+        name: `Practice ${goal}`,
+        description: `Daily practice session focused on ${goal}`,
+        category: 'Personal Development',
+        daysOfWeek: ['Mon', 'Wed', 'Fri']
+      }
+    ]
+  };
+}
