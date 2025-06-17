@@ -616,8 +616,9 @@ const HomePage: NextPage = () => {
   
   
   const handleAddProgramHabits = async (habitsToAdd: SuggestedProgramHabit[], programName: string) => {
+    if (!authUser) return;
+
     const programId = `prog_${Date.now()}`;
-    // FIX: Add index to the map function to ensure unique IDs
     const newHabits: Habit[] = habitsToAdd.map((sh, index) => ({
       id: `h_${Date.now()}_${index}`,
       name: sh.name,
@@ -633,15 +634,37 @@ const HomePage: NextPage = () => {
       programId,
       programName,
     }));
-    
+
     setHabits(prev => [...prev, ...newHabits]);
     setIsProgramSuggestionDialogOpen(false);
-    
-    toast({
-      title: "Program Added!",
-      description: `"${programName}" has been added with ${newHabits.length} habits.`,
-    });
+
+    try {
+      const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
+      const snapshot = await getDoc(userDocRef);
+      const existingData = snapshot.exists() ? snapshot.data() : {};
+
+      const updatedHabits = Array.isArray(existingData.habits) ? [...existingData.habits, ...newHabits] : [...newHabits];
+
+      await setDoc(userDocRef, {
+        ...existingData,
+        habits: sanitizeForFirestore(updatedHabits),
+        lastUpdated: new Date().toISOString(),
+      }, { merge: true });
+
+      toast({
+        title: "Program Added!",
+        description: `"${programName}" has been added with ${newHabits.length} habits.`,
+      });
+    } catch (error) {
+      console.error("Failed to write program habits:", error);
+      toast({
+        title: "Error Saving Program",
+        description: "Could not save the habits to Firestore.",
+        variant: "destructive",
+      });
+    }
   };
+
   
   const handleCustomizeSuggestedHabit = (sugg: CommonSuggestedHabitType) => {
     setInitialFormDataForDialog({
