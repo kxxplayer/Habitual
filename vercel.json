@@ -1,32 +1,22 @@
 {
-    "headers": [
-      {
-        "source": "/(.*)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=0, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "/static/(.*)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=31536000, immutable"
-          }
-        ]
-      },
-      {
-        "source": "/_next/static/(.*)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=31536000, immutable"
-          }
-        ]
-      }
-    ]
+  "functions": {
+    "app/api/generateHabit/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/generateHabitProgramFromGoal/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/getHabitSuggestion/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/getReflectionStarter/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/getCommonHabitSuggestions/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/debug/route.ts": {
+      "maxDuration": 30
+    }
   }
-  
+}
