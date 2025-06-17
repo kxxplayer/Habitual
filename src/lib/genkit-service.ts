@@ -1,4 +1,4 @@
-// src/lib/genkit-service.ts - UPDATED WITH ENHANCED ERROR HANDLING
+// src/lib/genkit-service.ts - FIXED VERSION WITH PROPER URL HANDLING
 
 import { runFlow } from '@genkit-ai/next/client';
 import type {
@@ -8,6 +8,34 @@ import type {
   getReflectionStarter,
   getCommonHabitSuggestions
 } from '@/genkit/flows';
+
+// Helper function to get the base URL
+function getBaseUrl(): string {
+  // In the browser
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  
+  // On the server
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  if (process.env.NEXT_PUBLIC_BASE_URL) {
+    return process.env.NEXT_PUBLIC_BASE_URL;
+  }
+  
+  // Fallback for local development
+  return `http://localhost:${process.env.PORT || 3000}`;
+}
+
+// Helper function to construct full URL
+function getApiUrl(endpoint: string): string {
+  const baseUrl = getBaseUrl();
+  // Ensure endpoint starts with /
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${baseUrl}${path}`;
+}
 
 export interface GenerateHabitInput {
   description: string;
@@ -74,6 +102,11 @@ function handleAIError(error: unknown, operation: string): never {
   const errorMessage = error instanceof Error ? error.message : String(error);
   const errorString = typeof error === 'string' ? error : errorMessage;
   
+  // Check for URL parsing errors
+  if (errorString.includes('Failed to parse URL')) {
+    throw new Error(`URL configuration error. Please check your deployment settings. ${errorMessage}`);
+  }
+  
   // Check for specific AI/API errors
   if (errorString.includes('quota') || errorString.includes('429')) {
     throw new Error(`AI quota exceeded. Please check your Google AI Studio quota limits. Original error: ${errorMessage}`);
@@ -131,7 +164,7 @@ export const genkitService = {
       }
       
       const result = await runFlow<typeof generateHabit>({
-        url: '/api/generateHabit',
+        url: getApiUrl('/api/generateHabit'),
         input,
       });
       
@@ -161,7 +194,7 @@ export const genkitService = {
       }
       
       const result = await runFlow<typeof getHabitSuggestion>({
-        url: '/api/getHabitSuggestion',
+        url: getApiUrl('/api/getHabitSuggestion'),
         input,
       });
       
@@ -194,7 +227,7 @@ export const genkitService = {
       }
       
       const result = await runFlow<typeof generateHabitProgramFromGoal>({
-        url: '/api/generateHabitProgramFromGoal',
+        url: getApiUrl('/api/generateHabitProgramFromGoal'),
         input,
       });
       
@@ -227,7 +260,7 @@ export const genkitService = {
       }
       
       const result = await runFlow<typeof getReflectionStarter>({
-        url: '/api/getReflectionStarter',
+        url: getApiUrl('/api/getReflectionStarter'),
         input,
       });
       
@@ -257,7 +290,7 @@ export const genkitService = {
       }
       
       const result = await runFlow<typeof getCommonHabitSuggestions>({
-        url: '/api/getCommonHabitSuggestions',
+        url: getApiUrl('/api/getCommonHabitSuggestions'),
         input,
       });
       
@@ -312,8 +345,8 @@ export async function debugAIService(): Promise<{
   const environment = {
     hasGoogleApiKey: typeof process !== 'undefined' && !!process.env?.GOOGLE_API_KEY,
     googleApiKeyLength: typeof process !== 'undefined' ? process.env?.GOOGLE_API_KEY?.length || 0 : 'N/A (client-side)',
-    nodeEnv: typeof process !== 'undefined' ? process.env?.NODE_ENV : 'client-side',
-    isClient: typeof window !== 'undefined',
+    nodeEnv: typeof process !== 'undefined' ? process.env?.NODE_ENV : 'N/A (client-side)',
+    baseUrl: getBaseUrl(),
   };
   
   const connectionTest = await testAIConnection();
