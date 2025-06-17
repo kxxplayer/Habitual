@@ -355,32 +355,57 @@ const HomePage: NextPage = () => {
   }, [habits, earnedBadges, isLoadingData, mounted]);
 
   const handleSaveHabit = async (habitData: CreateHabitFormData & { id?: string }) => {
-    const isEditing = habitData.id && habits.some(h => h.id === habitData.id);
-    
+    const isEditing = !!habitData.id;
+
     if (isEditing) {
-      setHabits(prev => prev.map(h => h.id === habitData.id ? { ...h, ...habitData, description: habitData.description || '' } as Habit : h));
+        setHabits(prev =>
+            prev.map(h => {
+                if (h.id === habitData.id) {
+                    // FIX: Explicitly map fields to prevent overwriting completionLog etc.
+                    return {
+                        ...h,
+                        name: habitData.name,
+                        description: habitData.description || '',
+                        category: habitData.category,
+                        daysOfWeek: habitData.daysOfWeek,
+                        optimalTiming: habitData.optimalTiming,
+                        durationHours: habitData.durationHours ?? undefined,
+                        durationMinutes: habitData.durationMinutes ?? undefined,
+                        specificTime: habitData.specificTime,
+                    };
+                }
+                return h;
+            })
+        );
+        toast({
+            title: "Habit Updated!",
+            description: `"${habitData.name}" has been saved.`,
+        });
     } else {
-      const newHabit: Habit = {
-        id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
-        ...habitData,
-        description: habitData.description || '',
-        durationHours: typeof habitData.durationHours === 'number' ? habitData.durationHours : undefined,
-        durationMinutes: typeof habitData.durationMinutes === 'number' ? habitData.durationMinutes : undefined,
-        completionLog: [],
-        reminderEnabled: false,
-      };
-      setHabits(prev => [...prev, newHabit]);
-      
-      toast({
-        title: "Habit Created!",
-        description: `"${newHabit.name}" has been added to your habits.`,
-      });
-      
-      if (commonHabitSuggestions.length > 0) setCommonHabitSuggestions([]);
+        const newHabit: Habit = {
+            id: `h_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            name: habitData.name,
+            description: habitData.description || '',
+            category: habitData.category,
+            daysOfWeek: habitData.daysOfWeek,
+            optimalTiming: habitData.optimalTiming,
+            durationHours: habitData.durationHours ?? undefined,
+            durationMinutes: habitData.durationMinutes ?? undefined,
+            specificTime: habitData.specificTime,
+            completionLog: [],
+            reminderEnabled: false,
+        };
+        setHabits(prev => [...prev, newHabit]);
+        toast({
+            title: "Habit Created!",
+            description: `"${newHabit.name}" has been added to your habits.`,
+        });
+        if (commonHabitSuggestions.length > 0) {
+            setCommonHabitSuggestions([]);
+        }
     }
-    
     setIsCreateHabitDialogOpen(false);
-  };
+};
 
   const handleDeleteProgram = (programId: string, programName: string) => {
     if (window.confirm(`Are you sure you want to delete the entire "${programName}" program and all its habits?`)) {
@@ -592,10 +617,17 @@ const HomePage: NextPage = () => {
   
   const handleAddProgramHabits = async (habitsToAdd: SuggestedProgramHabit[], programName: string) => {
     const programId = `prog_${Date.now()}`;
-    const newHabits: Habit[] = habitsToAdd.map(sh => ({
-      id: `h_${Date.now()}_${Math.random()}`,
-      ...sh,
+    // FIX: Add index to the map function to ensure unique IDs
+    const newHabits: Habit[] = habitsToAdd.map((sh, index) => ({
+      id: `h_${Date.now()}_${index}`,
+      name: sh.name,
       description: sh.description || '',
+      category: sh.category,
+      daysOfWeek: sh.daysOfWeek,
+      optimalTiming: sh.optimalTiming,
+      durationHours: sh.durationHours,
+      durationMinutes: sh.durationMinutes,
+      specificTime: sh.specificTime,
       completionLog: [],
       reminderEnabled: false,
       programId,
