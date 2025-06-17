@@ -42,6 +42,21 @@ const normalizeDay = (day: string): WeekDay | undefined => {
   return dayMapFullToAbbr[lowerDay] || (WeekDaySchema.options as readonly string[]).includes(day) ? day as WeekDay : undefined;
 };
 
+// Helper function to normalize duration values
+const normalizeDuration = (habit: any): any => {
+  if (habit.durationMinutes >= 60) {
+    const additionalHours = Math.floor(habit.durationMinutes / 60);
+    const remainingMinutes = habit.durationMinutes % 60;
+    
+    return {
+      ...habit,
+      durationHours: (habit.durationHours || 0) + additionalHours,
+      durationMinutes: remainingMinutes || null
+    };
+  }
+  return habit;
+};
+
 export const generateHabit = ai.defineFlow(
   {
     name: 'generateHabit',
@@ -70,6 +85,7 @@ export const generateHabit = ai.defineFlow(
       - \`category\`: MUST be one of these values: [${HabitCategorySchema.options.join(', ')}]. If unsure, you MUST default to "Other". The category field cannot be null.
       - \`daysOfWeek\`: MUST be an array of these exact 3-letter abbreviations: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].
       - For optional fields (\`optimalTiming\`, etc.), if the value is not present, set it to null.
+      - IMPORTANT: \`durationMinutes\` MUST be between 0 and 59. If duration is 60 minutes or more, convert to hours. For example: 90 minutes = 1 hour and 30 minutes, 60 minutes = 1 hour and 0 minutes (set durationMinutes to null).
 
       User text: "${description}"
 
@@ -79,9 +95,10 @@ export const generateHabit = ai.defineFlow(
 
     try {
       const parsed = JSON.parse(text.replace(/```json|```/g, ''));
+      const normalized = normalizeDuration(parsed);
       return {
-        ...parsed,
-        daysOfWeek: Array.isArray(parsed.daysOfWeek) ? parsed.daysOfWeek.map(normalizeDay).filter(Boolean) : [],
+        ...normalized,
+        daysOfWeek: Array.isArray(normalized.daysOfWeek) ? normalized.daysOfWeek.map(normalizeDay).filter(Boolean) : [],
       };
     } catch (e) {
       console.error("Failed to parse AI response for generateHabit. Response was:", text);
@@ -123,6 +140,11 @@ export const generateHabitProgramFromGoal = ai.defineFlow(
       3. Optional keys per habit: \`optimalTiming\`, \`durationHours\`, \`durationMinutes\`. If a value isn't known, set it to null.
       4. \`category\` MUST be from: [${HabitCategorySchema.options.join(', ')}]. If unsure, you MUST default to "Other". The category field cannot be null.
       5. \`daysOfWeek\` MUST be an array of these exact 3-letter abbreviations: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].
+      6. IMPORTANT: \`durationMinutes\` MUST be between 0 and 59. If duration is 60 minutes or more, convert to hours. Examples:
+         - 30 minutes = durationHours: null, durationMinutes: 30
+         - 60 minutes = durationHours: 1, durationMinutes: null
+         - 90 minutes = durationHours: 1, durationMinutes: 30
+         - 120 minutes = durationHours: 2, durationMinutes: null
 
       Your JSON Output:`;
 
@@ -131,10 +153,13 @@ export const generateHabitProgramFromGoal = ai.defineFlow(
     try {
       const parsed = JSON.parse(text.replace(/```json|```/g, ''));
       if (parsed.suggestedHabits && Array.isArray(parsed.suggestedHabits)) {
-        parsed.suggestedHabits = parsed.suggestedHabits.map((habit: any) => ({
-          ...habit,
-          daysOfWeek: Array.isArray(habit.daysOfWeek) ? habit.daysOfWeek.map(normalizeDay).filter(Boolean) : [],
-        }));
+        parsed.suggestedHabits = parsed.suggestedHabits.map((habit: any) => {
+          const normalized = normalizeDuration(habit);
+          return {
+            ...normalized,
+            daysOfWeek: Array.isArray(normalized.daysOfWeek) ? normalized.daysOfWeek.map(normalizeDay).filter(Boolean) : [],
+          };
+        });
       }
       return parsed;
     } catch (e) {
@@ -182,14 +207,14 @@ export const getCommonHabitSuggestions = ai.defineFlow(
     }),
   },
   async ({ category }) => {
-    const prompt = `List 5 common habits for the category "${category}". Respond with ONLY a JSON object with a "suggestions" array.`;
+    const prompt = `List 5 common habits for the category "${category}". Format as JSON array with "name" and "category" fields only.`;
     const { text } = await ai.generate({ model, prompt });
     try {
-        const parsed = JSON.parse(text.replace(/```json|```/g, ''));
-        return parsed;
+      const parsed = JSON.parse(text.replace(/```json|```/g, ''));
+      return { suggestions: parsed.suggestions || parsed };
     } catch (e) {
-        console.error("Failed to parse AI response for common habit suggestions. Response was:", text);
-        throw new Error("The AI failed to generate valid common habit suggestions.");
+      console.error("Failed to parse common suggestions. Response was:", text);
+      return { suggestions: [] };
     }
   }
 );
