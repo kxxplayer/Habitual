@@ -176,12 +176,24 @@ export const getHabitSuggestion = ai.defineFlow(
     outputSchema: z.object({ suggestion: z.string() }),
   },
   async ({ habitName, trackingData, daysOfWeek }) => {
-    const prompt = `Give one specific, actionable tip for the habit "${habitName}". Progress: ${trackingData}. Schedule: ${daysOfWeek.join(', ')}.`;
+    const prompt = `You are a helpful habit coach. Give one specific, actionable, and motivating tip for the habit "${habitName}". 
+    
+    Context:
+    - Progress: ${trackingData}
+    - Schedule: ${daysOfWeek.join(', ')}
+    
+    Your tip should be:
+    1. Specific and actionable (something they can do today)
+    2. Encouraging and positive
+    3. Based on behavioral science or proven habit-building techniques
+    4. Concise (2-3 sentences max)
+    
+    Focus on practical advice like timing, environment design, habit stacking, or motivation techniques.`;
+    
     const { text } = await ai.generate({ model, prompt });
     return { suggestion: text };
   }
 );
-
 export const getReflectionStarter = ai.defineFlow(
   {
     name: 'getReflectionStarter',

@@ -4,6 +4,9 @@
 
 import * as React from 'react';
 import type { FC } from 'react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreVertical, Trash2 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import HabitItem from './HabitItem';
 import type { Habit, WeekDay } from '@/types';
@@ -22,6 +25,7 @@ interface ProgramHabitGroupProps {
   onDelete: (habitId: string) => void;
   onEdit: (habit: Habit) => void;
   onReschedule: (habit: Habit, missedDate: string) => void;
+  onDeleteProgram?: (programId: string, programName: string) => void;
 }
 
 const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
@@ -35,6 +39,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   onDelete,
   onEdit,
   onReschedule,
+  onDeleteProgram  // Add this line to destructure onDeleteProgram
 }) => {
   const habitsScheduledToday = todayAbbr
     ? habitsInProgram.filter(habit =>
@@ -66,17 +71,50 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
                   {programName}
                 </span>
               </div>
-              <div className="flex items-center space-x-1.5 text-xs">
-                {allProgramTasksForTodayCompleted ?
-                  <CheckCircle2 className="h-4 w-4 text-accent" /> :
-                  <Circle className={cn("h-3.5 w-3.5", habitsScheduledToday.length > 0 ? "text-orange-500" : "text-muted-foreground/60")} />
-                }
-                {habitsScheduledToday.length > 0 ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-700/30 dark:text-amber-200">
-                    {`${completedTodayCount}/${habitsScheduledToday.length} today`}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">No tasks today</span>
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5 text-xs">
+                  {allProgramTasksForTodayCompleted ?
+                    <CheckCircle2 className="h-4 w-4 text-accent" /> :
+                    <Circle className={cn("h-3.5 w-3.5", habitsScheduledToday.length > 0 ? "text-orange-500" : "text-muted-foreground/60")} />
+                  }
+                  {habitsScheduledToday.length > 0 ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-700/30 dark:text-amber-200">
+                      {`${completedTodayCount}/${habitsScheduledToday.length} today`}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">No tasks today</span>
+                  )}
+                </div>
+                
+                {onDeleteProgram && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                        <span className="sr-only">Program options</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuItem 
+                        className="text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteProgram(programId, programName);
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Program
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
             </div>

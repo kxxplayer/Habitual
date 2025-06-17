@@ -347,7 +347,17 @@ const HomePage: NextPage = () => {
     }
     setIsCreateHabitDialogOpen(false);
   };
-  
+
+  const handleDeleteProgram = (programId: string, programName: string) => {
+    if (window.confirm(`Are you sure you want to delete the entire "${programName}" program and all its habits?`)) {
+      setHabits(prev => prev.filter(h => h.programId !== programId));
+      toast({
+        title: "Program Deleted",
+        description: `"${programName}" and all its habits have been removed.`,
+      });
+    }
+  };
+
   const handleToggleComplete = (habitId: string, date: string, completed: boolean) => {
     let habitName = '';
     let pointsChange = 0;
@@ -587,6 +597,7 @@ const HomePage: NextPage = () => {
               onDelete={handleDeleteHabit}
               onEdit={handleOpenEditDialog}
               onReschedule={handleOpenRescheduleDialog}
+              onDeleteProgram={handleDeleteProgram}
               todayString={todayString}
               todayAbbr={todayAbbr}
             />

@@ -16,6 +16,7 @@ interface HabitListProps {
   onDelete: (habitId: string) => void;
   onEdit: (habit: Habit) => void;
   onReschedule: (habit: Habit, missedDate: string) => void;
+  onDeleteProgram?: (programId: string, programName: string) => void;
   todayString: string;
   todayAbbr: WeekDay | undefined;
 }
@@ -28,7 +29,8 @@ const HabitList: FC<HabitListProps> = ({
   onEdit,
   onReschedule,
   todayString,
-  todayAbbr
+  todayAbbr,
+  onDeleteProgram  // Add this line to destructure onDeleteProgram
 }) => {
 
   if (!todayAbbr) {
@@ -88,8 +90,10 @@ const HabitList: FC<HabitListProps> = ({
           onDelete={onDelete}
           onEdit={onEdit}
           onReschedule={onReschedule}
+          onDeleteProgram={onDeleteProgram}  // This will now work
         />
       ))}
+
       {/* Container changed to a responsive grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {standaloneHabits.map((habit) => (
