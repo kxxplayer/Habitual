@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "next build", 
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "genkit:dev": "genkit start",
+    "genkit:watch": "genkit start --watch"
   },
   "dependencies": {
     "@genkit-ai/core": "^1.12.0",
