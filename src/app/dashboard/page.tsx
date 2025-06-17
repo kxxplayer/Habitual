@@ -120,20 +120,21 @@ const DashboardPage: NextPage = () => {
   }, [authUser, isLoadingAuth, toast]);
 
   // ADDED: Wrapper function to call the cloud function.
-  const handleGetAISuggestion = async (habit: Habit) => {
+  const getAISuggestion = async (input: { habitName: string; trackingData: string; daysOfWeek: string[] }): Promise<{ suggestion: string }> => {
     try {
-      const data = await genkitService.getHabitSuggestion({
-        habitName: habit.name,
-        trackingData: `Completions: ${habit.completionLog.length}`,
-        daysOfWeek: habit.daysOfWeek,
+      const response = await genkitService.getHabitSuggestion({
+        habitName: input.habitName,
+        trackingData: input.trackingData,
+        daysOfWeek: input.daysOfWeek,
       });
-      toast({ title: "AI Suggestion", description: data.suggestion });
-      return data;
+      
+      return { suggestion: response.suggestion };
     } catch (e) {
-      toast({ title: "Error", description: "Could not get AI suggestion.", variant: "destructive" });
-      throw e;
+      console.error('Failed to get AI suggestion:', e);
+      throw new Error('Could not get AI suggestion');
     }
   };
+  
 
 
   if (isLoadingAuth || (authUser && isLoadingData)) {
@@ -157,13 +158,10 @@ const DashboardPage: NextPage = () => {
           habits={habits}
           totalPoints={totalPoints}
           earnedBadges={earnedBadges}
-          // MODIFIED: Pass the new handler function as a prop
-          getAISuggestion={handleGetAISuggestion}
         />
       </main>
       <BottomNavigationBar onAddNewHabitClick={() => router.push('/?action=addHabit')} />
     </div>
   );
-};
-
+}
 export default DashboardPage;

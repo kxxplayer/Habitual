@@ -12,6 +12,7 @@ import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
+import { genkitService } from '@/lib/genkit-service';
 
 import AppPageLayout from '@/components/layout/AppPageLayout';
 import HabitList from '@/components/habits/HabitList';
@@ -494,23 +495,23 @@ const HomePage: NextPage = () => {
         throw new Error('Focus duration is required');
       }
   
-      const requestData = { 
-        goal: goal.trim(), 
-        focusDuration: duration.trim() 
-      };
-      
-      console.log('Sending request data:', requestData);
-      
-      const data = await callGenkitFlow<typeof requestData, GenerateHabitProgramOutput>(
-        'generateHabitProgramFromGoal', 
-        requestData
-      );
+      // Use genkitService instead of callGenkitFlow
+      const data = await genkitService.generateHabitProgramFromGoal({
+        goal: goal.trim(),
+        focusDuration: duration.trim()
+      });
       
       console.log('Received program data:', data);
       
-      const validHabits = (data.suggestedHabits || []).filter(
-        (h): h is SuggestedProgramHabit => HABIT_CATEGORIES.includes(h.category as HabitCategory)
-      );
+      // Fix the type filtering - ensure all required properties are present
+      const validHabits: SuggestedProgramHabit[] = (data.suggestedHabits || [])
+        .filter((h: any) => h && h.name && h.category && HABIT_CATEGORIES.includes(h.category as HabitCategory))
+        .map((h: any): SuggestedProgramHabit => ({
+          name: h.name,
+          description: h.description || '', // Ensure description is never undefined
+          category: h.category as HabitCategory,
+          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek : ['Mon', 'Wed', 'Fri']
+        }));
   
       setProgramSuggestion({
         goal,
@@ -530,6 +531,7 @@ const HomePage: NextPage = () => {
       setIsProgramSuggestionLoading(false);
     }
   };
+  
   
   const handleAddProgramHabits = (habitsToAdd: SuggestedProgramHabit[], programName: string) => {
     const programId = `prog_${Date.now()}`;

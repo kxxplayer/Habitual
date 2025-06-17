@@ -10,28 +10,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
+import { Button } from '@/components/ui/button';
+import { genkitService } from '@/lib/genkit-service';
 
 // Date-fns imports
 import { format, subDays, startOfWeek, addDays as dateFnsAddDays, isPast, getDay } from 'date-fns';
 
 // Lucide-react icons
-import { Target, Flame, CheckCircle2, BarChart3, Star, Zap, Brain, Circle } from 'lucide-react';
+import { Target, Flame, CheckCircle2, BarChart3, Star, Zap, Brain, Circle, Lightbulb } from 'lucide-react';
 
 // Recharts imports
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 
 // Local utility and type imports
 import { cn } from '@/lib/utils';
-import type { Habit, EarnedBadge } from '@/types';
+import type { Habit, EarnedBadge, WeekDay } from '@/types';
 import { getDayAbbreviationFromDate, calculateStreak } from '@/lib/dateUtils';
-import type { HabitSuggestionInput } from '@/ai/flows/habit-suggestion';
 
+// FIXED: Updated interface to match the expected signature
 interface HabitOverviewProps {
   habits: Habit[];
   totalPoints: number;
   earnedBadges: EarnedBadge[];
-  getAISuggestion: (input: HabitSuggestionInput) => Promise<{ suggestion: string }>;
+  // Remove this line: getAISuggestion: (input: { habitName: string; trackingData: string; daysOfWeek: string[] }) => Promise<{ suggestion: string }>;
 }
 
 // --- Reusable Card Component ---
@@ -61,7 +62,7 @@ const ProgressSnapshotCard: FC<Pick<HabitOverviewProps, 'totalPoints' | 'habits'
     let longest = 0;
     let activeCount = 0;
     habits.forEach(habit => {
-      const streak = calculateStreak(habit, new Date());
+      const streak = calculateStreak(habit); // FIXED: Removed the second parameter
       if (streak > 0) activeCount++;
       if (streak > longest) longest = streak;
     });
@@ -137,42 +138,30 @@ const TodayFocusCard: FC<Pick<HabitOverviewProps, 'habits'>> = React.memo(({ hab
 });
 TodayFocusCard.displayName = 'TodayFocusCard';
 
-
-const AIGoalsCard: FC<Pick<HabitOverviewProps, 'habits' | 'getAISuggestion'>> = React.memo(({ habits, getAISuggestion }) => {
-  const [suggestion, setSuggestion] = React.useState<string | null>(null);
+// FIXED: Updated AIGoalsCard to use genkitService directly and removed getAISuggestion prop dependency
+const AIGoalsCard: FC<Pick<HabitOverviewProps, 'habits'>> = React.memo(({ habits }) => {
+  const [suggestion, setSuggestion] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState(false);
   const [suggestedHabit, setSuggestedHabit] = React.useState<Habit | null>(null);
-
+  
   const fetchSuggestion = React.useCallback(async () => {
-    const habitsWithMissedDays = habits.filter(habit => {
-        return habit.daysOfWeek.some(day => {
-            const dayIndex = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(day);
-            for (let i = 1; i < 8; i++) { // Check last 7 days
-                const d = subDays(new Date(), i);
-                if (getDay(d) === dayIndex && isPast(d)) {
-                    if (!habit.completionLog.some(log => log.date === format(d, 'yyyy-MM-dd') && log.status === 'completed')) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        });
+    const habitsWithMissedDays = habits.filter(h => {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        const todayWeekDay = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][getDay(new Date())] as WeekDay;
+        return h.daysOfWeek.includes(todayWeekDay) && !h.completionLog.some(log => log.date === today && log.status === 'completed');
     });
 
     const targetHabit = habitsWithMissedDays.length > 0 ? habitsWithMissedDays[0] : habits[0];
-
     if (!targetHabit) return;
 
     setIsLoading(true);
     setSuggestedHabit(targetHabit);
     try {
-        const input: HabitSuggestionInput = {
+        const result = await genkitService.getHabitSuggestion({
             habitName: targetHabit.name,
-            habitDescription: targetHabit.description,
+            trackingData: `Completions: ${targetHabit.completionLog.length}`,
             daysOfWeek: targetHabit.daysOfWeek,
-            trackingData: `Completions: ${targetHabit.completionLog.length}`
-        };
-        const result = await getAISuggestion(input);
+        });
         setSuggestion(result.suggestion);
     } catch (error) {
         console.error("AI Suggestion failed:", error);
@@ -180,7 +169,7 @@ const AIGoalsCard: FC<Pick<HabitOverviewProps, 'habits' | 'getAISuggestion'>> = 
     } finally {
         setIsLoading(false);
     }
-  }, [habits, getAISuggestion]);
+  }, [habits]);
 
   React.useEffect(() => {
     if (habits.length > 0) {
@@ -196,15 +185,42 @@ const AIGoalsCard: FC<Pick<HabitOverviewProps, 'habits' | 'getAISuggestion'>> = 
             <Skeleton className="h-4 w-3/4" />
         </div>
       ) : suggestion ? (
-        <>
-          <p className="text-sm font-semibold text-primary">{suggestedHabit?.name}</p>
-          <p className="text-sm text-muted-foreground mt-1">{suggestion}</p>
-          <div className="flex justify-end mt-4">
-            <Badge variant="outline">AI Pro</Badge>
+        <div className="space-y-3">
+          <div className="flex items-start space-x-2">
+            <Lightbulb className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-muted-foreground leading-relaxed">{suggestion}</p>
           </div>
-        </>
+          {suggestedHabit && (
+            <p className="text-xs text-muted-foreground/70">
+              For your habit: <span className="font-medium">{suggestedHabit.name}</span>
+            </p>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchSuggestion}
+            className="w-full text-xs"
+          >
+            Get New Tip
+          </Button>
+        </div>
+      ) : habits.length > 0 ? (
+        <div className="text-center py-4">
+          <p className="text-sm text-muted-foreground mb-3">Ready to get personalized tips for your habits?</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchSuggestion}
+            className="text-xs"
+          >
+            <Brain className="h-3 w-3 mr-1" />
+            Get AI Tip
+          </Button>
+        </div>
       ) : (
-        <p className="text-sm text-muted-foreground text-center py-4">Add a habit to get personalized tips.</p>
+        <div className="text-center py-4">
+          <p className="text-sm text-muted-foreground">Add some habits to get AI-powered suggestions!</p>
+        </div>
       )}
     </DashboardCard>
   );
@@ -253,18 +269,18 @@ const TrendsCard: FC<Pick<HabitOverviewProps, 'habits'>> = React.memo(({ habits 
 });
 TrendsCard.displayName = 'TrendsCard';
 
-
-// --- Main Overview Component ---
-const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints, earnedBadges, getAISuggestion }) => {
+// FIXED: Updated main component to remove getAISuggestion prop since AIGoalsCard now handles it internally
+const HabitOverview: FC<HabitOverviewProps> = ({ habits, totalPoints, earnedBadges }) => {
   return (
     <div className="space-y-4 p-4 md:p-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
         <TodayFocusCard habits={habits} />
         <ProgressSnapshotCard totalPoints={totalPoints} habits={habits}/>
-        <AIGoalsCard habits={habits} getAISuggestion={getAISuggestion} />
+        <AIGoalsCard habits={habits} />
         <TrendsCard habits={habits} />
       </div>
     </div>
   );
 };
+
 export default HabitOverview;

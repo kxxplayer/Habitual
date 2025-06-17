@@ -128,6 +128,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
     try {
       console.log('Requesting AI suggestion for:', habitDescriptionForAI);
       
+      // Use genkitService instead of callGenkitFlow
       const result = await genkitService.generateHabit({ 
         description: habitDescriptionForAI.trim() 
       });
@@ -185,7 +186,6 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
       setIsAISuggesting(false);
     }
   };
-
   const onSubmitDialog = (data: CreateHabitFormData) => {
     onSaveHabit({ ...data, id: initialData?.id });
   };

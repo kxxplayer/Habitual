@@ -68,37 +68,77 @@ export interface GetCommonHabitSuggestionsOutput {
 
 export const genkitService = {
   generateHabit: async (input: GenerateHabitInput): Promise<GenerateHabitOutput> => {
-    return await runFlow<typeof generateHabit>({
-      url: '/api/generateHabit',
-      input,
-    });
+    try {
+      console.log('genkitService.generateHabit called with:', input);
+      const result = await runFlow<typeof generateHabit>({
+        url: '/api/generateHabit',
+        input,
+      });
+      console.log('genkitService.generateHabit result:', result);
+      return result;
+    } catch (error) {
+      console.error('genkitService.generateHabit error:', error);
+      throw error;
+    }
   },
 
   getHabitSuggestion: async (input: GetHabitSuggestionInput): Promise<GetHabitSuggestionOutput> => {
-    return await runFlow<typeof getHabitSuggestion>({
-      url: '/api/getHabitSuggestion',
-      input,
-    });
+    try {
+      console.log('genkitService.getHabitSuggestion called with:', input);
+      const result = await runFlow<typeof getHabitSuggestion>({
+        url: '/api/getHabitSuggestion',
+        input,
+      });
+      console.log('genkitService.getHabitSuggestion result:', result);
+      return result;
+    } catch (error) {
+      console.error('genkitService.getHabitSuggestion error:', error);
+      throw error;
+    }
   },
 
   generateHabitProgramFromGoal: async (input: GenerateHabitProgramInput): Promise<GenerateHabitProgramOutput> => {
-    return await runFlow<typeof generateHabitProgramFromGoal>({
-      url: '/api/generateHabitProgramFromGoal',
-      input,
-    });
+    try {
+      console.log('genkitService.generateHabitProgramFromGoal called with:', input);
+      const result = await runFlow<typeof generateHabitProgramFromGoal>({
+        url: '/api/generateHabitProgramFromGoal',
+        input,
+      });
+      console.log('genkitService.generateHabitProgramFromGoal result:', result);
+      return result;
+    } catch (error) {
+      console.error('genkitService.generateHabitProgramFromGoal error:', error);
+      throw error;
+    }
   },
 
   getReflectionStarter: async (input: GetReflectionStarterInput): Promise<GetReflectionStarterOutput> => {
-    return await runFlow<typeof getReflectionStarter>({
-      url: '/api/getReflectionStarter',
-      input,
-    });
+    try {
+      console.log('genkitService.getReflectionStarter called with:', input);
+      const result = await runFlow<typeof getReflectionStarter>({
+        url: '/api/getReflectionStarter',
+        input,
+      });
+      console.log('genkitService.getReflectionStarter result:', result);
+      return result;
+    } catch (error) {
+      console.error('genkitService.getReflectionStarter error:', error);
+      throw error;
+    }
   },
 
   getCommonHabitSuggestions: async (input: GetCommonHabitSuggestionsInput): Promise<GetCommonHabitSuggestionsOutput> => {
-    return await runFlow<typeof getCommonHabitSuggestions>({
-      url: '/api/getCommonHabitSuggestions',
-      input,
-    });
+    try {
+      console.log('genkitService.getCommonHabitSuggestions called with:', input);
+      const result = await runFlow<typeof getCommonHabitSuggestions>({
+        url: '/api/getCommonHabitSuggestions',
+        input,
+      });
+      console.log('genkitService.getCommonHabitSuggestions result:', result);
+      return result;
+    } catch (error) {
+      console.error('genkitService.getCommonHabitSuggestions error:', error);
+      throw error;
+    }
   },
 };

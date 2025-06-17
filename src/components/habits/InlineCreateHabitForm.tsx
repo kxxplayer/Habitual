@@ -12,10 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, XCircle, Tag } from 'lucide-react';
-import { createHabitFromDescription } from '@/ai/flows/habit-creation-from-description';
 import type { Habit, CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { genkitService } from '@/lib/genkit-service';
 import {
   Select,
   SelectContent,
@@ -130,7 +130,9 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
     }
     setIsAISuggesting(true);
     try {
-      const result = await createHabitFromDescription({ description: currentDescription });
+      // Use genkitService instead of createHabitFromDescription
+      const result = await genkitService.generateHabit({ description: currentDescription });
+      
       setValue('name', result.habitName || '');
       
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
@@ -138,7 +140,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       } else {
          setValue('category', 'Other');
       }
-
+  
       let suggestedDays: WeekDay[] = [];
       if (result.daysOfWeek && Array.isArray(result.daysOfWeek)) {
         suggestedDays = result.daysOfWeek
@@ -146,11 +148,11 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
           .filter((d): d is WeekDay => d !== undefined);
       }
       setValue('daysOfWeek', suggestedDays);
-
+  
       setValue('optimalTiming', result.optimalTiming || '');
       setValue('durationHours', result.durationHours ?? null);
       setValue('durationMinutes', result.durationMinutes ?? null);
-
+  
       if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) {
         setValue('specificTime', result.specificTime);
       } else if (result.specificTime && (result.specificTime.toLowerCase() === "anytime" || result.specificTime.toLowerCase() === "flexible")) {
@@ -158,6 +160,7 @@ const InlineCreateHabitForm: FC<InlineCreateHabitFormProps> = ({ onAddHabit, onC
       } else {
         setValue('specificTime', result.specificTime || '');
       }
+      
       toast({ title: "AI Suggestion Applied!", description: "The details have been filled in for you."});
     } catch (error) {
       console.error("AI suggestion error:", error);

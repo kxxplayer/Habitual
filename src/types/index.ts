@@ -77,8 +77,8 @@ export interface CommonSuggestedHabitType {
 
 export interface SuggestedProgramHabit {
   name: string;
-  description?: string;
-  category?: HabitCategory;
+  description: string; // Remove ? to make it required
+  category: HabitCategory; // Remove ? to make it required  
   daysOfWeek: WeekDay[];
   optimalTiming?: string;
   durationHours?: number;
