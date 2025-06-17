@@ -14,10 +14,15 @@ import { Loader2, CalendarDays, CheckCircle2, XCircle, Circle as CircleIcon, Cal
 import { format, parseISO, isSameDay, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday as dateFnsIsToday, isPast as dateFnsIsPast } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 
 const LS_KEY_PREFIX_HABITS = "habits_";
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const USER_DATA_COLLECTION = "users";
+const USER_APP_DATA_SUBCOLLECTION = "appData";
+const USER_MAIN_DOC_ID = "main";
 
 const CalendarPage: NextPage = () => {
   const router = useRouter();
@@ -44,20 +49,21 @@ const CalendarPage: NextPage = () => {
     if (!authUser || isLoadingAuth) return;
 
     setIsLoadingData(true);
-    const userUid = authUser.uid;
-    const habitsKey = `<span class="math-inline">\{LS\_KEY\_PREFIX\_HABITS\}</span>{userUid}`;
-    const storedHabits = localStorage.getItem(habitsKey);
-    if (storedHabits) {
-      try {
-        setHabits(JSON.parse(storedHabits));
-      } catch (e) {
-        console.error("Error parsing habits from localStorage on calendar page:", e);
+    const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
+    const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setHabits(Array.isArray(data.habits) ? data.habits : []);
+      } else {
         setHabits([]);
       }
-    } else {
-      setHabits([]);
-    }
-    setIsLoadingData(false);
+      setIsLoadingData(false);
+    }, (error) => {
+      console.error("Error fetching calendar data from Firestore:", error);
+      setIsLoadingData(false);
+    });
+
+    return () => unsubscribeFirestore();
   }, [authUser, isLoadingAuth]);
 
   const calendarDialogModifiers = React.useMemo(() => {
