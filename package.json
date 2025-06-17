@@ -66,6 +66,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "cross-env": "^7.0.3",
     "eslint": "9.28.0",
     "eslint-config-next": "15.3.3",
     "genkit": "^1.12.0",
