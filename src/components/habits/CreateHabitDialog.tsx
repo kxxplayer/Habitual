@@ -89,6 +89,11 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
     },
   });
 
+  // FIX: Define onSubmitDialog function
+  const onSubmitDialog = (data: CreateHabitFormData) => {
+    onSaveHabit(data);
+  };
+
   const habitDescriptionForAI = watch('description');
   const isEditing = !!(initialData && initialData.id);
 
@@ -126,22 +131,27 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
     
     setIsAISuggesting(true);
     try {
-      console.log('Requesting AI suggestion for:', habitDescriptionForAI);
+      console.log('🎯 User input for AI:', habitDescriptionForAI);
       
       // Use genkitService instead of callGenkitFlow
       const result = await genkitService.generateHabit({ 
         description: habitDescriptionForAI.trim() 
       });
   
-      console.log('AI suggestion result:', result);
+      console.log('🤖 AI response:', result);
   
       // Set form values with validation
       if (result.habitName) {
         setValue('name', result.habitName, { shouldValidate: true });
+        console.log('✅ Set habit name:', result.habitName);
       }
       
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
         setValue('category', result.category as HabitCategory);
+        console.log('✅ Set category:', result.category);
+      } else {
+        setValue('category', 'Other');
+        console.log('⚠️ Invalid category, using Other');
       }
       
       // Handle days of week with proper validation
@@ -153,22 +163,29 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
       
       if (suggestedDays.length > 0) {
         setValue('daysOfWeek', suggestedDays, { shouldValidate: true });
+        console.log('✅ Set days:', suggestedDays);
+      } else {
+        console.log('⚠️ No valid days found');
       }
       
       if (result.optimalTiming) {
         setValue('optimalTiming', result.optimalTiming);
+        console.log('✅ Set optimal timing:', result.optimalTiming);
       }
       
       if (typeof result.durationHours === 'number') {
         setValue('durationHours', result.durationHours);
+        console.log('✅ Set duration hours:', result.durationHours);
       }
       
       if (typeof result.durationMinutes === 'number') {
         setValue('durationMinutes', result.durationMinutes);
+        console.log('✅ Set duration minutes:', result.durationMinutes);
       }
       
       if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) {
         setValue('specificTime', result.specificTime);
+        console.log('✅ Set specific time:', result.specificTime);
       }
   
       toast({ 
@@ -185,9 +202,6 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
     } finally {
       setIsAISuggesting(false);
     }
-  };
-  const onSubmitDialog = (data: CreateHabitFormData) => {
-    onSaveHabit({ ...data, id: initialData?.id });
   };
   
   const handleOpenProgramDialog = () => {
