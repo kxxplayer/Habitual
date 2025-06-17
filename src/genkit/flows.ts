@@ -42,38 +42,32 @@ const normalizeDay = (day: string): WeekDay | undefined => {
   return dayMapFullToAbbr[lowerDay] || (WeekDaySchema.options as readonly string[]).includes(day) ? day as WeekDay : undefined;
 };
 
+// Flow to generate a single habit from a description
 export const generateHabit = ai.defineFlow(
   {
     name: 'generateHabit',
     inputSchema: z.object({ description: z.string() }),
+    // FIX: Added .nullable() to all optional fields to allow the AI to return null
     outputSchema: z.object({
       habitName: z.string(),
       category: HabitCategorySchema,
       daysOfWeek: z.array(WeekDaySchema),
-      optimalTiming: z.string().optional(),
-      durationHours: z.number().optional(),
-      durationMinutes: z.number().optional(),
-      specificTime: z.string().optional(),
+      optimalTiming: z.string().optional().nullable(),
+      durationHours: z.number().optional().nullable(),
+      durationMinutes: z.number().optional().nullable(),
+      specificTime: z.string().optional().nullable(),
     }),
   },
   async ({ description }) => {
     if (!description || description.trim() === '') {
       throw new Error('Description is required');
     }
-
     const prompt = `
       You are a machine that strictly converts user text into a JSON object.
       Your ONLY output must be the JSON. Do not add explanations or markdown.
-
       The JSON keys MUST be exactly: \`habitName\`, \`category\`, \`daysOfWeek\`, \`optimalTiming\`, \`durationHours\`, \`durationMinutes\`, \`specificTime\`.
-      Do NOT use other keys like "activity" or "frequency".
-
-      - category: Choose one from [${HabitCategorySchema.options.join(', ')}].
-      - daysOfWeek: Use ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].
-      - duration: If text says "1 hour", use "durationHours": 1. If "30 minutes", use "durationMinutes": 30.
-
+      If a value is not present in the user text, set it to null.
       User text: "${description}"
-
       Your JSON Output:`;
 
     const { text } = await ai.generate({ model, prompt });
@@ -86,15 +80,17 @@ export const generateHabit = ai.defineFlow(
       };
     } catch (e) {
       console.error("Failed to parse AI response for generateHabit. Response was:", text);
-      throw new Error("The AI failed to generate a valid habit structure. Please try rephrasing.");
+      throw new Error("The AI failed to generate a valid habit structure.");
     }
   }
 );
 
+// Flow to generate a full habit program from a user's goal
 export const generateHabitProgramFromGoal = ai.defineFlow(
   {
     name: 'generateHabitProgramFromGoal',
     inputSchema: z.object({ goal: z.string(), focusDuration: z.string() }),
+    // FIX: Added .nullable() to all optional fields within the suggestedHabits array
     outputSchema: z.object({
       programName: z.string(),
       suggestedHabits: z.array(z.object({
@@ -102,10 +98,10 @@ export const generateHabitProgramFromGoal = ai.defineFlow(
         description: z.string(),
         category: HabitCategorySchema,
         daysOfWeek: z.array(WeekDaySchema),
-        optimalTiming: z.string().optional(),
-        durationHours: z.number().int().min(0).optional(),
-        durationMinutes: z.number().int().min(0).max(59).optional(),
-        specificTime: z.string().optional(),
+        optimalTiming: z.string().optional().nullable(),
+        durationHours: z.number().int().min(0).optional().nullable(),
+        durationMinutes: z.number().int().min(0).max(59).optional().nullable(),
+        specificTime: z.string().optional().nullable(),
       }))
     }),
   },
@@ -117,14 +113,10 @@ export const generateHabitProgramFromGoal = ai.defineFlow(
       You are a machine that creates a JSON habit program. Your ONLY output must be the JSON.
       **Goal:** ${goal}
       **Duration:** ${focusDuration}
-
-      **Instructions:**
-      1. Create an inspiring \`programName\`.
-      2. Create a \`suggestedHabits\` array with 3-5 habits.
-      3. Each habit MUST have these keys: \`name\`, \`description\`, \`category\`, \`daysOfWeek\`.
-      4. Optional keys per habit: \`optimalTiming\`, \`durationHours\`, \`durationMinutes\`.
-      5. \`category\` MUST be from: [${HabitCategorySchema.options.join(', ')}].
-      
+      **Instructions:** Create a \`programName\` and a \`suggestedHabits\` array of 3-5 habits.
+      Each habit MUST have: \`name\`, \`description\`, \`category\`, \`daysOfWeek\`.
+      Optional keys per habit: \`optimalTiming\`, \`durationHours\`, \`durationMinutes\`. If a value isn't known, set it to null.
+      \`category\` MUST be from: [${HabitCategorySchema.options.join(', ')}].
       Your JSON Output:`;
 
     const { text } = await ai.generate({ model, prompt });
@@ -161,13 +153,7 @@ export const getHabitSuggestion = ai.defineFlow(
 export const getReflectionStarter = ai.defineFlow(
   {
     name: 'getReflectionStarter',
-    inputSchema: z.object({ 
-      habitName: z.string(),
-      habitCategory: HabitCategorySchema.optional(), 
-      currentStreak: z.number().optional(),
-      recentCompletions: z.number().optional(),
-      scheduledDaysInWeek: z.number().optional()
-    }),
+    inputSchema: z.object({ habitName: z.string() }),
     outputSchema: z.object({ reflectionPrompt: z.string() }),
   },
   async ({ habitName }) => {
