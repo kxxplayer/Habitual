@@ -358,65 +358,64 @@ const HomePage: NextPage = () => {
     const isEditing = !!habitData.id;
 
     if (isEditing) {
-        setHabits(prev =>
-            prev.map(h => {
-                if (h.id === habitData.id) {
-                    // FIX: Explicitly map fields to prevent overwriting completionLog etc.
-                    return {
-                        ...h,
-                        name: habitData.name,
-                        description: habitData.description || '',
-                        category: habitData.category,
-                        daysOfWeek: habitData.daysOfWeek,
-                        optimalTiming: habitData.optimalTiming,
-                        durationHours: habitData.durationHours ?? undefined,
-                        durationMinutes: habitData.durationMinutes ?? undefined,
-                        specificTime: habitData.specificTime,
-                    };
-                }
-                return h;
-            })
-        );
-        toast({
-            title: "Habit Updated!",
-            description: `"${habitData.name}" has been saved.`,
-        });
-      } else {
-        const newHabit: Habit = {
-          id: `h_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-          name: habitData.name,
-          description: habitData.description || '',
-          category: habitData.category,
-          daysOfWeek: habitData.daysOfWeek,
-          optimalTiming: habitData.optimalTiming,
-          durationHours: habitData.durationHours ?? undefined,
-          durationMinutes: habitData.durationMinutes ?? undefined,
-          specificTime: habitData.specificTime,
-          completionLog: [],
-          reminderEnabled: false,
-        };
-      
-        const updatedHabits = [...habits, newHabit];
-        setHabits(updatedHabits); // update local state
-      
-        const userDocRef = doc(db, USER_DATA_COLLECTION, authUser!.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
-        await setDoc(userDocRef, {
-          habits: sanitizeForFirestore(updatedHabits),
-          lastUpdated: new Date().toISOString(),
-        }, { merge: true });
-      
-        toast({
-          title: "Habit Created!",
-          description: `"${newHabit.name}" has been added to your habits.`,
-        });
-      
-        if (commonHabitSuggestions.length > 0) {
-          setCommonHabitSuggestions([]);
-        }
+      setHabits(prev =>
+        prev.map(h => {
+          if (h.id === habitData.id) {
+            return {
+              ...h,
+              name: habitData.name,
+              description: habitData.description || '',
+              category: habitData.category,
+              daysOfWeek: habitData.daysOfWeek,
+              optimalTiming: habitData.optimalTiming,
+              durationHours: habitData.durationHours ?? undefined,
+              durationMinutes: habitData.durationMinutes ?? undefined,
+              specificTime: habitData.specificTime,
+            };
+          }
+          return h;
+        })
+      );
+
+      const userHabitRef = doc(db, "users", authUser!.uid, "habits", habitData.id!);
+      await setDoc(userHabitRef, sanitizeForFirestore(habitData));
+
+      toast({
+        title: "Habit Updated!",
+        description: `"${habitData.name}" has been saved.`,
+      });
+    } else {
+      const newHabit: Habit = {
+        id: `h_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        name: habitData.name,
+        description: habitData.description || '',
+        category: habitData.category,
+        daysOfWeek: habitData.daysOfWeek,
+        optimalTiming: habitData.optimalTiming,
+        durationHours: habitData.durationHours ?? undefined,
+        durationMinutes: habitData.durationMinutes ?? undefined,
+        specificTime: habitData.specificTime,
+        completionLog: [],
+        reminderEnabled: false,
+      };
+
+      setHabits(prev => [...prev, newHabit]);
+
+      const userHabitRef = doc(db, "users", authUser!.uid, "habits", newHabit.id);
+      await setDoc(userHabitRef, sanitizeForFirestore(newHabit));
+
+      toast({
+        title: "Habit Created!",
+        description: `"${newHabit.name}" has been added to your habits.`,
+      });
+
+      if (commonHabitSuggestions.length > 0) {
+        setCommonHabitSuggestions([]);
       }
-      
+    }
+
     setIsCreateHabitDialogOpen(false);
-};
+  };
 
   const handleDeleteProgram = (programId: string, programName: string) => {
     if (window.confirm(`Are you sure you want to delete the entire "${programName}" program and all its habits?`)) {
@@ -628,7 +627,7 @@ const HomePage: NextPage = () => {
   
   const handleAddProgramHabits = async (habitsToAdd: SuggestedProgramHabit[], programName: string) => {
     if (!authUser) return;
-  
+
     const programId = `prog_${Date.now()}`;
     const newHabits: Habit[] = habitsToAdd.map((sh, index) => ({
       id: `h_${Date.now()}_${index}`,
@@ -645,21 +644,21 @@ const HomePage: NextPage = () => {
       programId,
       programName,
     }));
-  
-    const updatedHabits = [...habits, ...newHabits];
-    setHabits(updatedHabits);
+
+    setHabits(prev => [...prev, ...newHabits]);
     setIsProgramSuggestionDialogOpen(false);
-  
+
     try {
-      const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
-      await setDoc(userDocRef, {
-        habits: sanitizeForFirestore(updatedHabits),
-        lastUpdated: new Date().toISOString(),
-      }, { merge: true });
-  
+      await Promise.all(
+        newHabits.map(habit => {
+          const habitRef = doc(db, "users", authUser.uid, "habits", habit.id);
+          return setDoc(habitRef, sanitizeForFirestore(habit));
+        })
+      );
+
       toast({
         title: "Program Added!",
-        description: `\"${programName}\" has been added with ${newHabits.length} habits.`,
+        description: `"${programName}" has been added with ${newHabits.length} habits.`,
       });
     } catch (error) {
       console.error("Failed to write program habits:", error);
@@ -670,6 +669,7 @@ const HomePage: NextPage = () => {
       });
     }
   };
+
   
   
   const handleCustomizeSuggestedHabit = (sugg: CommonSuggestedHabitType) => {
