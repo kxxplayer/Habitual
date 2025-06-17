@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "genkit:dev": "genkit start",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "dev:clean": "npm run clean && npm run dev"
   },

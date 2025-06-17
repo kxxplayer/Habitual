@@ -39,7 +39,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   onDelete,
   onEdit,
   onReschedule,
-  onDeleteProgram  // Add this line to destructure onDeleteProgram
+  onDeleteProgram
 }) => {
   const habitsScheduledToday = todayAbbr
     ? habitsInProgram.filter(habit =>
@@ -61,74 +61,74 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
 
   return (
     <Accordion type="single" collapsible className="w-full" defaultValue={`program-${programId}`}>
-      <AccordionItem value={`program-${programId}`} className="border border-primary/20 rounded-lg shadow-md overflow-hidden bg-card/80">
-        <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 transition-colors w-full">
-          <div className="flex flex-col w-full space-y-1.5">
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center space-x-3">
-                <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} />
-                <span className={cn("font-semibold text-lg text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
-                  {programName}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="flex items-center space-x-1.5 text-xs">
-                  {allProgramTasksForTodayCompleted ?
-                    <CheckCircle2 className="h-4 w-4 text-accent" /> :
-                    <Circle className={cn("h-3.5 w-3.5", habitsScheduledToday.length > 0 ? "text-orange-500" : "text-muted-foreground/60")} />
-                  }
-                  {habitsScheduledToday.length > 0 ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-700/30 dark:text-amber-200">
-                      {`${completedTodayCount}/${habitsScheduledToday.length} today`}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">No tasks today</span>
-                  )}
-                </div>
-                
-                {onDeleteProgram && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                        }}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                        <span className="sr-only">Program options</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuItem 
-                        className="text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteProgram(programId, programName);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Program
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
+      <AccordionItem value={`program-${programId}`} className="border border-primary/20 rounded-lg shadow-md overflow-hidden bg-card/80 relative"> {/* Added 'relative' positioning */}
+        <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 transition-colors w-full flex-col items-start !no-underline"> {/* Added flex-col, items-start, and !no-underline */}
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center space-x-3">
+              <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} />
+              <span className={cn("font-semibold text-lg text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
+                {programName}
+              </span>
             </div>
-            {habitsScheduledToday.length > 0 && (
-              <Progress
-                value={progressPercentToday}
-                className="h-1.5 w-full mt-1"
-                indicatorClassName={allProgramTasksForTodayCompleted ? "bg-accent" : "bg-primary"}
-              />
-            )}
+            {/* The right-side progress indicator remains part of the AccordionTrigger's content */}
+            <div className="flex items-center space-x-2 text-xs">
+              {allProgramTasksForTodayCompleted ?
+                <CheckCircle2 className="h-4 w-4 text-accent" /> :
+                <Circle className={cn("h-3.5 w-3.5", habitsScheduledToday.length > 0 ? "text-orange-500" : "text-muted-foreground/60")} />
+              }
+              {habitsScheduledToday.length > 0 ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-700/30 dark:text-amber-200">
+                  {`${completedTodayCount}/${habitsScheduledToday.length} today`}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">No tasks today</span>
+              )}
+            </div>
           </div>
+          {habitsScheduledToday.length > 0 && (
+            <Progress
+              value={progressPercentToday}
+              className="h-1.5 w-full mt-1"
+              indicatorClassName={allProgramTasksForTodayCompleted ? "bg-accent" : "bg-primary"}
+            />
+          )}
         </AccordionTrigger>
+
+        {/* Moved DropdownMenu outside AccordionTrigger and positioned absolutely */}
+        {onDeleteProgram && (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent AccordionTrigger from toggling
+                    e.preventDefault(); // Prevent default button behavior
+                  }}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">Program options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Ensure click doesn't propagate up
+                    onDeleteProgram(programId, programName);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Program
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
         <AccordionContent className="bg-muted/20 border-t border-border">
-          {/* Container updated to a responsive grid */}
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {habitsScheduledToday.length > 0 ? (
               habitsScheduledToday.map(habit => (
