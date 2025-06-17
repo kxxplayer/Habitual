@@ -67,8 +67,8 @@ const USER_DATA_COLLECTION = "users";
 const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
 const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
-const DEBOUNCE_SAVE_DELAY_MS = 2500;
-
+const DEBOUNCE_SAVE_DELAY_MS = 500;
+const isSavingRef = useRef(false);
 // Helper function to call Genkit flows
 async function callGenkitFlow<I, O>(flowName: string, input: I): Promise<O> {
   try {
@@ -140,7 +140,19 @@ const LoadingFallback: React.FC = () => {
     </AppPageLayout>
   );
 };
-
+const ProgramGenerationOverlay: React.FC<{ isVisible: boolean }> = ({ isVisible }) => {
+  if (!isVisible) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-card p-8 rounded-lg shadow-xl flex flex-col items-center space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <h3 className="text-lg font-semibold">Generating Your Program</h3>
+        <p className="text-sm text-muted-foreground">AI is creating personalized habits for you...</p>
+      </div>
+    </div>
+  );
+};
 const HomePage: NextPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -294,10 +306,13 @@ const HomePage: NextPage = () => {
     if (!authUser || !mounted || !firstDataLoadCompleteRef.current || isLoadingData) {
       return;
     }
+    
     if (debounceSaveTimeoutRef.current) {
       clearTimeout(debounceSaveTimeoutRef.current);
     }
-    debounceSaveTimeoutRef.current = setTimeout(() => {
+    
+    debounceSaveTimeoutRef.current = setTimeout(async () => {
+      isSavingRef.current = true;
       const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
       const dataToSave = {
         habits: sanitizeForFirestore(habits),
@@ -305,15 +320,26 @@ const HomePage: NextPage = () => {
         totalPoints,
         lastUpdated: new Date().toISOString(),
       };
-      setDoc(userDocRef, dataToSave, { merge: true }).catch(error => {
+      
+      try {
+        await setDoc(userDocRef, dataToSave, { merge: true });
+        console.log('Data saved to Firestore successfully');
+      } catch (error) {
         console.error("Error saving data:", error);
-      });
+        toast({ 
+          title: "Save Error", 
+          description: "Failed to save changes. Please try again.", 
+          variant: "destructive" 
+        });
+      } finally {
+        isSavingRef.current = false;
+      }
     }, DEBOUNCE_SAVE_DELAY_MS);
+    
     return () => {
       if (debounceSaveTimeoutRef.current) clearTimeout(debounceSaveTimeoutRef.current);
     };
-  }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData]);
-
+  }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData, toast]);
   useEffect(() => {
     if (isLoadingData || !mounted || !firstDataLoadCompleteRef.current) return;
     const newlyEarnedBadges = checkAndAwardBadges(habits, earnedBadges);
@@ -328,8 +354,9 @@ const HomePage: NextPage = () => {
     }
   }, [habits, earnedBadges, isLoadingData, mounted]);
 
-  const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
+  const handleSaveHabit = async (habitData: CreateHabitFormData & { id?: string }) => {
     const isEditing = habitData.id && habits.some(h => h.id === habitData.id);
+    
     if (isEditing) {
       setHabits(prev => prev.map(h => h.id === habitData.id ? { ...h, ...habitData, description: habitData.description || '' } as Habit : h));
     } else {
@@ -343,8 +370,15 @@ const HomePage: NextPage = () => {
         reminderEnabled: false,
       };
       setHabits(prev => [...prev, newHabit]);
+      
+      toast({
+        title: "Habit Created!",
+        description: `"${newHabit.name}" has been added to your habits.`,
+      });
+      
       if (commonHabitSuggestions.length > 0) setCommonHabitSuggestions([]);
     }
+    
     setIsCreateHabitDialogOpen(false);
   };
 
@@ -556,7 +590,7 @@ const HomePage: NextPage = () => {
   };
   
   
-  const handleAddProgramHabits = (habitsToAdd: SuggestedProgramHabit[], programName: string) => {
+  const handleAddProgramHabits = async (habitsToAdd: SuggestedProgramHabit[], programName: string) => {
     const programId = `prog_${Date.now()}`;
     const newHabits: Habit[] = habitsToAdd.map(sh => ({
       id: `h_${Date.now()}_${Math.random()}`,
@@ -567,8 +601,14 @@ const HomePage: NextPage = () => {
       programId,
       programName,
     }));
+    
     setHabits(prev => [...prev, ...newHabits]);
     setIsProgramSuggestionDialogOpen(false);
+    
+    toast({
+      title: "Program Added!",
+      description: `"${programName}" has been added with ${newHabits.length} habits.`,
+    });
   };
   
   const handleCustomizeSuggestedHabit = (sugg: CommonSuggestedHabitType) => {
@@ -587,6 +627,7 @@ const HomePage: NextPage = () => {
 
   return (
     <>
+      <ProgramGenerationOverlay isVisible={isProgramSuggestionLoading && !programSuggestion} />
       <AppPageLayout onAddNew={openCreateHabitDialogForNew}>
         <div className="animate-card-fade-in">
           {habits.length > 0 ? (

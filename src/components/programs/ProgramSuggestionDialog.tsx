@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from 'react';
+import { useState } from 'react';
 import type { FC } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { CheckSquare, Sparkles, Tag, CalendarDays as CalendarIcon, Clock, Hourglass, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIconLucide, Brain } from 'lucide-react';
+import { CheckSquare, Sparkles, Tag, CalendarDays as CalendarIcon, Clock, Hourglass, ListChecks, Droplets, Bed, BookOpenText, HeartPulse, Briefcase, Paintbrush, Home as HomeIconLucide, Landmark, Users, Smile as LifestyleIcon, Sparkles as SparklesIconLucide, Brain, Loader2 } from 'lucide-react';
 import type { GenerateHabitProgramOutput, SuggestedProgramHabit } from '@/types';
 import { HABIT_CATEGORIES, type HabitCategory, type WeekDay } from '@/types';
 import { cn } from '@/lib/utils';
@@ -67,15 +68,36 @@ const ProgramSuggestionDialog: FC<ProgramSuggestionDialogProps> = ({
   onAddProgramHabits,
   isLoading,
 }) => {
-  if (!isOpen || !programSuggestion) {
+  const [isAdding, setIsAdding] = useState(false);
+  
+  if (!isOpen) return null;
+  
+  // Show loading state while generating
+  if (isLoading && !programSuggestion) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-lg bg-card rounded-lg shadow-xl">
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <h3 className="text-lg font-semibold">Creating Your Program</h3>
+            <p className="text-sm text-muted-foreground mt-2">AI is designing habits based on your goal...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  
+  // If not loading and no program suggestion, close the dialog
+  if (!programSuggestion) {
     return null;
   }
-
-  const handleAddAll = () => {
-    if (programSuggestion && programSuggestion.suggestedHabits && programSuggestion.programName) {
-      onAddProgramHabits(programSuggestion.suggestedHabits, programSuggestion.programName);
+  
+  const handleAddAll = async () => {
+    if (programSuggestion.suggestedHabits && programSuggestion.programName) {
+      setIsAdding(true);
+      await onAddProgramHabits(programSuggestion.suggestedHabits, programSuggestion.programName);
+      setIsAdding(false);
     }
-    onClose();
   };
 
   const formatDays = (days: WeekDay[] | undefined) => {
@@ -133,12 +155,22 @@ const ProgramSuggestionDialog: FC<ProgramSuggestionDialogProps> = ({
         </ScrollArea>
         <DialogFooter className="pt-4">
           <DialogClose asChild>
-            <Button type="button" variant="outline" disabled={isLoading} onClick={onClose}>
+            <Button type="button" variant="outline" disabled={isAdding} onClick={onClose}>
               Cancel
             </Button>
           </DialogClose>
-          <Button onClick={handleAddAll} disabled={isLoading}>
-            <CheckSquare className="mr-2 h-4 w-4" /> Add All Habits to My List
+          <Button onClick={handleAddAll} disabled={isAdding}>
+            {isAdding ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding Habits...
+              </>
+            ) : (
+              <>
+                <CheckSquare className="mr-2 h-4 w-4" />
+                Add All Habits to My List
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
