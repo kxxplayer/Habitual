@@ -22,7 +22,8 @@ const ai = genkit({
 
 console.log('✅ Genkit initialized successfully');
 
-const model = googleAI.model('gemini-2.0-flash');
+// Get the Gemini model
+const model = googleAI.model('gemini-1.5-flash');
 
 // Schema definitions
 const WeekDaySchema = z.enum(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
