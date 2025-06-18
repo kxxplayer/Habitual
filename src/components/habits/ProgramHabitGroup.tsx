@@ -60,50 +60,51 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   }
 
   return (
-    <AccordionItem value={`program-${programId}`} className="border border-primary/20 rounded-lg shadow-md overflow-hidden bg-card/80">
-      <div className="flex items-center px-4 py-3">
-        <AccordionTrigger className="flex-grow flex flex-col items-start !no-underline p-0">
-          <div className="flex items-center w-full">
-            <div className="flex items-center space-x-3">
-              <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} />
-              <span className={cn("font-semibold text-lg text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
-                {programName}
-              </span>
+    <Accordion type="single" collapsible className="w-full" defaultValue={`program-${programId}`}>
+      <AccordionItem value={`program-${programId}`} className="border border-primary/20 rounded-lg shadow-md overflow-hidden bg-card/80">
+        <div className="flex items-center px-4 py-3">
+          <AccordionTrigger className="flex-grow flex flex-col items-start !no-underline p-0">
+            <div className="flex items-center w-full">
+              <div className="flex items-center space-x-3">
+                <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} />
+                <span className={cn("font-semibold text-lg text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
+                  {programName}
+                </span>
+              </div>
             </div>
+            {/* ... Progress bar ... */}
+          </AccordionTrigger>
+          <div className="flex items-center space-x-2 text-xs">
+            {/* ... Progress indicator ... */}
           </div>
-          {/* ... Progress bar ... */}
-        </AccordionTrigger>
-        <div className="flex items-center space-x-2 text-xs">
-          {/* ... Progress indicator ... */}
+          {onDeleteProgram && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">Program options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteProgram(programId, programName);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Program
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
-        {onDeleteProgram && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MoreVertical className="h-4 w-4" />
-                <span className="sr-only">Program options</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteProgram(programId, programName);
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Program
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
         <AccordionContent className="bg-muted/20 border-t border-border">
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {habitsScheduledToday.length > 0 ? (
@@ -127,6 +128,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
           </div>
         </AccordionContent>
       </AccordionItem>
+    </Accordion>
   );
 };
 
