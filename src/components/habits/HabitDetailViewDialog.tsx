@@ -93,7 +93,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
 
   if (!isOpen || !habit) return null;
 
-  const currentStreak = calculateStreak(habit, new Date());
+  const currentStreak = calculateStreak(habit);
   const weekDays = getCurrentWeekDays(new Date());
 
   const todayInfo = weekDays.find(d => d.isToday);

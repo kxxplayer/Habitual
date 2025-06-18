@@ -1,21 +1,6 @@
 {
   "functions": {
-    "app/api/generateHabit/route.ts": {
-      "maxDuration": 30
-    },
-    "app/api/generateHabitProgramFromGoal/route.ts": {
-      "maxDuration": 30
-    },
-    "app/api/getHabitSuggestion/route.ts": {
-      "maxDuration": 30
-    },
-    "app/api/getReflectionStarter/route.ts": {
-      "maxDuration": 30
-    },
-    "app/api/getCommonHabitSuggestions/route.ts": {
-      "maxDuration": 30
-    },
-    "app/api/debug/route.ts": {
+    "src/app/api/*/route.ts": {
       "maxDuration": 30
     }
   }

@@ -1,17 +1,31 @@
 {
-  "name": "nextn",
+  "name": "habitual",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbopack",
+    "dev:clean": "npm run clean && npm run dev",
     "build": "next build",
+    "build:analyze": "cross-env ANALYZE=true next build",
+    "build:capacitor": "next build --config=next.config.capacitor.mjs",
     "start": "next start",
     "lint": "next lint",
+    "lint:fix": "next lint --fix",
     "typecheck": "tsc --noEmit",
+    "clean": "npx rimraf .next && npx rimraf out && npx rimraf node_modules/.cache",
     "genkit:dev": "genkit start",
-    "clean": "rm -rf .next && rm -rf node_modules/.cache",
-    "dev:clean": "npm run clean && npm run dev"
+    "genkit:watch": "genkit start --watch",
+    "genkit:stop": "pkill -f genkit || true",
+    "capacitor:sync": "npx cap sync",
+    "capacitor:build": "npm run build:capacitor && npx cap sync && npx cap build android",
+    "capacitor:run": "npm run build:capacitor && npx cap sync && npx cap run android",
+    "capacitor:dev": "npm run build:capacitor && npx cap sync && npx cap run android --livereload",
+    "android:build": "npx cap build android",
+    "android:run": "npx cap run android",
+    "android:open": "npx cap open android",
+    "deploy:vercel": "npm run build && vercel deploy --prod",
+    "test:build": "npm run build && npm run start"
   },
   "dependencies": {
     "@capacitor/android": "^7.3.0",
@@ -73,7 +87,12 @@
     "genkit": "^1.12.0",
     "genkit-cli": "^1.8.0",
     "postcss": "^8",
+    "rimraf": "^5.0.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
