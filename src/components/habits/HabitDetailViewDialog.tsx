@@ -24,15 +24,11 @@ import {
   Smile as LifestyleIcon, Sparkles as SparklesIcon,
   CheckCircle2, Circle, StickyNote, Trash2, Edit3, Brain
 } from 'lucide-react';
-import type { Habit, HabitCategory } from '../../types';
+import type { Habit, HabitCategory, ReflectionStarterInput, ReflectionStarterOutput } from '../../types';
 import { generateICS, downloadICS } from '../../lib/calendarUtils';
 import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
 import { getCurrentWeekDays, calculateStreak } from '../../lib/dateUtils';
 import { cn } from '../../lib/utils';
-import type {
-  ReflectionStarterInput,
-  ReflectionStarterOutput
-} from '../../ai/flows/reflection-starter-flow';
 import AIReflectionPromptDialog from '../../components/popups/AIReflectionPromptDialog';
 import { useToast } from "../../hooks/use-toast";
 
@@ -112,15 +108,9 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
     try {
       const input: ReflectionStarterInput = {
         habitName: habit.name,
-        habitCategory: habit.category,
-        currentStreak: currentStreak,
-        recentCompletions: habit.completionLog.filter(log =>
-          log.status === 'completed' && weekDays.some(d => d.dateStr === log.date)
-        ).length,
-        scheduledDaysInWeek: habit.daysOfWeek.length,
       };
       const result = await onGetAIReflectionPrompt(input);
-      setAiReflectionPrompt(result.prompt);
+      setAiReflectionPrompt(result.reflectionPrompt);
     } catch (error) {
       console.error("Failed to get AI reflection prompt:", error);
       toast({ title: "AI Error", description: "Could not generate a reflection prompt.", variant: "destructive" });
@@ -164,7 +154,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
               </div>
 
               <div className="my-6">
-                <Label className="text-xs text-muted-foreground">This Week's Progress</Label>
+                <Label className="text-xs text-muted-foreground">{`This Week's Progress`}</Label>
                 <div className="mt-2 flex justify-between gap-1">
                   {weekDays.map(day => {
                     const logEntry = habit.completionLog.find(l => l.date === day.dateStr);
@@ -206,7 +196,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                       transition={{ duration: 0.2 }}
                       className={cn(
                         "w-full h-full px-4 py-3 rounded-lg font-semibold text-lg text-white shadow-lg",
-                        "inline-flex items-center justify-center", // For centering text
+                        "inline-flex items-center justify-center",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         localCompleted
                             ? "bg-gradient-to-r from-pink-500 to-red-500"

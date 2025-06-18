@@ -73,7 +73,6 @@ async function callGenkitFlow<I, O>(flowName: string, input: I): Promise<O> {
   try {
     console.log(`[${flowName}] Starting request with input:`, input);
     
-    // Validate that input is not undefined or null
     if (input === undefined || input === null) {
       throw new Error(`Input cannot be ${input === undefined ? 'undefined' : 'null'}`);
     }
@@ -273,7 +272,6 @@ const HomePage: NextPage = () => {
       setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
       setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
 
-      // Call to getCommonHabitSuggestions
       if (parsedHabits.length === 0 && !commonSuggestionsFetched && authUser) {
         setIsLoadingCommonSuggestions(true);
         callGenkitFlow<{ category: string }, { suggestions: { name: string; category: string }[] }>('getCommonHabitSuggestions', { category: 'General' })
@@ -300,7 +298,7 @@ const HomePage: NextPage = () => {
       setIsLoadingData(false);
     });
     return () => unsubscribeFirestore();
-  }, [authUser, mounted, commonSuggestionsFetched]);
+  }, [authUser, mounted, commonSuggestionsFetched, isLoadingAuth]);
 
   useEffect(() => {
     if (!authUser || !mounted || !firstDataLoadCompleteRef.current || isLoadingData) {
@@ -340,6 +338,7 @@ const HomePage: NextPage = () => {
       if (debounceSaveTimeoutRef.current) clearTimeout(debounceSaveTimeoutRef.current);
     };
   }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData, toast]);
+
   useEffect(() => {
     if (isLoadingData || !mounted || !firstDataLoadCompleteRef.current) return;
     const newlyEarnedBadges = checkAndAwardBadges(habits, earnedBadges);
@@ -527,7 +526,7 @@ const HomePage: NextPage = () => {
           { date: newDate, time: 'N/A', status: 'pending_makeup', originalMissedDate: missedDate }
         ]
       } : h));
-       setRescheduleDialogData(null);
+      setRescheduleDialogData(null);
     }
   };
 
@@ -538,7 +537,7 @@ const HomePage: NextPage = () => {
         ...h,
         completionLog: h.completionLog.map(l => l.date === missedDate ? {...l, status: 'skipped'}: l)
       } : h));
-       setRescheduleDialogData(null);
+      setRescheduleDialogData(null);
     }
   };
 
@@ -546,7 +545,6 @@ const HomePage: NextPage = () => {
     setIsAISuggestionDialogOpen(true);
     setAISuggestion({ suggestionText: '', isLoading: true, error: null, habitId: habit.id });
     try {
-      // Use genkitService instead of callGenkitFlow
       const response = await genkitService.getHabitSuggestion({
         habitName: habit.name,
         trackingData: `Completions: ${habit.completionLog.length}`,
@@ -579,7 +577,6 @@ const HomePage: NextPage = () => {
     setIsProgramSuggestionLoading(true);
     
     try {
-      // Validate inputs
       if (!goal || goal.trim() === '') {
         throw new Error('Goal is required');
       }
@@ -587,7 +584,6 @@ const HomePage: NextPage = () => {
         throw new Error('Focus duration is required');
       }
   
-      // Use genkitService instead of callGenkitFlow
       const data = await genkitService.generateHabitProgramFromGoal({
         goal: goal.trim(),
         focusDuration: duration.trim()
@@ -595,12 +591,11 @@ const HomePage: NextPage = () => {
       
       console.log('Received program data:', data);
       
-      // Fix the type filtering - ensure all required properties are present
       const validHabits: SuggestedProgramHabit[] = (data.suggestedHabits || [])
         .filter((h: any) => h && h.name && h.category && HABIT_CATEGORIES.includes(h.category as HabitCategory))
         .map((h: any): SuggestedProgramHabit => ({
           name: h.name,
-          description: h.description || '', // Ensure description is never undefined
+          description: h.description || '',
           category: h.category as HabitCategory,
           daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek : ['Mon', 'Wed', 'Fri']
         }));
@@ -756,14 +751,14 @@ const HomePage: NextPage = () => {
           error={aiSuggestion.error}
         />
       )}
-       {reflectionDialogData && (
+      {reflectionDialogData && (
         <AddReflectionNoteDialog
-        isOpen={isReflectionDialogOpen}
-        onClose={() => setIsReflectionDialogOpen(false)}
-        onSaveNote={handleSaveReflectionNote}
-        {...reflectionDialogData}
-        completionDate={reflectionDialogData.date}
-      />
+          isOpen={isReflectionDialogOpen}
+          onClose={() => setIsReflectionDialogOpen(false)}
+          onSaveNote={handleSaveReflectionNote}
+          {...reflectionDialogData}
+          completionDate={reflectionDialogData.date}
+        />
       )}
       {rescheduleDialogData && (
         <RescheduleMissedHabitDialog
