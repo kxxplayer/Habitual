@@ -691,9 +691,9 @@ const HomePage: NextPage = () => {
             <HabitList
               habits={habits}
               onOpenDetailView={handleOpenDetailView}
-              onToggleComplete={(habitId, date) => handleToggleComplete(habitId, date, !habits.find(h => h.id === habitId)?.completionLog.some(l => l.date === date && l.status === 'completed'))}
+              onToggleComplete={handleToggleComplete}
               onDelete={handleDeleteHabit}
-              onEdit={handleOpenEditDialog}
+              onEdit={handleOpenEditDialog} // This now opens the CreateHabitDialog with initialData
               onReschedule={handleOpenRescheduleDialog}
               onDeleteProgram={handleDeleteProgram}
               todayString={todayString}
@@ -737,9 +737,13 @@ const HomePage: NextPage = () => {
 
       <CreateHabitDialog
         isOpen={isCreateHabitDialogOpen}
-        onClose={() => setIsCreateHabitDialogOpen(false)}
+        onClose={() => {
+          setIsCreateHabitDialogOpen(false);
+          setEditingHabit(null);
+          setInitialFormDataForDialog(null);
+        }}
         onSaveHabit={handleSaveHabit}
-        initialData={initialFormDataForDialog}
+        initialData={initialFormDataForDialog} // This receives data when editing
         onOpenGoalProgramDialog={handleOpenGoalInputProgramDialog}
       />
       {aiSuggestion && (
@@ -789,13 +793,13 @@ const HomePage: NextPage = () => {
         <HabitDetailViewDialog
           habit={selectedHabitForDetailView}
           isOpen={isDetailViewDialogOpen}
-          onClose={() => setSelectedHabitForDetailView(null)}
+          onClose={() => setIsDetailViewDialogOpen(false)}
           onToggleComplete={handleToggleComplete}
           onGetAISuggestion={handleGetAISuggestion}
           onOpenReflectionDialog={onOpenReflectionDialog}
           onOpenRescheduleDialog={handleOpenRescheduleDialog}
           onToggleReminder={onToggleReminder}
-          onOpenEditDialog={handleOpenEditDialog}
+          onOpenEditDialog={handleOpenEditDialog} // This can open the CreateHabitDialog
           onOpenDeleteConfirm={handleDeleteHabit}
           onGetAIReflectionPrompt={handleGetAIReflectionPrompt}
         />

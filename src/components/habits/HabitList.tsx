@@ -1,24 +1,21 @@
-// src/components/habits/HabitList.tsx
 "use client";
 
-import type { FC } from 'react';
 import * as React from 'react';
+import type { FC } from 'react';
+import type { Habit, WeekDay } from '@/types';
 import HabitItem from './HabitItem';
 import ProgramHabitGroup from './ProgramHabitGroup';
-import type { Habit, WeekDay } from '@/types';
-import { ListChecks } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface HabitListProps {
   habits: Habit[];
   onOpenDetailView: (habit: Habit) => void;
-  onToggleComplete: (habitId: string, date: string) => void;
+  onToggleComplete: (habitId: string, date: string, completed: boolean) => void;
   onDelete: (habitId: string) => void;
   onEdit: (habit: Habit) => void;
   onReschedule: (habit: Habit, missedDate: string) => void;
-  onDeleteProgram?: (programId: string, programName: string) => void;
+  onDeleteProgram: (programId: string, programName: string) => void;
   todayString: string;
-  todayAbbr: WeekDay | undefined;
+  todayAbbr: WeekDay;
 }
 
 const HabitList: FC<HabitListProps> = ({
@@ -28,89 +25,66 @@ const HabitList: FC<HabitListProps> = ({
   onDelete,
   onEdit,
   onReschedule,
+  onDeleteProgram,
   todayString,
   todayAbbr,
-  onDeleteProgram  // Add this line to destructure onDeleteProgram
 }) => {
 
-  if (!todayAbbr) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
-        <ListChecks className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-        <h3 className="text-xl font-semibold text-foreground">Loading...</h3>
-        <p className="text-muted-foreground">Determining today's tasks.</p>
-      </div>
-    );
-  }
-
-  const habitsRelevantToday = habits.filter(habit =>
-    habit.daysOfWeek.includes(todayAbbr) ||
-    habit.completionLog.some(log => log.date === todayString && log.status === 'pending_makeup')
-  );
-
-  const standaloneHabits = habitsRelevantToday.filter(h => !h.programId);
-  const programHabits = habitsRelevantToday.filter(h => h.programId && h.programName);
-
-  const groupedProgramHabits = programHabits.reduce<Record<string, { name: string; id: string; habits: Habit[] }>>((acc, habit) => {
-    if (habit.programId && habit.programName) {
-      if (!acc[habit.programId]) {
-        acc[habit.programId] = { id: habit.programId, name: habit.programName, habits: [] };
-      }
-      acc[habit.programId].habits.push(habit);
+  const groupedByProgram = habits.reduce((acc, habit) => {
+    const key = habit.programId || 'individual';
+    if (!acc[key]) {
+      acc[key] = {
+        programId: habit.programId,
+        programName: habit.programName,
+        habits: [],
+      };
     }
+    acc[key].habits.push(habit);
     return acc;
-  }, {});
+  }, {} as Record<string, { programId?: string; programName?: string; habits: Habit[] }>);
 
-  const programGroupsArray = Object.values(groupedProgramHabits);
-
-  const noTasksForToday = habits.length > 0 && habitsRelevantToday.length === 0;
-
-  if (noTasksForToday) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
-        <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
-        <h3 className="text-lg font-semibold text-foreground">No Habits for Today</h3>
-        <p className="text-sm text-muted-foreground">Relax or check your other scheduled habits!</p>
-      </div>
-    );
-  }
+  const sortedGroups = Object.values(groupedByProgram).sort((a, b) => {
+    if (a.programId && !b.programId) return 1;
+    if (!a.programId && b.programId) return -1;
+    return 0; 
+  });
 
   return (
-    <div className="flex flex-col space-y-4">
-      {programGroupsArray.map((group) => (
-        <ProgramHabitGroup
-          key={group.id}
-          programId={group.id}
-          programName={group.name}
-          habitsInProgram={group.habits}
-          onOpenDetailView={onOpenDetailView}
-          todayString={todayString}
-          todayAbbr={todayAbbr}
-          onToggleComplete={onToggleComplete}
-          onDelete={onDelete}
-          onEdit={onEdit}
-          onReschedule={onReschedule}
-          onDeleteProgram={onDeleteProgram}  // This will now work
-        />
-      ))}
-
-      {/* Container changed to a responsive grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {standaloneHabits.map((habit) => (
-          <HabitItem
-            key={habit.id}
-            habit={habit}
-            onToggleComplete={onToggleComplete}
-            onDelete={onDelete}
-            onEdit={onEdit}
-            onReschedule={onReschedule}
-            onOpenDetailView={onOpenDetailView}
-            isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
-            currentDate={todayString}
-            todayString={todayString} // Pass todayString here
-          />
-        ))}
-      </div>
+    <div className="space-y-4">
+      {sortedGroups.map(group => {
+        if (group.programId && group.programName) {
+          return (
+            <ProgramHabitGroup
+              key={group.programId}
+              programId={group.programId}
+              programName={group.programName}
+              habits={group.habits}
+              onOpenDetailView={onOpenDetailView}
+              onToggleComplete={onToggleComplete}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onReschedule={onReschedule}
+              onDeleteProgram={() => onDeleteProgram(group.programId!, group.programName!)}
+              todayString={todayString}
+              todayAbbr={todayAbbr}
+            />
+          );
+        } else {
+          return group.habits.map(habit => (
+            <HabitItem
+              key={habit.id}
+              habit={habit}
+              onOpenDetailView={() => onOpenDetailView(habit)}
+              onToggleComplete={(completed) => onToggleComplete(habit.id, todayString, completed)}
+              onDelete={() => onDelete(habit.id)}
+              onEdit={() => onEdit(habit)}
+              onReschedule={(missedDate) => onReschedule(habit, missedDate)}
+              isTodayScheduled={habit.daysOfWeek.includes(todayAbbr)}
+              todayString={todayString}
+            />
+          ));
+        }
+      })}
     </div>
   );
 };
