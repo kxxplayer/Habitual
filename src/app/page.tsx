@@ -9,7 +9,7 @@ import type { NextPage } from 'next';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { genkitService } from '@/lib/genkit-service';
@@ -20,7 +20,6 @@ import AISuggestionDialog from '@/components/habits/AISuggestionDialog';
 import AddReflectionNoteDialog from '@/components/habits/AddReflectionNoteDialog';
 import RescheduleMissedHabitDialog from '@/components/habits/RescheduleMissedHabitDialog';
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
-import DailyQuestDialog from '@/components/popups/DailyQuestDialog';
 import HabitDetailViewDialog from '@/components/habits/HabitDetailViewDialog';
 import GoalInputProgramDialog from '@/components/programs/GoalInputProgramDialog';
 import ProgramSuggestionDialog from '@/components/programs/ProgramSuggestionDialog';
@@ -66,56 +65,14 @@ const POINTS_PER_COMPLETION = 10;
 const USER_DATA_COLLECTION = "users";
 const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
-const LS_KEY_PREFIX_DAILY_QUEST = "hasSeenDailyQuest_";
 const DEBOUNCE_SAVE_DELAY_MS = 500;
-// Helper function to call Genkit flows
-async function callGenkitFlow<I, O>(flowName: string, input: I): Promise<O> {
-  try {
-    console.log(`[${flowName}] Starting request with input:`, input);
-    
-    // Validate that input is not undefined or null
-    if (input === undefined || input === null) {
-      throw new Error(`Input cannot be ${input === undefined ? 'undefined' : 'null'}`);
-    }
-    
-    const requestBody = JSON.stringify(input);
-    console.log(`[${flowName}] Request body:`, requestBody);
-    
-    const res = await fetch(`/api/${flowName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: requestBody,
-    });
-
-    console.log(`[${flowName}] Response status:`, res.status, res.statusText);
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error(`[${flowName}] Error response:`, {
-        status: res.status,
-        statusText: res.statusText,
-        body: errorText
-      });
-      throw new Error(`Server returned: ${res.status}: ${errorText}`);
-    }
-
-    const result = await res.json();
-    console.log(`[${flowName}] Success result:`, result);
-    return result;
-  } catch (error) {
-    console.error(`[${flowName}] Request failed:`, error);
-    throw error;
-  }
-}
 
 function sanitizeForFirestore<T>(data: T): T {
   if (data === null || typeof data !== 'object') {
     return data;
   }
   if (Array.isArray(data)) {
-    return data.map(item => sanitizeForFirestore(item)).filter(item => item !== undefined) as unknown as T;
+    return data.map((item:any) => sanitizeForFirestore(item)).filter(item => item !== undefined) as unknown as T;
   }
   const sanitizedObject: { [key: string]: any } = {};
   for (const key in data) {
@@ -152,6 +109,7 @@ const ProgramGenerationOverlay: React.FC<{ isVisible: boolean }> = ({ isVisible 
     </div>
   );
 };
+
 const HomePage: NextPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -169,7 +127,6 @@ const HomePage: NextPage = () => {
   const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = useState(false);
   const [initialFormDataForDialog, setInitialFormDataForDialog] = useState<Partial<CreateHabitFormData> | null>(null);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
-  const [isDailyQuestDialogOpen, setIsDailyQuestDialogOpen] = useState(false);
   const [selectedHabitForAISuggestion, setSelectedHabitForAISuggestion] = useState<Habit | null>(null);
   const [aiSuggestion, setAISuggestion] = useState<AISuggestionType | null>(null);
   const [isAISuggestionDialogOpen, setIsAISuggestionDialogOpen] = useState(false);
@@ -191,6 +148,8 @@ const HomePage: NextPage = () => {
   const [isProgramSuggestionLoading, setIsProgramSuggestionLoading] = useState(false);
   const [programSuggestion, setProgramSuggestion] = useState<GenerateHabitProgramOutput | null>(null);
   const [isProgramSuggestionDialogOpen, setIsProgramSuggestionDialogOpen] = useState(false);
+
+  const [showAllHabits, setShowAllHabits] = useState(false);
 
   const firstDataLoadCompleteRef = useRef(false);
   const debounceSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -263,7 +222,7 @@ const HomePage: NextPage = () => {
               originalMissedDate: typeof log.originalMissedDate === 'string' && log.originalMissedDate.match(/^\d{4}-\d{2}-\d{2}$/) ? log.originalMissedDate : undefined,
             };
           })
-          .filter((log: HabitCompletionLogEntry | undefined): log is HabitCompletionLogEntry => log !== undefined)
+          .filter((log: any): log is HabitCompletionLogEntry => log !== undefined)
           .sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)),
         reminderEnabled: typeof h.reminderEnabled === 'boolean' ? h.reminderEnabled : false,
         programId: typeof h.programId === 'string' ? h.programId : undefined,
@@ -272,27 +231,6 @@ const HomePage: NextPage = () => {
       setHabits(parsedHabits);
       setEarnedBadges(Array.isArray(data.earnedBadges) ? data.earnedBadges : []);
       setTotalPoints(typeof data.totalPoints === 'number' ? data.totalPoints : 0);
-
-      // Call to getCommonHabitSuggestions
-      if (parsedHabits.length === 0 && !commonSuggestionsFetched && authUser) {
-        setIsLoadingCommonSuggestions(true);
-        callGenkitFlow<{ category: string }, { suggestions: { name: string; category: string }[] }>('getCommonHabitSuggestions', { category: 'General' })
-          .then((response) => {
-            const validSuggestions = (response.suggestions || []).filter(
-              (s): s is CommonSuggestedHabitType => HABIT_CATEGORIES.includes(s.category as HabitCategory)
-            );
-            setCommonHabitSuggestions(validSuggestions);
-          })
-          .catch((err) => {
-            console.error("Failed to load common habit suggestions:", err);
-          })
-          .finally(() => {
-            setIsLoadingCommonSuggestions(false);
-            setCommonSuggestionsFetched(true);
-          });
-      } else if (parsedHabits.length > 0) {
-        if (!commonSuggestionsFetched) setCommonSuggestionsFetched(true);
-      }
       setIsLoadingData(false);
       firstDataLoadCompleteRef.current = true;
     }, (error) => {
@@ -300,7 +238,7 @@ const HomePage: NextPage = () => {
       setIsLoadingData(false);
     });
     return () => unsubscribeFirestore();
-  }, [authUser, mounted, commonSuggestionsFetched]);
+  }, [authUser, mounted]);
 
   useEffect(() => {
     if (!authUser || !mounted || !firstDataLoadCompleteRef.current || isLoadingData) {
@@ -340,6 +278,7 @@ const HomePage: NextPage = () => {
       if (debounceSaveTimeoutRef.current) clearTimeout(debounceSaveTimeoutRef.current);
     };
   }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData, toast]);
+
   useEffect(() => {
     if (isLoadingData || !mounted || !firstDataLoadCompleteRef.current) return;
     const newlyEarnedBadges = checkAndAwardBadges(habits, earnedBadges);
@@ -356,37 +295,7 @@ const HomePage: NextPage = () => {
 
   const handleSaveHabit = async (habitData: CreateHabitFormData & { id?: string }) => {
     const isEditing = !!habitData.id;
-
-    if (isEditing) {
-      setHabits(prev =>
-        prev.map(h => {
-          if (h.id === habitData.id) {
-            return {
-              ...h,
-              name: habitData.name,
-              description: habitData.description || '',
-              category: habitData.category,
-              daysOfWeek: habitData.daysOfWeek,
-              optimalTiming: habitData.optimalTiming,
-              durationHours: habitData.durationHours ?? undefined,
-              durationMinutes: habitData.durationMinutes ?? undefined,
-              specificTime: habitData.specificTime,
-            };
-          }
-          return h;
-        })
-      );
-
-      const userHabitRef = doc(db, "users", authUser!.uid, "habits", habitData.id!);
-      await setDoc(userHabitRef, sanitizeForFirestore(habitData));
-
-      toast({
-        title: "Habit Updated!",
-        description: `"${habitData.name}" has been saved.`,
-      });
-    } else {
-      const newHabit: Habit = {
-        id: `h_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    const habitToSave = {
         name: habitData.name,
         description: habitData.description || '',
         category: habitData.category,
@@ -395,25 +304,29 @@ const HomePage: NextPage = () => {
         durationHours: habitData.durationHours ?? undefined,
         durationMinutes: habitData.durationMinutes ?? undefined,
         specificTime: habitData.specificTime,
+    };
+
+    if (isEditing) {
+      setHabits(prev =>
+        prev.map(h => h.id === habitData.id ? { ...h, ...habitToSave } : h)
+      );
+      toast({
+        title: "Habit Updated!",
+        description: `"${habitData.name}" has been saved.`,
+      });
+    } else {
+      const newHabit: Habit = {
+        id: `h_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        ...habitToSave,
         completionLog: [],
         reminderEnabled: false,
       };
-
       setHabits(prev => [...prev, newHabit]);
-
-      const userHabitRef = doc(db, "users", authUser!.uid, "habits", newHabit.id);
-      await setDoc(userHabitRef, sanitizeForFirestore(newHabit));
-
       toast({
         title: "Habit Created!",
         description: `"${newHabit.name}" has been added to your habits.`,
       });
-
-      if (commonHabitSuggestions.length > 0) {
-        setCommonHabitSuggestions([]);
-      }
     }
-
     setIsCreateHabitDialogOpen(false);
   };
 
@@ -428,12 +341,10 @@ const HomePage: NextPage = () => {
   };
 
   const handleToggleComplete = (habitId: string, date: string, completed: boolean) => {
-    let habitName = '';
     let pointsChange = 0;
     setHabits(prev => {
       return prev.map(h => {
         if (h.id === habitId) {
-          habitName = h.name;
           const logIndex = h.completionLog.findIndex(l => l.date === date);
           const newLog = [...h.completionLog];
           if (completed) {
@@ -450,12 +361,11 @@ const HomePage: NextPage = () => {
               newLog.splice(logIndex, 1);
             }
           }
-          return { ...h, completionLog: newLog };
+          return { ...h, completionLog: newLog.sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)) };
         }
         return h;
       });
     });
-
     if (pointsChange !== 0) {
       setTotalPoints(prev => Math.max(0, prev + pointsChange));
     }
@@ -491,8 +401,7 @@ const HomePage: NextPage = () => {
   const handleOpenRescheduleDialog = (habit: Habit, missedDate: string) => setRescheduleDialogData({ habit, missedDate });
   
   const handleGetAIReflectionPrompt = async (input: ReflectionStarterInput): Promise<ReflectionStarterOutput> => {
-    const response = await callGenkitFlow<ReflectionStarterInput, ReflectionStarterOutput>('getReflectionStarter', input);
-    return response;
+    return await genkitService.getReflectionStarter(input);
   };
 
   const onOpenReflectionDialog = (habitId: string, date: string, habitName: string) => {
@@ -511,7 +420,7 @@ const HomePage: NextPage = () => {
       const { habitId, date } = reflectionDialogData;
       setHabits(prev => prev.map(h => h.id === habitId ? {
         ...h,
-        completionLog: h.completionLog.map(l => l.date === date ? {...l, note} : l)
+        completionLog: h.completionLog.map((l: HabitCompletionLogEntry) => l.date === date ? {...l, note} : l)
       } : h));
     }
     setIsReflectionDialogOpen(false);
@@ -536,7 +445,7 @@ const HomePage: NextPage = () => {
       const { habit, missedDate } = rescheduleDialogData;
       setHabits(prev => prev.map(h => h.id === habit.id ? {
         ...h,
-        completionLog: h.completionLog.map(l => l.date === missedDate ? {...l, status: 'skipped'}: l)
+        completionLog: h.completionLog.map((l: HabitCompletionLogEntry) => l.date === missedDate ? {...l, status: 'skipped'}: l)
       } : h));
        setRescheduleDialogData(null);
     }
@@ -546,39 +455,23 @@ const HomePage: NextPage = () => {
     setIsAISuggestionDialogOpen(true);
     setAISuggestion({ suggestionText: '', isLoading: true, error: null, habitId: habit.id });
     try {
-      // Use genkitService instead of callGenkitFlow
       const response = await genkitService.getHabitSuggestion({
-        habitName: habit.name, // Pass habitName as the first argument
+        habitName: habit.name,
         trackingData: `Completions: ${habit.completionLog.length}`,
         daysOfWeek: habit.daysOfWeek,
       });
-      
-      setAISuggestion({ 
-        suggestionText: response.suggestion, 
-        isLoading: false, 
-        error: null, 
-        habitId: habit.id 
-      });
+      setAISuggestion({ suggestionText: response.suggestion, isLoading: false, error: null, habitId: habit.id });
     } catch (e) {
       console.error('Failed to get AI suggestion:', e);
-      setAISuggestion({ 
-        suggestionText: '', 
-        isLoading: false, 
-        error: e instanceof Error ? e.message : 'Could not get suggestion.', 
-        habitId: habit.id 
-      });
+      setAISuggestion({ suggestionText: '', isLoading: false, error: e instanceof Error ? e.message : 'Could not get suggestion.', habitId: habit.id });
     }
   };
   
   const handleOpenGoalInputProgramDialog = () => setIsGoalInputProgramDialogOpen(true);
   
-  // src/app/page.tsx
-
   const handleGenerateProgram = async (goal: string, duration: string) => {
-    // Reverted to using your existing state variable `isProgramSuggestionLoading`
     if (isProgramSuggestionLoading) return;
     
-    // It's better UX to close the input dialog immediately
     setIsGoalInputProgramDialogOpen(false); 
     setIsProgramSuggestionLoading(true);
     setProgramSuggestion(null);
@@ -590,18 +483,15 @@ const HomePage: NextPage = () => {
       );
 
       if (data && data.suggestedHabits) {
-        // This improved mapping logic correctly handles potentially invalid AI responses
         const validHabits: SuggestedProgramHabit[] = (data.suggestedHabits || [])
           .filter((h: any) => h && h.name && h.name.trim() !== "")
           .map((h: any): SuggestedProgramHabit => {
             const category = h.category && HABIT_CATEGORIES.includes(h.category as HabitCategory)
               ? h.category as HabitCategory
               : "Other";
-            
             const daysOfWeek = Array.isArray(h.daysOfWeek) && h.daysOfWeek.length > 0
               ? h.daysOfWeek
               : ['Mon', 'Wed', 'Fri'];
-
             return {
               name: h.name,
               description: h.description || '',
@@ -615,7 +505,6 @@ const HomePage: NextPage = () => {
           });
 
         if (validHabits.length > 0) {
-          // Fixed the setProgramSuggestion call to include the required 'goal' and 'focusDuration'
           setProgramSuggestion({
             programName: data.programName || "New Program",
             suggestedHabits: validHabits,
@@ -642,11 +531,9 @@ const HomePage: NextPage = () => {
         variant: "destructive",
       });
     } finally {
-      // Correctly use the existing state setter
       setIsProgramSuggestionLoading(false);
     }
   };
-    
   
   const handleAddProgramHabits = async (habitsToAdd: SuggestedProgramHabit[], programName: string) => {
     if (!authUser) return;
@@ -670,42 +557,9 @@ const HomePage: NextPage = () => {
 
     setHabits(prev => [...prev, ...newHabits]);
     setIsProgramSuggestionDialogOpen(false);
-
-    try {
-      await Promise.all(
-        newHabits.map(habit => {
-          const habitRef = doc(db, "users", authUser.uid, "habits", habit.id);
-          return setDoc(habitRef, sanitizeForFirestore(habit));
-        })
-      );
-
-      toast({
-        title: "Program Added!",
-        description: `"${programName}" has been added with ${newHabits.length} habits.`,
-      });
-    } catch (error) {
-      console.error("Failed to write program habits:", error);
-      toast({
-        title: "Error Saving Program",
-        description: "Could not save the habits to Firestore.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  
-  
-  const handleCustomizeSuggestedHabit = (sugg: CommonSuggestedHabitType) => {
-    setInitialFormDataForDialog({
-      name: sugg.name,
-      description: sugg.description || '',
-      category: sugg.category || 'Other',
-      daysOfWeek: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-    });
-    setIsCreateHabitDialogOpen(true);
   };
   
-  if (!mounted || isLoadingAuth || (!firstDataLoadCompleteRef.current && isLoadingData)) {
+  if (!mounted || isLoadingAuth) {
     return <LoadingFallback />;
   }
 
@@ -715,40 +569,32 @@ const HomePage: NextPage = () => {
       <AppPageLayout onAddNew={openCreateHabitDialogForNew}>
         <div className="animate-card-fade-in">
           {habits.length > 0 ? (
-            <HabitList
-              habits={habits}
-              onOpenDetailView={handleOpenDetailView}
-              onToggleComplete={(habitId, date) => handleToggleComplete(habitId, date, !habits.find(h => h.id === habitId)?.completionLog.some(l => l.date === date && l.status === 'completed'))}
-              onDelete={handleDeleteHabit}
-              onEdit={handleOpenEditDialog}
-              onReschedule={handleOpenRescheduleDialog}
-              onDeleteProgram={handleDeleteProgram}
-              todayString={todayString}
-              todayAbbr={todayAbbr}
-            />
-          ) : isLoadingCommonSuggestions ? (
+             <>
+                <div className="flex justify-between items-center mb-4 px-1">
+                    <h2 className="text-xl font-bold text-foreground">
+                        {showAllHabits ? 'All Habits & Programs' : 'Today\'s Tasks'}
+                    </h2>
+                    <Button variant="outline" size="sm" onClick={() => setShowAllHabits(prev => !prev)}>
+                        {showAllHabits ? 'View Today\'s Tasks' : 'View All Tasks'}
+                    </Button>
+                </div>
+                <HabitList
+                    habits={habits}
+                    showAllHabits={showAllHabits}
+                    onOpenDetailView={handleOpenDetailView}
+                    onToggleComplete={(habitId, date) => handleToggleComplete(habitId, date, !habits.find(h => h.id === habitId)?.completionLog.some(l => l.date === date && l.status === 'completed'))}
+                    onDelete={handleDeleteHabit}
+                    onEdit={handleOpenEditDialog}
+                    onReschedule={handleOpenRescheduleDialog}
+                    onDeleteProgram={handleDeleteProgram}
+                    todayString={todayString}
+                    todayAbbr={todayAbbr}
+                />
+            </>
+          ) : isLoadingData ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <p className="ml-2 text-muted-foreground">Loading suggestions...</p>
-            </div>
-          ) : commonHabitSuggestions.length > 0 ? (
-            <div className="my-4 p-3 bg-card/70 backdrop-blur-sm border border-primary/20 rounded-xl shadow-md">
-              <div className="px-2 pt-0">
-                <h3 className="text-md font-semibold flex items-center text-primary mb-1">Welcome to Habitual!</h3>
-                <p className="text-xs text-muted-foreground mb-1.5">
-                  Start by picking a common habit or tap the "+" button to create your own.
-                </p>
-              </div>
-              <div className="p-1">
-                <div className="flex flex-wrap gap-2 justify-center mb-2">
-                  {commonHabitSuggestions.map((sugg, idx) => (
-                    <Button key={idx} variant="outline" className="p-2.5 h-auto flex flex-col items-center justify-center space-y-0.5 min-w-[90px] text-center shadow-sm hover:shadow-md transition-shadow text-xs" onClick={() => handleCustomizeSuggestedHabit(sugg)}>
-                      <span className="font-medium">{sugg.name}</span>
-                      {sugg.category && <span className="text-primary/80 opacity-80">{sugg.category}</span>}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+              <p className="ml-2 text-muted-foreground">Loading habits...</p>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
@@ -781,12 +627,12 @@ const HomePage: NextPage = () => {
       )}
        {reflectionDialogData && (
         <AddReflectionNoteDialog
-        isOpen={isReflectionDialogOpen}
-        onClose={() => setIsReflectionDialogOpen(false)}
-        onSaveNote={handleSaveReflectionNote}
-        {...reflectionDialogData}
-        completionDate={reflectionDialogData.date}
-      />
+            isOpen={isReflectionDialogOpen}
+            onClose={() => setIsReflectionDialogOpen(false)}
+            onSaveNote={handleSaveReflectionNote}
+            {...reflectionDialogData}
+            completionDate={reflectionDialogData.date}
+        />
       )}
       {rescheduleDialogData && (
         <RescheduleMissedHabitDialog

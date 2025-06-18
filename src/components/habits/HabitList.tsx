@@ -1,88 +1,88 @@
 // src/components/habits/HabitList.tsx
+
 "use client";
 
-import type { FC } from 'react';
 import * as React from 'react';
+import { useMemo } from 'react';
+import type { FC } from 'react';
+import type { Habit, WeekDay } from '@/types';
 import HabitItem from './HabitItem';
 import ProgramHabitGroup from './ProgramHabitGroup';
-import type { Habit, WeekDay } from '@/types';
-import { ListChecks } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ListTodo } from 'lucide-react';
 
 interface HabitListProps {
   habits: Habit[];
+  showAllHabits: boolean;
   onOpenDetailView: (habit: Habit) => void;
+  todayString: string;
+  todayAbbr: WeekDay | undefined;
   onToggleComplete: (habitId: string, date: string) => void;
   onDelete: (habitId: string) => void;
   onEdit: (habit: Habit) => void;
   onReschedule: (habit: Habit, missedDate: string) => void;
   onDeleteProgram?: (programId: string, programName: string) => void;
-  todayString: string;
-  todayAbbr: WeekDay | undefined;
 }
 
 const HabitList: FC<HabitListProps> = ({
   habits,
+  showAllHabits,
+  todayString,
+  todayAbbr,
   onOpenDetailView,
   onToggleComplete,
   onDelete,
   onEdit,
   onReschedule,
-  todayString,
-  todayAbbr,
-  onDeleteProgram  // Add this line to destructure onDeleteProgram
+  onDeleteProgram,
 }) => {
-
-  if (!todayAbbr) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
-        <ListChecks className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-        <h3 className="text-xl font-semibold text-foreground">Loading...</h3>
-        <p className="text-muted-foreground">Determining today's tasks.</p>
-      </div>
+  const habitsToDisplay = useMemo(() => {
+    if (showAllHabits) {
+      return habits;
+    }
+    return habits.filter(habit =>
+      (todayAbbr && habit.daysOfWeek.includes(todayAbbr)) ||
+      habit.completionLog.some(log => log.date === todayString && log.status === 'pending_makeup')
     );
-  }
+  }, [habits, showAllHabits, todayAbbr, todayString]);
 
-  const habitsRelevantToday = habits.filter(habit =>
-    habit.daysOfWeek.includes(todayAbbr) ||
-    habit.completionLog.some(log => log.date === todayString && log.status === 'pending_makeup')
+  const habitsWithoutPrograms = useMemo(() =>
+    habitsToDisplay.filter(habit => !habit.programId),
+    [habitsToDisplay]
   );
 
-  const standaloneHabits = habitsRelevantToday.filter(h => !h.programId);
-  const programHabits = habitsRelevantToday.filter(h => h.programId && h.programName);
-
-  const groupedProgramHabits = programHabits.reduce<Record<string, { name: string; id: string; habits: Habit[] }>>((acc, habit) => {
-    if (habit.programId && habit.programName) {
-      if (!acc[habit.programId]) {
-        acc[habit.programId] = { id: habit.programId, name: habit.programName, habits: [] };
+  const programs = useMemo(() => {
+    const programMap: { [key: string]: { name: string; habits: Habit[] } } = {};
+    habitsToDisplay.forEach(habit => {
+      if (habit.programId && habit.programName) {
+        if (!programMap[habit.programId]) {
+          programMap[habit.programId] = { name: habit.programName, habits: [] };
+        }
+        programMap[habit.programId].habits.push(habit);
       }
-      acc[habit.programId].habits.push(habit);
-    }
-    return acc;
-  }, {});
+    });
+    return Object.entries(programMap).map(([id, data]) => ({ id, ...data }));
+  }, [habitsToDisplay]);
 
-  const programGroupsArray = Object.values(groupedProgramHabits);
-
-  const noTasksForToday = habits.length > 0 && habitsRelevantToday.length === 0;
-
-  if (noTasksForToday) {
+  if (habitsToDisplay.length === 0 && !showAllHabits) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] sm:min-h-[250px]">
-        <ListChecks className="mx-auto h-16 w-16 text-muted-foreground/70 mb-4" />
-        <h3 className="text-lg font-semibold text-foreground">No Habits for Today</h3>
-        <p className="text-sm text-muted-foreground">Relax or check your other scheduled habits!</p>
+      <div className="flex flex-col items-center justify-center text-center py-10 min-h-[200px] bg-card/50 border border-dashed rounded-lg">
+        <ListTodo className="mx-auto h-12 w-12 text-muted-foreground/70 mb-4" />
+        <h3 className="text-lg font-semibold text-foreground">All Done for Today!</h3>
+        <p className="text-sm text-muted-foreground">
+          No more tasks scheduled. Try the 'View All Tasks' button to plan ahead.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col space-y-4">
-      {programGroupsArray.map((group) => (
+    <div className="space-y-6">
+      {programs.map(program => (
         <ProgramHabitGroup
-          key={group.id}
-          programId={group.id}
-          programName={group.name}
-          habitsInProgram={group.habits}
+          key={program.id}
+          programId={program.id}
+          programName={program.name}
+          habitsInProgram={program.habits}
           onOpenDetailView={onOpenDetailView}
           todayString={todayString}
           todayAbbr={todayAbbr}
@@ -90,24 +90,22 @@ const HabitList: FC<HabitListProps> = ({
           onDelete={onDelete}
           onEdit={onEdit}
           onReschedule={onReschedule}
-          onDeleteProgram={onDeleteProgram}  // This will now work
+          onDeleteProgram={onDeleteProgram}
         />
       ))}
-
-      {/* Container changed to a responsive grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {standaloneHabits.map((habit) => (
+        {habitsWithoutPrograms.map(habit => (
           <HabitItem
             key={habit.id}
             habit={habit}
+            todayString={todayString}
             onToggleComplete={onToggleComplete}
             onDelete={onDelete}
             onEdit={onEdit}
-            onReschedule={onReschedule}
+            onReschedule={() => onReschedule(habit, todayString)}
             onOpenDetailView={onOpenDetailView}
             isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
             currentDate={todayString}
-            todayString={todayString} // Pass todayString here
           />
         ))}
       </div>
