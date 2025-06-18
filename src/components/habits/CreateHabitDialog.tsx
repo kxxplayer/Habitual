@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from 'react';
-// FIX 1: Import FC, useState, useEffect directly for clarity
 import { FC, useState, useEffect } from 'react';
-import { useForm, Controller, useWatch } from 'react-hook-form';
+import { useForm, Controller, useWatch, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-// FIX 2: Change the Zod import to a namespace import. This is the main fix.
 import * as z from 'zod';
 import { genkitService } from '@/lib/genkit-service';
 import { Button } from '@/components/ui/button';
@@ -22,13 +20,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, Tag, Edit3, Save, FilePenLine, Target } from 'lucide-react';
+import {
+  Loader2, Wand2, Clock, CalendarClock, Hourglass,
+  PlusCircle, Tag, Edit3, Save, FilePenLine, Target
+} from 'lucide-react';
 import type { CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-// FIX 3: The interface was missing. Add it here.
 interface CreateHabitDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -45,15 +48,14 @@ const createHabitFormSchema = z.object({
   name: z.string().min(1, "Habit name is required."),
   category: z.enum(HABIT_CATEGORIES).optional(),
   daysOfWeek: z.array(z.enum(weekDaysArray)).min(1, "Please select at least one day."),
-  optimalTiming: z.string().optional(),
+  optimalTiming: z.string().nullable().optional(),
   durationHours: z.coerce.number().min(0).optional().nullable(),
   durationMinutes: z.coerce.number().min(0).max(59).optional().nullable(),
-  // FIX: The type for 'val' is now correctly set to 'string | undefined'
   specificTime: z.string().optional().refine((val: string | undefined) => !val || /^\d{2}:\d{2}$/.test(val), {
-    message: "Time should be in HH:mm format or empty",
+  message: "Time should be in HH:mm format or empty",
   }),
 });
-
+type HabitFormSchema = z.infer<typeof createHabitFormSchema>;
 const dayMapFullToAbbr: { [key: string]: WeekDay } = {
   "sunday": "Sun", "sun": "Sun", "sundays": "Sun",
   "monday": "Mon", "mon": "Mon", "mondays": "Mon",
@@ -67,9 +69,8 @@ const dayMapFullToAbbr: { [key: string]: WeekDay } = {
 const normalizeDay = (day: string): WeekDay | undefined => {
   if (typeof day !== 'string') return undefined;
   const lowerDay = day.trim().toLowerCase().replace(/,/g, '');
-  return dayMapFullToAbbr[lowerDay] || weekDaysArray.find(d => d.toLowerCase() === lowerDay) || undefined;
+  return dayMapFullToAbbr[lowerDay] || weekDaysArray.find(d => d.toLowerCase() === lowerDay);
 };
-
 
 const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   isOpen,
@@ -81,16 +82,26 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
   const [currentStep, setCurrentStep] = useState(1);
   const [isAISuggesting, setIsAISuggesting] = useState(false);
   const { toast } = useToast();
-  const { control, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = useForm<CreateHabitFormData>({
+  const {
+    control, handleSubmit, reset, watch, setValue,
+    formState: { errors, isSubmitting }
+  } = useForm<HabitFormSchema>({
     resolver: zodResolver(createHabitFormSchema),
     defaultValues: {
-      id: undefined, description: '', name: '', category: 'Other', daysOfWeek: [],
-      optimalTiming: '', durationHours: null, durationMinutes: null, specificTime: '',
+    // ...
+      id: undefined,
+      description: '',
+      name: '',
+      category: 'Other',
+      daysOfWeek: [],
+      optimalTiming: '',
+      durationHours: null,
+      durationMinutes: null,
+      specificTime: '',
     },
   });
 
-  // FIX: Define onSubmitDialog function
-  const onSubmitDialog = (data: CreateHabitFormData) => {
+  const onSubmitDialog: SubmitHandler<CreateHabitFormData> = (data) => {
     onSaveHabit(data);
   };
 
@@ -99,8 +110,15 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
 
   useEffect(() => {
     const defaultVals = {
-      id: undefined, description: '', name: '', category: 'Other' as HabitCategory, daysOfWeek: [] as WeekDay[],
-      optimalTiming: '', durationHours: null, durationMinutes: null, specificTime: '',
+      id: undefined,
+      description: '',
+      name: '',
+      category: 'Other' as HabitCategory,
+      daysOfWeek: [] as WeekDay[],
+      optimalTiming: '',
+      durationHours: null,
+      durationMinutes: null,
+      specificTime: '',
     };
     if (isOpen) {
       if (initialData) {
@@ -111,14 +129,14 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
           category: initialData.category || 'Other',
           daysOfWeek: initialData.daysOfWeek || [],
           optimalTiming: initialData.optimalTiming || '',
-          durationHours: initialData.durationHours === undefined ? null : initialData.durationHours,
-          durationMinutes: initialData.durationMinutes === undefined ? null : initialData.durationMinutes,
+          durationHours: typeof initialData.durationHours === 'number' ? initialData.durationHours : null,
+          durationMinutes: typeof initialData.durationMinutes === 'number' ? initialData.durationMinutes : null,
           specificTime: initialData.specificTime || '',
         });
-        setCurrentStep(2); 
+        setCurrentStep(2);
       } else {
         reset(defaultVals);
-        setCurrentStep(1); 
+        setCurrentStep(1);
       }
     }
   }, [isOpen, initialData, reset]);
@@ -128,89 +146,47 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
       toast({ title: "Input Missing", description: "Please describe your habit first.", variant: "destructive" });
       return;
     }
-    
+
     setIsAISuggesting(true);
     try {
-      console.log('🎯 User input for AI:', habitDescriptionForAI);
-      
-      // Use genkitService instead of callGenkitFlow
-      const result = await genkitService.generateHabit({ 
-        description: habitDescriptionForAI.trim() 
-      });
-  
-      console.log('🤖 AI response:', result);
-  
-      // Set form values with validation
-      if (result.habitName) {
-        setValue('name', result.habitName, { shouldValidate: true });
-        console.log('✅ Set habit name:', result.habitName);
-      }
-      
+      const result = await genkitService.generateHabit(habitDescriptionForAI.trim());
+
+      if (result.habitName) setValue('name', result.habitName, { shouldValidate: true });
       if (result.category && HABIT_CATEGORIES.includes(result.category as HabitCategory)) {
         setValue('category', result.category as HabitCategory);
-        console.log('✅ Set category:', result.category);
       } else {
         setValue('category', 'Other');
-        console.log('⚠️ Invalid category, using Other');
       }
-      
-      // Handle days of week with proper validation
-      const suggestedDays = Array.isArray(result.daysOfWeek) 
-        ? result.daysOfWeek
-            .map((day: string) => normalizeDay(day))
-            .filter((d?: WeekDay): d is WeekDay => !!d) 
+
+      const suggestedDays = Array.isArray(result.daysOfWeek)
+        ? result.daysOfWeek.map((day: string) => normalizeDay(day)).filter((d): d is WeekDay => !!d)
         : [];
-      
-      if (suggestedDays.length > 0) {
-        setValue('daysOfWeek', suggestedDays, { shouldValidate: true });
-        console.log('✅ Set days:', suggestedDays);
-      } else {
-        console.log('⚠️ No valid days found');
-      }
-      
-      if (result.optimalTiming) {
-        setValue('optimalTiming', result.optimalTiming);
-        console.log('✅ Set optimal timing:', result.optimalTiming);
-      }
-      
-      if (typeof result.durationHours === 'number') {
-        setValue('durationHours', result.durationHours);
-        console.log('✅ Set duration hours:', result.durationHours);
-      }
-      
-      if (typeof result.durationMinutes === 'number') {
-        setValue('durationMinutes', result.durationMinutes);
-        console.log('✅ Set duration minutes:', result.durationMinutes);
-      }
-      
-      if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) {
-        setValue('specificTime', result.specificTime);
-        console.log('✅ Set specific time:', result.specificTime);
-      }
-  
-      toast({ 
-        title: "Details Filled!", 
-        description: "Review the suggested details and adjust as needed." 
-      });
+
+      if (suggestedDays.length > 0) setValue('daysOfWeek', suggestedDays, { shouldValidate: true });
+      if (result.optimalTiming) setValue('optimalTiming', result.optimalTiming);
+      if (typeof result.durationHours === 'number') setValue('durationHours', typeof result.durationHours === 'number' ? result.durationHours : parseInt(result.durationHours ?? '0'));
+      if (typeof result.durationMinutes === 'number') setValue('durationMinutes', typeof result.durationMinutes === 'number' ? result.durationMinutes : parseInt(result.durationMinutes ?? '0'));
+      if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) setValue('specificTime', result.specificTime);
+
+      toast({ title: "Details Filled!", description: "Review the suggested details and adjust as needed." });
     } catch (error) {
-      console.error("AI Suggestion Error:", error);
-      toast({ 
-        title: "AI Suggestion Failed", 
-        description: error instanceof Error ? error.message : "Could not get AI suggestions. Please fill manually or try again.",
-        variant: "destructive" 
+      toast({
+        title: "AI Suggestion Failed",
+        description: error instanceof Error ? error.message : "Could not get AI suggestions. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setIsAISuggesting(false);
     }
   };
-  
+
   const handleOpenProgramDialog = () => {
-    onClose(); 
-    onOpenGoalProgramDialog(); 
+    onClose();
+    onOpenGoalProgramDialog();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open: boolean) => { if (!open) onClose(); }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-2xl bg-card rounded-xl shadow-xl flex flex-col max-h-[90vh]">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="text-2xl font-bold flex items-center text-primary">
@@ -254,7 +230,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
         )}
 
         {currentStep === 2 && (
-          <form onSubmit={handleSubmit(onSubmitDialog)} className="flex flex-col flex-grow min-h-0">
+          <form onSubmit={handleSubmit(onSubmitDialog as SubmitHandler<CreateHabitFormData>)}>
             <div className="flex-grow overflow-y-auto px-6">
               {!isEditing && (
                 <Button type="button" onClick={() => setCurrentStep(1)} variant="ghost" size="sm" className="text-xs text-muted-foreground mb-4 -ml-3">
@@ -311,7 +287,8 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                       <Controller key={day} name="daysOfWeek" control={control} render={({ field }) => (
                         <div className="flex items-center space-x-1 p-1 rounded-md hover:bg-accent/10">
                           <Checkbox id={`dialog-day-${day}`} checked={field.value?.includes(day)}
-                            onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), day].sort((a, b) => weekDaysArray.indexOf(a) - weekDaysArray.indexOf(b)) : (field.value || []).filter(d => d !== day))}
+                            onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), day].sort((a, b) => weekDaysArray.indexOf(a) - weekDaysArray.indexOf(b)) : (field.value || []).filter((d: WeekDay | undefined): d is WeekDay => !!d)
+)}
                             className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground h-4 w-4" />
                           <Label htmlFor={`dialog-day-${day}`} className="text-xs font-normal cursor-pointer select-none">{day}</Label>
                         </div>)} />))}
@@ -338,7 +315,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                 </div>
                 <div className="space-y-1 pb-4">
                   <Label htmlFor="dialog-habit-optimalTiming" className="text-sm font-medium flex items-center"><CalendarClock className="mr-1.5 h-4 w-4 text-muted-foreground" />Optimal General Timing (Optional)</Label>
-                  <Controller name="optimalTiming" control={control} render={({ field }) => <Input id="dialog-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} className="bg-input/50 text-sm" />} />
+                  <Controller name="optimalTiming" control={control} render={({ field }) => <Input id="dialog-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} value={field.value ?? ''} className="bg-input/50 text-sm" />} />
                 </div>
               </div>
             </div>

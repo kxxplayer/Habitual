@@ -125,7 +125,7 @@ const DashboardPage: NextPage = () => {
       const response = await genkitService.getHabitSuggestion({
         habitName: input.habitName,
         trackingData: input.trackingData,
-        daysOfWeek: input.daysOfWeek,
+        daysOfWeek: input.daysOfWeek as ("Sun" | "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat")[],
       });
       
       return { suggestion: response.suggestion };

@@ -548,7 +548,7 @@ const HomePage: NextPage = () => {
     try {
       // Use genkitService instead of callGenkitFlow
       const response = await genkitService.getHabitSuggestion({
-        habitName: habit.name,
+        habitName: habit.name, // Pass habitName as the first argument
         trackingData: `Completions: ${habit.completionLog.length}`,
         daysOfWeek: habit.daysOfWeek,
       });
@@ -588,11 +588,10 @@ const HomePage: NextPage = () => {
       }
   
       // Use genkitService instead of callGenkitFlow
-      const data = await genkitService.generateHabitProgramFromGoal({
-        goal: goal.trim(),
-        focusDuration: duration.trim()
-      });
-      
+      const data = await genkitService.generateHabitProgramFromGoal(
+      goal.trim(),
+      duration.trim()
+      );
       console.log('Received program data:', data);
       
       // Fix the type filtering - ensure all required properties are present
