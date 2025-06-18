@@ -572,63 +572,81 @@ const HomePage: NextPage = () => {
   
   const handleOpenGoalInputProgramDialog = () => setIsGoalInputProgramDialogOpen(true);
   
+  // src/app/page.tsx
+
   const handleGenerateProgram = async (goal: string, duration: string) => {
-    console.log('handleGenerateProgram called with:', { goal, duration });
+    // Reverted to using your existing state variable `isProgramSuggestionLoading`
+    if (isProgramSuggestionLoading) return;
     
-    setIsGoalInputProgramDialogOpen(false);
+    // It's better UX to close the input dialog immediately
+    setIsGoalInputProgramDialogOpen(false); 
     setIsProgramSuggestionLoading(true);
-    
+    setProgramSuggestion(null);
+
     try {
-      // Validate inputs
-      if (!goal || goal.trim() === '') {
-        throw new Error('Goal is required');
-      }
-      if (!duration || duration.trim() === '') {
-        throw new Error('Focus duration is required');
-      }
-  
-      // Use genkitService instead of callGenkitFlow
       const data = await genkitService.generateHabitProgramFromGoal(
-      goal.trim(),
-      duration.trim()
+        goal.trim(),
+        duration.trim()
       );
-      console.log('Received program data:', data);
-      
-      // Fix the type filtering - ensure all required properties are present
-      // In src/app/page.tsx, inside the handleGenerateProgram function
-      const validHabits: SuggestedProgramHabit[] = (data.suggestedHabits || [])
-        .filter((h: any) => h && h.name && h.category && HABIT_CATEGORIES.includes(h.category as HabitCategory))
-        .map((h: any): SuggestedProgramHabit => ({
-          name: h.name,
-          description: h.description || '',
-          category: h.category as HabitCategory,
-          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek : ['Mon', 'Wed', 'Fri'],
-          // ADDED: Make sure all optional fields are carried over
-          optimalTiming: h.optimalTiming,
-          durationHours: h.durationHours,
-          durationMinutes: h.durationMinutes,
-          specificTime: h.specificTime,
-      }));
-  
-      setProgramSuggestion({
-        goal,
-        focusDuration: duration,
-        programName: data.programName,
-        suggestedHabits: validHabits,
-      });
-      setIsProgramSuggestionDialogOpen(true);
-    } catch (e) {
-      console.error('Failed to generate program:', e);
-      toast({ 
-        title: "Error", 
-        description: e instanceof Error ? e.message : "Failed to generate program. Please try again.",
-        variant: "destructive"
+
+      if (data && data.suggestedHabits) {
+        // This improved mapping logic correctly handles potentially invalid AI responses
+        const validHabits: SuggestedProgramHabit[] = (data.suggestedHabits || [])
+          .filter((h: any) => h && h.name && h.name.trim() !== "")
+          .map((h: any): SuggestedProgramHabit => {
+            const category = h.category && HABIT_CATEGORIES.includes(h.category as HabitCategory)
+              ? h.category as HabitCategory
+              : "Other";
+            
+            const daysOfWeek = Array.isArray(h.daysOfWeek) && h.daysOfWeek.length > 0
+              ? h.daysOfWeek
+              : ['Mon', 'Wed', 'Fri'];
+
+            return {
+              name: h.name,
+              description: h.description || '',
+              category,
+              daysOfWeek,
+              optimalTiming: h.optimalTiming,
+              durationHours: h.durationHours,
+              durationMinutes: h.durationMinutes,
+              specificTime: h.specificTime,
+            };
+          });
+
+        if (validHabits.length > 0) {
+          // Fixed the setProgramSuggestion call to include the required 'goal' and 'focusDuration'
+          setProgramSuggestion({
+            programName: data.programName || "New Program",
+            suggestedHabits: validHabits,
+            goal: goal,
+            focusDuration: duration,
+          });
+          setIsProgramSuggestionDialogOpen(true);
+        } else {
+          toast({
+            title: "AI Error",
+            description: "The AI couldn't generate valid habits for this goal. Please try a different goal.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        throw new Error("Invalid response from AI service.");
+      }
+    } catch (error) {
+      console.error("Failed to generate habit program:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({
+        title: "Failed to Generate Program",
+        description: errorMessage,
+        variant: "destructive",
       });
     } finally {
+      // Correctly use the existing state setter
       setIsProgramSuggestionLoading(false);
     }
   };
-  
+    
   
   const handleAddProgramHabits = async (habitsToAdd: SuggestedProgramHabit[], programName: string) => {
     if (!authUser) return;
