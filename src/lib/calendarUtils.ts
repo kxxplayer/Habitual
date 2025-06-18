@@ -57,7 +57,10 @@ export const generateICS = (habit: Habit): string => {
 
   const rrule = getRRule(habit);
   const dtStartFormatted = isAllDay ? format(eventStartDate, 'yyyyMMdd') : format(eventStartDate, "yyyyMMdd'T'HHmmss");
-  const isoDurationFormatted = !isAllDay ? formatDurationToISO(habit.durationHours, habit.durationMinutes) : undefined;
+  const isoDurationFormatted = !isAllDay
+  ? formatDurationToISO(habit.durationHours ?? undefined, habit.durationMinutes ?? undefined)
+  : undefined;
+
 
   const icsLines = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//HabitualApp//NONSGML v1.0//EN',
