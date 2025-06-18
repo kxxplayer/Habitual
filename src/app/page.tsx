@@ -595,14 +595,20 @@ const HomePage: NextPage = () => {
       console.log('Received program data:', data);
       
       // Fix the type filtering - ensure all required properties are present
+      // In src/app/page.tsx, inside the handleGenerateProgram function
       const validHabits: SuggestedProgramHabit[] = (data.suggestedHabits || [])
         .filter((h: any) => h && h.name && h.category && HABIT_CATEGORIES.includes(h.category as HabitCategory))
         .map((h: any): SuggestedProgramHabit => ({
           name: h.name,
-          description: h.description || '', // Ensure description is never undefined
+          description: h.description || '',
           category: h.category as HabitCategory,
-          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek : ['Mon', 'Wed', 'Fri']
-        }));
+          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek : ['Mon', 'Wed', 'Fri'],
+          // ADDED: Make sure all optional fields are carried over
+          optimalTiming: h.optimalTiming,
+          durationHours: h.durationHours,
+          durationMinutes: h.durationMinutes,
+          specificTime: h.specificTime,
+      }));
   
       setProgramSuggestion({
         goal,
