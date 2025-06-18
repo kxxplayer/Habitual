@@ -18,8 +18,8 @@ const ai = genkit({
 
 const model = googleAI.model('gemini-1.5-flash');
 
-const WeekDaySchema = z.enum(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
-const HabitCategorySchema = z.enum([
+export const WeekDaySchema = z.enum(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+export const HabitCategorySchema = z.enum([
   'Health & Fitness', 'Work & Study', 'Personal Development', 'Mindfulness',
   'Social', 'Creative', 'Finance', 'Home & Environment', 'Entertainment', 'Other'
 ]);
@@ -42,7 +42,6 @@ const normalizeDay = (day: string): WeekDay | undefined => {
   return dayMapFullToAbbr[lowerDay] || (WeekDaySchema.options as readonly string[]).includes(day) ? day as WeekDay : undefined;
 };
 
-// Helper function to normalize duration values
 const normalizeDuration = (habit: any): any => {
   if (habit.durationMinutes >= 60) {
     const additionalHours = Math.floor(habit.durationMinutes / 60);
@@ -57,21 +56,26 @@ const normalizeDuration = (habit: any): any => {
   return habit;
 };
 
+// Schemas for generateHabit
+export const generateHabitInputSchema = z.object({ description: z.string() });
+export const generateHabitOutputSchema = z.object({
+  habitName: z.string(),
+  category: HabitCategorySchema,
+  daysOfWeek: z.array(WeekDaySchema),
+  optimalTiming: z.string().optional().nullable(),
+  durationHours: z.number().optional().nullable(),
+  durationMinutes: z.number().optional().nullable(),
+  specificTime: z.string().optional().nullable(),
+});
+
 export const generateHabit = ai.defineFlow(
   {
     name: 'generateHabit',
-    inputSchema: z.object({ description: z.string() }),
-    outputSchema: z.object({
-      habitName: z.string(),
-      category: HabitCategorySchema,
-      daysOfWeek: z.array(WeekDaySchema),
-      optimalTiming: z.string().optional().nullable(),
-      durationHours: z.number().optional().nullable(),
-      durationMinutes: z.number().optional().nullable(),
-      specificTime: z.string().optional().nullable(),
-    }),
+    inputSchema: generateHabitInputSchema,
+    outputSchema: generateHabitOutputSchema,
   },
   async ({ description }) => {
+    // ... (rest of the function is unchanged)
     if (!description || description.trim() === '') {
       throw new Error('Description is required');
     }
@@ -107,25 +111,30 @@ export const generateHabit = ai.defineFlow(
   }
 );
 
+// Schemas for generateHabitProgramFromGoal
+export const generateHabitProgramFromGoalInputSchema = z.object({ goal: z.string(), focusDuration: z.string() });
+export const generateHabitProgramFromGoalOutputSchema = z.object({
+  programName: z.string(),
+  suggestedHabits: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    category: HabitCategorySchema,
+    daysOfWeek: z.array(WeekDaySchema),
+    optimalTiming: z.string().optional().nullable(),
+    durationHours: z.number().int().min(0).optional().nullable(),
+    durationMinutes: z.number().int().min(0).max(59).optional().nullable(),
+    specificTime: z.string().optional().nullable(),
+  }))
+});
+
 export const generateHabitProgramFromGoal = ai.defineFlow(
   {
     name: 'generateHabitProgramFromGoal',
-    inputSchema: z.object({ goal: z.string(), focusDuration: z.string() }),
-    outputSchema: z.object({
-      programName: z.string(),
-      suggestedHabits: z.array(z.object({
-        name: z.string(),
-        description: z.string(),
-        category: HabitCategorySchema,
-        daysOfWeek: z.array(WeekDaySchema),
-        optimalTiming: z.string().optional().nullable(),
-        durationHours: z.number().int().min(0).optional().nullable(),
-        durationMinutes: z.number().int().min(0).max(59).optional().nullable(),
-        specificTime: z.string().optional().nullable(),
-      }))
-    }),
+    inputSchema: generateHabitProgramFromGoalInputSchema,
+    outputSchema: generateHabitProgramFromGoalOutputSchema,
   },
   async ({ goal, focusDuration }) => {
+    // ... (rest of the function is unchanged)
     if (!goal || !focusDuration) {
       throw new Error('Goal and focus duration are required.');
     }
@@ -169,13 +178,18 @@ export const generateHabitProgramFromGoal = ai.defineFlow(
   }
 );
 
+// Schemas for getHabitSuggestion
+export const getHabitSuggestionInputSchema = z.object({ habitName: z.string(), trackingData: z.string(), daysOfWeek: z.array(WeekDaySchema) });
+export const getHabitSuggestionOutputSchema = z.object({ suggestion: z.string() });
+
 export const getHabitSuggestion = ai.defineFlow(
   {
     name: 'getHabitSuggestion',
-    inputSchema: z.object({ habitName: z.string(), trackingData: z.string(), daysOfWeek: z.array(WeekDaySchema) }),
-    outputSchema: z.object({ suggestion: z.string() }),
+    inputSchema: getHabitSuggestionInputSchema,
+    outputSchema: getHabitSuggestionOutputSchema,
   },
   async ({ habitName, trackingData, daysOfWeek }) => {
+    // ... (rest of the function is unchanged)
     const prompt = `You are a helpful habit coach. Give one specific, actionable, and motivating tip for the habit "${habitName}". 
     
     Context:
@@ -194,11 +208,16 @@ export const getHabitSuggestion = ai.defineFlow(
     return { suggestion: text };
   }
 );
+
+// Schemas for getReflectionStarter
+export const getReflectionStarterInputSchema = z.object({ habitName: z.string() });
+export const getReflectionStarterOutputSchema = z.object({ reflectionPrompt: z.string() });
+
 export const getReflectionStarter = ai.defineFlow(
   {
     name: 'getReflectionStarter',
-    inputSchema: z.object({ habitName: z.string() }),
-    outputSchema: z.object({ reflectionPrompt: z.string() }),
+    inputSchema: getReflectionStarterInputSchema,
+    outputSchema: getReflectionStarterOutputSchema,
   },
   async ({ habitName }) => {
     const prompt = `Generate one thoughtful, open-ended reflection question for the habit: "${habitName}".`;
@@ -207,18 +226,23 @@ export const getReflectionStarter = ai.defineFlow(
   }
 );
 
+// Schemas for getCommonHabitSuggestions
+export const getCommonHabitSuggestionsInputSchema = z.object({ category: z.string() });
+export const getCommonHabitSuggestionsOutputSchema = z.object({
+  suggestions: z.array(z.object({
+    name: z.string(),
+    category: HabitCategorySchema
+  }))
+});
+
 export const getCommonHabitSuggestions = ai.defineFlow(
   {
     name: 'getCommonHabitSuggestions',
-    inputSchema: z.object({ category: z.string() }),
-    outputSchema: z.object({
-      suggestions: z.array(z.object({
-        name: z.string(),
-        category: HabitCategorySchema
-      }))
-    }),
+    inputSchema: getCommonHabitSuggestionsInputSchema,
+    outputSchema: getCommonHabitSuggestionsOutputSchema,
   },
   async ({ category }) => {
+    // ... (rest of the function is unchanged)
     const prompt = `List 5 common habits for the category "${category}". Format as JSON array with "name" and "category" fields only.`;
     const { text } = await ai.generate({ model, prompt });
     try {

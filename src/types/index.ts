@@ -32,10 +32,10 @@ export interface Habit {
   description?: string;
   category?: HabitCategory;
   daysOfWeek: WeekDay[];
-  optimalTiming?: string;
-  durationHours?: number;
-  durationMinutes?: number;
-  specificTime?: string;
+  optimalTiming?: string | null;
+  durationHours?: number | null;
+  durationMinutes?: number | null;
+  specificTime?: string | null;
   completionLog: HabitCompletionLogEntry[];
   reminderEnabled: boolean;
   programId?: string;
@@ -48,10 +48,10 @@ export interface CreateHabitFormData {
   description?: string;
   category?: HabitCategory;
   daysOfWeek: WeekDay[];
-  optimalTiming?: string;
+  optimalTiming?: string | null;
   durationHours?: number | null;
   durationMinutes?: number | null;
-  specificTime?: string;
+  specificTime?: string | null;
 }
 
 export interface EarnedBadge {
@@ -77,13 +77,13 @@ export interface CommonSuggestedHabitType {
 
 export interface SuggestedProgramHabit {
   name: string;
-  description: string; // Remove ? to make it required
-  category: HabitCategory; // Remove ? to make it required  
+  description: string; 
+  category: HabitCategory; 
   daysOfWeek: WeekDay[];
-  optimalTiming?: string;
-  durationHours?: number;
-  durationMinutes?: number;
-  specificTime?: string;
+  optimalTiming?: string | null;
+  durationHours?: number | null;
+  durationMinutes?: number | null;
+  specificTime?: string | null;
 }
 
 export interface GenerateHabitProgramOutput {
@@ -100,12 +100,7 @@ export interface ReflectionStarterInput {
 export interface ReflectionStarterOutput {
   reflectionPrompt: string;
 }
-export interface GenerateHabitProgramOutput {
-  programName: string;
-  suggestedHabits: SuggestedProgramHabit[];
-  goal: string;
-  focusDuration?: string; // ✅ Add this to fix TS error at line 475
-}
+
 export const FIRST_HABIT_COMPLETED_BADGE_ID = 'firstHabit';
 export const SEVEN_DAY_STREAK_BADGE_ID = 'sevenDayStreak';
 export const THIRTY_DAY_STREAK_BADGE_ID = 'thirtyDayStreak';

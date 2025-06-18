@@ -584,10 +584,11 @@ const HomePage: NextPage = () => {
         throw new Error('Focus duration is required');
       }
   
-      const data = await genkitService.generateHabitProgramFromGoal({
-        goal: goal.trim(),
-        focusDuration: duration.trim()
-      });
+      // FIX: Pass arguments separately instead of in an object
+      const data = await genkitService.generateHabitProgramFromGoal(
+        goal.trim(),
+        duration.trim()
+      );
       
       console.log('Received program data:', data);
       
