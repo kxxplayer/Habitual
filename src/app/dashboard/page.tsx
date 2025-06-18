@@ -119,8 +119,8 @@ const DashboardPage: NextPage = () => {
     return () => unsubscribeFirestore();
   }, [authUser, isLoadingAuth, toast]);
 
-  // ADDED: Wrapper function to call the cloud function.
-  const getAISuggestion = async (input: { habitName: string; trackingData: string; daysOfWeek: string[] }): Promise<{ suggestion: string }> => {
+  // FIXED: Changed daysOfWeek from string[] to WeekDay[]
+  const getAISuggestion = async (input: { habitName: string; trackingData: string; daysOfWeek: WeekDay[] }): Promise<{ suggestion: string }> => {
     try {
       const response = await genkitService.getHabitSuggestion({
         habitName: input.habitName,
@@ -135,8 +135,6 @@ const DashboardPage: NextPage = () => {
     }
   };
   
-
-
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
