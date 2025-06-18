@@ -18,23 +18,36 @@ import {
   Edit,
   Trash2,
   CalendarClock,
-  Eye
+  Eye,
 } from 'lucide-react';
 import type { Habit } from '@/types';
 import { cn } from '@/lib/utils';
-
-const getHabitIcon = (habitName: string): string => {
-  const nameLower = habitName.toLowerCase();
-  if (nameLower.includes('gym') || nameLower.includes('workout') || nameLower.includes('fitness')) return '🏋️';
-  if (nameLower.includes('sql') || nameLower.includes('code') || nameLower.includes('python')) return '💻';
-  if (nameLower.includes('water') || nameLower.includes('drink') || nameLower.includes('hydrate')) return '💧';
-  if (nameLower.includes('walk') || nameLower.includes('run') || nameLower.includes('jog')) return '🚶';
-  if (nameLower.includes('read') || nameLower.includes('book')) return '📚';
-  if (nameLower.includes('meditate') || nameLower.includes('mindfulness')) return '🧘';
-  if (nameLower.includes('learn') || nameLower.includes('study')) return '📝';
-  if (nameLower.includes('sleep') || nameLower.includes('bed')) return '🛏️';
-  if (nameLower.includes('journal') || nameLower.includes('write')) return '✍️';
-  return '✨';
+import {
+  BookOpen, Briefcase, Code, Dumbbell, Droplets, Heart,
+  DollarSign, Brush, PenSquare, Bed, Leaf, MessageCircle, Brain, Target, Bike, Laptop
+} from 'lucide-react';
+const getHabitIcon = (habitName: string): React.ReactNode => {
+    const nameLower = habitName.toLowerCase();
+    const iconProps = { className: "h-8 w-8 text-foreground/80" };
+  
+    
+    if (nameLower.includes('workout') || nameLower.includes('fitness')) return <Dumbbell {...iconProps} />;
+    if (nameLower.includes('bike') || nameLower.includes('cycle')) return <Bike {...iconProps} />;
+    if (nameLower.includes('sql') || nameLower.includes('code') || nameLower.includes('python') || nameLower.includes('develop')) return <Laptop {...iconProps} />;
+    if (nameLower.includes('water') || nameLower.includes('drink') || nameLower.includes('hydrate')) return <Droplets {...iconProps} />;
+    if (nameLower.includes('read') || nameLower.includes('book')) return <BookOpen {...iconProps} />;
+    if (nameLower.includes('meditate') || nameLower.includes('mindful')) return <Brain {...iconProps} />;
+    if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase {...iconProps} />;
+    if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed {...iconProps} />;
+    if (nameLower.includes('journal') || nameLower.includes('write')) return <PenSquare {...iconProps} />;
+    if (nameLower.includes('diet') || nameLower.includes('eat healthy') || nameLower.includes('food')) return <Leaf {...iconProps} />;
+    if (nameLower.includes('social') || nameLower.includes('talk') || nameLower.includes('call')) return <MessageCircle {...iconProps} />;
+    if (nameLower.includes('draw') || nameLower.includes('paint') || nameLower.includes('creative')) return <Brush {...iconProps} />;
+    if (nameLower.includes('finance') || nameLower.includes('budget') || nameLower.includes('money')) return <DollarSign {...iconProps} />;
+    if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <Heart {...iconProps} />;
+    
+    // Fallback icon
+    return <Target {...iconProps} />;
 };
 
 interface HabitItemProps {
@@ -77,7 +90,9 @@ const HabitItem: React.FC<HabitItemProps> = ({
         {/* Top section with name and options */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">{getHabitIcon(habit.name)}</span>
+            <div className="flex h-10 w-10 items-center justify-center">
+              {getHabitIcon(habit.name)}
+            </div>
             <p className={cn("font-semibold text-base", isCompleted && "line-through text-muted-foreground")}>
               {habit.name}
             </p>
