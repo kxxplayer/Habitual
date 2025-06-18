@@ -1,16 +1,14 @@
-// src/components/habits/ProgramHabitGroup.tsx
-
 "use client";
 
 import * as React from 'react';
 import type { FC } from 'react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Trash2, ChevronDown } from 'lucide-react';
+import { MoreVertical, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger as AccordionTriggerPrimitive } from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import HabitItem from './HabitItem';
 import type { Habit, WeekDay } from '@/types';
-import { Target, CheckCircle2 } from 'lucide-react';
+import { Target, CheckCircle2, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 
@@ -62,61 +60,59 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   return (
     <Accordion type="single" collapsible className="w-full" defaultValue={`program-${programId}`}>
       <AccordionItem value={`program-${programId}`} className="border border-primary/20 rounded-lg shadow-md overflow-hidden bg-card/80">
-        <div className="flex items-center px-4 py-2">
-            <AccordionTriggerPrimitive className="flex-grow p-0 !no-underline group">
-              <div className="flex flex-col items-start w-full">
-                <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center space-x-3">
-                        <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                        <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} />
-                        <span className={cn("font-semibold text-lg text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
-                            {programName}
-                        </span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-xs">
-                        {allProgramTasksForTodayCompleted ?
-                            <CheckCircle2 className="h-4 w-4 text-accent" /> :
-                            <span className={cn("font-mono text-xs px-1.5 py-0.5 rounded-full", progressPercentToday > 0 ? "text-primary-foreground bg-primary/80" : "bg-muted text-muted-foreground")}>
-                                {`${completedTodayCount}/${habitsScheduledToday.length}`}
-                            </span>
-                        }
-                    </div>
-                </div>
-                 {habitsScheduledToday.length > 0 && (
-                    <Progress
+        <div className="flex items-center px-2 py-2"> {/* Main flex container */}
+          
+          {/* 3-dots menu on the far left */}
+          {onDeleteProgram && (
+            <div className="mr-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="sr-only">Program options</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteProgram(programId, programName);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Program
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+
+          {/* Clickable accordion trigger area (without the arrow) */}
+          <AccordionTrigger className="flex-grow p-0 !no-underline [&>svg]:hidden">
+            <div className="flex flex-col items-start w-full ml-2">
+              <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center space-x-3">
+                      <Target className={cn("h-6 w-6", allProgramTasksForTodayCompleted ? "text-accent" : "text-primary")} />
+                      <span className={cn("font-semibold text-lg text-left", allProgramTasksForTodayCompleted ? "text-accent line-through" : "text-foreground")}>
+                          {programName}
+                      </span>
+                  </div>
+              </div>
+               {habitsScheduledToday.length > 0 && (
+                  <Progress
                     value={progressPercentToday}
-                    className="h-1.5 w-full mt-2 ml-8"
+                    className="h-1.5 w-full mt-2"
                     indicatorClassName={allProgramTasksForTodayCompleted ? "bg-accent" : "bg-primary"}
-                    />
-                )}
-              </div>
-            </AccordionTriggerPrimitive>
-            {onDeleteProgram && (
-              <div className="ml-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                      <span className="sr-only">Program options</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => onDeleteProgram(programId, programName)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Program
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
+                  />
+              )}
+            </div>
+          </AccordionTrigger>
         </div>
         <AccordionContent className="bg-muted/20 border-t border-border">
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
