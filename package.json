@@ -31,6 +31,8 @@
     "@capacitor/android": "^7.3.0",
     "@capacitor/core": "^7.3.0",
     "@capacitor/local-notifications": "^7.0.1",
+    "@capacitor/network": "^7.0.1",
+    "@capacitor/preferences": "^7.0.1",
     "@genkit-ai/core": "^1.12.0",
     "@genkit-ai/firebase": "^1.12.0",
     "@genkit-ai/googleai": "^1.12.0",

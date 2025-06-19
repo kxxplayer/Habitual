@@ -3,6 +3,15 @@
 // ==========================================================================
 // HABITUAL MAIN PAGE - Firestore Integration
 // ==========================================================================
+import { useNetworkStatus } from '@/hooks/use-network-status';
+import { 
+  loadHabitsFromLocal, 
+  saveHabitsToLocal,
+  loadBadgesFromLocal,
+  saveBadgesToLocal,
+  loadPointsFromLocal,
+  savePointsToLocal
+} from '@/lib/local-storage-service';
 import * as React from 'react';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { NextPage } from 'next';

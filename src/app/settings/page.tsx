@@ -58,7 +58,7 @@ const SettingsPage: NextPage = () => {
     } else {
         toast({
             title: 'Notifications Blocked',
-            description: 'Please enable notifications in your device or browser settings.',
+            description: 'Please enable notifications in your device settings.',
             variant: 'destructive',
         });
     }

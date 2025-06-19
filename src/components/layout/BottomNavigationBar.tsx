@@ -1,12 +1,13 @@
-
 "use client";
 
+import * as React from 'react';
 import type { FC } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Home, LayoutDashboard, Award, Settings, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
+// Importing Trophy, which will be used below
+import { Home, LayoutDashboard, Trophy, Settings, Plus } from 'lucide-react'; 
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface NavItem {
   id: string;
@@ -28,14 +29,16 @@ const BottomNavigationBar: FC<BottomNavigationBarProps> = ({ onAddNewHabitClick 
     { id: "home", href: "/", icon: Home, label: "Home" },
     { id: "dashboard", href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { id: "add-habit", action: onAddNewHabitClick, icon: Plus, label: "Add", isCentral: true },
-    { id: "achievements", href: "/achievements", icon: Award, label: "Badges" },
+    // Corrected this line to use the imported 'Trophy' icon instead of 'Award'
+    { id: "achievements", href: "/achievements", icon: Trophy, label: "Badges" }, 
     { id: "settings", href: "/settings", icon: Settings, label: "Settings" },
   ];
 
   return (
-    <div className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-14 sticky bottom-0 z-30"
-          style={{ paddingBottom: 'calc(0.25rem + env(safe-area-inset-bottom))' }} // 0.25rem is p-1
-          >
+    <div 
+      className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16 sticky bottom-0 z-30"
+      style={{ paddingBottom: 'calc(0.25rem + env(safe-area-inset-bottom))' }}
+    >
       {navItems.map((item) => {
         const isActive = item.isCentral || !item.href ? false : pathname === item.href;
         const IconComponent = item.icon;
@@ -68,7 +71,7 @@ const BottomNavigationBar: FC<BottomNavigationBarProps> = ({ onAddNewHabitClick 
             href={item.href!}
             className={cn(
               "flex flex-col items-center justify-center h-full p-1 flex-1 transition-colors duration-150 ease-in-out group",
-              !isActive && "hover:text-primary" // Apply hover to Link for group hover effect
+              !isActive && "hover:text-primary"
             )}
             aria-label={item.label}
           >

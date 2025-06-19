@@ -1,10 +1,10 @@
+// src/lib/notification-manager.ts
 import { LocalNotifications } from '@capacitor/local-notifications';
 import type { Habit } from '@/types';
-import type { ScheduleOptions, LocalNotificationSchema  } from '@capacitor/local-notifications';
+import type { ScheduleOptions, LocalNotificationSchema } from '@capacitor/local-notifications';
 
-// Helper to convert a habit ID to a numeric notification ID
+// Helper to convert a habit ID to a unique but consistent numeric ID for notifications
 const getNotificationId = (habitId: string): number => {
-  // Simple hash function to get a consistent integer from the string ID
   let hash = 0;
   for (let i = 0; i < habitId.length; i++) {
     const char = habitId.charCodeAt(i);
@@ -14,64 +14,57 @@ const getNotificationId = (habitId: string): number => {
   return Math.abs(hash);
 };
 
-// Check for permissions
-const checkPermissions = async (): Promise<boolean> => {
-  const result = await LocalNotifications.checkPermissions();
-  return result.display === 'granted';
-};
-
-// Request permissions
+// Request notification permissions from the user
 export const requestPermissions = async (): Promise<boolean> => {
-  const result = await LocalNotifications.requestPermissions();
-  return result.display === 'granted';
+  try {
+    const result = await LocalNotifications.requestPermissions();
+    return result.display === 'granted';
+  } catch (e) {
+    console.error("Error requesting notification permissions", e);
+    return false;
+  }
 };
 
-// Schedule a recurring reminder for a habit
+// Schedule a recurring reminder every 3 hours for a specific habit
 export const scheduleReminder = async (habit: Habit): Promise<void> => {
-  const hasPermission = await checkPermissions() || await requestPermissions();
+  const hasPermission = (await LocalNotifications.checkPermissions()).display === 'granted';
   if (!hasPermission) {
-    console.warn('Notification permission not granted.');
+    console.warn('Cannot schedule reminder, permission not granted.');
     return;
   }
 
-  const notificationId = getNotificationId(habit.id);
-
-  const options: ScheduleOptions = {
-    notifications: [
-      {
-        id: notificationId,
-        title: 'Habit Reminder ✨',
-        body: `Don't forget to complete your habit: "${habit.name}"`,
-        schedule: {
-          every: 'hour', // This will repeat every hour
-          count: 3, // Repeats 3 times, effectively creating a 3-hour window
-          on: {
-            hour: 9, // Starts at 9 AM. Adjust as needed.
-          }
-        },
-        sound: undefined, // Default sound
-        channelId: 'habit_reminders',
-      },
-    ],
-  };
-
   try {
+    // Schedule a notification that repeats every 3 hours
+    const options: ScheduleOptions = {
+      notifications: [
+        {
+          id: getNotificationId(habit.id),
+          title: `Time for a good habit!`,
+          body: `Don't forget to complete: "${habit.name}"`,
+          schedule: {
+            every: 'hour',
+            count: 1, // Will fire once and then be rescheduled by the app logic if needed
+            on: {
+                hour: new Date().getHours() + 3 // Schedule 3 hours from now
+            }
+          },
+          sound: undefined,
+          channelId: 'habit_reminders',
+        },
+      ],
+    };
     await LocalNotifications.schedule(options);
-    console.log(`Scheduled reminder for habit: ${habit.name}`);
   } catch (error) {
     console.error(`Error scheduling reminder for ${habit.name}:`, error);
   }
 };
 
-// Cancel a reminder for a specific habit
+// Cancel any scheduled reminders for a habit
 export const cancelReminder = async (habit: Habit): Promise<void> => {
-  const notificationId = getNotificationId(habit.id);
-
   try {
     await LocalNotifications.cancel({
-      notifications: [{ id: notificationId }],
+      notifications: [{ id: getNotificationId(habit.id) }],
     });
-    console.log(`Cancelled reminder for habit: ${habit.name}`);
   } catch (error) {
     console.error(`Error cancelling reminder for ${habit.name}:`, error);
   }

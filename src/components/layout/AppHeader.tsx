@@ -1,26 +1,27 @@
-
 "use client";
 
-import type { FC } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-// ThemeToggleButton removed as it's available in Settings
-// Button and buttonVariants removed as back arrow and calendar link are removed
-// CalendarDays and ChevronLeft icons removed
+import { Target, Sparkles } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
 
-const AppHeader: FC = () => {
-  const router = useRouter(); // Kept in case of future use, but not used in this simplified version
+const AppHeader = () => {
+  const pathname = usePathname();
 
   return (
-    <header className="bg-card/95 backdrop-blur-sm shadow sticky top-0 z-40 shrink-0">
-      <div className="px-3 py-2 flex justify-start items-center w-full"> {/* Slimmer padding, justify-start */}
-        <div className="flex items-center">
-          {/* SVG checkmark removed */}
-          <h1 className="text-lg font-semibold text-primary ml-1.5"> {/* Slightly larger font, added ml for alignment */}
-            GroviaHabits
-          </h1>
+    <header 
+      className="shrink-0 sticky top-0 z-40 w-full bg-background/80 backdrop-blur-sm border-b"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }} // <-- Add this line
+    >
+      <div className="container flex h-16 items-center max-w-2xl">
+        <Link href="/" className="mr-6 flex items-center space-x-2">
+          <Target className="h-6 w-6 text-primary" />
+          <span className="font-bold">GroviaHabits</span>
+        </Link>
+        <div className="flex flex-1 items-center justify-end space-x-2">
+          <ThemeToggleButton />
         </div>
-        {/* Calendar Link and ThemeToggleButton removed from here */}
       </div>
     </header>
   );

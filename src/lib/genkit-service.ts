@@ -24,7 +24,13 @@ type GetCommonHabitsOutput = z.infer<typeof getCommonHabitSuggestionsOutputSchem
 
 // Use your production URL when running on mobile (Capacitor)
 const IS_PRODUCTION_APP = process.env.NODE_ENV === 'production' && typeof window !== 'undefined' && (window as any).Capacitor;
-const API_BASE_PATH = IS_PRODUCTION_APP ? 'https://https://habitual-eight.vercel.app//api' : '/api';
+// Add this helper to check if the app is running in Capacitor
+const IS_NATIVE_APP = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
+
+// IMPORTANT: Replace with your actual Vercel URL below
+const PRODUCTION_URL = 'https://habitual-eight.vercel.app/'; 
+
+const API_BASE_PATH = IS_NATIVE_APP ? `${PRODUCTION_URL}/api` : '/api';
 
 function handleAIError(error: any, flowName: string): never {
   console.error(`[GenkitService] Error in flow '${flowName}':`, error);

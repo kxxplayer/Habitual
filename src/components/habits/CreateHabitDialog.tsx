@@ -254,14 +254,12 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                                       />
                                   )} />
                                   <Button
-                                      type="button"
-                                      onClick={handleAISuggestDetails}
-                                      disabled={isAISuggesting || !habitDescriptionForAI?.trim()}
-                                      className="w-full"
-                                      size="sm"
+                                    type="button"
+                                    onClick={handleAISuggestDetails}
+                                    disabled={!isOnline || isAISuggesting || !habitDescriptionForAI?.trim()} // <-- Update disabled logic
+                                    className="w-full"
                                   >
-                                      {isAISuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                                      Suggest Details
+                                    {!isOnline ? <p>Connect to use AI</p> : /* ... existing button text */}
                                   </Button>
                               </div>
                           )}
