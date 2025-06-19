@@ -45,8 +45,7 @@ async function runFlow<T, U>(flowName: string, input: T): Promise<U> {
     const response = await fetch(`${API_BASE_PATH}/${flowName}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: input }),
-    });
+      body: JSON.stringify(input),    });
 
     if (!response.ok) {
       const errorText = await response.text();
