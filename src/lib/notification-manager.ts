@@ -21,7 +21,7 @@ const checkPermissions = async (): Promise<boolean> => {
 };
 
 // Request permissions
-const requestPermissions = async (): Promise<boolean> => {
+export const requestPermissions = async (): Promise<boolean> => {
   const result = await LocalNotifications.requestPermissions();
   return result.display === 'granted';
 };
