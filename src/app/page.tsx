@@ -205,7 +205,7 @@ const HomePage: NextPage = () => {
       }
     });
     return () => unsubscribeAuthMain();
-  }, [router, mounted]);
+  }, [router, mounted, isLoadingAuth]);
 
   useEffect(() => {
     if (!authUser || !mounted) {

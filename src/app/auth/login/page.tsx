@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -14,8 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GoogleIcon } from '@/components/ui/icons';
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { useState } from 'react';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { useState, useEffect } from 'react';
 import { Loader2, Mail, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -52,16 +51,25 @@ const LoginPage: NextPage = () => {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      console.log("Attempting Google Sign-In from hostname:", window.location.hostname);
-      await signInWithPopup(auth, provider);
-      console.log("Google Login Successful!");
-      router.push('/');
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
-      console.error("Google Sign-In Failed for hostname:", window.location.hostname, "Error message:", error.message || "Could not sign in with Google.", "Full error:", error);
+      console.error("Google Sign-In Failed:", error.message || "Could not sign in with Google.", error);
     } finally {
       setIsGoogleLoading(false);
     }
   };
+
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          router.push('/');
+        }
+      })
+      .catch((error) => {
+        console.error("Google Redirect Error:", error);
+      });
+  }, [router]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">

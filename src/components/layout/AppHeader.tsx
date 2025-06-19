@@ -6,23 +6,30 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
+import React from 'react';
 
 const AppHeader = () => {
   const pathname = usePathname();
 
-  PushNotifications.requestPermissions().then(result => {
-    if (result.receive === 'granted') {
-      PushNotifications.register();
+  React.useEffect(() => {
+    if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
+      PushNotifications.requestPermissions().then(result => {
+        if (result.receive === 'granted') {
+          PushNotifications.register();
+        }
+      });
+
+      PushNotifications.addListener('registration', token => {
+        // Send token to your backend
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', notification => {
+        // Handle notification
+      });
     }
-  });
-
-  PushNotifications.addListener('registration', token => {
-    // Send token to your backend
-  });
-
-  PushNotifications.addListener('pushNotificationReceived', notification => {
-    // Handle notification
-  });
+    // No PushNotifications on web
+  }, []);
 
   return (
     <header 
