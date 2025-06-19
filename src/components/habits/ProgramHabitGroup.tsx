@@ -26,6 +26,8 @@ interface ProgramHabitGroupProps {
   onEdit: (habit: Habit) => void;
   onReschedule: (habit: Habit, missedDate: string) => void;
   onDeleteProgram?: (programId: string, programName: string) => void;
+  selectedHabitIds?: string[];
+  onSelectHabit?: (habitId: string, checked: boolean) => void;
 }
 
 const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
@@ -40,7 +42,9 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
   onDelete,
   onEdit,
   onReschedule,
-  onDeleteProgram
+  onDeleteProgram,
+  selectedHabitIds,
+  onSelectHabit
 }) => {
 
   // This logic now correctly toggles between showing all habits and only today's habits
@@ -124,6 +128,8 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
                 onOpenDetailView={onOpenDetailView}
                 isCompleted={habit.completionLog.some(log => log.date === todayString && log.status === 'completed')}
                 currentDate={todayString}
+                isSelected={selectedHabitIds?.includes(habit.id)}
+                onSelect={onSelectHabit}
               />
             ))}
           </div>

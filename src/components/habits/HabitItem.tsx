@@ -26,6 +26,8 @@ import {
   BookOpen, Briefcase, Code, Dumbbell, Droplets, Heart,
   DollarSign, Brush, PenSquare, Bed, Leaf, MessageCircle, Brain, Target, Bike, Laptop
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+
 const getHabitIcon = (habitName: string): React.ReactNode => {
     const nameLower = habitName.toLowerCase();
     const iconProps = { className: "h-8 w-8 text-foreground/80" };
@@ -60,6 +62,8 @@ interface HabitItemProps {
   onEdit: (habit: Habit) => void;
   onReschedule: (habit: Habit, missedDate: string) => void;
   onOpenDetailView: (habit: Habit) => void;
+  isSelected?: boolean;
+  onSelect?: (habitId: string, checked: boolean) => void;
 }
 
 const HabitItem: React.FC<HabitItemProps> = ({
@@ -71,6 +75,8 @@ const HabitItem: React.FC<HabitItemProps> = ({
   onEdit,
   onReschedule,
   onOpenDetailView,
+  isSelected,
+  onSelect,
 }) => {
   
   const handleCompletionClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -90,6 +96,12 @@ const HabitItem: React.FC<HabitItemProps> = ({
         {/* Top section with name and options */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
+            <Checkbox
+              checked={!!isSelected}
+              onCheckedChange={checked => onSelect && onSelect(habit.id, !!checked)}
+              onClick={e => e.stopPropagation()}
+              className="mr-2"
+            />
             <div className="flex h-10 w-10 items-center justify-center">
               {getHabitIcon(habit.name)}
             </div>
