@@ -9,6 +9,9 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import React from 'react';
 
+const BUILD_VERSION = '1.1.5'; // Update this manually for each release
+const BUILD_TIMESTAMP = new Date().toLocaleString(); // Will be set at build time
+
 const AppHeader = () => {
   const pathname = usePathname();
 
@@ -34,7 +37,7 @@ const AppHeader = () => {
   return (
     <header 
       className="shrink-0 sticky top-0 z-40 w-full bg-background/80 backdrop-blur-sm border-b"
-      style={{ paddingTop: 'env(safe-area-inset-top)' }} // <-- Add this line
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="container flex h-16 items-center max-w-2xl">
         <Link href="/" className="mr-6 flex items-center space-x-2">
@@ -42,6 +45,9 @@ const AppHeader = () => {
         </Link>
         <div className="flex flex-1 items-center justify-end space-x-2">
           <ThemeToggleButton />
+          <span className="ml-4 text-xs text-muted-foreground" style={{fontFamily: 'monospace'}}>
+            v{BUILD_VERSION} | {BUILD_TIMESTAMP}
+          </span>
         </div>
       </div>
     </header>
