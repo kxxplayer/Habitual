@@ -31,6 +31,8 @@ import {
   SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Network } from '@capacitor/network';
+import type { PluginListenerHandle } from '@capacitor/core';
 
 interface CreateHabitDialogProps {
   isOpen: boolean;
