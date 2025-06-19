@@ -40,19 +40,25 @@ function handleAIError(error: any, flowName: string): never {
   throw new Error(errorMessage);
 }
 
+// In src/lib/genkit-service.ts
+
 async function runFlow<T, U>(flowName: string, input: T): Promise<U> {
   try {
     const response = await fetch(`${API_BASE_PATH}/${flowName}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),    });
+      // This is the correct format for the appRoute helper
+      body: JSON.stringify({ data: input }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
+      // The detailed error from the server is now in errorText
       throw new Error(`[${flowName}] API Error: ${response.status} ${errorText}`);
     }
 
     const result = await response.json();
+    // The actual flow output is nested in a 'result' property
     return result.result;
   } catch (error) {
     handleAIError(error, flowName);
