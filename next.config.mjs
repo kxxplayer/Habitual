@@ -15,6 +15,7 @@ const withBundleAnalyzer = nextBundleAnalyzer({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
   webpack: (config, { isServer }) => {
     // Ignore certain modules that cause warnings
     config.resolve.fallback = {
@@ -30,6 +31,9 @@ const nextConfig = {
     
     return config;
   },
+  images: {
+    unoptimized: true,
+  }
   // Your other config options here
 };
 
