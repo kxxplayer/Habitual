@@ -7,6 +7,24 @@ const isDev = process.env.NODE_ENV !== 'production';
 const withPWA = withPWAInit({
   dest: 'public',
   disable: isDev,
+  runtimeCaching: [
+    {
+      urlPattern: /^\/api\//,
+      handler: 'NetworkOnly',
+      method: 'POST',
+    },
+    {
+      urlPattern: /.*/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'pages-cache',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+        },
+      },
+    },
+  ],
 });
 
 const withBundleAnalyzer = nextBundleAnalyzer({
@@ -15,26 +33,20 @@ const withBundleAnalyzer = nextBundleAnalyzer({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
   webpack: (config, { isServer }) => {
-    // Ignore certain modules that cause warnings
     config.resolve.fallback = {
       ...config.resolve.fallback,
       '@opentelemetry/exporter-jaeger': false,
     };
-    
-    // Ignore handlebars require.extensions warning
     config.module = {
       ...config.module,
       exprContextCritical: false,
     };
-    
     return config;
   },
   images: {
     unoptimized: true,
   }
-  // Your other config options here
 };
 
-export default nextConfig;
+export default withPWA(withBundleAnalyzer(nextConfig));
