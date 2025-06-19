@@ -80,6 +80,7 @@ const HabitList: FC<HabitListProps> = ({
       {programs.map(program => (
         <ProgramHabitGroup
           key={program.id}
+          showAllHabits={showAllHabits}
           programId={program.id}
           programName={program.name}
           habitsInProgram={program.habits}
