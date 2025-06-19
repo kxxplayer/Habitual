@@ -7,7 +7,7 @@ import * as React from 'react';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { NextPage } from 'next';
 import { useRouter, useSearchParams } from 'next/navigation';
-
+import { scheduleReminder, cancelReminder } from '@/lib/notification-manager';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
@@ -341,34 +341,49 @@ const HomePage: NextPage = () => {
   };
 
   const handleToggleComplete = (habitId: string, date: string, completed: boolean) => {
-    let pointsChange = 0;
-    setHabits(prev => {
-      return prev.map(h => {
-        if (h.id === habitId) {
-          const logIndex = h.completionLog.findIndex(l => l.date === date);
-          const newLog = [...h.completionLog];
+      let pointsChange = 0;
+      const habit = habits.find(h => h.id === habitId);
+
+      // If a valid habit is found, handle its reminder schedule
+      if (habit) {
           if (completed) {
-            if (logIndex > -1) {
-              if (newLog[logIndex].status !== 'completed') pointsChange = POINTS_PER_COMPLETION;
-              newLog[logIndex] = { ...newLog[logIndex], status: 'completed', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-            } else {
-              pointsChange = POINTS_PER_COMPLETION;
-              newLog.push({ date, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), status: 'completed' });
-            }
+              // When the habit is marked complete, cancel any pending reminders for it
+              cancelReminder(habit);
           } else {
-            if (logIndex > -1) {
-              if (h.completionLog[logIndex].status === 'completed') pointsChange = -POINTS_PER_COMPLETION;
-              newLog.splice(logIndex, 1);
-            }
+              // If the habit is being un-completed, re-schedule the reminder
+              scheduleReminder(habit);
           }
-          return { ...h, completionLog: newLog.sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)) };
-        }
-        return h;
+      }
+      
+      setHabits(prev => {
+          return prev.map(h => {
+              if (h.id === habitId) {
+                  const logIndex = h.completionLog.findIndex(l => l.date === date);
+                  const newLog = [...h.completionLog];
+
+                  if (completed) {
+                      if (logIndex > -1) {
+                          if (newLog[logIndex].status !== 'completed') pointsChange = POINTS_PER_COMPLETION;
+                          newLog[logIndex] = { ...newLog[logIndex], status: 'completed', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+                      } else {
+                          pointsChange = POINTS_PER_COMPLETION;
+                          newLog.push({ date, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), status: 'completed' });
+                      }
+                  } else {
+                      if (logIndex > -1) {
+                          if (h.completionLog[logIndex].status === 'completed') pointsChange = -POINTS_PER_COMPLETION;
+                          newLog.splice(logIndex, 1);
+                      }
+                  }
+                  return { ...h, completionLog: newLog.sort((a: HabitCompletionLogEntry, b: HabitCompletionLogEntry) => b.date.localeCompare(a.date)) };
+              }
+              return h;
+          });
       });
-    });
-    if (pointsChange !== 0) {
-      setTotalPoints(prev => Math.max(0, prev + pointsChange));
-    }
+
+      if (pointsChange !== 0) {
+          setTotalPoints(prev => Math.max(0, prev + pointsChange));
+      }
   };
 
   const handleDeleteHabit = (habitId: string) => {
@@ -412,6 +427,14 @@ const HomePage: NextPage = () => {
   };
   
   const onToggleReminder = (habitId: string, enabled: boolean) => {
+    const habit = habits.find(h => h.id === habitId);
+    if (!habit) return;
+
+    if (enabled) {
+      scheduleReminder(habit);
+    } else {
+      cancelReminder(habit);
+    }
     setHabits(prev => prev.map(h => h.id === habitId ? {...h, reminderEnabled: enabled} : h));
   };
   

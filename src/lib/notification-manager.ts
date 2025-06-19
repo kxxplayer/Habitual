@@ -1,91 +1,78 @@
-// src/lib/notification-manager.ts
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
-import { app, db, auth } from './firebase';
-import { doc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { toast } from '@/hooks/use-toast';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import type { Habit } from '@/types';
+import type { ScheduleOptions, LocalNotificationSchema  } from '@capacitor/local-notifications';
 
-// This function requests permission and gets the token
-export const requestNotificationPermission = async () => {
-  if (typeof window === 'undefined' || !('Notification' in window)) {
-    console.log('This browser does not support desktop notification');
-    toast({
-      title: 'Notifications Not Supported',
-      description: 'Your browser does not support push notifications.',
-      variant: 'destructive',
-    });
-    return;
+// Helper to convert a habit ID to a numeric notification ID
+const getNotificationId = (habitId: string): number => {
+  // Simple hash function to get a consistent integer from the string ID
+  let hash = 0;
+  for (let i = 0; i < habitId.length; i++) {
+    const char = habitId.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
   }
-
-  const messaging = getMessaging(app);
-  const permission = await Notification.requestPermission();
-
-  if (permission === 'granted') {
-    console.log('Notification permission granted.');
-    try {
-      const currentToken = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-      });
-
-      if (currentToken) {
-        console.log('FCM Token:', currentToken);
-        // Save the token to Firestore
-        await saveTokenToFirestore(currentToken);
-        toast({
-          title: 'Notifications Enabled!',
-          description: "You'll now receive reminders for your habits.",
-        });
-      } else {
-        console.log('No registration token available. Request permission to generate one.');
-      }
-    } catch (err) {
-      console.error('An error occurred while retrieving token. ', err);
-      toast({
-        title: 'Error Enabling Notifications',
-        description: 'Could not get the notification token. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  } else {
-    console.log('Unable to get permission to notify.');
-    toast({
-      title: 'Notifications Denied',
-      description: 'You can enable notifications in your browser settings.',
-    });
-  }
+  return Math.abs(hash);
 };
 
-// Function to save the token to the user's document in Firestore
-const saveTokenToFirestore = async (token: string) => {
-  const user = auth.currentUser;
-  if (!user) {
-    console.log('No user logged in to save token.');
+// Check for permissions
+const checkPermissions = async (): Promise<boolean> => {
+  const result = await LocalNotifications.checkPermissions();
+  return result.display === 'granted';
+};
+
+// Request permissions
+const requestPermissions = async (): Promise<boolean> => {
+  const result = await LocalNotifications.requestPermissions();
+  return result.display === 'granted';
+};
+
+// Schedule a recurring reminder for a habit
+export const scheduleReminder = async (habit: Habit): Promise<void> => {
+  const hasPermission = await checkPermissions() || await requestPermissions();
+  if (!hasPermission) {
+    console.warn('Notification permission not granted.');
     return;
   }
 
-  const userDocRef = doc(db, 'users', user.uid);
+  const notificationId = getNotificationId(habit.id);
+
+  const options: ScheduleOptions = {
+    notifications: [
+      {
+        id: notificationId,
+        title: 'Habit Reminder ✨',
+        body: `Don't forget to complete your habit: "${habit.name}"`,
+        schedule: {
+          every: 'hour', // This will repeat every hour
+          count: 3, // Repeats 3 times, effectively creating a 3-hour window
+          on: {
+            hour: 9, // Starts at 9 AM. Adjust as needed.
+          }
+        },
+        sound: undefined, // Default sound
+        channelId: 'habit_reminders',
+      },
+    ],
+  };
 
   try {
-    // Use arrayUnion to add the token to an array, avoiding duplicates
-    await setDoc(userDocRef, { 
-      fcmTokens: arrayUnion(token) 
-    }, { merge: true });
-    console.log('FCM token saved for user:', user.uid);
+    await LocalNotifications.schedule(options);
+    console.log(`Scheduled reminder for habit: ${habit.name}`);
   } catch (error) {
-    console.error('Error saving FCM token to Firestore:', error);
+    console.error(`Error scheduling reminder for ${habit.name}:`, error);
   }
 };
 
-// Listen for messages when the app is in the foreground
-export const onForegroundMessage = () => {
-  if (typeof window !== 'undefined' && 'Notification' in window) {
-    const messaging = getMessaging(app);
-    onMessage(messaging, (payload) => {
-      console.log('Foreground message received. ', payload);
-      // Show a toast or update UI when a message is received
-      toast({
-        title: payload.notification?.title || 'New Message',
-        description: payload.notification?.body || '',
-      });
+// Cancel a reminder for a specific habit
+export const cancelReminder = async (habit: Habit): Promise<void> => {
+  const notificationId = getNotificationId(habit.id);
+
+  try {
+    await LocalNotifications.cancel({
+      notifications: [{ id: notificationId }],
     });
+    console.log(`Cancelled reminder for habit: ${habit.name}`);
+  } catch (error) {
+    console.error(`Error cancelling reminder for ${habit.name}:`, error);
   }
 };
