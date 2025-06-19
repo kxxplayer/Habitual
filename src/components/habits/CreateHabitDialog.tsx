@@ -256,10 +256,10 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                                   <Button
                                     type="button"
                                     onClick={handleAISuggestDetails}
-                                    disabled={!isOnline || isAISuggesting || !habitDescriptionForAI?.trim()} // <-- Update disabled logic
+                                    disabled={isAISuggesting || !habitDescriptionForAI?.trim()}
                                     className="w-full"
                                   >
-                                    {!isOnline ? <p>Connect to use AI</p> : /* ... existing button text */}
+                                    {isAISuggesting ? "Generating..." : "Suggest with AI"}
                                   </Button>
                               </div>
                           )}
