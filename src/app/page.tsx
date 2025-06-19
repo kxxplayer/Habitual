@@ -69,6 +69,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { format, getDay } from 'date-fns';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const POINTS_PER_COMPLETION = 10;
@@ -603,6 +604,8 @@ const HomePage: NextPage = () => {
     setSelectedHabitIds([]);
     setIsDeleteSelectedConfirmOpen(false);
   };
+
+  usePushNotifications();
 
   if (!mounted || isLoadingAuth) {
     return <LoadingFallback />;

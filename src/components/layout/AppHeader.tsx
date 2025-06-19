@@ -5,9 +5,24 @@ import { Target, Sparkles } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 const AppHeader = () => {
   const pathname = usePathname();
+
+  PushNotifications.requestPermissions().then(result => {
+    if (result.receive === 'granted') {
+      PushNotifications.register();
+    }
+  });
+
+  PushNotifications.addListener('registration', token => {
+    // Send token to your backend
+  });
+
+  PushNotifications.addListener('pushNotificationReceived', notification => {
+    // Handle notification
+  });
 
   return (
     <header 
@@ -16,7 +31,6 @@ const AppHeader = () => {
     >
       <div className="container flex h-16 items-center max-w-2xl">
         <Link href="/" className="mr-6 flex items-center space-x-2">
-          <Target className="h-6 w-6 text-primary" />
           <span className="font-bold">GroviaHabits</span>
         </Link>
         <div className="flex flex-1 items-center justify-end space-x-2">

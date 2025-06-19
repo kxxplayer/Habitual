@@ -10,6 +10,7 @@ import {
 } from '../genkit/flows';
 import { z } from 'genkit';
 import { toast } from '../hooks/use-toast';
+import { Capacitor } from '@capacitor/core';
 
 // Define types from imported schemas
 type GenerateHabitOutput = z.infer<typeof generateHabitOutputSchema>;
@@ -24,11 +25,11 @@ type GetCommonHabitsOutput = z.infer<typeof getCommonHabitSuggestionsOutputSchem
 
 // Use your production URL when running on mobile (Capacitor)
 const IS_PRODUCTION_APP = process.env.NODE_ENV === 'production' && typeof window !== 'undefined' && (window as any).Capacitor;
-// Add this helper to check if the app is running in Capacitor
-const IS_NATIVE_APP = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
+// Use Capacitor's recommended detection for native app
+const IS_NATIVE_APP = Capacitor.isNativePlatform && Capacitor.isNativePlatform();
 
-// IMPORTANT: Replace with your actual Vercel URL below
-const PRODUCTION_URL = 'https://habitual-eight.vercel.app/'; 
+// IMPORTANT: Replace with your actual Vercel/production backend URL below
+const PRODUCTION_URL = 'https://habitual-eight.vercel.app'; // <-- Update this if your backend changes
 
 const API_BASE_PATH = IS_NATIVE_APP ? `${PRODUCTION_URL}/api` : '/api';
 

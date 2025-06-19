@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "543466575094",
+    "project_id": "habitual-ucw41",
+    "storage_bucket": "habitual-ucw41.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:543466575094:android:48638380b2bf26a28948d7",
+        "android_client_info": {
+          "package_name": "com.grovia.habitual"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "543466575094-381gjh3im74vjc70a4oo2tqvkfcndnct.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALfOMRMabKD-5S6Y2BMmNsl6TLUz5X8to"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "543466575094-381gjh3im74vjc70a4oo2tqvkfcndnct.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "543466575094-dbccnn0ihhq307u2g18ri9h7qfldss59.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mycompany.habitual"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

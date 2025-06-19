@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { requestPermissions } from '@/lib/notification-manager'; // Corrected import name
 import { toast } from "@/hooks/use-toast";
+import { Capacitor } from '@capacitor/core';
 
 const SettingsPage: NextPage = () => {
   const router = useRouter();
@@ -124,20 +125,22 @@ const SettingsPage: NextPage = () => {
               </div>
               <ThemeToggleButton />
             </div>
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <BellRing className="mr-3 h-5 w-5 text-muted-foreground" />
-                  <Label className="text-base font-medium">Reminders</Label>
+            {(!Capacitor.isNativePlatform || !Capacitor.isNativePlatform()) && (
+              <div className="p-4 border rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <BellRing className="mr-3 h-5 w-5 text-muted-foreground" />
+                    <Label className="text-base font-medium">Reminders</Label>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={handleRequestPermission}>
+                    Enable Notifications
+                  </Button>
                 </div>
-                <Button size="sm" variant="outline" onClick={handleRequestPermission}>
-                  Enable Notifications
-                </Button>
+                <p className="text-xs text-muted-foreground mt-2 pl-8">
+                  Click "Enable" to receive reminders for your tasks. You may need to grant permission.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-2 pl-8">
-                Click "Enable" to receive reminders for your tasks. You may need to grant permission.
-              </p>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
