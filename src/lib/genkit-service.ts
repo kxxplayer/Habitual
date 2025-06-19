@@ -21,7 +21,10 @@ type GetReflectionStarterOutput = z.infer<typeof getReflectionStarterOutputSchem
 type GetCommonHabitsInput = z.infer<typeof getCommonHabitSuggestionsInputSchema>;
 type GetCommonHabitsOutput = z.infer<typeof getCommonHabitSuggestionsOutputSchema>;
 
-const API_BASE_PATH = '/api';
+
+// Use your production URL when running on mobile (Capacitor)
+const IS_PRODUCTION_APP = process.env.NODE_ENV === 'production' && typeof window !== 'undefined' && (window as any).Capacitor;
+const API_BASE_PATH = IS_PRODUCTION_APP ? 'https://https://habitual-eight.vercel.app//api' : '/api';
 
 function handleAIError(error: any, flowName: string): never {
   console.error(`[GenkitService] Error in flow '${flowName}':`, error);
