@@ -28,4 +28,5 @@ task clean(type: Delete) {
     delete rootProject.buildDir
 }
 
-apply plugin: 'com.google.gms.google-services'
+// Remove this line - google-services plugin should only be applied at app level
+// apply plugin: 'com.google.gms.google-services'
