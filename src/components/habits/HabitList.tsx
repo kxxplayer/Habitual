@@ -24,6 +24,8 @@ interface HabitListProps {
   onEdit: (habit: Habit) => void;
   onReschedule: (habit: Habit, missedDate: string) => void;
   onDeleteProgram?: (programId: string, programName: string) => void;
+  selectedHabitIds: string[];
+  setSelectedHabitIds: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 const HabitList: FC<HabitListProps> = ({
@@ -37,8 +39,9 @@ const HabitList: FC<HabitListProps> = ({
   onEdit,
   onReschedule,
   onDeleteProgram,
+  selectedHabitIds,
+  setSelectedHabitIds,
 }) => {
-  const [selectedHabitIds, setSelectedHabitIds] = React.useState<string[]>([]);
   const selectAllRef = React.useRef<HTMLInputElement>(null);
 
   const handleSelectHabit = (habitId: string, checked: boolean) => {
@@ -53,11 +56,6 @@ const HabitList: FC<HabitListProps> = ({
     } else {
       setSelectedHabitIds([]);
     }
-  };
-
-  const handleDeleteSelected = () => {
-    selectedHabitIds.forEach(id => onDelete(id));
-    setSelectedHabitIds([]);
   };
 
   const habitsToDisplay = useMemo(() => {
@@ -116,15 +114,6 @@ const HabitList: FC<HabitListProps> = ({
           onCheckedChange={handleSelectAll}
         />
         <label htmlFor="select-all-habits" className="text-sm font-medium cursor-pointer select-none">Select All</label>
-        <Button
-          variant="destructive"
-          size="sm"
-          className="ml-2"
-          onClick={handleDeleteSelected}
-          disabled={selectedHabitIds.length === 0}
-        >
-          <Trash2 className="mr-1 h-4 w-4" /> Delete Selected
-        </Button>
       </div>
       {programs.map(program => (
         <ProgramHabitGroup

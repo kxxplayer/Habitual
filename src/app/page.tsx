@@ -66,6 +66,7 @@ import {
 
 import {
   Loader2, ListChecks,
+  Trash2
 } from 'lucide-react';
 import { format, getDay } from 'date-fns';
 
@@ -165,6 +166,9 @@ const HomePage: NextPage = () => {
 
   const todayString = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const todayAbbr = useMemo(() => dayIndexToWeekDayConstant[getDay(new Date())], []);
+
+  const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
+  const [isDeleteSelectedConfirmOpen, setIsDeleteSelectedConfirmOpen] = useState(false);
 
   const openCreateHabitDialogForNew = useCallback(() => {
     setEditingHabit(null);
@@ -591,6 +595,15 @@ const HomePage: NextPage = () => {
     setIsProgramSuggestionDialogOpen(false);
   };
   
+  const handleDeleteSelected = () => {
+    setIsDeleteSelectedConfirmOpen(true);
+  };
+  const handleConfirmDeleteSelected = () => {
+    setHabits(prev => prev.filter(h => !selectedHabitIds.includes(h.id)));
+    setSelectedHabitIds([]);
+    setIsDeleteSelectedConfirmOpen(false);
+  };
+
   if (!mounted || isLoadingAuth) {
     return <LoadingFallback />;
   }
@@ -606,9 +619,21 @@ const HomePage: NextPage = () => {
                     <h2 className="text-xl font-bold text-foreground">
                         {showAllHabits ? 'All Habits & Programs' : 'Today\'s Tasks'}
                     </h2>
-                    <Button variant="outline" size="sm" onClick={() => setShowAllHabits(prev => !prev)}>
-                        {showAllHabits ? 'View Today\'s Tasks' : 'View All Tasks'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        {selectedHabitIds.length > 0 && (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                className="flex items-center"
+                                onClick={handleDeleteSelected}
+                            >
+                                <Trash2 className="mr-1 h-4 w-4" /> Delete Selected
+                            </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => setShowAllHabits(prev => !prev)}>
+                            {showAllHabits ? 'View Today\'s Tasks' : 'View All Tasks'}
+                        </Button>
+                    </div>
                 </div>
                 <HabitList
                     habits={habits}
@@ -621,6 +646,8 @@ const HomePage: NextPage = () => {
                     onDeleteProgram={handleDeleteProgram}
                     todayString={todayString}
                     todayAbbr={todayAbbr}
+                    selectedHabitIds={selectedHabitIds}
+                    setSelectedHabitIds={setSelectedHabitIds}
                 />
             </>
           ) : isLoadingData ? (
@@ -720,6 +747,20 @@ const HomePage: NextPage = () => {
          isLoading={isProgramSuggestionLoading}
        />
      )}
+     <AlertDialog open={isDeleteSelectedConfirmOpen} onOpenChange={setIsDeleteSelectedConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeaderEl>
+            <AlertTitle>Confirm Deletion</AlertTitle>
+            <AlertDialogDescriptionEl>
+              Are you sure you want to delete {selectedHabitIds.length} selected habit{selectedHabitIds.length > 1 ? 's' : ''}? This action cannot be undone.
+            </AlertDialogDescriptionEl>
+          </AlertDialogHeaderEl>
+          <AlertDialogFooterEl>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteSelected}>Delete</AlertDialogAction>
+          </AlertDialogFooterEl>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
