@@ -590,7 +590,7 @@ const HomePage: NextPage = () => {
         <div className="animate-card-fade-in">
           {habits.length > 0 ? (
              <>
-                <div className="flex justify-between items-center mb-4 px-1">
+                <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold text-foreground">
                         {showAllHabits ? 'All Habits & Programs' : 'Today\'s Tasks'}
                     </h2>

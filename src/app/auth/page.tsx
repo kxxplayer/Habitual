@@ -13,9 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GoogleIcon } from '@/components/ui/icons';
 import { auth } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider } from 'firebase/auth';
 import { useState } from 'react';
-import { Loader2, Mail, Lock, Eye, EyeOff, UserPlus, Sparkles, CheckCircle2, Shield } from 'lucide-react';
+import { Loader2, Mail, Lock, Eye, EyeOff, UserPlus, Sparkles, CheckCircle2, Shield, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const registerSchema = z.object({
@@ -85,119 +85,96 @@ const RegisterPage: NextPage = () => {
   const passwordStrength = getPasswordStrength(password || '');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-32 h-32 bg-green-200/30 dark:bg-green-500/10 rounded-full blur-xl"></div>
-        <div className="absolute top-40 right-32 w-24 h-24 bg-blue-200/30 dark:bg-blue-500/10 rounded-full blur-xl"></div>
-        <div className="absolute bottom-32 left-32 w-28 h-28 bg-purple-200/30 dark:bg-purple-500/10 rounded-full blur-xl"></div>
-        <div className="absolute bottom-20 right-20 w-36 h-36 bg-teal-200/30 dark:bg-teal-500/10 rounded-full blur-xl"></div>
+        <div className="absolute top-20 left-20 w-32 h-32 bg-accent/20 dark:bg-accent/10 rounded-full blur-xl"></div>
+        <div className="absolute top-40 right-32 w-24 h-24 bg-primary/20 dark:bg-primary/10 rounded-full blur-xl"></div>
+        <div className="absolute bottom-32 left-32 w-28 h-28 bg-accent/15 dark:bg-accent/5 rounded-full blur-xl"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-primary/15 dark:bg-primary/5 rounded-full blur-xl"></div>
       </div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Header with logo and welcome text */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-500 to-blue-600 rounded-2xl mb-4 shadow-lg">
-            <UserPlus className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-accent to-primary rounded-2xl mb-4 shadow-lg">
+            <Target className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent mb-2">
             Join Habitual
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Start building better habits today
           </p>
         </div>
 
-        <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-2xl shadow-black/5 dark:shadow-black/20">
+        <Card className="backdrop-blur-sm bg-card/90 border border-border/50 shadow-2xl">
           <CardHeader className="space-y-1 text-center pb-6">
-            <CardTitle className="text-2xl font-semibold text-gray-900 dark:text-white">Create Account</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-2xl font-semibold text-foreground">Create Account</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Enter your details to get started with your habit journey
             </CardDescription>
           </CardHeader>
           
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6">
-              {/* Google Sign Up Button - Moved to top */}
-              <Button 
-                type="button"
-                variant="outline" 
-                onClick={handleGoogleSignUp} 
-                disabled={isGoogleLoading}
-                className="w-full h-12 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 transform hover:scale-[1.02]"
-              >
-                {isGoogleLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Account...
-                  </>
-                ) : (
-                  <>
-                    <GoogleIcon className="mr-2 h-4 w-4" />
-                    Continue with Google
-                  </>
-                )}
-              </Button>
-
-              {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-200 dark:border-gray-600" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-gray-800 px-4 text-gray-500 dark:text-gray-400 font-medium">
-                    Or create with email
-                  </span>
-                </div>
+          <CardContent className="space-y-6">
+            {/* Google Sign Up Button */}
+            <Button
+              onClick={handleGoogleSignUp}
+              disabled={isGoogleLoading}
+              variant="outline"
+              className="w-full h-12 border-2 border-border hover:border-accent/50 bg-background hover:bg-accent/5 transition-all duration-200"
+            >
+              <div className="flex items-center justify-center space-x-3">
+                <GoogleIcon className="w-5 h-5" />
+                <span className="font-medium">Sign up with Google</span>
               </div>
+            </Button>
 
-              {/* Email Field */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or sign up with email</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="email" className="text-sm font-medium text-foreground">
                   Email Address
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="you@example.com" 
-                    {...register("email")} 
-                    className={cn(
-                      "pl-10 h-12 bg-white/50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 focus:border-green-500 dark:focus:border-green-400 transition-all duration-200",
-                      errors.email && "border-red-500 focus:border-red-500"
-                    )}
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    {...register("email")}
+                    className="pl-10 h-12 bg-background border-border focus:border-accent"
+                    required
                   />
                 </div>
-                {errors.email && (
-                  <p className="text-sm text-red-500 flex items-center">
-                    <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
-                    {errors.email.message}
-                  </p>
-                )}
               </div>
 
-              {/* Password Field */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="password" className="text-sm font-medium text-foreground">
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
-                    id="password" 
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Create a strong password"
-                    {...register("password")} 
-                    className={cn(
-                      "pl-10 pr-10 h-12 bg-white/50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 focus:border-green-500 dark:focus:border-green-400 transition-all duration-200",
-                      errors.password && "border-red-500 focus:border-red-500"
-                    )}
+                    {...register("password")}
+                    className="pl-10 pr-10 h-12 bg-background border-border focus:border-accent"
+                    required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -206,128 +183,71 @@ const RegisterPage: NextPage = () => {
                 {/* Password Strength Indicator */}
                 {password && (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500 dark:text-gray-400">Password strength</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1 bg-muted rounded-full h-2">
+                        <div 
+                          className={cn(
+                            "h-2 rounded-full transition-all duration-300",
+                            passwordStrength.strength <= 2 ? "w-1/4 bg-red-500" : 
+                            passwordStrength.strength <= 3 ? "w-2/4 bg-orange-500" : "w-full bg-green-500"
+                          )}
+                        />
+                      </div>
                       <span className={cn(
-                        "font-medium",
-                        passwordStrength.strength <= 2 ? "text-red-500" : 
-                        passwordStrength.strength <= 3 ? "text-yellow-500" : "text-green-500"
+                        "text-xs font-medium",
+                        passwordStrength.strength <= 2 ? "text-red-600" : 
+                        passwordStrength.strength <= 3 ? "text-orange-600" : "text-green-600"
                       )}>
                         {passwordStrength.label}
                       </span>
                     </div>
-                    <div className="flex space-x-1">
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <div
-                          key={level}
-                          className={cn(
-                            "h-2 flex-1 rounded-full transition-colors duration-200",
-                            level <= passwordStrength.strength 
-                              ? passwordStrength.color 
-                              : "bg-gray-200 dark:bg-gray-600"
-                          )}
-                        />
-                      ))}
-                    </div>
                   </div>
                 )}
-                
-                {errors.password && (
-                  <p className="text-sm text-red-500 flex items-center">
-                    <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
-                    {errors.password.message}
-                  </p>
-                )}
               </div>
 
-              {/* Confirm Password Field */}
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Confirm Password
-                </Label>
-                <div className="relative">
-                  <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
-                    id="confirmPassword" 
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm your password"
-                    {...register("confirmPassword")} 
-                    className={cn(
-                      "pl-10 pr-10 h-12 bg-white/50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 focus:border-green-500 dark:focus:border-green-400 transition-all duration-200",
-                      errors.confirmPassword && "border-red-500 focus:border-red-500"
-                    )}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="text-sm text-red-500 flex items-center">
-                    <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
-                    {errors.confirmPassword.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Create Account Button */}
-              <Button 
-                type="submit" 
-                disabled={isEmailLoading}
-                className="w-full h-12 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+              <Button
+                type="submit"
+                disabled={isEmailLoading || passwordStrength.strength < 2}
+                className="w-full h-12 bg-gradient-to-r from-accent to-primary hover:from-accent/90 hover:to-primary/90 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 {isEmailLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Account...
-                  </>
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Creating account...</span>
+                  </div>
                 ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Create Account
-                  </>
+                  <div className="flex items-center space-x-2">
+                    <UserPlus className="h-4 w-4" />
+                    <span>Create Account</span>
+                  </div>
                 )}
               </Button>
+            </form>
 
-              {/* Terms and Privacy */}
-              <div className="text-center">
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  By creating an account, you agree to our{' '}
-                  <a href="#" className="text-green-600 hover:text-green-500 dark:text-green-400 underline">
-                    Terms of Service
-                  </a>{' '}
-                  and{' '}
-                  <a href="#" className="text-green-600 hover:text-green-500 dark:text-green-400 underline">
-                    Privacy Policy
-                  </a>
-                </p>
-              </div>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <Link 
+                  href="/auth/login" 
+                  className="font-medium text-accent hover:text-accent/80 transition-colors"
+                >
+                  Sign in instead
+                </Link>
+              </p>
+            </div>
 
-              {/* Sign In Link */}
-              <div className="text-center pt-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Already have an account?{' '}
-                  <Link 
-                    href="/auth/login" 
-                    className="font-medium text-green-600 hover:text-green-500 dark:text-green-400 dark:hover:text-green-300 transition-colors duration-200"
-                  >
-                    Sign in here
-                  </Link>
-                </p>
-              </div>
-            </CardContent>
-          </form>
+            <div className="text-center text-xs text-muted-foreground leading-relaxed">
+              By creating an account, you agree to our{' '}
+              <a href="#" className="text-accent hover:text-accent/80 transition-colors">
+                Terms of Service
+              </a>{' '}
+              and{' '}
+              <a href="#" className="text-accent hover:text-accent/80 transition-colors">
+                Privacy Policy
+              </a>
+            </div>
+          </CardContent>
         </Card>
-
-        {/* Footer */}
-        <div className="text-center mt-8">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Join thousands of users building better habits with Habitual
-          </p>
-        </div>
       </div>
     </div>
   );

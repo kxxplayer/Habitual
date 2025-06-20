@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Target, Sparkles, Zap } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -39,8 +40,14 @@ const AppHeader = () => {
       <div className="container flex h-12 items-center max-w-2xl px-3 sm:px-4">
         <Link href="/" className="mr-4 flex items-center space-x-2 group transition-all duration-300 hover:scale-105">
           <div className="relative">
-            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-primary to-accent shadow-md group-hover:shadow-lg transition-all duration-300">
-              <Target className="h-3.5 w-3.5 text-white" />
+            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-primary to-accent shadow-md group-hover:shadow-lg transition-all duration-300 p-0.5">
+              <Image 
+                src="/icons/icon-512x512.png" 
+                alt="GroviaHabits" 
+                width={24}
+                height={24}
+                className="w-6 h-6 rounded-full object-cover"
+              />
             </div>
             <Sparkles className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 text-accent animate-pulse" />
           </div>

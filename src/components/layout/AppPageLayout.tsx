@@ -13,11 +13,11 @@ interface AppPageLayoutProps {
 
 const AppPageLayout: FC<AppPageLayoutProps> = ({ children, onAddNew }) => {
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-background">
       <AppHeader />
-      <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col min-h-0">
+      <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col">
         <ScrollArea className="flex-1">
-          <main className="px-3 sm:px-4 pt-2 pb-2">
+          <main className="px-3 sm:px-4 pt-2 pb-20">
             {children}
           </main>
         </ScrollArea>

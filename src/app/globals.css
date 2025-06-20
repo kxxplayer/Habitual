@@ -10,11 +10,9 @@
   /* Safe area support for mobile devices */
   html, body {
     /* Ensure the app doesn't overlap with system UI */
-    height: 100vh;
-    height: 100dvh; /* Dynamic viewport height for mobile */
+    min-height: 100vh;
     margin: 0;
     padding: 0;
-    overflow: hidden;
   }
 
   /* For Capacitor apps specifically */

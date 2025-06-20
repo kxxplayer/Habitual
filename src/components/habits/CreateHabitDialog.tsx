@@ -182,144 +182,305 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-2xl bg-card rounded-xl shadow-xl flex flex-col max-h-[90vh]">
-          <DialogHeader className="p-6 pb-4">
-              <DialogTitle className="text-2xl font-bold flex items-center text-primary">
-                  {isEditing ? <Edit3 className="mr-3 h-6 w-6" /> : <PlusCircle className="mr-3 h-6 w-6" />}
-                  {isEditing ? "Edit Habit" : "Create a New Habit"}
+      <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-card to-card/95 rounded-2xl shadow-2xl border-0 flex flex-col max-h-[90vh] overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2">
+              <DialogTitle className="text-2xl font-bold flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  {isEditing ? <Edit3 className="mr-3 h-6 w-6 text-primary" /> : <Target className="mr-3 h-6 w-6 text-primary" />}
+                  {isEditing ? "Edit Habit" : "Create New Habit"}
               </DialogTitle>
-              <DialogDescription>
-                  {isEditing ? "Modify the details of your habit." : (currentStep === 1 ? "Choose how you'd like to start." : "Describe your goal for AI help, or fill the form below.")}
+              <DialogDescription className="text-muted-foreground">
+                  {isEditing ? "Modify your habit details below." : (currentStep === 1 ? "Choose how you'd like to get started." : "Let AI help you or customize everything yourself.")}
               </DialogDescription>
           </DialogHeader>
 
           {currentStep === 1 && !isEditing && (
-              <div className="flex-grow min-h-0 overflow-y-auto">
-                  <div className="p-6 grid md:grid-cols-2 gap-6 items-start">
+              <div className="flex-1 overflow-y-auto px-6 pb-6">
+                  <div className="grid gap-4">
                       <div
-                          className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
+                          className="group relative p-6 rounded-xl border-2 border-primary/20 hover:border-primary/40 transition-all duration-300 cursor-pointer bg-gradient-to-br from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10"
                           onClick={() => setCurrentStep(2)}
                       >
-                          <div className="flex items-center gap-3 mb-2">
-                              <FilePenLine className="h-8 w-8 text-muted-foreground" />
-                              <h3 className="text-lg font-semibold">Create a Single Habit</h3>
+                          <div className="flex items-start space-x-4">
+                              <div className="flex-shrink-0 p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                                  <FilePenLine className="h-6 w-6 text-primary" />
+                              </div>
+                              <div className="flex-1">
+                                  <h3 className="text-lg font-semibold text-foreground mb-2">Create a Single Habit</h3>
+                                  <p className="text-sm text-muted-foreground leading-relaxed">
+                                      Define one habit at a time, with or without AI assistance to help you set it up perfectly.
+                                  </p>
+                              </div>
+                              <div className="flex-shrink-0 text-primary/60 group-hover:text-primary transition-colors">
+                                  →
+                              </div>
                           </div>
-                          <p className="text-sm text-muted-foreground flex-grow">
-                              Define one habit at a time, with or without AI assistance.
-                          </p>
                       </div>
+                      
                       <div
-                          className="flex flex-col h-full p-6 rounded-lg border-2 border-muted hover:border-primary transition-colors cursor-pointer bg-card hover:bg-accent/5"
+                          className="group relative p-6 rounded-xl border-2 border-accent/20 hover:border-accent/40 transition-all duration-300 cursor-pointer bg-gradient-to-br from-accent/5 to-primary/5 hover:from-accent/10 hover:to-primary/10"
                           onClick={handleOpenProgramDialog}
                       >
-                          <div className="flex items-center gap-3 mb-2">
-                              <Target className="h-8 w-8 text-muted-foreground" />
-                              <h3 className="text-lg font-semibold">Create a Program</h3>
+                          <div className="flex items-start space-x-4">
+                              <div className="flex-shrink-0 p-3 rounded-full bg-accent/10 group-hover:bg-accent/20 transition-colors">
+                                  <Target className="h-6 w-6 text-accent" />
+                              </div>
+                              <div className="flex-1">
+                                  <h3 className="text-lg font-semibold text-foreground mb-2">Create a Program</h3>
+                                  <p className="text-sm text-muted-foreground leading-relaxed">
+                                      Get a set of related habits for a larger goal. Perfect for learning new skills or achieving big objectives.
+                                  </p>
+                              </div>
+                              <div className="flex-shrink-0 text-accent/60 group-hover:text-accent transition-colors">
+                                  →
+                              </div>
                           </div>
-                          <p className="text-sm text-muted-foreground flex-grow">
-                              Get a set of related habits for a larger goal.
-                          </p>
                       </div>
                   </div>
               </div>
           )}
 
           {currentStep === 2 && (
-              <form onSubmit={handleSubmit(onSubmitDialog as SubmitHandler<CreateHabitFormData>)} className="flex flex-col flex-grow min-h-0">
-                  <div className="flex-grow overflow-y-auto px-6">
-                      {!isEditing && (
-                          <Button type="button" onClick={() => setCurrentStep(1)} variant="ghost" size="sm" className="text-xs text-muted-foreground mb-4 -ml-3">
-                              &larr; Back to Creation Options
-                          </Button>
-                      )}
-                      <div className="space-y-4">
-                          {!isEditing && (
-                              <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 space-y-3">
-                                  <Label htmlFor="dialog-ai-description" className="font-semibold flex items-center gap-2">
-                                      <Wand2 className="h-5 w-5 text-primary"/>
-                                      Start with AI (Optional)
-                                  </Label>
-                                  <Controller name="description" control={control} render={({ field }) => (
+              <div className="flex-1 overflow-y-auto">
+                  <form onSubmit={handleSubmit(onSubmitDialog)} className="space-y-6">
+                      <div className="px-6 space-y-6">
+                          {/* AI Description Section */}
+                          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 p-4 rounded-xl border border-blue-200/50 dark:border-blue-800/50">
+                              <div className="flex items-center mb-3">
+                                  <Wand2 className="h-5 w-5 text-blue-600 mr-2" />
+                                  <Label className="text-sm font-medium text-blue-900 dark:text-blue-100">AI Assistant</Label>
+                              </div>
+                              <Controller
+                                  name="description"
+                                  control={control}
+                                  render={({ field }) => (
                                       <Textarea
-                                          id="dialog-ai-description"
-                                          placeholder="e.g., 'Run 3 times a week' or 'Learn to play guitar'"
                                           {...field}
-                                          className="bg-background text-sm"
-                                          rows={2}
+                                          placeholder="Describe what you want to achieve... (e.g., 'I want to learn guitar and practice 30 minutes daily')"
+                                          className="min-h-[80px] border-blue-200 focus:border-blue-400 dark:border-blue-800 dark:focus:border-blue-600 bg-white/50 dark:bg-gray-900/50"
                                       />
-                                  )} />
-                                  <Button
-                                    type="button"
-                                    onClick={handleAISuggestDetails}
-                                    disabled={isAISuggesting || !habitDescriptionForAI?.trim()}
-                                    className="w-full"
-                                  >
-                                    {isAISuggesting ? "Generating..." : "Suggest with AI"}
-                                  </Button>
-                              </div>
-                          )}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-1">
-                                  <Label htmlFor="dialog-habit-name" className="text-sm font-medium">Name</Label>
-                                  <Controller name="name" control={control} render={({ field }) => <Input id="dialog-habit-name" placeholder="e.g., Read a chapter" {...field} className="bg-input/50 text-sm" />} />
-                                  {errors.name && <p className="text-xs text-destructive pt-1">{errors.name.message}</p>}
-                              </div>
-                              <div className="space-y-1">
-                                  <Label htmlFor="dialog-habit-category" className="text-sm font-medium flex items-center"><Tag className="mr-1.5 h-4 w-4 text-muted-foreground" />Category</Label>
-                                  <Controller name="category" control={control} render={({ field }) => (
-                                      <Select onValueChange={field.onChange} value={field.value || "Other"}>
-                                          <SelectTrigger id="dialog-habit-category" className="bg-input/50 text-sm"><SelectValue placeholder="Select category" /></SelectTrigger>
-                                          <SelectContent>{HABIT_CATEGORIES.map(cat => <SelectItem key={cat} value={cat} className="text-sm">{cat}</SelectItem>)}</SelectContent>
-                                      </Select>)} />
-                              </div>
+                                  )}
+                              />
+                              <Button
+                                  type="button"
+                                  onClick={handleAISuggestDetails}
+                                  disabled={isAISuggesting || !habitDescriptionForAI?.trim()}
+                                  className="mt-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                                  size="sm"
+                              >
+                                  {isAISuggesting ? (
+                                      <>
+                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                          Generating...
+                                      </>
+                                  ) : (
+                                      <>
+                                          <Wand2 className="mr-2 h-4 w-4" />
+                                          Get AI Suggestions
+                                      </>
+                                  )}
+                              </Button>
                           </div>
-                          <div className="space-y-1">
-                              <Label className="text-sm font-medium">Days of the Week</Label>
-                              <div className="grid grid-cols-4 sm:grid-cols-7 gap-1 p-1.5 border rounded-md bg-input/20">
-                                  {weekDaysArray.map(day => (
-                                      <Controller key={day} name="daysOfWeek" control={control} render={({ field }) => (
-                                          <div className="flex items-center space-x-1 p-1 rounded-md hover:bg-accent/10">
-                                              <Checkbox id={`dialog-day-${day}`} checked={field.value?.includes(day)}
-                                                  onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), day].sort((a, b) => weekDaysArray.indexOf(a) - weekDaysArray.indexOf(b)) : (field.value || []).filter((d: WeekDay | undefined): d is WeekDay => !!d)
-                                                  )}
-                                                  className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground h-4 w-4" />
-                                              <Label htmlFor={`dialog-day-${day}`} className="text-xs font-normal cursor-pointer select-none">{day}</Label>
-                                          </div>)} />))}
+
+                          {/* Form Fields */}
+                          <div className="grid gap-6">
+                              {/* Habit Name */}
+                              <div className="space-y-2">
+                                  <Label htmlFor="name" className="text-sm font-medium flex items-center">
+                                      <Tag className="h-4 w-4 mr-2 text-primary" />
+                                      Habit Name *
+                                  </Label>
+                                  <Controller
+                                      name="name"
+                                      control={control}
+                                      render={({ field }) => (
+                                          <Input
+                                              {...field}
+                                              id="name"
+                                              placeholder="e.g., Practice Guitar, Morning Jog, Read 30 minutes"
+                                              className="h-11"
+                                          />
+                                      )}
+                                  />
+                                  {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                               </div>
-                              {errors.daysOfWeek && <p className="text-xs text-destructive pt-1">{errors.daysOfWeek.message}</p>}
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-1">
-                                  <Label className="text-sm font-medium flex items-center"><Hourglass className="mr-1.5 h-4 w-4 text-muted-foreground" />Duration (Optional)</Label>
-                                  <div className="grid grid-cols-2 gap-2">
-                                      <div> <Label htmlFor="dialog-duration-hours" className="text-xs text-muted-foreground">Hours</Label>
-                                          <Controller name="durationHours" control={control} render={({ field }) => <Input id="dialog-duration-hours" type="number" placeholder="Hr" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm" min="0" />} />
-                                      </div>
-                                      <div> <Label htmlFor="dialog-duration-minutes" className="text-xs text-muted-foreground">Minutes</Label>
-                                          <Controller name="durationMinutes" control={control} render={({ field }) => <Input id="dialog-duration-minutes" type="number" placeholder="Min" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value))} value={field.value ?? ''} className="bg-input/50 w-full text-sm" min="0" max="59" />} />
-                                      </div>
+
+                              {/* Category */}
+                              <div className="space-y-2">
+                                  <Label className="text-sm font-medium">Category</Label>
+                                  <Controller
+                                      name="category"
+                                      control={control}
+                                      render={({ field }) => (
+                                          <Select onValueChange={field.onChange} value={field.value}>
+                                              <SelectTrigger className="h-11">
+                                                  <SelectValue placeholder="Select a category" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                  {HABIT_CATEGORIES.map((cat) => (
+                                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                  ))}
+                                              </SelectContent>
+                                          </Select>
+                                      )}
+                                  />
+                              </div>
+
+                              {/* Days of Week */}
+                              <div className="space-y-3">
+                                  <Label className="text-sm font-medium flex items-center">
+                                      <CalendarClock className="h-4 w-4 mr-2 text-primary" />
+                                      Days of the Week *
+                                  </Label>
+                                  <Controller
+                                      name="daysOfWeek"
+                                      control={control}
+                                      render={({ field }) => (
+                                          <div className="grid grid-cols-7 gap-2">
+                                              {weekDaysArray.map((day) => (
+                                                  <div key={day} className="flex flex-col items-center">
+                                                      <Checkbox
+                                                          checked={field.value.includes(day)}
+                                                          onCheckedChange={(checked) => {
+                                                              if (checked) {
+                                                                  field.onChange([...field.value, day]);
+                                                              } else {
+                                                                  field.onChange(field.value.filter((d) => d !== day));
+                                                              }
+                                                          }}
+                                                      />
+                                                      <Label className="text-xs mt-1 text-center">{day}</Label>
+                                                  </div>
+                                              ))}
+                                          </div>
+                                      )}
+                                  />
+                                  {errors.daysOfWeek && <p className="text-sm text-destructive">{errors.daysOfWeek.message}</p>}
+                              </div>
+
+                              {/* Duration */}
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                      <Label className="text-sm font-medium flex items-center">
+                                          <Hourglass className="h-4 w-4 mr-2 text-primary" />
+                                          Hours
+                                      </Label>
+                                      <Controller
+                                          name="durationHours"
+                                          control={control}
+                                          render={({ field }) => (
+                                              <Input
+                                                  {...field}
+                                                  type="number"
+                                                  min="0"
+                                                  placeholder="0"
+                                                  className="h-11"
+                                                  value={field.value ?? ''}
+                                                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                                              />
+                                          )}
+                                      />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label className="text-sm font-medium">Minutes</Label>
+                                      <Controller
+                                          name="durationMinutes"
+                                          control={control}
+                                          render={({ field }) => (
+                                              <Input
+                                                  {...field}
+                                                  type="number"
+                                                  min="0"
+                                                  max="59"
+                                                  placeholder="30"
+                                                  className="h-11"
+                                                  value={field.value ?? ''}
+                                                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                                              />
+                                          )}
+                                      />
                                   </div>
                               </div>
-                              <div className="space-y-1">
-                                  <Label htmlFor="dialog-habit-specificTime" className="text-sm font-medium flex items-center"><Clock className="mr-1.5 h-4 w-4 text-muted-foreground" />Specific Time (Optional)</Label>
-                                  <Controller name="specificTime" control={control} render={({ field }) => <Input id="dialog-habit-specificTime" type="time" {...field} className="bg-input/50 w-full text-sm" />} />
-                                  {errors.specificTime && <p className="text-xs text-destructive pt-1">{errors.specificTime.message}</p>}
+
+                              {/* Specific Time */}
+                              <div className="space-y-2">
+                                  <Label className="text-sm font-medium flex items-center">
+                                      <Clock className="h-4 w-4 mr-2 text-primary" />
+                                      Specific Time (Optional)
+                                  </Label>
+                                  <Controller
+                                      name="specificTime"
+                                      control={control}
+                                      render={({ field }) => (
+                                          <Input
+                                              {...field}
+                                              type="time"
+                                              className="h-11"
+                                          />
+                                      )}
+                                  />
+                                  {errors.specificTime && <p className="text-sm text-destructive">{errors.specificTime.message}</p>}
+                              </div>
+
+                              {/* Optimal Timing */}
+                              <div className="space-y-2">
+                                  <Label className="text-sm font-medium">Optimal Timing (Optional)</Label>
+                                  <Controller
+                                      name="optimalTiming"
+                                      control={control}
+                                      render={({ field }) => (
+                                          <Input
+                                              {...field}
+                                              value={field.value ?? ''}
+                                              onChange={(e) => field.onChange(e.target.value || null)}
+                                              placeholder="e.g., Morning after coffee, Before bed"
+                                              className="h-11"
+                                          />
+                                      )}
+                                  />
                               </div>
                           </div>
-                          <div className="space-y-1 pb-4">
-                              <Label htmlFor="dialog-habit-optimalTiming" className="text-sm font-medium flex items-center"><CalendarClock className="mr-1.5 h-4 w-4 text-muted-foreground" />Optimal General Timing (Optional)</Label>
-                              <Controller name="optimalTiming" control={control} render={({ field }) => <Input id="dialog-habit-optimalTiming" placeholder="e.g., Morning, After work" {...field} value={field.value ?? ''} className="bg-input/50 text-sm" />} />
-                          </div>
                       </div>
-                  </div>
-                  <DialogFooter className="p-6 pt-4 shrink-0 border-t">
-                      <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>Cancel</Button></DialogClose>
-                      <Button type="submit" disabled={isSubmitting || isAISuggesting}>
-                          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isEditing ? <Save className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />)}
-                          {isEditing ? "Save Changes" : "Add Habit"}
-                      </Button>
-                  </DialogFooter>
-              </form>
+
+                      <DialogFooter className="px-6 py-4 bg-muted/30 border-t">
+                          <div className="flex justify-between w-full">
+                              {!isEditing && (
+                                  <Button
+                                      type="button"
+                                      variant="ghost"
+                                      onClick={() => setCurrentStep(1)}
+                                      className="text-muted-foreground hover:text-foreground"
+                                  >
+                                      ← Back
+                                  </Button>
+                              )}
+                              <div className="flex space-x-3 ml-auto">
+                                  <DialogClose asChild>
+                                      <Button type="button" variant="outline" disabled={isSubmitting || isAISuggesting}>
+                                          Cancel
+                                      </Button>
+                                  </DialogClose>
+                                  <Button 
+                                      type="submit" 
+                                      disabled={isSubmitting || isAISuggesting}
+                                      className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white"
+                                  >
+                                      {isSubmitting ? (
+                                          <>
+                                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                              {isEditing ? 'Updating...' : 'Creating...'}
+                                          </>
+                                      ) : (
+                                          <>
+                                              <Save className="mr-2 h-4 w-4" />
+                                              {isEditing ? 'Update Habit' : 'Create Habit'}
+                                          </>
+                                      )}
+                                  </Button>
+                              </div>
+                          </div>
+                      </DialogFooter>
+                  </form>
+              </div>
           )}
       </DialogContent>
     </Dialog>
