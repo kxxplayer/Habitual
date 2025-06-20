@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { GoogleIcon } from '@/components/ui/icons';
 import { auth } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithGoogle } from '@/lib/google-auth';
 import { useState } from 'react';
 import { Loader2, Mail, Lock, Eye, EyeOff, UserPlus, Sparkles, CheckCircle2, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -56,9 +57,21 @@ const RegisterPage: NextPage = () => {
 
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
-    // TODO: Fix Google sign-in import issue
-    console.log('Google sign-up temporarily disabled due to import issue');
-    setIsGoogleLoading(false);
+    try {
+      const result = await signInWithGoogle();
+      if (result) {
+        // Sign-in completed with popup
+        console.log('Google sign-up successful:', result.user);
+        router.push('/');
+      } else {
+        // Sign-in initiated with redirect, result will be handled by redirect
+        console.log('Google sign-up redirect initiated');
+      }
+    } catch (error: any) {
+      console.error('Google sign-up failed:', error);
+      alert(error.message || 'Google sign-up failed. Please try again.');
+      setIsGoogleLoading(false);
+    }
   };
 
   // Password strength indicator

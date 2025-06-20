@@ -13,7 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GoogleIcon } from '@/components/ui/icons';
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { signInWithGoogle, getGoogleRedirectResult } from '@/lib/google-auth';
 import { useState, useEffect } from 'react';
 import { Loader2, Mail, Lock, Eye, EyeOff, Sparkles, CheckCircle, Target, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -55,7 +56,7 @@ const LoginPage: NextPage = () => {
   useEffect(() => {
     const handleRedirectResult = async () => {
       try {
-        const result = await getRedirectResult(auth);
+        const result = await getGoogleRedirectResult();
         if (result) {
           // User signed in successfully via redirect
           console.log('Google sign-in successful:', result.user);
@@ -66,13 +67,7 @@ const LoginPage: NextPage = () => {
         }
       } catch (error: any) {
         console.error('Google sign-in redirect error:', error);
-        if (error.code === 'auth/unauthorized-domain') {
-          alert('This domain is not authorized for Google sign-in. Please contact support.');
-        } else if (error.code === 'auth/popup-closed-by-user') {
-          console.log('User cancelled Google sign-in');
-        } else {
-          alert('Google sign-in failed. Please try again.');
-        }
+        alert(error.message || 'Google sign-in failed. Please try again.');
         setIsGoogleLoading(false);
       } finally {
         setIsProcessingRedirect(false);
@@ -115,28 +110,18 @@ const LoginPage: NextPage = () => {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('email');
-      provider.addScope('profile');
-      
-      // Set custom parameters to ensure we get the account selection
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      });
-      
-      await signInWithRedirect(auth, provider);
-      // signInWithRedirect will redirect the page, so no need to manually navigate
+      const result = await signInWithGoogle();
+      if (result) {
+        // Sign-in completed with popup
+        console.log('Google sign-in successful:', result.user);
+        // The onAuthStateChanged listener will handle the redirect
+      } else {
+        // Sign-in initiated with redirect, result will be handled by useEffect
+        console.log('Google sign-in redirect initiated');
+      }
     } catch (error: any) {
       console.error('Google sign-in failed:', error);
-      let errorMessage = 'Google sign-in failed. Please try again.';
-      
-      if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = 'This domain is not authorized for Google sign-in. Please contact support.';
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Popup was blocked. Please allow popups and try again.';
-      }
-      
-      alert(errorMessage);
+      alert(error.message || 'Google sign-in failed. Please try again.');
       setIsGoogleLoading(false);
     }
   };
