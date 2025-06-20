@@ -16,47 +16,162 @@ declare global {
   }
 }
 
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+const ENABLE_DEV_MODE = process.env.NEXT_PUBLIC_FIREBASE_DEV_MODE === 'true';
+
 /**
  * Initialize reCAPTCHA verifier for phone authentication
+ * @param containerId - ID of the DOM element to render reCAPTCHA
+ * @param devMode - Optional development mode to bypass reCAPTCHA (use test numbers only)
  */
-export const initializeRecaptcha = (containerId: string): Promise<RecaptchaVerifier> => {
+export const initializeRecaptcha = (containerId: string, devMode: boolean = false): Promise<RecaptchaVerifier> => {
   return new Promise((resolve, reject) => {
     try {
-      // Clean up existing verifier if it exists
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-      }
-
-      const recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
-        size: 'normal',
-        callback: (response: string) => {
-          console.log('reCAPTCHA solved:', response);
-        },
-        'expired-callback': () => {
-          console.log('reCAPTCHA expired');
-        },
-        'error-callback': (error: any) => {
-          console.error('reCAPTCHA error:', error);
-          reject(new Error('reCAPTCHA verification failed'));
+      console.log('🔄 Starting reCAPTCHA initialization...');
+      console.log('📍 Container ID:', containerId);
+      console.log('🌐 Current location:', window.location.href);
+      console.log('🔑 Auth domain:', auth.app.options.authDomain);
+      console.log('🛠️ Development mode:', IS_DEVELOPMENT && (ENABLE_DEV_MODE || devMode));
+      
+      // Validate domain for reCAPTCHA
+      const currentDomain = window.location.hostname;
+      console.log('🏠 Current domain:', currentDomain);
+      
+      // Check if container exists and wait for it if needed
+      const waitForContainer = () => {
+        const container = document.getElementById(containerId);
+        if (!container) {
+          console.warn('⏳ Container not found, waiting...');
+          setTimeout(waitForContainer, 100);
+          return;
         }
-      });
+        
+        console.log('✅ Container found:', container);
+        initializeRecaptchaInternal(container);
+      };
+      
+      const initializeRecaptchaInternal = (container: HTMLElement) => {
+        // Clean up existing verifier if it exists
+        if (window.recaptchaVerifier) {
+          console.log('🧹 Cleaning up existing reCAPTCHA verifier');
+          try {
+            window.recaptchaVerifier.clear();
+          } catch (e) {
+            console.warn('⚠️ Error clearing existing reCAPTCHA:', e);
+          }
+          delete window.recaptchaVerifier;
+        }
 
-      // Store verifier globally for cleanup
-      window.recaptchaVerifier = recaptchaVerifier;
+        // Development mode: Use invisible reCAPTCHA with auto-resolution
+        if (IS_DEVELOPMENT && (ENABLE_DEV_MODE || devMode)) {
+          console.log('🛠️ Using development mode with simplified reCAPTCHA');
+          
+          try {
+            // Create RecaptchaVerifier with correct parameters for Firebase v9+
+            const recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+              size: 'invisible',
+              callback: (response: string) => {
+                console.log('✅ reCAPTCHA solved successfully (dev mode)');
+              },
+              'expired-callback': () => {
+                console.log('⏰ reCAPTCHA expired (dev mode)');
+              },
+              'error-callback': (error: any) => {
+                console.error('❌ reCAPTCHA error (dev mode):', error);
+              }
+            });
 
-      // Render the reCAPTCHA
-      recaptchaVerifier.render().then((widgetId: number) => {
-        window.recaptchaWidgetId = widgetId;
-        console.log('reCAPTCHA rendered successfully');
-        resolve(recaptchaVerifier);
-      }).catch((error) => {
-        console.error('Failed to render reCAPTCHA:', error);
-        reject(error);
-      });
+            window.recaptchaVerifier = recaptchaVerifier;
+            console.log('💾 reCAPTCHA verifier stored globally (dev mode)');
+            // In dev mode, resolve immediately without rendering
+            console.log('🎉 reCAPTCHA initialized successfully (dev mode)');
+            resolve(recaptchaVerifier);
+            return;
+          } catch (error: any) {
+            console.error('💥 Error creating dev mode reCAPTCHA:', error);
+            reject(new Error(`Failed to create reCAPTCHA verifier (dev mode): ${error.message}`));
+            return;
+          }
+        }
 
-    } catch (error) {
-      console.error('Failed to initialize reCAPTCHA:', error);
-      reject(error);
+        // Production mode: Normal reCAPTCHA with better error handling
+        console.log('🏗️ Creating new reCAPTCHA verifier (production mode)');
+        
+        try {
+          const recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+            size: 'normal',
+            callback: (response: string) => {
+              console.log('✅ reCAPTCHA solved successfully');
+            },
+            'expired-callback': () => {
+              console.log('⏰ reCAPTCHA expired, user needs to solve it again');
+            },
+            'error-callback': (error: any) => {
+              console.error('❌ reCAPTCHA error:', error);
+            }
+          });
+
+          // Store verifier globally for cleanup
+          window.recaptchaVerifier = recaptchaVerifier;
+          console.log('💾 reCAPTCHA verifier stored globally');
+
+          // Render the reCAPTCHA with timeout and better error handling
+          console.log('🎨 Starting reCAPTCHA render...');
+          
+          const renderPromise = recaptchaVerifier.render();
+          const timeoutPromise = new Promise((_, timeoutReject) => {
+            setTimeout(() => timeoutReject(new Error('reCAPTCHA render timeout after 15 seconds')), 15000);
+          });
+
+          Promise.race([renderPromise, timeoutPromise])
+            .then((widgetId: any) => {
+              window.recaptchaWidgetId = widgetId;
+              console.log('🎉 reCAPTCHA rendered successfully with widget ID:', widgetId);
+              resolve(recaptchaVerifier);
+            })
+            .catch((error) => {
+              console.error('💥 Failed to render reCAPTCHA:', error);
+              console.error('🔍 Error details:', {
+                message: error.message,
+                code: error.code,
+                name: error.name,
+                stack: error.stack
+              });
+              
+              // Cleanup on failure
+              try {
+                recaptchaVerifier.clear();
+              } catch (e) {
+                console.warn('⚠️ Error cleaning up failed reCAPTCHA:', e);
+              }
+              delete window.recaptchaVerifier;
+              
+              // Provide specific error messages based on error type
+              if (error.message?.includes('timeout')) {
+                reject(new Error('reCAPTCHA loading timed out. Please check your internet connection and try again.'));
+              } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+                reject(new Error('Network error loading reCAPTCHA. Please check your internet connection.'));
+              } else if (error.message?.includes('Invalid site key') || error.message?.includes('Invalid key') || error.message?.includes('Invalid domain')) {
+                reject(new Error('Domain configuration error. Please make sure localhost is authorized in Firebase Console.'));
+              } else if (error.message?.includes('not allowed') || error.message?.includes('unauthorized')) {
+                reject(new Error('Domain not authorized. Please add your domain to Firebase Console authorized domains.'));
+              } else {
+                reject(new Error(`reCAPTCHA initialization failed: ${error.message || 'Unknown error'}`));
+              }
+            });
+            
+        } catch (error: any) {
+          console.error('💥 Error creating reCAPTCHA verifier:', error);
+          reject(new Error(`Failed to create reCAPTCHA verifier: ${error.message}`));
+        }
+      };
+      
+      // Start the container waiting process
+      waitForContainer();
+
+    } catch (error: any) {
+      console.error('💥 Failed to initialize reCAPTCHA:', error);
+      reject(new Error(`Failed to initialize security verification: ${error.message}`));
     }
   });
 };
@@ -228,9 +343,9 @@ const getOTPErrorMessage = (errorCode: string): string => {
  * Country codes for phone number input
  */
 export const COUNTRY_CODES = [
+  { code: '+91', country: 'IN', flag: '🇮🇳', name: 'India' },
   { code: '+1', country: 'US/CA', flag: '🇺🇸', name: 'United States / Canada' },
   { code: '+44', country: 'UK', flag: '🇬🇧', name: 'United Kingdom' },
-  { code: '+91', country: 'IN', flag: '🇮🇳', name: 'India' },
   { code: '+86', country: 'CN', flag: '🇨🇳', name: 'China' },
   { code: '+81', country: 'JP', flag: '🇯🇵', name: 'Japan' },
   { code: '+49', country: 'DE', flag: '🇩🇪', name: 'Germany' },

@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 const OTPLoginPage = () => {
   const router = useRouter();
   const [step, setStep] = useState<'phone' | 'otp' | 'success'>('phone');
-  const [countryCode, setCountryCode] = useState('+1');
+  const [countryCode, setCountryCode] = useState('+91');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -34,6 +34,7 @@ const OTPLoginPage = () => {
   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
   const [isRecaptchaLoaded, setIsRecaptchaLoaded] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [isDevMode, setIsDevMode] = useState(false);
 
   // Monitor authentication state changes
   useEffect(() => {
@@ -51,22 +52,29 @@ const OTPLoginPage = () => {
   useEffect(() => {
     const setupRecaptcha = async () => {
       try {
-        const verifier = await initializeRecaptcha('recaptcha-container');
+        // Wait a bit for the DOM to be ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const verifier = await initializeRecaptcha('recaptcha-container', isDevMode);
         setRecaptchaVerifier(verifier);
         setIsRecaptchaLoaded(true);
+        setError(null); // Clear any previous errors
       } catch (error: any) {
         console.error('Failed to initialize reCAPTCHA:', error);
-        setError('Failed to initialize security verification. Please refresh the page.');
+        setError(error.message || 'Failed to initialize security verification. Please refresh the page.');
+        setIsRecaptchaLoaded(false);
       }
     };
 
-    setupRecaptcha();
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(setupRecaptcha, 200);
 
     // Cleanup on unmount
     return () => {
+      clearTimeout(timer);
       cleanupRecaptcha();
     };
-  }, []);
+  }, [isDevMode]);
 
   // Resend timer countdown
   useEffect(() => {
@@ -252,7 +260,7 @@ const OTPLoginPage = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {COUNTRY_CODES.map((country) => (
-                          <SelectItem key={country.code} value={country.code}>
+                          <SelectItem value={country.code} key={country.code}>
                             <div className="flex items-center space-x-2">
                               <span>{country.flag}</span>
                               <span>{country.code}</span>
@@ -276,7 +284,7 @@ const OTPLoginPage = () => {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Format: {countryCode === '+1' ? '(555) 123-4567' : 'Enter without country code'}
+                    Format: {countryCode === '+91' ? '98765 43210' : countryCode === '+1' ? '(555) 123-4567' : 'Enter without country code'}
                   </p>
                 </div>
 
@@ -285,12 +293,40 @@ const OTPLoginPage = () => {
                   <Label className="text-sm font-medium text-foreground">Security Verification</Label>
                   <div 
                     id="recaptcha-container" 
-                    className="flex justify-center p-4 border-2 border-dashed border-border rounded-lg bg-background/50"
+                    className="flex justify-center p-4 border-2 border-dashed border-border rounded-lg bg-background/50 min-h-[78px]"
                   >
-                    {!isRecaptchaLoaded && (
+                    {!isRecaptchaLoaded && !error && (
                       <div className="flex items-center space-x-2 text-muted-foreground">
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <span className="text-sm">Loading security verification...</span>
+                      </div>
+                    )}
+                    {error && !isRecaptchaLoaded && (
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+                          <AlertCircle className="w-4 h-4" />
+                          <span className="text-sm">Security verification failed</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            setError(null);
+                            setIsRecaptchaLoaded(false);
+                            try {
+                              await new Promise(resolve => setTimeout(resolve, 100));
+                              const verifier = await initializeRecaptcha('recaptcha-container', isDevMode);
+                              setRecaptchaVerifier(verifier);
+                              setIsRecaptchaLoaded(true);
+                            } catch (error: any) {
+                              setError(error.message || 'Failed to initialize security verification.');
+                            }
+                          }}
+                          className="text-xs"
+                        >
+                          Try Again
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -378,19 +414,87 @@ const OTPLoginPage = () => {
               </form>
             )}
 
-            {/* Info section */}
+            {/* Enhanced info section with testing guide */}
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2 flex items-center">
                 <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
-                Secure Phone Authentication
+                Phone Authentication Setup
               </h3>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• Your phone number is kept secure and private</li>
-                <li>• Verification codes expire after 5 minutes</li>
-                <li>• SMS rates may apply from your carrier</li>
-                <li>• You can change your phone number later in settings</li>
-              </ul>
+              
+              <div className="space-y-3 text-sm text-blue-800 dark:text-blue-200">
+                <div>
+                  <p className="font-medium mb-1">🔒 Security Features:</p>
+                  <ul className="space-y-1 ml-4">
+                    <li>• Your phone number is kept secure and private</li>
+                    <li>• Verification codes expire after 5 minutes</li>
+                    <li>• SMS rates may apply from your carrier</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <p className="font-medium mb-1">🧪 For Testing:</p>
+                  <ul className="space-y-1 ml-4">
+                    <li>• Enable development mode below for test numbers</li>
+                    <li>• Configure test numbers in Firebase Console</li>
+                    <li>• No SMS charges during testing</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <p className="font-medium mb-1">⚙️ Firebase Console Setup:</p>
+                  <ul className="space-y-1 ml-4">
+                    <li>• Authentication → Sign-in method → Phone enabled</li>
+                    <li>• Add test numbers in "Phone numbers for testing"</li>
+                    <li>• Ensure localhost is in authorized domains</li>
+                  </ul>
+                </div>
+              </div>
             </div>
+
+            {/* Development mode toggle */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+                    🛠️ Development Mode
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsDevMode(!isDevMode)}
+                    className={cn(
+                      "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                      isDevMode ? "bg-yellow-600" : "bg-gray-300 dark:bg-gray-600"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "inline-block h-3 w-3 transform rounded-full bg-white transition-transform",
+                        isDevMode ? "translate-x-5" : "translate-x-1"
+                      )}
+                    />
+                  </button>
+                </div>
+                
+                {isDevMode && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                      Bypasses reCAPTCHA for testing. Use these test numbers:
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 text-xs">
+                      <div className="bg-yellow-100 dark:bg-yellow-800/30 p-2 rounded">
+                        <span className="font-medium">🇮🇳 India:</span> +91 98765-43210 (Code: 123456)
+                      </div>
+                      <div className="bg-yellow-100 dark:bg-yellow-800/30 p-2 rounded">
+                        <span className="font-medium">🇺🇸 US:</span> +1 650-555-3434 (Code: 123456)
+                      </div>
+                    </div>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                      Configure these in Firebase Console → Authentication → Phone numbers for testing
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="text-center">
               <p className="text-sm text-muted-foreground">
