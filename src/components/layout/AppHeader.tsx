@@ -36,25 +36,25 @@ const AppHeader = () => {
       className="shrink-0 sticky top-0 z-40 w-full bg-gradient-to-r from-primary/10 via-background/95 to-accent/10 backdrop-blur-md border-b border-border/50 shadow-sm"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <div className="container flex h-14 items-center max-w-2xl">
-        <Link href="/" className="mr-6 flex items-center space-x-3 group transition-all duration-300 hover:scale-105">
+      <div className="container flex h-12 items-center max-w-2xl px-3 sm:px-4">
+        <Link href="/" className="mr-4 flex items-center space-x-2 group transition-all duration-300 hover:scale-105">
           <div className="relative">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent shadow-md group-hover:shadow-lg transition-all duration-300">
-              <Target className="h-4 w-4 text-white" />
+            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-primary to-accent shadow-md group-hover:shadow-lg transition-all duration-300">
+              <Target className="h-3.5 w-3.5 text-white" />
             </div>
-            <Sparkles className="absolute -top-1 -right-1 h-3 w-3 text-accent animate-pulse" />
+            <Sparkles className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 text-accent animate-pulse" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <span className="font-bold text-base bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               GroviaHabits
             </span>
-            <span className="text-xs text-muted-foreground -mt-1">Build Better You</span>
+            <span className="text-xs text-muted-foreground -mt-0.5">Build Better You</span>
           </div>
         </Link>
         
-        <div className="flex flex-1 items-center justify-end space-x-3">
-          <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50">
-            <Zap className="h-3 w-3 text-accent animate-pulse" />
+        <div className="flex flex-1 items-center justify-end space-x-2">
+          <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-muted/50 border border-border/50">
+            <Zap className="h-2.5 w-2.5 text-accent animate-pulse" />
             <span className="text-xs font-medium text-muted-foreground">Stay Focused</span>
           </div>
           <ThemeToggleButton />

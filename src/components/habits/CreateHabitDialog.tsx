@@ -30,7 +30,7 @@ import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+
 import { Network } from '@capacitor/network';
 import type { PluginListenerHandle } from '@capacitor/core';
 
@@ -83,7 +83,6 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isAISuggesting, setIsAISuggesting] = useState(false);
-  const { toast } = useToast();
   const {
     control, handleSubmit, reset, watch, setValue,
     formState: { errors, isSubmitting }
@@ -145,7 +144,6 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
 
   const handleAISuggestDetails = async () => {
     if (!habitDescriptionForAI || habitDescriptionForAI.trim() === "") {
-      toast({ title: "Input Missing", description: "Please describe your habit first.", variant: "destructive" });
       return;
     }
 
@@ -170,13 +168,8 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
       if (typeof result.durationMinutes === 'number') setValue('durationMinutes', typeof result.durationMinutes === 'number' ? result.durationMinutes : parseInt(result.durationMinutes ?? '0'));
       if (result.specificTime && /^\d{2}:\d{2}$/.test(result.specificTime)) setValue('specificTime', result.specificTime);
 
-      toast({ title: "Details Filled!", description: "Review the suggested details and adjust as needed." });
     } catch (error) {
-      toast({
-        title: "AI Suggestion Failed",
-        description: error instanceof Error ? error.message : "Could not get AI suggestions. Please try again.",
-        variant: "destructive"
-      });
+      console.error("AI Suggestion Failed:", error);
     } finally {
       setIsAISuggesting(false);
     }

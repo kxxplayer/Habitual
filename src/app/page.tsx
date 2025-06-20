@@ -50,7 +50,6 @@ import type {
 import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm } from '@/types';
 
 import { checkAndAwardBadges } from '@/lib/badgeUtils';
-import { useToast } from "@/hooks/use-toast";
 
 import { Button } from '@/components/ui/button';
 import {
@@ -124,7 +123,6 @@ const ProgramGenerationOverlay: React.FC<{ isVisible: boolean }> = ({ isVisible 
 const HomePage: NextPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -278,11 +276,6 @@ const HomePage: NextPage = () => {
         console.log('Data saved to Firestore successfully');
       } catch (error) {
         console.error("Error saving data:", error);
-        toast({ 
-          title: "Save Error", 
-          description: "Failed to save changes. Please try again.", 
-          variant: "destructive" 
-        });
       } finally {
         isSavingRef.current = false;
       }
@@ -291,7 +284,7 @@ const HomePage: NextPage = () => {
     return () => {
       if (debounceSaveTimeoutRef.current) clearTimeout(debounceSaveTimeoutRef.current);
     };
-  }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData, toast]);
+  }, [habits, earnedBadges, totalPoints, authUser, mounted, isLoadingData]);
 
   useEffect(() => {
     if (isLoadingData || !mounted || !firstDataLoadCompleteRef.current) return;
@@ -324,10 +317,6 @@ const HomePage: NextPage = () => {
       setHabits(prev =>
         prev.map(h => h.id === habitData.id ? { ...h, ...habitToSave } : h)
       );
-      toast({
-        title: "Habit Updated!",
-        description: `"${habitData.name}" has been saved.`,
-      });
     } else {
       const newHabit: Habit = {
         id: `h_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -336,10 +325,6 @@ const HomePage: NextPage = () => {
         reminderEnabled: false,
       };
       setHabits(prev => [...prev, newHabit]);
-      toast({
-        title: "Habit Created!",
-        description: `"${newHabit.name}" has been added to your habits.`,
-      });
     }
     setIsCreateHabitDialogOpen(false);
   };
@@ -347,10 +332,6 @@ const HomePage: NextPage = () => {
   const handleDeleteProgram = (programId: string, programName: string) => {
     if (window.confirm(`Are you sure you want to delete the entire "${programName}" program and all its habits?`)) {
       setHabits(prev => prev.filter(h => h.programId !== programId));
-      toast({
-        title: "Program Deleted",
-        description: `"${programName}" and all its habits have been removed.`,
-      });
     }
   };
 
@@ -550,11 +531,7 @@ const HomePage: NextPage = () => {
           });
           setIsProgramSuggestionDialogOpen(true);
         } else {
-          toast({
-            title: "AI Error",
-            description: "The AI couldn't generate valid habits for this goal. Please try a different goal.",
-            variant: "destructive",
-          });
+          console.error("AI Error: The AI couldn't generate valid habits for this goal.");
         }
       } else {
         throw new Error("Invalid response from AI service.");
@@ -562,11 +539,6 @@ const HomePage: NextPage = () => {
     } catch (error) {
       console.error("Failed to generate habit program:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
-        title: "Failed to Generate Program",
-        description: errorMessage,
-        variant: "destructive",
-      });
     } finally {
       setIsProgramSuggestionLoading(false);
     }

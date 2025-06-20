@@ -24,32 +24,142 @@ import type { Habit } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   BookOpen, Briefcase, Code, Dumbbell, Droplets, Heart,
-  DollarSign, Brush, PenSquare, Bed, Leaf, MessageCircle, Brain, Target, Bike, Laptop
+  DollarSign, Brush, PenSquare, Bed, Leaf, MessageCircle, Brain, Target, Bike, Laptop,
+  Car, Music, Utensils, Coffee, Camera, Gamepad2, Headphones, ShoppingCart, 
+  Plane, Hammer, GraduationCap, Calculator, Scissors, Stethoscope, Wrench
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const getHabitIcon = (habitName: string): React.ReactNode => {
     const nameLower = habitName.toLowerCase();
-    const iconProps = { className: "h-8 w-8 text-foreground/80" };
   
+    // Driving related
+    if (nameLower.includes('driving') || nameLower.includes('drive')) {
+        return <Car className="h-8 w-8 text-blue-600" />;
+    }
     
-    if (nameLower.includes('workout') || nameLower.includes('fitness')) return <Dumbbell {...iconProps} />;
-    if (nameLower.includes('bike') || nameLower.includes('cycle')) return <Bike {...iconProps} />;
-    if (nameLower.includes('sql') || nameLower.includes('code') || nameLower.includes('python') || nameLower.includes('develop')) return <Laptop {...iconProps} />;
-    if (nameLower.includes('water') || nameLower.includes('drink') || nameLower.includes('hydrate')) return <Droplets {...iconProps} />;
-    if (nameLower.includes('read') || nameLower.includes('book')) return <BookOpen {...iconProps} />;
-    if (nameLower.includes('meditate') || nameLower.includes('mindful')) return <Brain {...iconProps} />;
-    if (nameLower.includes('learn') || nameLower.includes('study')) return <Briefcase {...iconProps} />;
-    if (nameLower.includes('sleep') || nameLower.includes('bed')) return <Bed {...iconProps} />;
-    if (nameLower.includes('journal') || nameLower.includes('write')) return <PenSquare {...iconProps} />;
-    if (nameLower.includes('diet') || nameLower.includes('eat healthy') || nameLower.includes('food')) return <Leaf {...iconProps} />;
-    if (nameLower.includes('social') || nameLower.includes('talk') || nameLower.includes('call')) return <MessageCircle {...iconProps} />;
-    if (nameLower.includes('draw') || nameLower.includes('paint') || nameLower.includes('creative')) return <Brush {...iconProps} />;
-    if (nameLower.includes('finance') || nameLower.includes('budget') || nameLower.includes('money')) return <DollarSign {...iconProps} />;
-    if (nameLower.includes('stretch') || nameLower.includes('yoga')) return <Heart {...iconProps} />;
+    // Music and instruments
+    if (nameLower.includes('guitar') || nameLower.includes('piano') || nameLower.includes('music') || nameLower.includes('practice') && (nameLower.includes('instrument') || nameLower.includes('guitar') || nameLower.includes('piano'))) {
+        return <Music className="h-8 w-8 text-purple-600" />;
+    }
     
-    // Fallback icon
-    return <Target {...iconProps} />;
+    // Theory study (books, learning)
+    if (nameLower.includes('theory') || nameLower.includes('study') || nameLower.includes('learn')) {
+        return <GraduationCap className="h-8 w-8 text-indigo-600" />;
+    }
+    
+    // Simulation (games, practice)
+    if (nameLower.includes('simulation') || nameLower.includes('simulator')) {
+        return <Gamepad2 className="h-8 w-8 text-green-600" />;
+    }
+    
+    // Review sessions
+    if (nameLower.includes('review') || nameLower.includes('revision')) {
+        return <BookOpen className="h-8 w-8 text-orange-600" />;
+    }
+    
+    // Fitness and workout
+    if (nameLower.includes('workout') || nameLower.includes('fitness') || nameLower.includes('exercise') || nameLower.includes('gym')) {
+        return <Dumbbell className="h-8 w-8 text-red-600" />;
+    }
+    
+    // Cycling and biking
+    if (nameLower.includes('bike') || nameLower.includes('cycle') || nameLower.includes('cycling')) {
+        return <Bike className="h-8 w-8 text-emerald-600" />;
+    }
+    
+    // Programming and coding
+    if (nameLower.includes('code') || nameLower.includes('programming') || nameLower.includes('develop') || nameLower.includes('sql') || nameLower.includes('python') || nameLower.includes('javascript')) {
+        return <Laptop className="h-8 w-8 text-slate-600" />;
+    }
+    
+    // Water and hydration
+    if (nameLower.includes('water') || nameLower.includes('drink') || nameLower.includes('hydrate')) {
+        return <Droplets className="h-8 w-8 text-cyan-600" />;
+    }
+    
+    // Reading
+    if (nameLower.includes('read') || nameLower.includes('book')) {
+        return <BookOpen className="h-8 w-8 text-amber-600" />;
+    }
+    
+    // Meditation and mindfulness
+    if (nameLower.includes('meditate') || nameLower.includes('mindful') || nameLower.includes('meditation')) {
+        return <Brain className="h-8 w-8 text-violet-600" />;
+    }
+    
+    // Sleep and rest
+    if (nameLower.includes('sleep') || nameLower.includes('bed') || nameLower.includes('rest')) {
+        return <Bed className="h-8 w-8 text-blue-500" />;
+    }
+    
+    // Writing and journaling
+    if (nameLower.includes('journal') || nameLower.includes('write') || nameLower.includes('writing')) {
+        return <PenSquare className="h-8 w-8 text-teal-600" />;
+    }
+    
+    // Diet and nutrition
+    if (nameLower.includes('diet') || nameLower.includes('eat') || nameLower.includes('food') || nameLower.includes('nutrition')) {
+        return <Utensils className="h-8 w-8 text-green-600" />;
+    }
+    
+    // Social activities
+    if (nameLower.includes('social') || nameLower.includes('talk') || nameLower.includes('call') || nameLower.includes('friends')) {
+        return <MessageCircle className="h-8 w-8 text-pink-600" />;
+    }
+    
+    // Creative activities
+    if (nameLower.includes('draw') || nameLower.includes('paint') || nameLower.includes('creative') || nameLower.includes('art')) {
+        return <Brush className="h-8 w-8 text-orange-500" />;
+    }
+    
+    // Finance and money
+    if (nameLower.includes('finance') || nameLower.includes('budget') || nameLower.includes('money') || nameLower.includes('saving')) {
+        return <DollarSign className="h-8 w-8 text-green-700" />;
+    }
+    
+    // Yoga and stretching
+    if (nameLower.includes('stretch') || nameLower.includes('yoga')) {
+        return <Heart className="h-8 w-8 text-rose-600" />;
+    }
+    
+    // Coffee or morning routine
+    if (nameLower.includes('coffee') || nameLower.includes('morning')) {
+        return <Coffee className="h-8 w-8 text-amber-700" />;
+    }
+    
+    // Photography
+    if (nameLower.includes('photo') || nameLower.includes('picture') || nameLower.includes('camera')) {
+        return <Camera className="h-8 w-8 text-gray-600" />;
+    }
+    
+    // Shopping or errands
+    if (nameLower.includes('shop') || nameLower.includes('grocery') || nameLower.includes('buy')) {
+        return <ShoppingCart className="h-8 w-8 text-blue-700" />;
+    }
+    
+    // Travel or planning
+    if (nameLower.includes('travel') || nameLower.includes('trip') || nameLower.includes('vacation')) {
+        return <Plane className="h-8 w-8 text-sky-600" />;
+    }
+    
+    // Work or business
+    if (nameLower.includes('work') || nameLower.includes('business') || nameLower.includes('office')) {
+        return <Briefcase className="h-8 w-8 text-gray-700" />;
+    }
+    
+    // Repair or maintenance
+    if (nameLower.includes('repair') || nameLower.includes('fix') || nameLower.includes('maintenance')) {
+        return <Wrench className="h-8 w-8 text-zinc-600" />;
+    }
+    
+    // Health and medical
+    if (nameLower.includes('health') || nameLower.includes('doctor') || nameLower.includes('medical')) {
+        return <Stethoscope className="h-8 w-8 text-red-500" />;
+    }
+    
+    // Fallback icon with primary color
+    return <Target className="h-8 w-8 text-primary" />;
 };
 
 interface HabitItemProps {
@@ -138,17 +248,34 @@ const HabitItem: React.FC<HabitItemProps> = ({
         <Button
           onClick={handleCompletionClick}
           variant={isCompleted ? "secondary" : "outline"}
-          className="w-full transition-all duration-150 ease-in-out active:scale-[0.97]"
+          className={cn(
+            "w-full transition-all duration-300 ease-in-out active:scale-[0.97] relative overflow-hidden",
+            isCompleted 
+              ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-green-500 shadow-lg shadow-green-500/25" 
+              : "hover:bg-primary/5 hover:border-primary/50 border-2 border-dashed border-muted-foreground/30 hover:border-primary/60"
+          )}
           size="lg"
         >
-          {isCompleted ? (
-            <CheckCircle2 className="mr-2 h-5 w-5" />
-          ) : (
-            <Circle className="mr-2 h-5 w-5" />
-          )}
+          <div className={cn(
+            "flex items-center justify-center mr-2 h-6 w-6 rounded-full transition-all duration-300",
+            isCompleted 
+              ? "bg-white/20 backdrop-blur-sm" 
+              : "border-2 border-primary/40 border-dashed hover:border-primary/70 hover:bg-primary/10"
+          )}>
+            {isCompleted ? (
+              <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <div className="h-2 w-2 rounded-full bg-primary/40 transition-all duration-300 group-hover:bg-primary/70" />
+            )}
+          </div>
           <span className="font-semibold">
-            {isCompleted ? 'Completed' : 'Mark as Done'}
+            {isCompleted ? 'Completed ✨' : 'Mark as Done'}
           </span>
+          {isCompleted && (
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 animate-pulse" />
+          )}
         </Button>
       </div>
     </Card>

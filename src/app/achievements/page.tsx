@@ -16,7 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Trophy, Award, Calendar, Star, Zap, Target, Lock } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useToast } from "@/hooks/use-toast";
+
 import { badgeDefinitions } from '@/lib/badgeUtils'; // Import all possible badge definitions
 
 const USER_DATA_COLLECTION = "users";
@@ -39,7 +39,6 @@ const getBadgeIcon = (badgeId: string, isLocked = false) => {
 
 const AchievementsPage: NextPage = () => {
     const router = useRouter();
-    const { toast } = useToast();
     const [authUser, setAuthUser] = React.useState<User | null>(null);
     const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
     const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
@@ -87,12 +86,11 @@ const AchievementsPage: NextPage = () => {
             }
         }, (error) => {
             console.error("Error fetching achievements data:", error);
-            toast({ title: "Data Error", description: "Could not load achievements.", variant: "destructive" });
             setIsLoadingData(false);
         });
 
         return () => unsubscribeFirestore();
-    }, [authUser, isLoadingAuth, toast]);
+    }, [authUser, isLoadingAuth]);
 
     const handleOpenCreateHabitDialog = () => {
         setIsCreateHabitDialogOpen(true);
@@ -106,10 +104,6 @@ const AchievementsPage: NextPage = () => {
     const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
         // Handle saving the habit here if needed, or just close dialog and navigate
         setIsCreateHabitDialogOpen(false);
-        toast({
-            title: "Habit Created!",
-            description: `"${habitData.name}" has been added. Redirecting to home...`,
-        });
         // Navigate to home page after successful creation
         setTimeout(() => {
             router.push('/');
@@ -228,10 +222,6 @@ const AchievementsPage: NextPage = () => {
                 onClose={() => setIsGoalInputProgramDialogOpen(false)}
                 onSubmit={() => {
                     setIsGoalInputProgramDialogOpen(false);
-                    toast({
-                        title: "Program Created!",
-                        description: "Your habit program has been created. Redirecting to home...",
-                    });
                     setTimeout(() => {
                         router.push('/');
                     }, 1000);

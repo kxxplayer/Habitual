@@ -18,7 +18,7 @@ import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
 import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
 import GoalInputProgramDialog from '@/components/programs/GoalInputProgramDialog';
 import { Loader2 } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+
 
 // REMOVED: The import from '@/ai/flows/...' has been deleted.
 
@@ -39,7 +39,6 @@ const USER_MAIN_DOC_ID = "main";
 
 const DashboardPage: NextPage = () => {
   const router = useRouter();
-  const { toast } = useToast();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [habits, setHabits] = React.useState<Habit[]>([]);
@@ -110,14 +109,13 @@ const DashboardPage: NextPage = () => {
         setTotalPoints(0);
       }
       setIsLoadingData(false);
-    }, (error) => {
-      console.error("Error fetching dashboard data from Firestore:", error);
-      toast({ title: "Data Error", description: "Could not load dashboard data.", variant: "destructive" });
-      setIsLoadingData(false);
-    });
+          }, (error) => {
+        console.error("Error fetching dashboard data from Firestore:", error);
+        setIsLoadingData(false);
+      });
 
     return () => unsubscribeFirestore();
-  }, [authUser, isLoadingAuth, toast]);
+  }, [authUser, isLoadingAuth]);
 
   const handleOpenCreateHabitDialog = () => {
     setIsCreateHabitDialogOpen(true);
@@ -131,10 +129,6 @@ const DashboardPage: NextPage = () => {
   const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
     // Handle saving the habit here if needed, or just close dialog and navigate
     setIsCreateHabitDialogOpen(false);
-    toast({
-      title: "Habit Created!",
-      description: `"${habitData.name}" has been added. Redirecting to home...`,
-    });
     // Navigate to home page after successful creation
     setTimeout(() => {
       router.push('/');
@@ -197,10 +191,6 @@ const DashboardPage: NextPage = () => {
         onClose={() => setIsGoalInputProgramDialogOpen(false)}
         onSubmit={() => {
           setIsGoalInputProgramDialogOpen(false);
-          toast({
-            title: "Program Created!",
-            description: "Your habit program has been created. Redirecting to home...",
-          });
           setTimeout(() => {
             router.push('/');
           }, 1000);

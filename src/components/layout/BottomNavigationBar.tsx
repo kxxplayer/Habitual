@@ -36,7 +36,7 @@ const BottomNavigationBar: FC<BottomNavigationBarProps> = ({ onAddNewHabitClick 
 
   return (
     <div 
-      className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-16 sticky bottom-0 z-30"
+      className="shrink-0 bg-card border-t border-border p-1 flex justify-around items-center h-14 sticky bottom-0 z-30"
       style={{ paddingBottom: 'calc(0.25rem + env(safe-area-inset-bottom))' }}
     >
       {navItems.map((item) => {
@@ -54,13 +54,13 @@ const BottomNavigationBar: FC<BottomNavigationBarProps> = ({ onAddNewHabitClick 
                 }
               }}
               className={cn(
-                "flex flex-col items-center justify-center h-12 w-12 rounded-full text-primary-foreground transition-colors duration-150 ease-in-out",
+                "flex flex-col items-center justify-center h-11 w-11 rounded-full text-primary-foreground transition-colors duration-150 ease-in-out",
                 "bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95",
-                "relative -top-3"
+                "relative -top-2"
               )}
               aria-label="Add new habit"
             >
-              <IconComponent className="h-6 w-6" />
+              <IconComponent className="h-5 w-5" />
             </Button>
           );
         }
@@ -70,8 +70,7 @@ const BottomNavigationBar: FC<BottomNavigationBarProps> = ({ onAddNewHabitClick 
             key={item.id}
             href={item.href!}
             className={cn(
-              "flex flex-col items-center justify-center h-full p-1 flex-1 transition-colors duration-150 ease-in-out group",
-              !isActive && "hover:text-primary"
+              "flex flex-col items-center justify-center h-full p-0.5 flex-1 transition-colors duration-150 ease-in-out group"
             )}
             aria-label={item.label}
           >
@@ -80,12 +79,12 @@ const BottomNavigationBar: FC<BottomNavigationBarProps> = ({ onAddNewHabitClick 
               isActive ? "bg-primary/10" : "bg-transparent"
             )}>
               <IconComponent className={cn(
-                "h-5 w-5",
+                "h-4 w-4",
                 isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary"
               )} />
             </div>
             <span className={cn(
-              "mt-0.5 text-[10px] leading-tight",
+              "mt-0.5 text-[9px] leading-tight",
               isActive ? "text-primary font-medium" : "text-muted-foreground group-hover:text-primary"
             )}>
               {item.label}

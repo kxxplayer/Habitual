@@ -13,11 +13,10 @@ import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { Loader2, UserCircle2 } from 'lucide-react';
 import type { CreateHabitFormData } from '@/types';
-import { useToast } from "@/hooks/use-toast";
+
 
 const ProfilePage: NextPage = () => {
   const router = useRouter();
-  const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -50,10 +49,6 @@ const ProfilePage: NextPage = () => {
   const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
     // Handle saving the habit here if needed, or just close dialog and navigate
     setIsCreateHabitDialogOpen(false);
-    toast({
-      title: "Habit Created!",
-      description: `"${habitData.name}" has been added. Redirecting to home...`,
-    });
     // Navigate to home page after successful creation
     setTimeout(() => {
       router.push('/');
@@ -121,10 +116,6 @@ const ProfilePage: NextPage = () => {
         onClose={() => setIsGoalInputProgramDialogOpen(false)}
         onSubmit={() => {
           setIsGoalInputProgramDialogOpen(false);
-          toast({
-            title: "Program Created!",
-            description: "Your habit program has been created. Redirecting to home...",
-          });
           setTimeout(() => {
             router.push('/');
           }, 1000);

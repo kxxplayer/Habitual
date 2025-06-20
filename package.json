@@ -65,7 +65,7 @@
     "cordova-plugin-camera": "^8.0.0",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
-    "firebase": "^11.7.0",
+    "firebase": "^11.9.1",
     "framer-motion": "^12.17.3",
     "lucide-react": "^0.475.0",
     "next": "^15.3.2",

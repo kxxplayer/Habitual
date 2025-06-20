@@ -333,4 +333,4 @@ const RegisterPage: NextPage = () => {
   );
 };
 
-export default RegisterPage;
+export default RegisterPage; 

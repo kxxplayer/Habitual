@@ -14,7 +14,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Loader2, Wand2, Clock, CalendarClock, Hourglass, PlusCircle, XCircle, Tag } from 'lucide-react';
 import type { Habit, CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
 import { HABIT_CATEGORIES } from '@/types';
-import { useToast } from '@/hooks/use-toast';
+
 import { genkitService } from '@/lib/genkit-service';
 import {
   Select,
@@ -41,7 +41,6 @@ const createHabitFormSchema = z.object({
 });
 
 const InlineCreateHabitForm: FC<{ onAddHabit: (habit: Omit<Habit, 'id' | 'completionLog'>) => void; onCloseForm: () => void; initialData?: Partial<CreateHabitFormData> | null; }> = ({ onAddHabit, onCloseForm, initialData }) => {
-  const { toast } = useToast();
   const [isAISuggesting, setIsAISuggesting] = useState(false);
 
   const {
@@ -100,7 +99,6 @@ const InlineCreateHabitForm: FC<{ onAddHabit: (habit: Omit<Habit, 'id' | 'comple
   const handleAISuggestDetails = async () => {
     const description = habitDescriptionForAI || "";
     if (!description.trim()) {
-      toast({ title: "Input Missing", description: "Please describe your habit first.", variant: "destructive" });
       return;
     }
     setIsAISuggesting(true);
@@ -113,10 +111,8 @@ const InlineCreateHabitForm: FC<{ onAddHabit: (habit: Omit<Habit, 'id' | 'comple
       setValue('durationHours', result.durationHours ?? null);
       setValue('durationMinutes', result.durationMinutes ?? null);
       setValue('specificTime', result.specificTime ?? '');
-      toast({ title: "AI Suggestion Applied!", description: "The details have been filled in." });
     } catch (err) {
       console.error(err);
-      toast({ title: "AI Suggestion Failed", description: "Try again later.", variant: "destructive" });
     } finally {
       setIsAISuggesting(false);
     }

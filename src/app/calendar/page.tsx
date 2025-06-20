@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useToast } from "@/hooks/use-toast";
+
 
 const LS_KEY_PREFIX_HABITS = "habits_";
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -28,7 +28,6 @@ const USER_MAIN_DOC_ID = "main";
 
 const CalendarPage: NextPage = () => {
   const router = useRouter();
-  const { toast } = useToast();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [habits, setHabits] = React.useState<Habit[]>([]);
@@ -85,10 +84,6 @@ const CalendarPage: NextPage = () => {
   const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
     // Handle saving the habit here if needed, or just close dialog and navigate
     setIsCreateHabitDialogOpen(false);
-    toast({
-      title: "Habit Created!",
-      description: `"${habitData.name}" has been added. Redirecting to home...`,
-    });
     // Navigate to home page after successful creation
     setTimeout(() => {
       router.push('/');
@@ -252,31 +247,50 @@ const CalendarPage: NextPage = () => {
                       const logEntry = habit.completionLog.find(log => log.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
                       const dayOfWeekForSelected = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
                       const isScheduledToday = habit.daysOfWeek.includes(dayOfWeekForSelected);
-                      let statusText = "Scheduled";
-                      let StatusIcon = CircleIcon;
-                      let iconColor = "text-orange-500";
-
-                      if (logEntry?.status === 'completed') {
-                          statusText = `Completed ${logEntry.time || ''}`;
-                          StatusIcon = CheckCircle2; iconColor = "text-accent";
-                      } else if (logEntry?.status === 'pending_makeup') {
-                          statusText = `Makeup for ${logEntry.originalMissedDate || 'earlier'}`;
-                          StatusIcon = MakeupIcon; iconColor = "text-blue-500";
-                      } else if (logEntry?.status === 'skipped') {
-                          statusText = "Skipped";
-                          StatusIcon = XCircle; iconColor = "text-muted-foreground";
-                      } else if (isScheduledToday && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry) {
-                          statusText = "Missed"; StatusIcon = XCircle; iconColor = "text-destructive";
-                      } else if (!isScheduledToday && !logEntry) {
-                          statusText = "Not Scheduled"; StatusIcon = CircleIcon; iconColor = "text-muted-foreground/50";
-                      }
 
                       return (
-                        <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
-                          <span className="font-medium truncate pr-2">{habit.name}</span>
-                          <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                              <StatusIcon className={cn("h-3.5 w-3.5", iconColor)} />
-                              <span>{statusText}</span>
+                        <li key={habit.id} className="flex items-center justify-between p-2 bg-card/50 rounded-lg border border-border/50 hover:bg-card/80 transition-all duration-200">
+                          <span className="font-medium truncate pr-2 text-foreground">{habit.name}</span>
+                          <div className={cn(
+                            "flex items-center space-x-1.5 text-xs font-medium px-2 py-1 rounded-full transition-all duration-200",
+                            logEntry?.status === 'completed' && "bg-green-100 text-green-700 border border-green-200",
+                            logEntry?.status === 'pending_makeup' && "bg-blue-100 text-blue-700 border border-blue-200",
+                            logEntry?.status === 'skipped' && "bg-gray-100 text-gray-600 border border-gray-200",
+                            (isScheduledToday && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry) && "bg-red-100 text-red-700 border border-red-200",
+                            (!isScheduledToday && !logEntry) && "bg-muted/50 text-muted-foreground border border-muted-foreground/20",
+                            (!logEntry && isScheduledToday && !dateFnsIsPast(startOfDay(selectedCalendarDate as Date))) && "bg-orange-100 text-orange-700 border border-orange-200"
+                          )}>
+                            {logEntry?.status === 'completed' ? (
+                              <>
+                                <div className="h-2 w-2 rounded-full bg-green-500" />
+                                <span>Completed {logEntry.time || ''}</span>
+                              </>
+                            ) : logEntry?.status === 'pending_makeup' ? (
+                              <>
+                                <div className="h-2 w-2 rounded-full bg-blue-500" />
+                                <span>Makeup for {logEntry.originalMissedDate || 'earlier'}</span>
+                              </>
+                            ) : logEntry?.status === 'skipped' ? (
+                              <>
+                                <div className="h-2 w-2 rounded-full bg-gray-500" />
+                                <span>Skipped</span>
+                              </>
+                            ) : (isScheduledToday && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry) ? (
+                              <>
+                                <div className="h-2 w-2 rounded-full bg-red-500" />
+                                <span>Missed</span>
+                              </>
+                            ) : (!isScheduledToday && !logEntry) ? (
+                              <>
+                                <div className="h-2 w-2 rounded-full bg-muted-foreground/50" />
+                                <span>Not Scheduled</span>
+                              </>
+                            ) : (
+                              <>
+                                <div className="h-2 w-2 rounded-full bg-orange-500" />
+                                <span>Scheduled</span>
+                              </>
+                            )}
                           </div>
                         </li>
                       );
@@ -304,10 +318,6 @@ const CalendarPage: NextPage = () => {
         onClose={() => setIsGoalInputProgramDialogOpen(false)}
         onSubmit={() => {
           setIsGoalInputProgramDialogOpen(false);
-          toast({
-            title: "Program Created!",
-            description: "Your habit program has been created. Redirecting to home...",
-          });
           setTimeout(() => {
             router.push('/');
           }, 1000);

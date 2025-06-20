@@ -16,7 +16,7 @@ import ThemeToggleButton from '@/components/theme/ThemeToggleButton';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { requestPermissions } from '@/lib/notification-manager'; // Corrected import name
-import { toast } from "@/hooks/use-toast";
+
 import { Capacitor } from '@capacitor/core';
 import type { CreateHabitFormData } from '@/types';
 
@@ -55,10 +55,6 @@ const SettingsPage: NextPage = () => {
   const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
     // Handle saving the habit here if needed, or just close dialog and navigate
     setIsCreateHabitDialogOpen(false);
-    toast({
-      title: "Habit Created!",
-      description: `"${habitData.name}" has been added. Redirecting to home...`,
-    });
     // Navigate to home page after successful creation
     setTimeout(() => {
       router.push('/');
@@ -72,7 +68,6 @@ const SettingsPage: NextPage = () => {
       router.push('/auth/login');
     } catch (error: any) {
       console.error("Sign Out Failed:", error.message || "Could not sign out.");
-      toast({ title: "Sign Out Failed", description: "An error occurred while signing out.", variant: "destructive" });
     } finally {
       setIsSigningOut(false);
     }
@@ -80,18 +75,7 @@ const SettingsPage: NextPage = () => {
 
   const handleRequestPermission = async () => {
     const granted = await requestPermissions(); // Use the corrected function name
-    if (granted) {
-        toast({
-            title: 'Notifications Enabled',
-            description: 'You will now receive reminders for your habits.',
-        });
-    } else {
-        toast({
-            title: 'Notifications Blocked',
-            description: 'Please enable notifications in your device settings.',
-            variant: 'destructive',
-        });
-    }
+    // Removed toast notifications as requested
   };
 
   const accountSettingsItems = [
@@ -189,10 +173,6 @@ const SettingsPage: NextPage = () => {
         onClose={() => setIsGoalInputProgramDialogOpen(false)}
         onSubmit={() => {
           setIsGoalInputProgramDialogOpen(false);
-          toast({
-            title: "Program Created!",
-            description: "Your habit program has been created. Redirecting to home...",
-          });
           setTimeout(() => {
             router.push('/');
           }, 1000);

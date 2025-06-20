@@ -9,10 +9,12 @@
 
   /* Safe area support for mobile devices */
   html, body {
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     /* Ensure the app doesn't overlap with system UI */
-    min-height: 100vh;
-    min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
   }
 
   /* For Capacitor apps specifically */
