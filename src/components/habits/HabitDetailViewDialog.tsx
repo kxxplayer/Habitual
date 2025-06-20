@@ -216,8 +216,8 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         "transition-all duration-300 ease-in-out active:scale-[0.98]",
                         localCompleted 
-                          ? "bg-gradient-to-r from-red-500 via-pink-500 to-purple-600 text-white hover:from-red-600 hover:via-pink-600 hover:to-purple-700 shadow-pink-500/30" 
-                          : "bg-gradient-to-r from-blue-500 via-green-500 to-teal-600 text-white hover:from-blue-600 hover:via-green-600 hover:to-teal-700 shadow-blue-500/30"
+                          ? "bg-gradient-to-r from-gray-400 via-gray-500 to-gray-600 text-white hover:from-gray-500 hover:via-gray-600 hover:to-gray-700 shadow-gray-500/30" 
+                          : "bg-gradient-to-r from-green-500 via-green-600 to-emerald-600 text-white hover:from-green-600 hover:via-green-700 hover:to-emerald-700 shadow-green-500/30"
                       )}
                     >
                       <div className={cn(
@@ -235,7 +235,7 @@ const HabitDetailViewDialog: FC<HabitDetailViewDialogProps> = ({
                         )}
                       </div>
                       <span className="font-bold tracking-wide">
-                        {localCompleted ? "Mark as Not Done" : "Mark as Done"}
+                        {localCompleted ? "Not Done?" : "Mark as Done"}
                       </span>
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 group-hover:translate-x-full transition-transform duration-700" />
                     </motion.button>

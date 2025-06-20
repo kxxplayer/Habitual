@@ -85,13 +85,13 @@ const RegisterPage: NextPage = () => {
   const passwordStrength = getPasswordStrength(password || '');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen min-h-[100dvh] bg-gradient-to-br from-primary/10 via-background to-accent/10 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 overflow-y-auto overscroll-contain">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-32 h-32 bg-green-200/30 dark:bg-green-500/10 rounded-full blur-xl"></div>
-        <div className="absolute top-40 right-32 w-24 h-24 bg-blue-200/30 dark:bg-blue-500/10 rounded-full blur-xl"></div>
-        <div className="absolute bottom-32 left-32 w-28 h-28 bg-purple-200/30 dark:bg-purple-500/10 rounded-full blur-xl"></div>
-        <div className="absolute bottom-20 right-20 w-36 h-36 bg-teal-200/30 dark:bg-teal-500/10 rounded-full blur-xl"></div>
+        <div className="absolute top-20 left-20 w-32 h-32 bg-primary/20 dark:bg-primary/10 rounded-full blur-xl"></div>
+        <div className="absolute top-40 right-32 w-24 h-24 bg-accent/20 dark:bg-accent/10 rounded-full blur-xl"></div>
+        <div className="absolute bottom-32 left-32 w-28 h-28 bg-primary/15 dark:bg-primary/5 rounded-full blur-xl"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-accent/15 dark:bg-accent/5 rounded-full blur-xl"></div>
       </div>
 
       <div className="w-full max-w-md relative z-10">
@@ -108,10 +108,10 @@ const RegisterPage: NextPage = () => {
           </p>
         </div>
 
-        <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-2xl shadow-black/5 dark:shadow-black/20">
+        <Card className="backdrop-blur-sm bg-card/90 border border-border/50 shadow-2xl">
           <CardHeader className="space-y-1 text-center pb-6">
-            <CardTitle className="text-2xl font-semibold text-gray-900 dark:text-white">Create Account</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-2xl font-semibold text-foreground">Create Account</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Enter your details to get started with your habit journey
             </CardDescription>
           </CardHeader>

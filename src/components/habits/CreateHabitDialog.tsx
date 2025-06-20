@@ -21,7 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  Loader2, Wand2, Clock, CalendarClock, Hourglass,
+  ArrowLeft, Loader2, Wand2, Clock, CalendarClock, Hourglass,
   PlusCircle, Tag, Edit3, Save, FilePenLine, Target
 } from 'lucide-react';
 import type { CreateHabitFormData, WeekDay, HabitCategory } from '@/types';
@@ -182,13 +182,29 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-card to-card/95 rounded-2xl shadow-2xl border-0 flex flex-col max-h-[90vh] overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-2">
-              <DialogTitle className="text-2xl font-bold flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  {isEditing ? <Edit3 className="mr-3 h-6 w-6 text-primary" /> : <Target className="mr-3 h-6 w-6 text-primary" />}
-                  {isEditing ? "Edit Habit" : "Create New Habit"}
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
+      <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-card to-card/95 rounded-2xl shadow-2xl border-0 flex flex-col max-h-[90vh] max-h-[90dvh] overflow-hidden">
+          <DialogHeader className="relative px-6 pt-6 pb-4">
+              <div className="flex items-center justify-center relative">
+                  {/* Back button for step 2 */}
+                  {currentStep === 2 && !isEditing && (
+                      <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setCurrentStep(1)}
+                          className="absolute left-0 p-2 h-8 w-8 rounded-full hover:bg-muted/50"
+                      >
+                          <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                  )}
+                  
+                  <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                      <div className="flex items-center">
+                          {isEditing ? <Edit3 className="mr-3 h-6 w-6 text-primary" /> : <Target className="mr-3 h-6 w-6 text-primary" />}
+                          {isEditing ? "Edit Habit" : "Create New Habit"}
+                      </div>
+                  </DialogTitle>
+              </div>
+              <DialogDescription className="text-center text-muted-foreground mt-2">
                   {isEditing ? "Modify your habit details below." : (currentStep === 1 ? "Choose how you'd like to get started." : "Let AI help you or customize everything yourself.")}
               </DialogDescription>
           </DialogHeader>
@@ -240,14 +256,14 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
           )}
 
           {currentStep === 2 && (
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto overscroll-contain">
                   <form onSubmit={handleSubmit(onSubmitDialog)} className="space-y-6">
-                      <div className="px-6 space-y-6">
+                      <div className="px-6 space-y-6 pb-4">
                           {/* AI Description Section */}
-                          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 p-4 rounded-xl border border-blue-200/50 dark:border-blue-800/50">
+                          <div className="bg-gradient-to-r from-primary/10 to-accent/10 dark:from-primary/20 dark:to-accent/20 p-4 rounded-xl border border-primary/20 dark:border-primary/30">
                               <div className="flex items-center mb-3">
-                                  <Wand2 className="h-5 w-5 text-blue-600 mr-2" />
-                                  <Label className="text-sm font-medium text-blue-900 dark:text-blue-100">AI Assistant</Label>
+                                  <Wand2 className="h-5 w-5 text-primary mr-2" />
+                                  <Label className="text-sm font-medium text-foreground">AI Assistant</Label>
                               </div>
                               <Controller
                                   name="description"
@@ -256,7 +272,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                                       <Textarea
                                           {...field}
                                           placeholder="Describe what you want to achieve... (e.g., 'I want to learn guitar and practice 30 minutes daily')"
-                                          className="min-h-[80px] border-blue-200 focus:border-blue-400 dark:border-blue-800 dark:focus:border-blue-600 bg-white/50 dark:bg-gray-900/50"
+                                          className="min-h-[80px] border-border focus:border-primary bg-background/70 dark:bg-background/50"
                                       />
                                   )}
                               />
@@ -264,7 +280,7 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                                   type="button"
                                   onClick={handleAISuggestDetails}
                                   disabled={isAISuggesting || !habitDescriptionForAI?.trim()}
-                                  className="mt-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                                  className="mt-3 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white"
                                   size="sm"
                               >
                                   {isAISuggesting ? (
@@ -281,202 +297,205 @@ const CreateHabitDialog: FC<CreateHabitDialogProps> = ({
                               </Button>
                           </div>
 
-                          {/* Form Fields */}
-                          <div className="grid gap-6">
-                              {/* Habit Name */}
-                              <div className="space-y-2">
-                                  <Label htmlFor="name" className="text-sm font-medium flex items-center">
-                                      <Tag className="h-4 w-4 mr-2 text-primary" />
-                                      Habit Name *
-                                  </Label>
-                                  <Controller
-                                      name="name"
-                                      control={control}
-                                      render={({ field }) => (
-                                          <Input
-                                              {...field}
-                                              id="name"
-                                              placeholder="e.g., Practice Guitar, Morning Jog, Read 30 minutes"
-                                              className="h-11"
-                                          />
-                                      )}
-                                  />
-                                  {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-                              </div>
-
-                              {/* Category */}
-                              <div className="space-y-2">
-                                  <Label className="text-sm font-medium">Category</Label>
-                                  <Controller
-                                      name="category"
-                                      control={control}
-                                      render={({ field }) => (
-                                          <Select onValueChange={field.onChange} value={field.value}>
-                                              <SelectTrigger className="h-11">
-                                                  <SelectValue placeholder="Select a category" />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                  {HABIT_CATEGORIES.map((cat) => (
-                                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                                  ))}
-                                              </SelectContent>
-                                          </Select>
-                                      )}
-                                  />
-                              </div>
-
-                              {/* Days of Week */}
-                              <div className="space-y-3">
-                                  <Label className="text-sm font-medium flex items-center">
-                                      <CalendarClock className="h-4 w-4 mr-2 text-primary" />
-                                      Days of the Week *
-                                  </Label>
-                                  <Controller
-                                      name="daysOfWeek"
-                                      control={control}
-                                      render={({ field }) => (
-                                          <div className="grid grid-cols-7 gap-2">
-                                              {weekDaysArray.map((day) => (
-                                                  <div key={day} className="flex flex-col items-center">
-                                                      <Checkbox
-                                                          checked={field.value.includes(day)}
-                                                          onCheckedChange={(checked) => {
-                                                              if (checked) {
-                                                                  field.onChange([...field.value, day]);
-                                                              } else {
-                                                                  field.onChange(field.value.filter((d) => d !== day));
-                                                              }
-                                                          }}
-                                                      />
-                                                      <Label className="text-xs mt-1 text-center">{day}</Label>
-                                                  </div>
-                                              ))}
-                                          </div>
-                                      )}
-                                  />
-                                  {errors.daysOfWeek && <p className="text-sm text-destructive">{errors.daysOfWeek.message}</p>}
-                              </div>
-
-                              {/* Duration */}
-                              <div className="grid grid-cols-2 gap-4">
+                          {/* Form Fields - Better organized layout */}
+                          <div className="space-y-6">
+                              {/* Basic Info Section */}
+                              <div className="space-y-4">
+                                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">Basic Information</h3>
+                                  
+                                  {/* Habit Name */}
                                   <div className="space-y-2">
-                                      <Label className="text-sm font-medium flex items-center">
-                                          <Hourglass className="h-4 w-4 mr-2 text-primary" />
-                                          Hours
+                                      <Label htmlFor="name" className="text-sm font-medium flex items-center">
+                                          <Tag className="h-4 w-4 mr-2 text-primary" />
+                                          Habit Name *
                                       </Label>
                                       <Controller
-                                          name="durationHours"
+                                          name="name"
                                           control={control}
                                           render={({ field }) => (
                                               <Input
                                                   {...field}
-                                                  type="number"
-                                                  min="0"
-                                                  placeholder="0"
-                                                  className="h-11"
-                                                  value={field.value ?? ''}
-                                                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                                                  id="name"
+                                                  placeholder="e.g., Practice Guitar, Morning Jog, Read 30 minutes"
+                                                  className="h-11 border-2 border-border focus:border-primary bg-background"
                                               />
                                           )}
                                       />
+                                      {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                                   </div>
+
+                                  {/* Category */}
                                   <div className="space-y-2">
-                                      <Label className="text-sm font-medium">Minutes</Label>
+                                      <Label className="text-sm font-medium">Category</Label>
                                       <Controller
-                                          name="durationMinutes"
+                                          name="category"
                                           control={control}
                                           render={({ field }) => (
-                                              <Input
-                                                  {...field}
-                                                  type="number"
-                                                  min="0"
-                                                  max="59"
-                                                  placeholder="30"
-                                                  className="h-11"
-                                                  value={field.value ?? ''}
-                                                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                                              />
+                                              <Select onValueChange={field.onChange} value={field.value}>
+                                                  <SelectTrigger className="h-11 border-2 border-border focus:border-primary bg-background">
+                                                      <SelectValue placeholder="Select a category" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                      {HABIT_CATEGORIES.map((cat) => (
+                                                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                      ))}
+                                                  </SelectContent>
+                                              </Select>
                                           )}
                                       />
                                   </div>
                               </div>
 
-                              {/* Specific Time */}
-                              <div className="space-y-2">
-                                  <Label className="text-sm font-medium flex items-center">
-                                      <Clock className="h-4 w-4 mr-2 text-primary" />
-                                      Specific Time (Optional)
-                                  </Label>
-                                  <Controller
-                                      name="specificTime"
-                                      control={control}
-                                      render={({ field }) => (
-                                          <Input
-                                              {...field}
-                                              type="time"
-                                              className="h-11"
-                                          />
-                                      )}
-                                  />
-                                  {errors.specificTime && <p className="text-sm text-destructive">{errors.specificTime.message}</p>}
+                              {/* Schedule Section */}
+                              <div className="space-y-4">
+                                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">Schedule</h3>
+                                  
+                                  {/* Days of Week */}
+                                  <div className="space-y-3">
+                                      <Label className="text-sm font-medium flex items-center">
+                                          <CalendarClock className="h-4 w-4 mr-2 text-primary" />
+                                          Days of the Week *
+                                      </Label>
+                                      <Controller
+                                          name="daysOfWeek"
+                                          control={control}
+                                          render={({ field }) => (
+                                              <div className="grid grid-cols-7 gap-2">
+                                                  {weekDaysArray.map((day) => (
+                                                      <div key={day} className="flex flex-col items-center space-y-2">
+                                                          <Checkbox
+                                                              checked={field.value.includes(day)}
+                                                              onCheckedChange={(checked) => {
+                                                                  if (checked) {
+                                                                      field.onChange([...field.value, day]);
+                                                                  } else {
+                                                                      field.onChange(field.value.filter((d) => d !== day));
+                                                                  }
+                                                              }}
+                                                          />
+                                                          <Label className="text-xs text-center">{day}</Label>
+                                                      </div>
+                                                  ))}
+                                              </div>
+                                          )}
+                                      />
+                                      {errors.daysOfWeek && <p className="text-sm text-destructive">{errors.daysOfWeek.message}</p>}
+                                  </div>
+
+                                  {/* Specific Time */}
+                                  <div className="space-y-2">
+                                      <Label className="text-sm font-medium flex items-center">
+                                          <Clock className="h-4 w-4 mr-2 text-primary" />
+                                          Specific Time (Optional)
+                                      </Label>
+                                      <Controller
+                                          name="specificTime"
+                                          control={control}
+                                          render={({ field }) => (
+                                              <Input
+                                                  {...field}
+                                                  type="time"
+                                                  className="h-11 max-w-xs border-2 border-border focus:border-primary bg-background"
+                                              />
+                                          )}
+                                      />
+                                      {errors.specificTime && <p className="text-sm text-destructive">{errors.specificTime.message}</p>}
+                                  </div>
                               </div>
 
-                              {/* Optimal Timing */}
-                              <div className="space-y-2">
-                                  <Label className="text-sm font-medium">Optimal Timing (Optional)</Label>
-                                  <Controller
-                                      name="optimalTiming"
-                                      control={control}
-                                      render={({ field }) => (
-                                          <Input
-                                              {...field}
-                                              value={field.value ?? ''}
-                                              onChange={(e) => field.onChange(e.target.value || null)}
-                                              placeholder="e.g., Morning after coffee, Before bed"
-                                              className="h-11"
+                              {/* Duration & Timing Section */}
+                              <div className="space-y-4">
+                                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">Duration & Timing</h3>
+                                  
+                                  {/* Duration */}
+                                  <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                          <Label className="text-sm font-medium flex items-center">
+                                              <Hourglass className="h-4 w-4 mr-2 text-primary" />
+                                              Hours
+                                          </Label>
+                                          <Controller
+                                              name="durationHours"
+                                              control={control}
+                                              render={({ field }) => (
+                                                  <Input
+                                                      {...field}
+                                                      type="number"
+                                                      min="0"
+                                                      placeholder="0"
+                                                      className="h-11 border-2 border-border focus:border-primary bg-background"
+                                                      value={field.value ?? ''}
+                                                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                                                  />
+                                              )}
                                           />
-                                      )}
-                                  />
+                                      </div>
+                                      <div className="space-y-2">
+                                          <Label className="text-sm font-medium">Minutes</Label>
+                                          <Controller
+                                              name="durationMinutes"
+                                              control={control}
+                                              render={({ field }) => (
+                                                  <Input
+                                                      {...field}
+                                                      type="number"
+                                                      min="0"
+                                                      max="59"
+                                                      placeholder="30"
+                                                      className="h-11 border-2 border-border focus:border-primary bg-background"
+                                                      value={field.value ?? ''}
+                                                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                                                  />
+                                              )}
+                                          />
+                                      </div>
+                                  </div>
+
+                                  {/* Optimal Timing */}
+                                  <div className="space-y-2">
+                                      <Label className="text-sm font-medium">Optimal Timing (Optional)</Label>
+                                      <Controller
+                                          name="optimalTiming"
+                                          control={control}
+                                          render={({ field }) => (
+                                              <Input
+                                                  {...field}
+                                                  value={field.value ?? ''}
+                                                  onChange={(e) => field.onChange(e.target.value || null)}
+                                                  placeholder="e.g., Morning after coffee, Before bed"
+                                                  className="h-11 border-2 border-border focus:border-primary bg-background"
+                                              />
+                                          )}
+                                      />
+                                  </div>
                               </div>
                           </div>
                       </div>
 
                       <DialogFooter className="px-6 py-4 bg-muted/30 border-t">
-                          <div className="flex justify-between w-full">
-                              {!isEditing && (
-                                  <Button
-                                      type="button"
-                                      variant="ghost"
-                                      onClick={() => setCurrentStep(1)}
-                                      className="text-muted-foreground hover:text-foreground"
-                                  >
-                                      ← Back
+                          <div className="flex justify-end space-x-3 w-full">
+                              <DialogClose asChild>
+                                  <Button type="button" variant="outline" disabled={isSubmitting || isAISuggesting}>
+                                      Cancel
                                   </Button>
-                              )}
-                              <div className="flex space-x-3 ml-auto">
-                                  <DialogClose asChild>
-                                      <Button type="button" variant="outline" disabled={isSubmitting || isAISuggesting}>
-                                          Cancel
-                                      </Button>
-                                  </DialogClose>
-                                  <Button 
-                                      type="submit" 
-                                      disabled={isSubmitting || isAISuggesting}
-                                      className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white"
-                                  >
-                                      {isSubmitting ? (
-                                          <>
-                                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                              {isEditing ? 'Updating...' : 'Creating...'}
-                                          </>
-                                      ) : (
-                                          <>
-                                              <Save className="mr-2 h-4 w-4" />
-                                              {isEditing ? 'Update Habit' : 'Create Habit'}
-                                          </>
-                                      )}
-                                  </Button>
-                              </div>
+                              </DialogClose>
+                              <Button 
+                                  type="submit" 
+                                  disabled={isSubmitting || isAISuggesting}
+                                  className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white"
+                              >
+                                  {isSubmitting ? (
+                                      <>
+                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                          {isEditing ? 'Updating...' : 'Creating...'}
+                                      </>
+                                  ) : (
+                                      <>
+                                          <Save className="mr-2 h-4 w-4" />
+                                          {isEditing ? 'Update Habit' : 'Create Habit'}
+                                      </>
+                                  )}
+                              </Button>
                           </div>
                       </DialogFooter>
                   </form>

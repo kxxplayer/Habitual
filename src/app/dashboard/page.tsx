@@ -153,9 +153,18 @@ const DashboardPage: NextPage = () => {
 
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+      <div className="flex min-h-screen min-h-[100dvh] flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-20 w-32 h-32 bg-primary/20 dark:bg-primary/10 rounded-full blur-xl"></div>
+          <div className="absolute top-40 right-32 w-24 h-24 bg-accent/20 dark:bg-accent/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-32 left-32 w-28 h-28 bg-primary/15 dark:bg-primary/5 rounded-full blur-xl"></div>
+          <div className="absolute bottom-20 right-20 w-36 h-36 bg-accent/15 dark:bg-accent/5 rounded-full blur-xl"></div>
+        </div>
+        <div className="relative z-10 flex flex-col items-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -166,16 +175,26 @@ const DashboardPage: NextPage = () => {
 
   return (
     <>
-      <div className="flex flex-col min-h-screen bg-background">
-        <AppHeader />
-        <main className="flex-grow">
-          <HabitOverview
-            habits={habits}
-            totalPoints={totalPoints}
-            earnedBadges={earnedBadges}
-          />
-        </main>
-        <BottomNavigationBar onAddNewHabitClick={handleOpenCreateHabitDialog} />
+      <div className="flex flex-col min-h-screen min-h-[100dvh] bg-gradient-to-br from-primary/10 via-background to-accent/10 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-y-auto overscroll-contain">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-20 w-32 h-32 bg-primary/20 dark:bg-primary/10 rounded-full blur-xl"></div>
+          <div className="absolute top-40 right-32 w-24 h-24 bg-accent/20 dark:bg-accent/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-32 left-32 w-28 h-28 bg-primary/15 dark:bg-primary/5 rounded-full blur-xl"></div>
+          <div className="absolute bottom-20 right-20 w-36 h-36 bg-accent/15 dark:bg-accent/5 rounded-full blur-xl"></div>
+        </div>
+        
+        <div className="relative z-10 flex flex-col min-h-screen">
+          <AppHeader />
+          <main className="flex-grow">
+            <HabitOverview
+              habits={habits}
+              totalPoints={totalPoints}
+              earnedBadges={earnedBadges}
+            />
+          </main>
+          <BottomNavigationBar onAddNewHabitClick={handleOpenCreateHabitDialog} />
+        </div>
       </div>
 
       <CreateHabitDialog

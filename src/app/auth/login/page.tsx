@@ -13,8 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GoogleIcon } from '@/components/ui/icons';
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword, GoogleAuthProvider } from 'firebase/auth';
-import { useState } from 'react';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
+import { useState, useEffect } from 'react';
 import { Loader2, Mail, Lock, Eye, EyeOff, Sparkles, CheckCircle, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +29,7 @@ const LoginPage: NextPage = () => {
   const router = useRouter();
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,6 +38,50 @@ const LoginPage: NextPage = () => {
     resolver: zodResolver(loginSchema),
   });
 
+  // Monitor authentication state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in, redirect to home
+        console.log('User authenticated, redirecting to home:', user.email);
+        router.push('/');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  // Handle Google sign-in redirect result
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          // User signed in successfully via redirect
+          console.log('Google sign-in successful:', result.user);
+          // The onAuthStateChanged listener will handle the redirect
+        } else {
+          // No redirect result, user came here directly
+          console.log('No redirect result found, user accessing page directly');
+        }
+      } catch (error: any) {
+        console.error('Google sign-in redirect error:', error);
+        if (error.code === 'auth/unauthorized-domain') {
+          alert('This domain is not authorized for Google sign-in. Please contact support.');
+        } else if (error.code === 'auth/popup-closed-by-user') {
+          console.log('User cancelled Google sign-in');
+        } else {
+          alert('Google sign-in failed. Please try again.');
+        }
+        setIsGoogleLoading(false);
+      } finally {
+        setIsProcessingRedirect(false);
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
@@ -44,10 +89,24 @@ const LoginPage: NextPage = () => {
     setIsEmailLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/');
+      // The onAuthStateChanged listener will handle the redirect
     } catch (error: any) {
       console.error('Login failed:', error);
-      alert('Login failed. Please check your credentials.');
+      let errorMessage = 'Login failed. Please check your credentials.';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address format.';
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = 'This account has been disabled.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsEmailLoading(false);
     }
@@ -56,19 +115,46 @@ const LoginPage: NextPage = () => {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      console.log('Google sign-in clicked');
-      // Temporarily disabled due to TypeScript import issues
-      alert('Google sign-in is temporarily unavailable. Please use email/password.');
+      const provider = new GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
+      
+      // Set custom parameters to ensure we get the account selection
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
+      await signInWithRedirect(auth, provider);
+      // signInWithRedirect will redirect the page, so no need to manually navigate
     } catch (error: any) {
       console.error('Google sign-in failed:', error);
-      alert('Google sign-in failed. Please try again.');
-    } finally {
+      let errorMessage = 'Google sign-in failed. Please try again.';
+      
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = 'This domain is not authorized for Google sign-in. Please contact support.';
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = 'Popup was blocked. Please allow popups and try again.';
+      }
+      
+      alert(errorMessage);
       setIsGoogleLoading(false);
     }
   };
 
+  // Show loading screen while processing redirect result
+  if (isProcessingRedirect) {
+    return (
+      <div className="min-h-screen min-h-[100dvh] bg-gradient-to-br from-primary/10 via-background to-accent/10 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Processing sign-in...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen min-h-[100dvh] bg-gradient-to-br from-primary/10 via-background to-accent/10 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 overflow-y-auto overscroll-contain" style={{ minHeight: '100dvh' }}>
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-20 w-32 h-32 bg-primary/20 dark:bg-primary/10 rounded-full blur-xl"></div>
@@ -77,7 +163,7 @@ const LoginPage: NextPage = () => {
         <div className="absolute bottom-20 right-20 w-36 h-36 bg-accent/15 dark:bg-accent/5 rounded-full blur-xl"></div>
       </div>
 
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-full max-w-md relative z-10 my-auto flex flex-col justify-center">
         {/* Header with logo and welcome text */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-primary to-accent rounded-2xl mb-4 shadow-lg">
@@ -99,7 +185,7 @@ const LoginPage: NextPage = () => {
             </CardDescription>
           </CardHeader>
           
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 pb-8">
             {/* Google Sign In Button */}
             <Button
               onClick={handleGoogleSignIn}
@@ -107,10 +193,17 @@ const LoginPage: NextPage = () => {
               variant="outline"
               className="w-full h-12 border-2 border-border hover:border-primary/50 bg-background hover:bg-accent/5 transition-all duration-200"
             >
-              <div className="flex items-center justify-center space-x-3">
-                <GoogleIcon className="w-5 h-5" />
-                <span className="font-medium">Continue with Google</span>
-              </div>
+              {isGoogleLoading ? (
+                <div className="flex items-center justify-center space-x-3">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="font-medium">Signing in...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center space-x-3">
+                  <GoogleIcon className="w-5 h-5" />
+                  <span className="font-medium">Continue with Google</span>
+                </div>
+              )}
             </Button>
 
             <div className="relative">
@@ -122,7 +215,7 @@ const LoginPage: NextPage = () => {
               </div>
             </div>
 
-            <form onSubmit={handleEmailLogin} className="space-y-4">
+            <form onSubmit={handleEmailLogin} className="space-y-4" autoComplete="on">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-foreground">
                   Email Address
@@ -135,7 +228,7 @@ const LoginPage: NextPage = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="pl-10 h-12 bg-background border-border focus:border-primary"
+                    className="pl-10 h-12 bg-background border-2 border-border focus:border-primary"
                     required
                   />
                 </div>
@@ -153,7 +246,7 @@ const LoginPage: NextPage = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="pl-10 pr-10 h-12 bg-background border-border focus:border-primary"
+                    className="pl-10 pr-10 h-12 bg-background border-2 border-border focus:border-primary"
                     required
                   />
                   <button

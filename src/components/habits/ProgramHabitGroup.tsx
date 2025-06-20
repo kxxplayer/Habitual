@@ -99,7 +99,7 @@ const ProgramHabitGroup: FC<ProgramHabitGroupProps> = ({
           </DropdownMenu>
         </div>
         <AccordionContent className="bg-muted/20 border-t border-border">
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
             {habitsToRender.map(habit => (
               <HabitItem
                 key={habit.id}

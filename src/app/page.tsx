@@ -587,10 +587,10 @@ const HomePage: NextPage = () => {
     <>
       <ProgramGenerationOverlay isVisible={isProgramSuggestionLoading && !programSuggestion} />
       <AppPageLayout onAddNew={openCreateHabitDialogForNew}>
-        <div className="animate-card-fade-in">
+        <div className="animate-card-fade-in w-full">
           {habits.length > 0 ? (
              <>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-4 w-full">
                     <h2 className="text-xl font-bold text-foreground">
                         {showAllHabits ? 'All Habits & Programs' : 'Today\'s Tasks'}
                     </h2>

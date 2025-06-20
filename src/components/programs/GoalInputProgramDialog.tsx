@@ -46,8 +46,8 @@ const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClo
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[480px] bg-card rounded-lg shadow-xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[480px] bg-card rounded-lg shadow-xl max-h-[90vh] max-h-[90dvh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-semibold flex items-center">
             <WandSparkles className="mr-2 h-5 w-5 text-primary" /> Create Habit Program from Goal
           </DialogTitle>
@@ -55,7 +55,7 @@ const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClo
             Tell us your goal and how long you want to focus. We'll suggest a habit program.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 px-1 space-y-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain py-4 px-4 space-y-4">
           <div>
             <Label htmlFor="program-goal" className="text-sm font-medium">
               What is your primary goal?
@@ -65,7 +65,7 @@ const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClo
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               placeholder="e.g., Reduce weight, Learn Python, Read more books"
-              className="bg-input/50"
+              className="mt-2 border-2 border-border focus:border-primary bg-background"
               disabled={isLoading}
             />
           </div>
@@ -78,12 +78,12 @@ const GoalInputProgramDialog: FC<GoalInputProgramDialogProps> = ({ isOpen, onClo
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
               placeholder="e.g., 3 months, 6 weeks, 1 month"
-              className="bg-input/50"
+              className="mt-2 border-2 border-border focus:border-primary bg-background"
               disabled={isLoading}
             />
           </div>
         </div>
-        <DialogFooter className="pt-4">
+        <DialogFooter className="flex-shrink-0 pt-4 border-t bg-card">
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={isLoading} onClick={onClose}>
               Cancel

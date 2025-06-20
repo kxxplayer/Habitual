@@ -116,8 +116,8 @@ const HabitList: FC<HabitListProps> = ({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4 mb-2">
+    <div className="space-y-6 w-full">
+      <div className="flex items-center gap-4 mb-2 w-full">
         <Checkbox
           id="select-all-habits"
           ref={selectAllRef}
@@ -145,7 +145,7 @@ const HabitList: FC<HabitListProps> = ({
           onSelectHabit={handleSelectHabit}
         />
       ))}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
         {habitsWithoutPrograms.map(habit => (
           <HabitItem
             key={habit.id}

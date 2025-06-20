@@ -34,10 +34,10 @@ const AppHeader = () => {
 
   return (
     <header 
-      className="shrink-0 sticky top-0 z-40 w-full bg-gradient-to-r from-primary/10 via-background/95 to-accent/10 backdrop-blur-md border-b border-border/50 shadow-sm"
+      className="shrink-0 sticky top-0 z-40 w-full bg-gradient-to-r from-primary/5 via-background/80 to-accent/5 backdrop-blur-md border-b border-border/30 shadow-sm"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <div className="container flex h-12 items-center max-w-2xl px-3 sm:px-4">
+      <div className="w-full max-w-2xl mx-auto flex h-12 items-center px-3 sm:px-4">
         <Link href="/" className="mr-4 flex items-center space-x-2 group transition-all duration-300 hover:scale-105">
           <div className="relative">
             <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-primary to-accent shadow-md group-hover:shadow-lg transition-all duration-300 p-0.5">
