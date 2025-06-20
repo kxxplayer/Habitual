@@ -201,14 +201,14 @@ const LoginPage: NextPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   asChild
                   variant="outline"
                   className="h-12 border-2 border-border hover:border-primary/50 bg-background hover:bg-accent/5 transition-all duration-200"
                 >
                   <Link href="/auth/email-link">
-                    <Mail className="w-4 h-4 mr-1" />
+                    <Mail className="w-4 h-4 mr-2" />
                     Email Link
                   </Link>
                 </Button>
@@ -219,18 +219,8 @@ const LoginPage: NextPage = () => {
                   className="h-12 border-2 border-border hover:border-primary/50 bg-background hover:bg-accent/5 transition-all duration-200"
                 >
                   <Link href="/auth/otp-login">
-                    <Phone className="w-4 h-4 mr-1" />
+                    <Phone className="w-4 h-4 mr-2" />
                     Phone OTP
-                  </Link>
-                </Button>
-                
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-12 border-2 border-border hover:border-primary/50 bg-background hover:bg-accent/5 transition-all duration-200"
-                >
-                  <Link href="/auth">
-                    Create Account
                   </Link>
                 </Button>
               </div>

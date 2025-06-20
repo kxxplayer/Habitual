@@ -27,7 +27,7 @@ const AppPageLayout: FC<AppPageLayoutProps> = ({ children, onAddNew }) => {
         <div className="flex-1 flex flex-col items-center w-full">
           <div className="w-full max-w-2xl flex-1 flex flex-col">
             <ScrollArea className="flex-1">
-              <main className="px-4 pt-2 pb-20">
+              <main className="px-4 pt-2 pb-24">
                 {children}
               </main>
             </ScrollArea>

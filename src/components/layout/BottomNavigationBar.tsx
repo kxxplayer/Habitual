@@ -36,7 +36,7 @@ const BottomNavigationBar: FC<BottomNavigationBarProps> = ({ onAddNewHabitClick 
 
   return (
     <div 
-      className="shrink-0 bg-card/80 backdrop-blur-md border-t border-border/30 p-1 flex justify-around items-center h-14 sticky bottom-0 z-30"
+      className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border/30 p-1 flex justify-around items-center h-16 z-50"
       style={{ paddingBottom: 'calc(0.25rem + env(safe-area-inset-bottom))' }}
     >
       {navItems.map((item) => {

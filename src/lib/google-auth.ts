@@ -1,4 +1,4 @@
-import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, linkWithPopup, type User, type UserCredential } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, linkWithPopup, signInWithCredential, type User, type UserCredential } from 'firebase/auth';
 import { auth } from './firebase';
 
 /**
@@ -83,7 +83,49 @@ export const getGoogleRedirectResult = async (): Promise<UserCredential | null> 
 };
 
 /**
- * Auto sign-in with Google (tries popup first, falls back to redirect)
+ * Sign in with Google using Capacitor plugin (for mobile apps)
+ */
+export const signInWithGoogleCapacitor = async (): Promise<UserCredential> => {
+  try {
+    console.log('🔄 Starting Google sign-in with Capacitor...');
+    
+    // Import the Capacitor Google Auth plugin dynamically
+    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+    
+    // Initialize Google Auth if needed
+    await GoogleAuth.initialize({
+      clientId: '543466575094-381gjh3im74vjc70a4oo2tqvkfcndnct.apps.googleusercontent.com',
+      scopes: ['profile', 'email'],
+      grantOfflineAccess: true,
+    });
+    
+    // Sign in with Google
+    const googleUser = await GoogleAuth.signIn();
+    
+    console.log('✅ Google Auth successful:', googleUser);
+    
+    // Create Firebase credential from Google token
+    const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+    
+    // Sign in to Firebase with the credential
+    const result = await signInWithCredential(auth, credential);
+    
+    console.log('✅ Firebase sign-in successful:', {
+      uid: result.user.uid,
+      email: result.user.email,
+      displayName: result.user.displayName,
+      photoURL: result.user.photoURL
+    });
+    
+    return result;
+  } catch (error: any) {
+    console.error('❌ Google sign-in with Capacitor failed:', error);
+    throw new Error(getGoogleAuthErrorMessage(error.code) || error.message);
+  }
+};
+
+/**
+ * Auto sign-in with Google (uses Capacitor plugin for mobile, popup for web)
  */
 export const signInWithGoogle = async (): Promise<UserCredential | null> => {
   try {
@@ -91,9 +133,8 @@ export const signInWithGoogle = async (): Promise<UserCredential | null> => {
     const isCapacitor = !!(window as any).Capacitor;
     
     if (isCapacitor) {
-      console.log('📱 Capacitor detected, using redirect method');
-      await signInWithGoogleRedirect();
-      return null; // Result will be available via getGoogleRedirectResult
+      console.log('📱 Capacitor detected, using native Google Auth');
+      return await signInWithGoogleCapacitor();
     } else {
       console.log('🌐 Web environment detected, using popup method');
       return await signInWithGooglePopup();

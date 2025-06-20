@@ -13,11 +13,17 @@ declare global {
   interface Window {
     recaptchaVerifier?: RecaptchaVerifier;
     recaptchaWidgetId?: number;
+    Capacitor?: any;
   }
 }
 
-const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
-const ENABLE_DEV_MODE = process.env.NEXT_PUBLIC_FIREBASE_DEV_MODE === 'true';
+// Check if we're in a Capacitor environment
+const isCapacitorEnvironment = (): boolean => {
+  return !!(window as any).Capacitor && !!(window as any).Capacitor.isNativePlatform;
+};
+
+const IS_DEVELOPMENT = false; // Disabled for simplicity
+const ENABLE_DEV_MODE = false; // Disabled for simplicity
 
 /**
  * Initialize reCAPTCHA verifier for phone authentication
@@ -30,8 +36,12 @@ export const initializeRecaptcha = (containerId: string, devMode: boolean = fals
       console.log('🔄 Starting reCAPTCHA initialization...');
       console.log('📍 Container ID:', containerId);
       console.log('🌐 Current location:', window.location.href);
+      console.log('📱 Capacitor environment:', isCapacitorEnvironment());
       console.log('🔑 Auth domain:', auth.app.options.authDomain);
       console.log('🛠️ Development mode:', IS_DEVELOPMENT && (ENABLE_DEV_MODE || devMode));
+      
+      // For Capacitor/Android environment, use invisible reCAPTCHA
+      const isCapacitor = isCapacitorEnvironment();
       
       // Validate domain for reCAPTCHA
       const currentDomain = window.location.hostname;
@@ -62,34 +72,43 @@ export const initializeRecaptcha = (containerId: string, devMode: boolean = fals
           delete window.recaptchaVerifier;
         }
 
-        // Development mode: Use invisible reCAPTCHA with auto-resolution
-        if (IS_DEVELOPMENT && (ENABLE_DEV_MODE || devMode)) {
-          console.log('🛠️ Using development mode with simplified reCAPTCHA');
+        // Use invisible reCAPTCHA for Capacitor/Android or development mode
+        if (isCapacitor || IS_DEVELOPMENT && (ENABLE_DEV_MODE || devMode)) {
+          console.log('🛠️ Using invisible reCAPTCHA for mobile/dev environment');
           
           try {
-            // Create RecaptchaVerifier with correct parameters for Firebase v9+
+            // Create RecaptchaVerifier with correct parameters for Firebase v11+
             const recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
               size: 'invisible',
               callback: (response: string) => {
-                console.log('✅ reCAPTCHA solved successfully (dev mode)');
+                console.log('✅ reCAPTCHA solved successfully (mobile/dev mode)');
               },
               'expired-callback': () => {
-                console.log('⏰ reCAPTCHA expired (dev mode)');
+                console.log('⏰ reCAPTCHA expired (mobile/dev mode)');
               },
               'error-callback': (error: any) => {
-                console.error('❌ reCAPTCHA error (dev mode):', error);
+                console.error('❌ reCAPTCHA error (mobile/dev mode):', error);
               }
             });
 
             window.recaptchaVerifier = recaptchaVerifier;
-            console.log('💾 reCAPTCHA verifier stored globally (dev mode)');
-            // In dev mode, resolve immediately without rendering
-            console.log('🎉 reCAPTCHA initialized successfully (dev mode)');
-            resolve(recaptchaVerifier);
+            console.log('💾 reCAPTCHA verifier stored globally (mobile/dev mode)');
+            
+            // For invisible reCAPTCHA, render and resolve immediately
+            recaptchaVerifier.render()
+              .then((widgetId: any) => {
+                window.recaptchaWidgetId = widgetId;
+                console.log('🎉 Invisible reCAPTCHA initialized successfully');
+                resolve(recaptchaVerifier);
+              })
+              .catch((error) => {
+                console.error('💥 Error rendering invisible reCAPTCHA:', error);
+                reject(new Error(`Failed to initialize security verification: ${error.message}`));
+              });
             return;
           } catch (error: any) {
-            console.error('💥 Error creating dev mode reCAPTCHA:', error);
-            reject(new Error(`Failed to create reCAPTCHA verifier (dev mode): ${error.message}`));
+            console.error('💥 Error creating invisible reCAPTCHA:', error);
+            reject(new Error(`Failed to create reCAPTCHA verifier: ${error.message}`));
             return;
           }
         }
@@ -152,7 +171,7 @@ export const initializeRecaptcha = (containerId: string, devMode: boolean = fals
               } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
                 reject(new Error('Network error loading reCAPTCHA. Please check your internet connection.'));
               } else if (error.message?.includes('Invalid site key') || error.message?.includes('Invalid key') || error.message?.includes('Invalid domain')) {
-                reject(new Error('Domain configuration error. Please make sure localhost is authorized in Firebase Console.'));
+                reject(new Error('Domain configuration error. Please make sure your domain is authorized in Firebase Console.'));
               } else if (error.message?.includes('not allowed') || error.message?.includes('unauthorized')) {
                 reject(new Error('Domain not authorized. Please add your domain to Firebase Console authorized domains.'));
               } else {
