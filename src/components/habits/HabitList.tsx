@@ -52,7 +52,7 @@ const HabitList: FC<HabitListProps> = ({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedHabitIds(habits.map(h => h.id));
+      setSelectedHabitIds(habitsToDisplay.map(h => h.id));
     } else {
       setSelectedHabitIds([]);
     }
@@ -88,9 +88,20 @@ const HabitList: FC<HabitListProps> = ({
 
   React.useEffect(() => {
     if (selectAllRef.current) {
-      selectAllRef.current.indeterminate = selectedHabitIds.length > 0 && selectedHabitIds.length < habitsToDisplay.length;
+      const visibleSelectedCount = selectedHabitIds.filter(id => habitsToDisplay.some(h => h.id === id)).length;
+      selectAllRef.current.indeterminate = visibleSelectedCount > 0 && visibleSelectedCount < habitsToDisplay.length;
     }
-  }, [selectedHabitIds, habitsToDisplay.length]);
+  }, [selectedHabitIds, habitsToDisplay]);
+
+  // Clear selections that are not visible in the current view
+  React.useEffect(() => {
+    const visibleHabitIds = new Set(habitsToDisplay.map(h => h.id));
+    const filteredSelectedIds = selectedHabitIds.filter(id => visibleHabitIds.has(id));
+    
+    if (filteredSelectedIds.length !== selectedHabitIds.length) {
+      setSelectedHabitIds(filteredSelectedIds);
+    }
+  }, [habitsToDisplay, selectedHabitIds, setSelectedHabitIds]);
 
   if (habitsToDisplay.length === 0 && !showAllHabits) {
     return (
@@ -110,7 +121,7 @@ const HabitList: FC<HabitListProps> = ({
         <Checkbox
           id="select-all-habits"
           ref={selectAllRef}
-          checked={selectedHabitIds.length > 0 && selectedHabitIds.length === habitsToDisplay.length}
+          checked={habitsToDisplay.length > 0 && selectedHabitIds.filter(id => habitsToDisplay.some(h => h.id === id)).length === habitsToDisplay.length}
           onCheckedChange={handleSelectAll}
         />
         <label htmlFor="select-all-habits" className="text-sm font-medium cursor-pointer select-none">Select All</label>

@@ -5,7 +5,8 @@ const config: CapacitorConfig = {
   appName: 'GroviaHabits',
   webDir: 'out',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    cleartext: true
   },
   plugins: {
     Camera: {
@@ -25,6 +26,14 @@ const config: CapacitorConfig = {
       splashImmersive: true,
       layoutName: "launch_screen",
       useDialog: true,
+    },
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"]
+    },
+    StatusBar: {
+      style: "LIGHT",
+      backgroundColor: "#ffffff",
+      overlay: false
     }
   }
 };

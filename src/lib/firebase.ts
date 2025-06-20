@@ -1,16 +1,16 @@
-
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { ENV_CONFIG } from './env-check';
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  apiKey: ENV_CONFIG.FIREBASE_API_KEY,
+  authDomain: ENV_CONFIG.FIREBASE_AUTH_DOMAIN,
+  projectId: ENV_CONFIG.FIREBASE_PROJECT_ID,
+  storageBucket: ENV_CONFIG.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: ENV_CONFIG.FIREBASE_MESSAGING_SENDER_ID,
+  appId: ENV_CONFIG.FIREBASE_APP_ID,
+  measurementId: ENV_CONFIG.FIREBASE_MEASUREMENT_ID,
 };
 
 let app: FirebaseApp;

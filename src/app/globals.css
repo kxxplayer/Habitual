@@ -7,6 +7,22 @@
     --radius: 1rem;
   }
 
+  /* Safe area support for mobile devices */
+  html, body {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    /* Ensure the app doesn't overlap with system UI */
+    min-height: 100vh;
+    min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  /* For Capacitor apps specifically */
+  @media (display-mode: standalone) {
+    html, body {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+
   /* Enhanced Theme: Calm Blue (More Vibrant) */
   .theme-calm-blue {
     --background: 210 40% 98%;

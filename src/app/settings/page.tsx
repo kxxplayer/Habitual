@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { signOut, type User, onAuthStateChanged } from 'firebase/auth';
 import AppPageLayout from '@/components/layout/AppPageLayout';
+import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
+import GoalInputProgramDialog from '@/components/programs/GoalInputProgramDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Loader2, UserCircle, CalendarDays, Palette, BellRing, Settings as SettingsIcon, LogOut } from 'lucide-react';
@@ -16,12 +18,17 @@ import { Separator } from '@/components/ui/separator';
 import { requestPermissions } from '@/lib/notification-manager'; // Corrected import name
 import { toast } from "@/hooks/use-toast";
 import { Capacitor } from '@capacitor/core';
+import type { CreateHabitFormData } from '@/types';
 
 const SettingsPage: NextPage = () => {
   const router = useRouter();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
+
+  // Dialog states
+  const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
+  const [isGoalInputProgramDialogOpen, setIsGoalInputProgramDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -35,6 +42,28 @@ const SettingsPage: NextPage = () => {
     });
     return () => unsubscribe();
   }, [router]);
+
+  const handleOpenCreateHabitDialog = () => {
+    setIsCreateHabitDialogOpen(true);
+  };
+
+  const handleOpenGoalInputProgramDialog = () => {
+    setIsCreateHabitDialogOpen(false);
+    setIsGoalInputProgramDialogOpen(true);
+  };
+
+  const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
+    // Handle saving the habit here if needed, or just close dialog and navigate
+    setIsCreateHabitDialogOpen(false);
+    toast({
+      title: "Habit Created!",
+      description: `"${habitData.name}" has been added. Redirecting to home...`,
+    });
+    // Navigate to home page after successful creation
+    setTimeout(() => {
+      router.push('/');
+    }, 1000);
+  };
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -80,71 +109,97 @@ const SettingsPage: NextPage = () => {
   }
 
   return (
-    <AppPageLayout onAddNew={() => router.push('/?action=addHabit')}>
-      <div className="flex items-center mb-6">
-        <SettingsIcon className="mr-3 h-8 w-8 text-primary" />
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-          <p className="text-muted-foreground">Manage preferences and account.</p>
+    <>
+      <AppPageLayout onAddNew={handleOpenCreateHabitDialog}>
+        <div className="flex items-center mb-6">
+          <SettingsIcon className="mr-3 h-8 w-8 text-primary" />
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+            <p className="text-muted-foreground">Manage preferences and account.</p>
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-6">
-        <Card className="animate-card-fade-in" style={{ animationDelay: '100ms' }}>
-          <CardHeader>
-            <CardTitle className="text-lg">Account</CardTitle>
-            <CardDescription>Manage your profile and linked data.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {accountSettingsItems.map((item) => (
-              <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
-                <Button variant="outline" className="w-full justify-start text-base py-6">
-                  <item.icon className="mr-3 h-5 w-5" />
-                  {item.label}
-                </Button>
-              </Link>
-            ))}
-            <Separator className="my-4" />
-            <Button onClick={handleSignOut} variant="destructive" className="w-full text-base py-6" disabled={isSigningOut}>
-              {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
-              Sign Out
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="animate-card-fade-in" style={{ animationDelay: '200ms' }}>
-          <CardHeader>
-            <CardTitle className="text-lg">App Preferences</CardTitle>
-            <CardDescription>Customize the look and feel of Habitual.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 border rounded-lg flex items-center justify-between">
-              <div className="flex items-center">
-                <Palette className="mr-3 h-5 w-5 text-muted-foreground" />
-                <Label className="text-base font-medium">App Theme</Label>
-              </div>
-              <ThemeToggleButton />
-            </div>
-            {(!Capacitor.isNativePlatform || !Capacitor.isNativePlatform()) && (
-              <div className="p-4 border rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <BellRing className="mr-3 h-5 w-5 text-muted-foreground" />
-                    <Label className="text-base font-medium">Reminders</Label>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={handleRequestPermission}>
-                    Enable Notifications
+        <div className="space-y-6">
+          <Card className="animate-card-fade-in" style={{ animationDelay: '100ms' }}>
+            <CardHeader>
+              <CardTitle className="text-lg">Account</CardTitle>
+              <CardDescription>Manage your profile and linked data.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {accountSettingsItems.map((item) => (
+                <Link key={item.label} href={item.href} passHref legacyBehavior={false}>
+                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                    <item.icon className="mr-3 h-5 w-5" />
+                    {item.label}
                   </Button>
+                </Link>
+              ))}
+              <Separator className="my-4" />
+              <Button onClick={handleSignOut} variant="destructive" className="w-full text-base py-6" disabled={isSigningOut}>
+                {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
+                Sign Out
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-card-fade-in" style={{ animationDelay: '200ms' }}>
+            <CardHeader>
+              <CardTitle className="text-lg">App Preferences</CardTitle>
+              <CardDescription>Customize the look and feel of Habitual.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 border rounded-lg flex items-center justify-between">
+                <div className="flex items-center">
+                  <Palette className="mr-3 h-5 w-5 text-muted-foreground" />
+                  <Label className="text-base font-medium">App Theme</Label>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 pl-8">
-                  Click "Enable" to receive reminders for your tasks. You may need to grant permission.
-                </p>
+                <ThemeToggleButton />
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </AppPageLayout>
+              {(!Capacitor.isNativePlatform || !Capacitor.isNativePlatform()) && (
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <BellRing className="mr-3 h-5 w-5 text-muted-foreground" />
+                      <Label className="text-base font-medium">Reminders</Label>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={handleRequestPermission}>
+                      Enable Notifications
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 pl-8">
+                    Click "Enable" to receive reminders for your tasks. You may need to grant permission.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </AppPageLayout>
+
+      <CreateHabitDialog
+        isOpen={isCreateHabitDialogOpen}
+        onClose={() => setIsCreateHabitDialogOpen(false)}
+        onSaveHabit={handleSaveHabit}
+        initialData={null}
+        onOpenGoalProgramDialog={handleOpenGoalInputProgramDialog}
+      />
+
+      <GoalInputProgramDialog
+        isOpen={isGoalInputProgramDialogOpen}
+        onClose={() => setIsGoalInputProgramDialogOpen(false)}
+        onSubmit={() => {
+          setIsGoalInputProgramDialogOpen(false);
+          toast({
+            title: "Program Created!",
+            description: "Your habit program has been created. Redirecting to home...",
+          });
+          setTimeout(() => {
+            router.push('/');
+          }, 1000);
+        }}
+        isLoading={false}
+      />
+    </>
   );
 };
 

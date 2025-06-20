@@ -6,17 +6,19 @@ import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
-import type { Habit, WeekDay } from '@/types';
+import type { Habit, WeekDay, CreateHabitFormData } from '@/types';
 import AppPageLayout from '@/components/layout/AppPageLayout';
+import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
+import GoalInputProgramDialog from '@/components/programs/GoalInputProgramDialog';
 import { Calendar } from '@/components/ui/calendar';
 import { type DayPicker } from 'react-day-picker';
 import { Loader2, CalendarDays, CheckCircle2, XCircle, Circle as CircleIcon, CalendarClock as MakeupIcon } from 'lucide-react';
-import { format, parseISO, isSameDay, getDay, startOfDay, subDays, addDays as dateFnsAddDays, isToday as dateFnsIsToday, isPast as dateFnsIsPast } from 'date-fns';
+import { format, parseISO, isSameDay, getDay, startOfDay, subDays, addDays, addDays as dateFnsAddDays, isToday as dateFnsIsToday, isPast as dateFnsIsPast } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-
+import { useToast } from "@/hooks/use-toast";
 
 const LS_KEY_PREFIX_HABITS = "habits_";
 const dayIndexToWeekDayConstant: WeekDay[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -26,11 +28,16 @@ const USER_MAIN_DOC_ID = "main";
 
 const CalendarPage: NextPage = () => {
   const router = useRouter();
+  const { toast } = useToast();
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
   const [habits, setHabits] = React.useState<Habit[]>([]);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
   const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
+  
+  // Dialog states
+  const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
+  const [isGoalInputProgramDialogOpen, setIsGoalInputProgramDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -65,6 +72,28 @@ const CalendarPage: NextPage = () => {
 
     return () => unsubscribeFirestore();
   }, [authUser, isLoadingAuth]);
+
+  const handleOpenCreateHabitDialog = () => {
+    setIsCreateHabitDialogOpen(true);
+  };
+
+  const handleOpenGoalInputProgramDialog = () => {
+    setIsCreateHabitDialogOpen(false);
+    setIsGoalInputProgramDialogOpen(true);
+  };
+
+  const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
+    // Handle saving the habit here if needed, or just close dialog and navigate
+    setIsCreateHabitDialogOpen(false);
+    toast({
+      title: "Habit Created!",
+      description: `"${habitData.name}" has been added. Redirecting to home...`,
+    });
+    // Navigate to home page after successful creation
+    setTimeout(() => {
+      router.push('/');
+    }, 1000);
+  };
 
   const calendarDialogModifiers = React.useMemo(() => {
     if (!authUser) {
@@ -102,55 +131,41 @@ const CalendarPage: NextPage = () => {
         });
 
         const iteration_limit = 60;
-        for (let day_offset = 0; day_offset < iteration_limit; day_offset++) {
-          const pastDateToConsider_obj = subDays(today_date_obj, day_offset);
-          const futureDateToConsider_obj = dateFnsAddDays(today_date_obj, day_offset);
+        for (let i = 0; i < iteration_limit; i++) {
+          const checkDate_obj = addDays(subDays(today_date_obj, 30), i);
+          const checkDateStr = format(checkDate_obj, 'yyyy-MM-dd');
+          const dayOfWeek = dayIndexToWeekDayConstant[getDay(checkDate_obj)];
+          const isScheduled = habit_item_for_modifiers_loop.daysOfWeek.includes(dayOfWeek);
+          const logEntry = habit_item_for_modifiers_loop.completionLog.find(l => l.date === checkDateStr);
+          const isPastDate = dateFnsIsPast(checkDate_obj) && !dateFnsIsToday(checkDate_obj);
 
-          [pastDateToConsider_obj, futureDateToConsider_obj].forEach(current_day_being_checked_obj => {
-            if (isSameDay(current_day_being_checked_obj, today_date_obj) && day_offset !== 0 && current_day_being_checked_obj !== pastDateToConsider_obj) return;
-
-            const dateStrToMatch_str = format(current_day_being_checked_obj, 'yyyy-MM-dd');
-            const dayOfWeekForDate_val = dayIndexToWeekDayConstant[getDay(current_day_being_checked_obj)];
-            const isScheduledOnThisDay_bool = habit_item_for_modifiers_loop.daysOfWeek.includes(dayOfWeekForDate_val);
-            const logEntryForThisDay_obj = habit_item_for_modifiers_loop.completionLog.find(log_find_item => log_find_item.date === dateStrToMatch_str);
-
-            if (isScheduledOnThisDay_bool && !logEntryForThisDay_obj) {
-              if (current_day_being_checked_obj < today_date_obj && !isSameDay(current_day_being_checked_obj, today_date_obj)) {
-                if (!dates_scheduled_missed_arr.some(missed_day_item => isSameDay(missed_day_item, current_day_being_checked_obj))) {
-                  dates_scheduled_missed_arr.push(current_day_being_checked_obj);
-                }
-              } else {
-                if (!dates_scheduled_upcoming_arr.some(upcoming_day_item => isSameDay(upcoming_day_item, current_day_being_checked_obj)) &&
-                    !dates_completed_arr.some(completed_day_item_for_check => isSameDay(completed_day_item_for_check, current_day_being_checked_obj))) {
-                  dates_scheduled_upcoming_arr.push(current_day_being_checked_obj);
-                }
-              }
+          if (isScheduled) {
+            if (logEntry?.status === 'completed') {
+              // Already handled above
+            } else if (isPastDate && !logEntry) {
+              dates_scheduled_missed_arr.push(checkDate_obj);
+            } else if (!isPastDate) {
+              dates_scheduled_upcoming_arr.push(checkDate_obj);
             }
-          });
+          }
         }
       });
 
-      const finalScheduledUpcoming_arr = dates_scheduled_upcoming_arr.filter(s_date_upcoming_for_final_filter =>
-        !dates_completed_arr.some(comp_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, comp_date_for_final_filter)) &&
-        !dates_makeup_pending_arr.some(makeup_date_for_final_filter => isSameDay(s_date_upcoming_for_final_filter, makeup_date_for_final_filter))
-      );
-      const finalScheduledMissed_arr = dates_scheduled_missed_arr.filter(s_date_missed_for_final_filter =>
-        !dates_completed_arr.some(comp_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, comp_date_for_final_filter_missed)) &&
-        !dates_makeup_pending_arr.some(makeup_date_for_final_filter_missed => isSameDay(s_date_missed_for_final_filter, makeup_date_for_final_filter_missed))
-      );
-
       return {
+        selected: selectedCalendarDate ? [selectedCalendarDate] : [],
         completed: dates_completed_arr,
-        missed: finalScheduledMissed_arr,
-        scheduled: finalScheduledUpcoming_arr,
+        missed: dates_scheduled_missed_arr,
+        scheduled: dates_scheduled_upcoming_arr,
         makeup: dates_makeup_pending_arr,
-        selected: selectedCalendarDate ? [selectedCalendarDate] : [],
       };
-    } catch (error) {
-      console.error("CRITICAL ERROR in calendarDialogModifiers calculation on Calendar Page:", error);
+    } catch (eCalendarModifiers) {
+      console.error("Error in calendarDialogModifiers calculation:", eCalendarModifiers);
       return {
-        completed: [], missed: [], scheduled: [], makeup: [],
         selected: selectedCalendarDate ? [selectedCalendarDate] : [],
+        completed: [],
+        missed: [],
+        scheduled: [],
+        makeup: [],
       };
     }
   }, [habits, selectedCalendarDate, authUser]);
@@ -180,7 +195,6 @@ const CalendarPage: NextPage = () => {
     }
   }, [selectedCalendarDate, habits, authUser]);
 
-
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
       <AppPageLayout>
@@ -203,78 +217,104 @@ const CalendarPage: NextPage = () => {
   }
 
   return (
-    <AppPageLayout onAddNew={() => router.push('/?action=addHabit')}>
-      <Card className="animate-card-fade-in">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold text-primary flex items-center">
-            <CalendarDays className="mr-2 h-5 w-5" /> Habit Calendar
-          </CardTitle>
-          <CardDescription>View your habit activity across dates.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-2 flex flex-col items-center">
-          <Calendar
-            mode="single"
-            selected={selectedCalendarDate}
-            onSelect={setSelectedCalendarDate}
-            modifiers={calendarDialogModifiers}
-            modifiersStyles={calendarDialogModifierStyles}
-            className="rounded-md border p-0 sm:p-2"
-            month={selectedCalendarDate || new Date()}
-            onMonthChange={(month) => {
-               if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) {
-                 setSelectedCalendarDate(startOfDay(month));
-               }
-             }}
-          />
-          {selectedCalendarDate && (
-            <div className="mt-4 w-full">
-              <h3 className="text-md font-semibold mb-2 text-center">
-                Habits for {format(selectedCalendarDate, 'MMMM d, yyyy')}
-              </h3>
-              {habitsForSelectedCalendarDate.length > 0 ? (
-                <ul className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
-                  {habitsForSelectedCalendarDate.map(habit => {
-                    const logEntry = habit.completionLog.find(log => log.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
-                    const dayOfWeekForSelected = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
-                    const isScheduledToday = habit.daysOfWeek.includes(dayOfWeekForSelected);
-                    let statusText = "Scheduled";
-                    let StatusIcon = CircleIcon;
-                    let iconColor = "text-orange-500";
+    <>
+      <AppPageLayout onAddNew={handleOpenCreateHabitDialog}>
+        <Card className="animate-card-fade-in">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl font-bold text-primary flex items-center">
+              <CalendarDays className="mr-2 h-5 w-5" /> Habit Calendar
+            </CardTitle>
+            <CardDescription>View your habit activity across dates.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-2 flex flex-col items-center">
+            <Calendar
+              mode="single"
+              selected={selectedCalendarDate}
+              onSelect={setSelectedCalendarDate}
+              modifiers={calendarDialogModifiers}
+              modifiersStyles={calendarDialogModifierStyles}
+              className="rounded-md border p-0 sm:p-2"
+              month={selectedCalendarDate || new Date()}
+              onMonthChange={(month) => {
+                 if (!selectedCalendarDate || selectedCalendarDate.getMonth() !== month.getMonth() || selectedCalendarDate.getFullYear() !== month.getFullYear()) {
+                   setSelectedCalendarDate(startOfDay(month));
+                 }
+               }}
+            />
+            {selectedCalendarDate && (
+              <div className="mt-4 w-full">
+                <h3 className="text-md font-semibold mb-2 text-center">
+                  Habits for {format(selectedCalendarDate, 'MMMM d, yyyy')}
+                </h3>
+                {habitsForSelectedCalendarDate.length > 0 ? (
+                  <ul className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
+                    {habitsForSelectedCalendarDate.map(habit => {
+                      const logEntry = habit.completionLog.find(log => log.date === format(selectedCalendarDate as Date, 'yyyy-MM-dd'));
+                      const dayOfWeekForSelected = dayIndexToWeekDayConstant[getDay(selectedCalendarDate as Date)];
+                      const isScheduledToday = habit.daysOfWeek.includes(dayOfWeekForSelected);
+                      let statusText = "Scheduled";
+                      let StatusIcon = CircleIcon;
+                      let iconColor = "text-orange-500";
 
-                    if (logEntry?.status === 'completed') {
-                        statusText = `Completed ${logEntry.time || ''}`;
-                        StatusIcon = CheckCircle2; iconColor = "text-accent";
-                    } else if (logEntry?.status === 'pending_makeup') {
-                        statusText = `Makeup for ${logEntry.originalMissedDate || 'earlier'}`;
-                        StatusIcon = MakeupIcon; iconColor = "text-blue-500";
-                    } else if (logEntry?.status === 'skipped') {
-                        statusText = "Skipped";
-                        StatusIcon = XCircle; iconColor = "text-muted-foreground";
-                    } else if (isScheduledToday && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry) {
-                        statusText = "Missed"; StatusIcon = XCircle; iconColor = "text-destructive";
-                    } else if (!isScheduledToday && !logEntry) {
-                        statusText = "Not Scheduled"; StatusIcon = CircleIcon; iconColor = "text-muted-foreground/50";
-                    }
+                      if (logEntry?.status === 'completed') {
+                          statusText = `Completed ${logEntry.time || ''}`;
+                          StatusIcon = CheckCircle2; iconColor = "text-accent";
+                      } else if (logEntry?.status === 'pending_makeup') {
+                          statusText = `Makeup for ${logEntry.originalMissedDate || 'earlier'}`;
+                          StatusIcon = MakeupIcon; iconColor = "text-blue-500";
+                      } else if (logEntry?.status === 'skipped') {
+                          statusText = "Skipped";
+                          StatusIcon = XCircle; iconColor = "text-muted-foreground";
+                      } else if (isScheduledToday && dateFnsIsPast(startOfDay(selectedCalendarDate as Date)) && !dateFnsIsToday(selectedCalendarDate as Date) && !logEntry) {
+                          statusText = "Missed"; StatusIcon = XCircle; iconColor = "text-destructive";
+                      } else if (!isScheduledToday && !logEntry) {
+                          statusText = "Not Scheduled"; StatusIcon = CircleIcon; iconColor = "text-muted-foreground/50";
+                      }
 
-                    return (
-                      <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
-                        <span className="font-medium truncate pr-2">{habit.name}</span>
-                        <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                            <StatusIcon className={cn("h-3.5 w-3.5", iconColor)} />
-                            <span>{statusText}</span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-2">No habits scheduled or logged for this day.</p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </AppPageLayout>
+                      return (
+                        <li key={habit.id} className="flex items-center justify-between p-1.5 bg-input/30 rounded-md">
+                          <span className="font-medium truncate pr-2">{habit.name}</span>
+                          <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                              <StatusIcon className={cn("h-3.5 w-3.5", iconColor)} />
+                              <span>{statusText}</span>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-2">No habits scheduled or logged for this day.</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </AppPageLayout>
+
+      <CreateHabitDialog
+        isOpen={isCreateHabitDialogOpen}
+        onClose={() => setIsCreateHabitDialogOpen(false)}
+        onSaveHabit={handleSaveHabit}
+        initialData={null}
+        onOpenGoalProgramDialog={handleOpenGoalInputProgramDialog}
+      />
+
+      <GoalInputProgramDialog
+        isOpen={isGoalInputProgramDialogOpen}
+        onClose={() => setIsGoalInputProgramDialogOpen(false)}
+        onSubmit={() => {
+          setIsGoalInputProgramDialogOpen(false);
+          toast({
+            title: "Program Created!",
+            description: "Your habit program has been created. Redirecting to home...",
+          });
+          setTimeout(() => {
+            router.push('/');
+          }, 1000);
+        }}
+        isLoading={false}
+      />
+    </>
   );
 };
 

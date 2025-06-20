@@ -11,10 +11,12 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import dynamic from 'next/dynamic';
-import type { Habit, HabitCategory, HabitCompletionLogEntry, WeekDay, EarnedBadge } from '@/types';
+import type { Habit, HabitCategory, HabitCompletionLogEntry, WeekDay, EarnedBadge, CreateHabitFormData } from '@/types';
 import { HABIT_CATEGORIES, weekDays as weekDaysArrayForForm } from '@/types';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNavigationBar from '@/components/layout/BottomNavigationBar';
+import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
+import GoalInputProgramDialog from '@/components/programs/GoalInputProgramDialog';
 import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,7 +37,6 @@ const USER_DATA_COLLECTION = "users";
 const USER_APP_DATA_SUBCOLLECTION = "appData";
 const USER_MAIN_DOC_ID = "main";
 
-
 const DashboardPage: NextPage = () => {
   const router = useRouter();
   const { toast } = useToast();
@@ -45,6 +46,10 @@ const DashboardPage: NextPage = () => {
   const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
   const [totalPoints, setTotalPoints] = React.useState<number>(0);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
+
+  // Dialog states
+  const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
+  const [isGoalInputProgramDialogOpen, setIsGoalInputProgramDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -60,12 +65,7 @@ const DashboardPage: NextPage = () => {
   }, [router]);
 
   React.useEffect(() => {
-    if (!authUser || isLoadingAuth) {
-      if (!authUser && !isLoadingAuth) {
-        setIsLoadingData(false);
-      }
-      return;
-    }
+    if (!authUser || isLoadingAuth) return;
 
     setIsLoadingData(true);
     const userDocRef = doc(db, USER_DATA_COLLECTION, authUser.uid, USER_APP_DATA_SUBCOLLECTION, USER_MAIN_DOC_ID);
@@ -74,15 +74,15 @@ const DashboardPage: NextPage = () => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const parsedHabits = (Array.isArray(data.habits) ? data.habits : []).map((h: any): Habit => ({
-          id: String(h.id || Date.now().toString() + Math.random().toString(36).substring(2, 7)),
-          name: String(h.name || 'Unnamed Habit'),
-          description: typeof h.description === 'string' ? h.description : undefined,
-          category: HABIT_CATEGORIES.includes(h.category as HabitCategory) ? h.category : 'Other',
-          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((d: any): d is WeekDay => weekDaysArrayForForm.includes(d as WeekDay)) : [],
-          optimalTiming: typeof h.optimalTiming === 'string' ? h.optimalTiming : undefined,
-          durationHours: typeof h.durationHours === 'number' ? h.durationHours : undefined,
-          durationMinutes: typeof h.durationMinutes === 'number' ? h.durationMinutes : undefined,
-          specificTime: typeof h.specificTime === 'string' ? h.specificTime : undefined,
+          id: typeof h.id === 'string' ? h.id : `h_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          name: typeof h.name === 'string' ? h.name : 'Unnamed Habit',
+          description: typeof h.description === 'string' ? h.description : '',
+          category: HABIT_CATEGORIES.includes(h.category) ? h.category : 'Other',
+          daysOfWeek: Array.isArray(h.daysOfWeek) ? h.daysOfWeek.filter((day: any) => weekDaysArrayForForm.includes(day)) : [],
+          optimalTiming: typeof h.optimalTiming === 'string' ? h.optimalTiming : '',
+          durationHours: typeof h.durationHours === 'number' && h.durationHours > 0 ? h.durationHours : undefined,
+          durationMinutes: typeof h.durationMinutes === 'number' && h.durationMinutes > 0 ? h.durationMinutes : undefined,
+          specificTime: typeof h.specificTime === 'string' ? h.specificTime : '',
           completionLog: (Array.isArray(h.completionLog) ? h.completionLog : [])
             .map((log: Partial<HabitCompletionLogEntry>): HabitCompletionLogEntry | null => {
               if (typeof log.date !== 'string' || !log.date.match(/^\d{4}-\d{2}-\d{2}$/)) return null;
@@ -119,6 +119,28 @@ const DashboardPage: NextPage = () => {
     return () => unsubscribeFirestore();
   }, [authUser, isLoadingAuth, toast]);
 
+  const handleOpenCreateHabitDialog = () => {
+    setIsCreateHabitDialogOpen(true);
+  };
+
+  const handleOpenGoalInputProgramDialog = () => {
+    setIsCreateHabitDialogOpen(false);
+    setIsGoalInputProgramDialogOpen(true);
+  };
+
+  const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
+    // Handle saving the habit here if needed, or just close dialog and navigate
+    setIsCreateHabitDialogOpen(false);
+    toast({
+      title: "Habit Created!",
+      description: `"${habitData.name}" has been added. Redirecting to home...`,
+    });
+    // Navigate to home page after successful creation
+    setTimeout(() => {
+      router.push('/');
+    }, 1000);
+  };
+
   // ADDED: Wrapper function to call the cloud function.
   const getAISuggestion = async (input: { habitName: string; trackingData: string; daysOfWeek: string[] }): Promise<{ suggestion: string }> => {
     try {
@@ -134,8 +156,6 @@ const DashboardPage: NextPage = () => {
       throw new Error('Could not get AI suggestion');
     }
   };
-  
-
 
   if (isLoadingAuth || (authUser && isLoadingData)) {
     return (
@@ -151,17 +171,44 @@ const DashboardPage: NextPage = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <AppHeader />
-      <main className="flex-grow">
-        <HabitOverview
-          habits={habits}
-          totalPoints={totalPoints}
-          earnedBadges={earnedBadges}
-        />
-      </main>
-      <BottomNavigationBar onAddNewHabitClick={() => router.push('/?action=addHabit')} />
-    </div>
+    <>
+      <div className="flex flex-col min-h-screen bg-background">
+        <AppHeader />
+        <main className="flex-grow">
+          <HabitOverview
+            habits={habits}
+            totalPoints={totalPoints}
+            earnedBadges={earnedBadges}
+          />
+        </main>
+        <BottomNavigationBar onAddNewHabitClick={handleOpenCreateHabitDialog} />
+      </div>
+
+      <CreateHabitDialog
+        isOpen={isCreateHabitDialogOpen}
+        onClose={() => setIsCreateHabitDialogOpen(false)}
+        onSaveHabit={handleSaveHabit}
+        initialData={null}
+        onOpenGoalProgramDialog={handleOpenGoalInputProgramDialog}
+      />
+
+      <GoalInputProgramDialog
+        isOpen={isGoalInputProgramDialogOpen}
+        onClose={() => setIsGoalInputProgramDialogOpen(false)}
+        onSubmit={() => {
+          setIsGoalInputProgramDialogOpen(false);
+          toast({
+            title: "Program Created!",
+            description: "Your habit program has been created. Redirecting to home...",
+          });
+          setTimeout(() => {
+            router.push('/');
+          }, 1000);
+        }}
+        isLoading={false}
+      />
+    </>
   );
-}
+};
+
 export default DashboardPage;

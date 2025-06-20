@@ -8,8 +8,10 @@ import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
-import type { EarnedBadge } from '@/types';
+import type { EarnedBadge, CreateHabitFormData } from '@/types';
 import AppPageLayout from '@/components/layout/AppPageLayout';
+import CreateHabitDialog from '@/components/habits/CreateHabitDialog';
+import GoalInputProgramDialog from '@/components/programs/GoalInputProgramDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Trophy, Award, Calendar, Star, Zap, Target, Lock } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -42,6 +44,10 @@ const AchievementsPage: NextPage = () => {
     const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
     const [earnedBadges, setEarnedBadges] = React.useState<EarnedBadge[]>([]);
     const [isLoadingData, setIsLoadingData] = React.useState(true);
+
+    // Dialog states
+    const [isCreateHabitDialogOpen, setIsCreateHabitDialogOpen] = React.useState(false);
+    const [isGoalInputProgramDialogOpen, setIsGoalInputProgramDialogOpen] = React.useState(false);
 
     React.useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -88,6 +94,28 @@ const AchievementsPage: NextPage = () => {
         return () => unsubscribeFirestore();
     }, [authUser, isLoadingAuth, toast]);
 
+    const handleOpenCreateHabitDialog = () => {
+        setIsCreateHabitDialogOpen(true);
+    };
+
+    const handleOpenGoalInputProgramDialog = () => {
+        setIsCreateHabitDialogOpen(false);
+        setIsGoalInputProgramDialogOpen(true);
+    };
+
+    const handleSaveHabit = (habitData: CreateHabitFormData & { id?: string }) => {
+        // Handle saving the habit here if needed, or just close dialog and navigate
+        setIsCreateHabitDialogOpen(false);
+        toast({
+            title: "Habit Created!",
+            description: `"${habitData.name}" has been added. Redirecting to home...`,
+        });
+        // Navigate to home page after successful creation
+        setTimeout(() => {
+            router.push('/');
+        }, 1000);
+    };
+
     const formatDateSafe = (dateString: string | undefined) => {
         if (!dateString) return "Date unavailable";
         try {
@@ -113,78 +141,104 @@ const AchievementsPage: NextPage = () => {
     }
 
     return (
-        <AppPageLayout onAddNew={() => router.push('/?action=addHabit')}>
-            <div className="animate-card-fade-in space-y-8">
-                <div>
-                    <div className="flex items-center mb-6">
-                        <Trophy className="mr-3 h-8 w-8 text-yellow-500" />
-                        <div>
-                            <h2 className="text-3xl font-bold tracking-tight">Achievements</h2>
-                            <p className="text-muted-foreground">Your collection of earned badges.</p>
+        <>
+            <AppPageLayout onAddNew={handleOpenCreateHabitDialog}>
+                <div className="animate-card-fade-in space-y-8">
+                    <div>
+                        <div className="flex items-center mb-6">
+                            <Trophy className="mr-3 h-8 w-8 text-yellow-500" />
+                            <div>
+                                <h2 className="text-3xl font-bold tracking-tight">Achievements</h2>
+                                <p className="text-muted-foreground">Your collection of earned badges.</p>
+                            </div>
                         </div>
-                    </div>
-                    <Card>
-                        <CardContent className={cn("pt-6", validEarnedBadges.length === 0 && "min-h-[150px] flex items-center justify-center")}>
-                            {validEarnedBadges.length === 0 ? (
-                                <p className="text-muted-foreground text-center">
-                                    Your earned badges will appear here.
-                                </p>
-                            ) : (
-                                <div className="grid grid-cols-1 gap-3">
-                                    {validEarnedBadges.map((badge) => (
-                                        <div key={badge.id} className="flex items-center space-x-4 p-4 bg-secondary/30 rounded-lg border">
-                                            {getBadgeIcon(badge.id)}
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold">{badge.name}</h3>
-                                                <p className="text-sm text-muted-foreground">{badge.description}</p>
-                                                <div className="flex items-center mt-1 text-xs text-muted-foreground">
-                                                    <Calendar className="mr-1.5 h-3 w-3" />
-                                                    <span>Earned on {formatDateSafe(badge.earnedDate)}</span>
+                        <Card>
+                            <CardContent className={cn("pt-6", validEarnedBadges.length === 0 && "min-h-[150px] flex items-center justify-center")}>
+                                {validEarnedBadges.length === 0 ? (
+                                    <p className="text-muted-foreground text-center">
+                                        Your earned badges will appear here.
+                                    </p>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {validEarnedBadges.map((badge) => (
+                                            <div key={badge.id} className="flex items-center space-x-4 p-4 bg-secondary/30 rounded-lg border">
+                                                {getBadgeIcon(badge.id)}
+                                                <div className="flex-1">
+                                                    <h3 className="font-semibold">{badge.name}</h3>
+                                                    <p className="text-sm text-muted-foreground">{badge.description}</p>
+                                                    <div className="flex items-center mt-1 text-xs text-muted-foreground">
+                                                        <Calendar className="mr-1.5 h-3 w-3" />
+                                                        <span>Earned on {formatDateSafe(badge.earnedDate)}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Sneak Peek Section */}
-                <div>
-                    <div className="flex items-center mb-4">
-                        <Lock className="mr-3 h-6 w-6 text-muted-foreground" />
-                        <div>
-                            <h3 className="text-2xl font-bold tracking-tight">Achievements to Unlock</h3>
-                            <p className="text-muted-foreground">Here’s what you can earn next!</p>
-                        </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
-                    <Card>
-                         <CardContent className="pt-6">
-                            {unearnedBadges.length > 0 ? (
-                                <div className="grid grid-cols-1 gap-3">
-                                    {unearnedBadges.map((badge) => (
-                                        <div key={badge.id} className="flex items-center space-x-4 p-4 bg-background rounded-lg border border-dashed opacity-70">
-                                            {getBadgeIcon(badge.id, true)}
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold text-muted-foreground">{badge.name}</h3>
-                                                <p className="text-sm text-muted-foreground/80">{badge.description}</p>
+
+                    {/* Sneak Peek Section */}
+                    <div>
+                        <div className="flex items-center mb-4">
+                            <Lock className="mr-3 h-6 w-6 text-muted-foreground" />
+                            <div>
+                                <h3 className="text-2xl font-bold tracking-tight">Achievements to Unlock</h3>
+                                <p className="text-muted-foreground">Here's what you can earn next!</p>
+                            </div>
+                        </div>
+                        <Card>
+                             <CardContent className="pt-6">
+                                {unearnedBadges.length > 0 ? (
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {unearnedBadges.map((badge) => (
+                                            <div key={badge.id} className="flex items-center space-x-4 p-4 bg-background rounded-lg border border-dashed opacity-70">
+                                                {getBadgeIcon(badge.id, true)}
+                                                <div className="flex-1">
+                                                    <h3 className="font-semibold text-muted-foreground">{badge.name}</h3>
+                                                    <p className="text-sm text-muted-foreground/80">{badge.description}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="min-h-[100px] flex items-center justify-center">
-                                     <p className="text-muted-foreground text-center">
-                                        You've earned all available badges. Great job!
-                                    </p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="min-h-[100px] flex items-center justify-center">
+                                         <p className="text-muted-foreground text-center">
+                                            You've earned all available badges. Great job!
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
-            </div>
-        </AppPageLayout>
+            </AppPageLayout>
+
+            <CreateHabitDialog
+                isOpen={isCreateHabitDialogOpen}
+                onClose={() => setIsCreateHabitDialogOpen(false)}
+                onSaveHabit={handleSaveHabit}
+                initialData={null}
+                onOpenGoalProgramDialog={handleOpenGoalInputProgramDialog}
+            />
+
+            <GoalInputProgramDialog
+                isOpen={isGoalInputProgramDialogOpen}
+                onClose={() => setIsGoalInputProgramDialogOpen(false)}
+                onSubmit={() => {
+                    setIsGoalInputProgramDialogOpen(false);
+                    toast({
+                        title: "Program Created!",
+                        description: "Your habit program has been created. Redirecting to home...",
+                    });
+                    setTimeout(() => {
+                        router.push('/');
+                    }, 1000);
+                }}
+                isLoading={false}
+            />
+        </>
     );
 };
 

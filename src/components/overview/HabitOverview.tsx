@@ -143,6 +143,7 @@ const AIGoalsCard: FC<Pick<HabitOverviewProps, 'habits'>> = React.memo(({ habits
   const [suggestion, setSuggestion] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState(false);
   const [suggestedHabit, setSuggestedHabit] = React.useState<Habit | null>(null);
+  const [hasFetched, setHasFetched] = React.useState(false);
   
   const fetchSuggestion = React.useCallback(async () => {
     const habitsWithMissedDays = habits.filter(h => {
@@ -171,11 +172,16 @@ const AIGoalsCard: FC<Pick<HabitOverviewProps, 'habits'>> = React.memo(({ habits
     }
   }, [habits]);
 
+  const handleGetNewTip = React.useCallback(() => {
+    fetchSuggestion();
+  }, [fetchSuggestion]);
+
   React.useEffect(() => {
-    if (habits.length > 0) {
+    if (habits.length > 0 && !hasFetched) {
         fetchSuggestion();
+        setHasFetched(true);
     }
-  }, [habits, fetchSuggestion]);
+  }, [habits.length, hasFetched, fetchSuggestion]);
 
   return (
     <DashboardCard title="AI Co-Pilot" icon={Brain} style={{ animationDelay: '200ms' }}>
@@ -198,7 +204,7 @@ const AIGoalsCard: FC<Pick<HabitOverviewProps, 'habits'>> = React.memo(({ habits
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={fetchSuggestion}
+            onClick={handleGetNewTip}
             className="w-full text-xs"
           >
             Get New Tip
@@ -210,7 +216,7 @@ const AIGoalsCard: FC<Pick<HabitOverviewProps, 'habits'>> = React.memo(({ habits
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={fetchSuggestion}
+            onClick={handleGetNewTip}
             className="text-xs"
           >
             <Brain className="h-3 w-3 mr-1" />
