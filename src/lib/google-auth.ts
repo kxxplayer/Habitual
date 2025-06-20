@@ -83,43 +83,20 @@ export const getGoogleRedirectResult = async (): Promise<UserCredential | null> 
 };
 
 /**
- * Sign in with Google using Capacitor plugin (for mobile apps)
+ * Sign in with Google using redirect method (for mobile/Capacitor apps)
  */
-export const signInWithGoogleCapacitor = async (): Promise<UserCredential> => {
+export const signInWithGoogleCapacitor = async (): Promise<UserCredential | null> => {
   try {
-    console.log('🔄 Starting Google sign-in with Capacitor...');
+    console.log('🔄 Starting Google sign-in with redirect for mobile...');
     
-    // Import the Capacitor Google Auth plugin dynamically
-    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+    // Use redirect method for mobile devices
+    await signInWithGoogleRedirect();
     
-    // Initialize Google Auth if needed
-    await GoogleAuth.initialize({
-      clientId: '543466575094-381gjh3im74vjc70a4oo2tqvkfcndnct.apps.googleusercontent.com',
-      scopes: ['profile', 'email'],
-      grantOfflineAccess: true,
-    });
-    
-    // Sign in with Google
-    const googleUser = await GoogleAuth.signIn();
-    
-    console.log('✅ Google Auth successful:', googleUser);
-    
-    // Create Firebase credential from Google token
-    const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
-    
-    // Sign in to Firebase with the credential
-    const result = await signInWithCredential(auth, credential);
-    
-    console.log('✅ Firebase sign-in successful:', {
-      uid: result.user.uid,
-      email: result.user.email,
-      displayName: result.user.displayName,
-      photoURL: result.user.photoURL
-    });
-    
-    return result;
+    // Return null as the result will be available via getGoogleRedirectResult
+    console.log('🔄 Redirect initiated, result will be available via getGoogleRedirectResult');
+    return null;
   } catch (error: any) {
-    console.error('❌ Google sign-in with Capacitor failed:', error);
+    console.error('❌ Google sign-in with redirect failed:', error);
     throw new Error(getGoogleAuthErrorMessage(error.code) || error.message);
   }
 };

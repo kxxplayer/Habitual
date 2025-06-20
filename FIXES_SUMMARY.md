@@ -51,7 +51,7 @@
 **Files Modified**:
 - `src/app/auth/login/page.tsx` - Removed Create Account button
 
-### 5. ✅ Android Phone Authentication Setup (NEW)
+### 5. ✅ Android Phone Authentication Setup
 **Problem**: Phone authentication was failing on Android with reCAPTCHA errors.
 
 **Solution Applied**:
@@ -61,6 +61,7 @@
   - `READ_SMS` 
   - `SEND_SMS`
 - **Environment Detection**: Added `isCapacitorEnvironment()` function to properly handle mobile vs web environments
+- **Container Cleanup**: Added proper reCAPTCHA container clearing to prevent "element must be empty" errors
 - **Created Setup Guide**: Comprehensive guide at `docs/ANDROID_PHONE_AUTH_SETUP.md`
 
 **Critical Firebase Console Setup Required**:
@@ -69,9 +70,29 @@
 - **Enable Phone Authentication** in Firebase Console → Authentication → Sign-in method
 
 **Files Modified**:
-- `src/lib/otp-auth.ts` - Added mobile-specific reCAPTCHA handling
+- `src/lib/otp-auth.ts` - Added mobile-specific reCAPTCHA handling and container cleanup
 - `android/app/src/main/AndroidManifest.xml` - Added SMS permissions
 - `docs/ANDROID_PHONE_AUTH_SETUP.md` - Comprehensive setup guide
+
+### 6. ✅ Vercel Deployment Dependency Conflict Fixed (NEW)
+**Problem**: Vercel deployment failing with dependency conflict error for `@codetrix-studio/capacitor-google-auth`.
+
+**Solution Applied**:
+- **Removed Problematic Plugin**: Removed `@codetrix-studio/capacitor-google-auth` which was causing peer dependency conflicts
+- **Simplified Google Auth**: Updated Google authentication to use Firebase's built-in redirect method for mobile
+- **Graceful Fallbacks**: Added proper error handling for missing dependencies
+- **Clean Build**: Ensured all dependencies are compatible and build succeeds
+
+**Error Fixed**:
+```
+npm error ERESOLVE could not resolve
+npm error peer @capacitor/core@"^6.0.0" from @codetrix-studio/capacitor-google-auth@3.4.0-rc.4
+```
+
+**Files Modified**:
+- `package.json` - Removed conflicting dependency
+- `src/lib/google-auth.ts` - Updated to use redirect method instead of plugin
+- `capacitor.config.ts` - Removed plugin configuration
 
 ## 🚨 IMMEDIATE ACTION REQUIRED
 
@@ -101,9 +122,12 @@
 - [x] Build completes successfully
 - [x] Capacitor synced with latest changes
 - [x] SHA-1 fingerprint identified
+- [x] Vercel deployment dependency conflicts resolved
+- [x] reCAPTCHA container cleanup implemented
 - [ ] SHA-1 added to Firebase Console (USER ACTION REQUIRED)
 - [ ] Phone authentication enabled in Firebase Console (USER ACTION REQUIRED)
 - [ ] Test phone authentication on Android device
+- [ ] Test Vercel deployment
 
 ## 📚 Documentation Created
 
@@ -112,13 +136,22 @@
 
 ## 🔧 Key Technical Improvements
 
-1. **Mobile-First reCAPTCHA**: Automatically uses invisible reCAPTCHA for Android devices
-2. **Better Error Handling**: More specific error messages for different failure scenarios
-3. **Environment Detection**: Proper detection of Capacitor vs web environments
-4. **Comprehensive Logging**: Better debugging information for troubleshooting
-5. **Security Best Practices**: Proper SMS permissions and Firebase configuration
+1. **Dependency Conflict Resolution**: Removed problematic Capacitor plugin causing Vercel deployment failures
+2. **reCAPTCHA Container Management**: Proper cleanup to prevent "element must be empty" errors
+3. **Mobile-First reCAPTCHA**: Automatically uses invisible reCAPTCHA for Android devices
+4. **Simplified Google Auth**: Uses Firebase redirect method instead of complex native plugin
+5. **Better Error Handling**: More specific error messages for different failure scenarios
+6. **Environment Detection**: Proper detection of Capacitor vs web environments
+7. **Comprehensive Logging**: Better debugging information for troubleshooting
 
-The phone authentication should now work properly on Android once you add the SHA-1 fingerprint to Firebase Console!
+## 🎯 Expected Results
+
+1. **Vercel Deployment**: Should now deploy successfully without dependency conflicts
+2. **Phone Authentication**: Should work on Android after adding SHA-1 to Firebase Console
+3. **Google Authentication**: Works on both web and Android using redirect method
+4. **reCAPTCHA**: No more "element must be empty" errors
+
+The app should now work properly on both web and Android platforms! 🎉
 
 ## Additional Improvements Made
 

@@ -72,6 +72,11 @@ export const initializeRecaptcha = (containerId: string, devMode: boolean = fals
           delete window.recaptchaVerifier;
         }
 
+        // Clear the container content to ensure it's empty
+        console.log('🧹 Clearing reCAPTCHA container content');
+        container.innerHTML = '';
+        container.style.display = 'block';
+
         // Use invisible reCAPTCHA for Capacitor/Android or development mode
         if (isCapacitor || IS_DEVELOPMENT && (ENABLE_DEV_MODE || devMode)) {
           console.log('🛠️ Using invisible reCAPTCHA for mobile/dev environment');
