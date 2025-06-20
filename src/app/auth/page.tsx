@@ -15,7 +15,7 @@ import { GoogleIcon } from '@/components/ui/icons';
 import { auth } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
 import { useState, useEffect } from 'react';
-import { Loader2, Mail, Lock, Eye, EyeOff, UserPlus, Sparkles, CheckCircle2, Shield, Target } from 'lucide-react';
+import { Loader2, Mail, Lock, Eye, EyeOff, UserPlus, Sparkles, CheckCircle2, Shield, Target, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const registerSchema = z.object({
@@ -231,12 +231,47 @@ const RegisterPage: NextPage = () => {
               )}
             </Button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
+            <div className="space-y-4">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or try other methods</span>
+                </div>
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or sign up with email</span>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-12 border-2 border-border hover:border-accent/50 bg-background hover:bg-accent/5 transition-all duration-200"
+                >
+                  <Link href="/auth/email-link">
+                    <Mail className="w-4 h-4 mr-2" />
+                    Email Link
+                  </Link>
+                </Button>
+                
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-12 border-2 border-border hover:border-accent/50 bg-background hover:bg-accent/5 transition-all duration-200"
+                >
+                  <Link href="/auth/otp-login">
+                    <Phone className="w-4 h-4 mr-2" />
+                    Phone OTP
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or sign up with email</span>
+                </div>
               </div>
             </div>
 

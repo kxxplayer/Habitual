@@ -23,6 +23,52 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Intent filter for Firebase email link authentication -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data
+                    android:scheme="https"
+                    android:host="habitual-ucw41.firebaseapp.com"
+                    android:pathPrefix="/__/auth/links" />
+            </intent-filter>
+
+            <!-- Intent filter for production password reset -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data
+                    android:scheme="https"
+                    android:host="habitual-ucw41.firebaseapp.com"
+                    android:path="/auth/reset-password" />
+            </intent-filter>
+
+            <!-- Intent filter for local development email links -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data
+                    android:scheme="http"
+                    android:host="localhost"
+                    android:port="3000"
+                    android:path="/auth/email-link-signin" />
+            </intent-filter>
+
+            <!-- Intent filter for local development password reset -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data
+                    android:scheme="http"
+                    android:host="localhost"
+                    android:port="3000"
+                    android:path="/auth/reset-password" />
+            </intent-filter>
+
         </activity>
 
         <provider

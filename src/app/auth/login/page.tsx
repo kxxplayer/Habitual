@@ -15,7 +15,7 @@ import { GoogleIcon } from '@/components/ui/icons';
 import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
 import { useState, useEffect } from 'react';
-import { Loader2, Mail, Lock, Eye, EyeOff, Sparkles, CheckCircle, Target } from 'lucide-react';
+import { Loader2, Mail, Lock, Eye, EyeOff, Sparkles, CheckCircle, Target, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
@@ -206,12 +206,48 @@ const LoginPage: NextPage = () => {
               )}
             </Button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
+            <div className="space-y-4">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                </div>
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-12 border-2 border-border hover:border-primary/50 bg-background hover:bg-accent/5 transition-all duration-200"
+                >
+                  <Link href="/auth/email-link">
+                    <Mail className="w-4 h-4 mr-1" />
+                    Email Link
+                  </Link>
+                </Button>
+                
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-12 border-2 border-border hover:border-primary/50 bg-background hover:bg-accent/5 transition-all duration-200"
+                >
+                  <Link href="/auth/otp-login">
+                    <Phone className="w-4 h-4 mr-1" />
+                    Phone OTP
+                  </Link>
+                </Button>
+                
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-12 border-2 border-border hover:border-primary/50 bg-background hover:bg-accent/5 transition-all duration-200"
+                >
+                  <Link href="/auth">
+                    Create Account
+                  </Link>
+                </Button>
               </div>
             </div>
 
@@ -276,6 +312,15 @@ const LoginPage: NextPage = () => {
                   </div>
                 )}
               </Button>
+
+              <div className="text-center">
+                <Link 
+                  href="/auth/forgot-password" 
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
             </form>
 
             <div className="text-center">
